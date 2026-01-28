@@ -999,80 +999,87 @@ function renderAds(settings) {
 }
 
 async function boot() {
-  state.user = await getCurrentUser();
-  state.settings = await fetchSettings();
-  applyTheme(state.settings);
-  if (state.settings.themeId) {
-    const theme = await fetchThemeById(state.settings.themeId);
-    if (theme) applyThemeVariables(theme);
-  }
-  renderAuthActions();
-  showAdminLinks();
+  try {
+    state.user = await getCurrentUser();
+    state.settings = await fetchSettings();
+    applyTheme(state.settings);
+    if (state.settings.themeId) {
+      const theme = await fetchThemeById(state.settings.themeId);
+      if (theme) applyThemeVariables(theme);
+    }
+    renderAuthActions();
+    showAdminLinks();
 
-  const postId = getQueryParam("id");
-  const slug = getQueryParam("slug");
-  const post = await fetchPostByIdOrSlug({ id: postId, slug });
+    const postId = getQueryParam("id");
+    const slug = getQueryParam("slug");
+    const post = await fetchPostByIdOrSlug({ id: postId, slug });
 
-  if (!post) {
-    document.getElementById("postTitle").textContent = "Post not found";
+    if (!post) {
+      document.getElementById("postTitle").textContent = "Post not found";
+      document.getElementById("postContent").innerHTML =
+        "<p>This post does not exist. Return to the homepage.</p>";
+      return;
+    }
+
+    updateMeta(post);
+
+    const [categories, relatedPosts, comments, likes, ads, postMedia] = await Promise.all([
+      fetchCategories(),
+      fetchPosts({ status: "published" }),
+      fetchComments({ status: "approved", postId: post.id }),
+      fetchPostLikes({ postId: post.id }),
+      fetchAds({ status: "active" }),
+      fetchPostMedia(post.id)
+    ]);
+
+    state.categories = categories;
+    state.likes = likes;
+    state.ads = ads;
+    state.postMedia = postMedia;
+    state.likeCount = likes.length;
+    state.hasLiked = !!state.user && likes.some((like) => like.user_id === state.user.id);
+    state.authorPostCount = relatedPosts.filter((item) => item.author_id === post.author_id).length;
+    if (post.author_id) {
+      const profile = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", post.author_id)
+        .maybeSingle();
+      state.authorProfile = profile.data || null;
+    }
+    if (state.user) {
+      state.isBookmarked = await fetchBookmarkStatus(post.id, state.user.id);
+    }
+    if (state.user && post.author_id) {
+      state.isFollowingAuthor = await fetchFollowStatus({
+        targetType: "author",
+        targetId: post.author_id,
+        followerId: state.user.id
+      });
+    }
+
+    renderPost({ categories }, post);
+    renderGallery(state.postMedia);
+    await loadCommentAuthors(comments);
+    renderComments(comments);
+    renderRelated({ posts: relatedPosts }, post);
+    renderTakeaways(post);
+    renderAuthorMini(post);
+    renderAuthorCard(post);
+    await incrementViewIfNeeded(post);
+    renderAds(state.settings);
+    setupLike(post);
+    setupBookmark(post);
+    setupFollowAuthor(post);
+    setupShare(post);
+    setupCommentForm(post, comments);
+    setupReveal();
+  } catch (err) {
+    console.error("post boot failed:", err);
+    document.getElementById("postTitle").textContent = "Error loading post";
     document.getElementById("postContent").innerHTML =
-      "<p>This post does not exist. Return to the homepage.</p>";
-    return;
+      "<p>Something went wrong while loading this post. Try refreshing or contact support.</p>";
   }
-
-  updateMeta(post);
-
-  const [categories, relatedPosts, comments, likes, ads, postMedia] = await Promise.all([
-    fetchCategories(),
-    fetchPosts({ status: "published" }),
-    fetchComments({ status: "approved", postId: post.id }),
-    fetchPostLikes({ postId: post.id }),
-    fetchAds({ status: "active" }),
-    fetchPostMedia(post.id)
-  ]);
-
-  state.categories = categories;
-  state.likes = likes;
-  state.ads = ads;
-  state.postMedia = postMedia;
-  state.likeCount = likes.length;
-  state.hasLiked = !!state.user && likes.some((like) => like.user_id === state.user.id);
-  state.authorPostCount = relatedPosts.filter((item) => item.author_id === post.author_id).length;
-  if (post.author_id) {
-    const profile = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", post.author_id)
-      .maybeSingle();
-    state.authorProfile = profile.data || null;
-  }
-  if (state.user) {
-    state.isBookmarked = await fetchBookmarkStatus(post.id, state.user.id);
-  }
-  if (state.user && post.author_id) {
-    state.isFollowingAuthor = await fetchFollowStatus({
-      targetType: "author",
-      targetId: post.author_id,
-      followerId: state.user.id
-    });
-  }
-
-  renderPost({ categories }, post);
-  renderGallery(state.postMedia);
-  await loadCommentAuthors(comments);
-  renderComments(comments);
-  renderRelated({ posts: relatedPosts }, post);
-  renderTakeaways(post);
-  renderAuthorMini(post);
-  renderAuthorCard(post);
-  await incrementViewIfNeeded(post);
-  renderAds(state.settings);
-  setupLike(post);
-  setupBookmark(post);
-  setupFollowAuthor(post);
-  setupShare(post);
-  setupCommentForm(post, comments);
-  setupReveal();
 }
 
 boot();

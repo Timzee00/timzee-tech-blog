@@ -64,15 +64,20 @@ export async function deletePostMedia(id) {
 
 export async function fetchPostByIdOrSlug({ id, slug }) {
   if (!id && !slug) return null;
-  let query = supabase.from("posts").select("*").limit(1);
-  if (id) query = query.eq("id", id);
-  if (!id && slug) query = query.eq("slug", slug);
-  const result = await query.maybeSingle();
-  if (result.error) {
-    console.warn("Post lookup failed", result.error);
+  try {
+    let query = supabase.from("posts").select("*").limit(1);
+    if (id) query = query.eq("id", id);
+    if (!id && slug) query = query.eq("slug", slug);
+    const result = await query.maybeSingle();
+    if (result && result.error) {
+      console.warn("Post lookup failed", result.error);
+      return null;
+    }
+    return result.data || null;
+  } catch (err) {
+    console.error("fetchPostByIdOrSlug exception:", err);
     return null;
   }
-  return result.data || null;
 }
 
 export async function fetchComments({ status, postId } = {}) {

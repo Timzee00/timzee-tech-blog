@@ -155,7 +155,7 @@
     </footer>
 
     <script type="module">
-      import { supabase, getCurrentUser, getDisplayName, signOut } from "./assets/js/supabase.js";
+      import { supabase, getCurrentUser, getDisplayName, signOut, getUserRole } from "./assets/js/supabase.js";
       import { fetchSettings } from "./assets/js/settings.js";
 
       let state = {
@@ -190,8 +190,23 @@
             await signOut();
             window.location.reload();
           });
-          document.getElementById("createNovelBtn").style.display = "inline-block";
-          document.getElementById("createForm").style.display = "block";
+
+          // Only show create UI to authors/moderators/admins/super
+          try {
+            const role = getUserRole(state.user) || "user";
+            if (["author", "moderator", "admin", "super"].includes(role)) {
+              document.getElementById("createNovelBtn").style.display = "inline-block";
+              document.getElementById("createForm").style.display = "block";
+            } else {
+              document.getElementById("createNovelBtn").style.display = "none";
+              document.getElementById("createForm").style.display = "none";
+            }
+          } catch (e) {
+            // Fallback: hide create UI if role check fails
+            document.getElementById("createNovelBtn").style.display = "none";
+            document.getElementById("createForm").style.display = "none";
+            console.warn("Failed to determine user role for novel creation", e);
+          }
         } else {
           authActions.innerHTML = `<a class="btn ghost" href="login.html?next=novels.html">Log In</a>`;
         }

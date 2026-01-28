@@ -11,15 +11,22 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
     const videoId = crypto.randomUUID();
     const timestamp = Date.now();
     
-    // Upload video
+    // Upload video to storage
     const videoPath = `videos/${userId}/${timestamp}-${videoFile.name}`;
+    console.log("Uploading video to storage:", videoPath);
+    
     const videoResult = await supabase.storage
       .from("media")
       .upload(videoPath, videoFile);
     
-    if (videoResult.error) throw videoResult.error;
+    if (videoResult.error) {
+      console.error("Storage upload error:", videoResult.error);
+      throw new Error(`Storage upload failed: ${videoResult.error.message}`);
+    }
+    
+    console.log("Storage upload successful");
 
-    let thumbnailUrl = videoData.thumbnail_url || "";
+    let thumbnailUrl = "";
     
     // Upload thumbnail if provided
     if (thumbnailFile) {
@@ -33,6 +40,7 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
           .from("media")
           .getPublicUrl(thumbnailPath);
         thumbnailUrl = data.publicUrl;
+        console.log("Thumbnail URL:", thumbnailUrl);
       }
     }
 
@@ -42,12 +50,17 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
       .getPublicUrl(videoPath);
     
     const videoUrl = data.publicUrl;
+    console.log("Video URL:", videoUrl);
+
+    if (!videoUrl) {
+      throw new Error("Failed to get video URL from storage");
+    }
 
     // Save video metadata
     const payload = {
       id: videoId,
       user_id: userId,
-      author_name: authorName,
+      author_name: authorName || "Anonymous",
       title: videoData.title || "Untitled Video",
       description: videoData.description || "",
       video_url: videoUrl,
@@ -59,52 +72,86 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
       created_at: new Date().toISOString()
     };
 
+    console.log("Inserting video metadata:", payload);
+    
     const result = await supabase.from("videos").insert(payload).select().single();
+    
+    if (result.error) {
+      console.error("Insert error:", result.error);
+      throw new Error(`Database insert failed: ${result.error.message}`);
+    }
+    
+    console.log("Video upload complete:", result.data);
     return result;
   } catch (error) {
+    console.error("uploadVideo exception:", error);
     return { error: error.message || "Video upload failed" };
   }
 }
 
 export async function fetchVideos({ category = null, limit = 20, offset = 0, userId = null } = {}) {
-  let query = supabase
-    .from("videos")
-    .select("*")
-    .eq("is_public", true)
-    .order("created_at", { ascending: false });
+  try {
+    let query = supabase
+      .from("videos")
+      .select("*")
+      .eq("is_public", true)
+      .order("created_at", { ascending: false });
 
-  if (category) query = query.eq("category", category);
-  if (userId) query = query.eq("user_id", userId);
+    if (category) query = query.eq("category", category);
+    if (userId) query = query.eq("user_id", userId);
 
-  query = query.range(offset, offset + limit - 1);
+    query = query.range(offset, offset + limit - 1);
 
-  const result = await query;
-  return result.data || [];
+    const result = await query;
+    if (result && result.error) {
+      console.error("fetchVideos error:", result.error);
+      return [];
+    }
+    return result.data || [];
+  } catch (err) {
+    console.error("fetchVideos exception:", err);
+    return [];
+  }
 }
 
 export async function fetchVideoById(videoId) {
-  const result = await supabase
-    .from("videos")
-    .select("*")
-    .eq("id", videoId)
-    .single();
-  
-  if (result.error) return null;
-  return result.data;
+  try {
+    const result = await supabase
+      .from("videos")
+      .select("*")
+      .eq("id", videoId)
+      .single();
+    if (result.error) {
+      console.error("fetchVideoById error:", result.error);
+      return null;
+    }
+    return result.data || null;
+  } catch (err) {
+    console.error("fetchVideoById exception:", err);
+    return null;
+  }
 }
 
 export async function searchVideos({ query, limit = 20, offset = 0 } = {}) {
   if (!query) return [];
+  try {
+    const result = await supabase
+      .from("videos")
+      .select("*")
+      .textSearch("search_vector", query, { type: "websearch", config: "english" })
+      .eq("is_public", true)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
-  const result = await supabase
-    .from("videos")
-    .select("*")
-    .textSearch("search_vector", query, { type: "websearch", config: "english" })
-    .eq("is_public", true)
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
-
-  return result.data || [];
+    if (result && result.error) {
+      console.error("searchVideos error:", result.error);
+      return [];
+    }
+    return result.data || [];
+  } catch (err) {
+    console.error("searchVideos exception:", err);
+    return [];
+  }
 }
 
 export async function likeVideo(videoId, userId) {
@@ -133,25 +180,40 @@ export async function likeVideo(videoId, userId) {
 }
 
 export async function getVideoLikeCount(videoId) {
-  const result = await supabase
-    .from("video_likes")
-    .select("id", { count: "exact", head: true })
-    .eq("video_id", videoId);
-
-  return result.count || 0;
+  try {
+    const result = await supabase
+      .from("video_likes")
+      .select("id", { count: "exact", head: true })
+      .eq("video_id", videoId);
+    if (result && result.error) {
+      console.error("getVideoLikeCount error:", result.error);
+      return 0;
+    }
+    return result.count || 0;
+  } catch (err) {
+    console.error("getVideoLikeCount exception:", err);
+    return 0;
+  }
 }
 
 export async function isVideoLiked(videoId, userId) {
   if (!userId) return false;
-  
-  const result = await supabase
-    .from("video_likes")
-    .select("id")
-    .eq("video_id", videoId)
-    .eq("user_id", userId)
-    .single();
-
-  return !result.error && !!result.data;
+  try {
+    const result = await supabase
+      .from("video_likes")
+      .select("id")
+      .eq("video_id", videoId)
+      .eq("user_id", userId)
+      .single();
+    if (result && result.error) {
+      console.error("isVideoLiked error:", result.error);
+      return false;
+    }
+    return !!result.data;
+  } catch (err) {
+    console.error("isVideoLiked exception:", err);
+    return false;
+  }
 }
 
 export async function commentOnVideo(videoId, userId, authorName, body, replyTo = null) {
@@ -167,13 +229,21 @@ export async function commentOnVideo(videoId, userId, authorName, body, replyTo 
 }
 
 export async function getVideoComments(videoId) {
-  const result = await supabase
-    .from("video_comments")
-    .select("*")
-    .eq("video_id", videoId)
-    .order("created_at", { ascending: true });
-
-  return result.data || [];
+  try {
+    const result = await supabase
+      .from("video_comments")
+      .select("*")
+      .eq("video_id", videoId)
+      .order("created_at", { ascending: true });
+    if (result && result.error) {
+      console.error("getVideoComments error:", result.error);
+      return [];
+    }
+    return result.data || [];
+  } catch (err) {
+    console.error("getVideoComments exception:", err);
+    return [];
+  }
 }
 
 export async function incrementVideoView(videoId) {
@@ -187,21 +257,31 @@ export async function incrementVideoView(videoId) {
 }
 
 export async function updateVideo(videoId, userId, updates) {
-  return supabase
-    .from("videos")
-    .update(updates)
-    .eq("id", videoId)
-    .eq("user_id", userId)
-    .select()
-    .single();
+  try {
+    return await supabase
+      .from("videos")
+      .update(updates)
+      .eq("id", videoId)
+      .eq("user_id", userId)
+      .select()
+      .single();
+  } catch (err) {
+    console.error("updateVideo exception:", err);
+    return { error: err };
+  }
 }
 
 export async function deleteVideo(videoId, userId) {
-  return supabase
-    .from("videos")
-    .delete()
-    .eq("id", videoId)
-    .eq("user_id", userId);
+  try {
+    return await supabase
+      .from("videos")
+      .delete()
+      .eq("id", videoId)
+      .eq("user_id", userId);
+  } catch (err) {
+    console.error("deleteVideo exception:", err);
+    return { error: err };
+  }
 }
 
 // ============================================================================
@@ -221,7 +301,8 @@ export async function createMarketplaceItem({
   location,
   images = []
 } = {}) {
-  return supabase.from("marketplace_items").insert({
+  try {
+    return await supabase.from("marketplace_items").insert({
     id: crypto.randomUUID(),
     user_id: userId,
     seller_name: sellerName,
@@ -237,7 +318,11 @@ export async function createMarketplaceItem({
     is_available: true,
     created_at: new Date().toISOString(),
     expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
-  }).select().single();
+    }).select().single();
+  } catch (err) {
+    console.error("createMarketplaceItem exception:", err);
+    return { error: err };
+  }
 }
 
 export async function fetchMarketplaceItems({ 
@@ -247,47 +332,71 @@ export async function fetchMarketplaceItems({
   userId = null,
   onlyAvailable = true
 } = {}) {
-  let query = supabase
-    .from("marketplace_items")
-    .select("*")
-    .order("created_at", { ascending: false });
+  try {
+    let query = supabase
+      .from("marketplace_items")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  if (onlyAvailable) query = query.eq("is_available", true);
-  if (category) query = query.eq("category", category);
-  if (userId) query = query.eq("user_id", userId);
+    if (onlyAvailable) query = query.eq("is_available", true);
+    if (category) query = query.eq("category", category);
+    if (userId) query = query.eq("user_id", userId);
 
-  query = query.range(offset, offset + limit - 1);
+    query = query.range(offset, offset + limit - 1);
 
-  const result = await query;
-  return result.data || [];
+    const result = await query;
+    if (result && result.error) {
+      console.error("fetchMarketplaceItems error:", result.error);
+      return [];
+    }
+    return result.data || [];
+  } catch (err) {
+    console.error("fetchMarketplaceItems exception:", err);
+    return [];
+  }
 }
 
 export async function searchMarketplace({ query, category = null, limit = 20, offset = 0 } = {}) {
   if (!query) return [];
+  try {
+    let request = supabase
+      .from("marketplace_items")
+      .select("*")
+      .textSearch("search_vector", query, { type: "websearch", config: "english" })
+      .eq("is_available", true)
+      .order("created_at", { ascending: false });
 
-  let request = supabase
-    .from("marketplace_items")
-    .select("*")
-    .textSearch("search_vector", query, { type: "websearch", config: "english" })
-    .eq("is_available", true)
-    .order("created_at", { ascending: false });
+    if (category) request = request.eq("category", category);
 
-  if (category) request = request.eq("category", category);
-
-  request = request.range(offset, offset + limit - 1);
-  const result = await request;
-  return result.data || [];
+    request = request.range(offset, offset + limit - 1);
+    const result = await request;
+    if (result && result.error) {
+      console.error("searchMarketplace error:", result.error);
+      return [];
+    }
+    return result.data || [];
+  } catch (err) {
+    console.error("searchMarketplace exception:", err);
+    return [];
+  }
 }
 
 export async function getMarketplaceItemById(itemId) {
-  const result = await supabase
-    .from("marketplace_items")
-    .select("*")
-    .eq("id", itemId)
-    .single();
-
-  if (result.error) return null;
-  return result.data;
+  try {
+    const result = await supabase
+      .from("marketplace_items")
+      .select("*")
+      .eq("id", itemId)
+      .single();
+    if (result && result.error) {
+      console.error("getMarketplaceItemById error:", result.error);
+      return null;
+    }
+    return result.data || null;
+  } catch (err) {
+    console.error("getMarketplaceItemById exception:", err);
+    return null;
+  }
 }
 
 export async function createMarketplaceInquiry({

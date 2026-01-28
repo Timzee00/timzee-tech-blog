@@ -152,29 +152,39 @@ async function loadThreadPreviews() {
 }
 
 async function loadGroups() {
-  const result = await supabase
-    .from("chat_members")
-    .select("thread_id, chat_threads(id, name, is_group, created_by, created_at)")
-    .eq("user_id", state.user.id);
-  const rows = result.data || [];
-  const groups = rows
-    .map((row) => row.chat_threads)
-    .filter((thread) => thread && thread.is_group);
-  state.groups = groups;
+  try {
+    const result = await supabase
+      .from("chat_members")
+      .select("thread_id, chat_threads(id, name, is_group, created_by, created_at)")
+      .eq("user_id", state.user?.id);
+    const rows = result.data || [];
+    const groups = rows
+      .map((row) => row.chat_threads)
+      .filter((thread) => thread && thread.is_group);
+    state.groups = groups;
+  } catch (err) {
+    console.warn("Failed to load groups", err);
+    state.groups = [];
+  }
 }
 
 async function loadGroupMembers(threadId) {
-  const result = await supabase
-    .from("chat_members")
-    .select("user_id")
-    .eq("thread_id", threadId);
-  const ids = (result.data || []).map((row) => row.user_id).filter(Boolean);
-  state.groupMembers[threadId] = ids;
-  if (ids.length) {
-    const profiles = await supabase.from("profiles").select("*").in("id", ids);
-    (profiles.data || []).forEach((profile) => {
-      state.profileCache[profile.id] = profile;
-    });
+  try {
+    const result = await supabase
+      .from("chat_members")
+      .select("user_id")
+      .eq("thread_id", threadId);
+    const ids = (result.data || []).map((row) => row.user_id).filter(Boolean);
+    state.groupMembers[threadId] = ids;
+    if (ids.length) {
+      const profiles = await supabase.from("profiles").select("*").in("id", ids);
+      (profiles.data || []).forEach((profile) => {
+        state.profileCache[profile.id] = profile;
+      });
+    }
+  } catch (err) {
+    console.warn("loadGroupMembers failed:", err);
+    state.groupMembers[threadId] = [];
   }
 }
 
