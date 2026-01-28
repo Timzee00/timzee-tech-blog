@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Log In - Timzee Tech Hub</title>
+    <meta name="description" content="Log in or create your Timzee Tech Hub account to join discussions, comment, and connect.">
+    <meta name="keywords" content="Timzee Tech Hub login, sign up, tech community account">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0f766e">
+    <link rel="canonical" href="https://timzee-tech-blog.netlify.app/login.html">
+    <meta property="og:site_name" content="Timzee Tech Hub">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Log In - Timzee Tech Hub">
+    <meta property="og:description" content="Log in or create your Timzee Tech Hub account to join discussions, comment, and connect.">
+    <meta property="og:url" content="https://timzee-tech-blog.netlify.app/login.html">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Log In - Timzee Tech Hub">
+    <meta name="twitter:description" content="Log in or create your Timzee Tech Hub account to join discussions, comment, and connect.">
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline">Sign in to comment, like, and share</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-shell auth-shell">
+      <div class="container auth-layout">
+        <section class="auth-hero" data-reveal>
+          <div class="auth-hero-card">
+            <span class="chip">Welcome back</span>
+            <h1>Sign in to your newsroom</h1>
+            <p class="tagline">A creator-first space for tech stories, community debate, and creator tools.</p>
+            <div class="auth-highlights">
+              <div class="auth-highlight">
+                <strong>Creator Studio</strong>
+                <span>Publish, pin, and track performance.</span>
+              </div>
+              <div class="auth-highlight">
+                <strong>Smart Discussions</strong>
+                <span>Host topics, pin replies, and moderate in real time.</span>
+              </div>
+              <div class="auth-highlight">
+                <strong>Community Pulse</strong>
+                <span>Likes, views, and shares with live updates.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="auth-cards">
+          <div class="auth-switcher" data-view="login" data-reveal>
+            <div class="auth-card auth-panel auth-panel-login">
+              <h2>Log In</h2>
+              <p class="tagline">Welcome back, you’ve been missed.</p>
+              <form id="loginForm" class="form-grid auth-form">
+                <div class="auth-input-group">
+                  <label for="loginEmail">Email</label>
+                  <input type="email" id="loginEmail" placeholder="you@example.com" required>
+                </div>
+                <div class="auth-input-group">
+                  <label for="loginPassword">Password</label>
+                  <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <div class="auth-row">
+                  <button class="btn" type="submit">Sign In</button>
+                  <button class="btn ghost" type="button" id="forgotToggle">Forgot password?</button>
+                </div>
+              </form>
+              <form id="forgotForm" class="form-grid hidden auth-form" style="margin-top:12px;">
+                <div class="auth-input-group">
+                  <label for="forgotEmail">Reset email</label>
+                  <input type="email" id="forgotEmail" placeholder="you@example.com" required>
+                </div>
+                <button class="btn ghost" type="submit">Send reset link</button>
+              </form>
+              <p class="callout" id="loginMessage" style="display:none; margin-top:14px;"></p>
+              <div class="auth-switch">
+                <span>New here?</span>
+                <button class="btn ghost auth-switch-btn" type="button" data-switch="signup">
+                  Create Account
+                </button>
+              </div>
+            </div>
+
+            <div class="auth-card auth-panel auth-panel-signup secondary-card">
+              <h2>Create Account</h2>
+              <p class="tagline">Join the community and publish your first story.</p>
+              <form id="signupForm" class="form-grid auth-form">
+                <div class="auth-input-group">
+                  <label for="signupName">Display name</label>
+                  <input type="text" id="signupName" placeholder="Jane Doe" required>
+                </div>
+                <div class="auth-input-group">
+                  <label for="signupEmail">Email</label>
+                  <input type="email" id="signupEmail" placeholder="you@example.com" required>
+                </div>
+                <div class="auth-input-group">
+                  <label for="signupPassword">Password</label>
+                  <input type="password" id="signupPassword" placeholder="Create a strong password" required>
+                </div>
+                <button class="btn secondary" type="submit">Sign Up</button>
+              </form>
+              <p class="callout" id="signupMessage" style="display:none; margin-top:14px;"></p>
+              <div class="callout" style="margin-top:14px;">If email confirmation is enabled, check your inbox.</div>
+              <div class="auth-switch">
+                <span>Already have an account?</span>
+                <button class="btn ghost auth-switch-btn" type="button" data-switch="login">
+                  Sign In
+                </button>
+              </div>
+            </div>
+
+            <div class="auth-card auth-panel auth-panel-reset secondary-card">
+              <h2>Reset Password</h2>
+              <p class="tagline">Create a new password for your account.</p>
+              <form id="resetForm" class="form-grid auth-form">
+                <div class="auth-input-group">
+                  <label for="resetPassword">New password</label>
+                  <input type="password" id="resetPassword" placeholder="Enter a new password" required>
+                </div>
+                <div class="auth-input-group">
+                  <label for="resetPasswordConfirm">Confirm password</label>
+                  <input type="password" id="resetPasswordConfirm" placeholder="Confirm new password" required>
+                </div>
+                <button class="btn secondary" type="submit">Update Password</button>
+              </form>
+              <p class="callout" id="resetMessage" style="display:none; margin-top:14px;"></p>
+              <div class="auth-switch">
+                <span>Remembered your password?</span>
+                <button class="btn ghost auth-switch-btn" type="button" data-switch="login">
+                  Back to login
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-links">
+          <a href="index.html">Back to home</a>
+          <a href="support.html">Support</a>
+          <a href="ads.html">Advertise</a>
+          <a href="discussion.html">Discussion</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="assets/js/user-auth.js"></script>
+  </body>
+</html>

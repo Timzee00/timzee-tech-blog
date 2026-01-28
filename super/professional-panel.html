@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Super Admin Control - Timzee Tech Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/admin.css">
+  </head>
+  <body class="admin-shell">
+    <div class="topbar">
+      <div class="container" style="display:flex; align-items:center; justify-content:space-between;">
+        <div class="brand">
+          <div class="logo">Timzee <span>Tech</span> Control Panel</div>
+          <div class="tagline">👑 Super Admin - Full System Control</div>
+        </div>
+        <div class="inline-actions">
+          <a class="btn" href="../admin/dashboard.html">📊 Admin Dashboard</a>
+          <a class="btn ghost" href="../index.html">🌐 View Site</a>
+          <button class="btn ghost" id="logoutBtn">Log Out</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="container admin-panel">
+      <nav class="admin-nav">
+        <button class="active" data-tab="team">👥 Team Management</button>
+        <button data-tab="curator">🤖 Curator Bot</button>
+        <button data-tab="posts">📰 All Posts</button>
+        <button data-tab="users">👤 Users</button>
+        <button data-tab="settings">⚙️ Site Settings</button>
+        <button data-tab="danger">⚠️ Danger Zone</button>
+      </nav>
+
+      <!-- Team Management -->
+      <section class="admin-card" data-panel="team">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+          <div>
+            <h2>👥 Team Management</h2>
+            <p>Promote and manage moderators, authors, and admins</p>
+          </div>
+          <div style="text-align: right;">
+            <a class="btn" href="https://www.notion.so" style="margin: 8px;">📖 View Guide</a>
+            <button class="btn ghost" onclick="alert('Quick tips:\n✅ Start with trusted community members\n✅ Document their roles\n✅ Review monthly\n✅ Keep backup list')">💡 Tips</button>
+          </div>
+        </div>
+
+        <!-- Moderators Section -->
+        <div id="moderatorManagerContainer" style="margin-bottom: 40px;"></div>
+
+        <!-- Cursor Section -->
+        <div id="curatorManagerContainer" style="margin-bottom: 40px;"></div>
+      </section>
+
+      <!-- Curator Bot Management -->
+      <section class="admin-card" data-panel="curator">
+        <div id="botManagerContainer"></div>
+      </section>
+
+      <!-- All Posts -->
+      <section class="admin-card" data-panel="posts">
+        <h2>📰 All Posts</h2>
+        <p style="color: #666; margin-bottom: 20px;">View and manage all content on the site</p>
+        <div id="allPostsContainer" style="text-align: center; padding: 40px; color: #999;">Loading posts...</div>
+      </section>
+
+      <!-- Users -->
+      <section class="admin-card" data-panel="users">
+        <h2>👤 Users</h2>
+        <p style="color: #666; margin-bottom: 20px;">View and manage user accounts</p>
+        <div id="allUsersContainer" style="text-align: center; padding: 40px; color: #999;">Loading users...</div>
+      </section>
+
+      <!-- Site Settings -->
+      <section class="admin-card" data-panel="settings">
+        <h2>⚙️ Site Settings</h2>
+        <p style="color: #666; margin-bottom: 20px;">Configure global site settings</p>
+        <div class="form-card">
+          <form id="siteSettingsForm">
+            <div class="form-group">
+              <label>Site Name</label>
+              <input type="text" id="siteName" placeholder="Timzee Tech Hub">
+            </div>
+            <div class="form-group">
+              <label>Tagline</label>
+              <input type="text" id="tagline" placeholder="Your site description">
+            </div>
+            <div class="form-group">
+              <label>Comment Moderation Enabled</label>
+              <input type="checkbox" id="commentModeration" checked>
+            </div>
+            <button class="btn" type="submit">💾 Save Settings</button>
+            <div id="settingsStatus" style="margin-top: 12px; display: none;"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Danger Zone -->
+      <section class="admin-card" data-panel="danger">
+        <h2 style="color: #ef4444;">⚠️ DANGER ZONE</h2>
+        <p style="color: #666; margin-bottom: 20px;">Irreversible actions. Use with extreme caution.</p>
+        
+        <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin: 0 0 12px 0; color: #ef4444;">🗑️ Reset Database</h3>
+          <p style="margin: 0 0 12px 0; color: #666;">Delete ALL content, posts, comments, and discussions. Users remain.</p>
+          <button class="btn" style="background: #ef4444; color: white; border-color: #ef4444;" onclick="if(confirm('DELETE ALL POSTS AND COMMENTS? This cannot be undone!')) alert('Contact support to perform this action.')">Delete All Content</button>
+        </div>
+
+        <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px;">
+          <h3 style="margin: 0 0 12px 0; color: #ef4444;">👤 Delete User</h3>
+          <p style="margin: 0 0 12px 0; color: #666;">Permanently delete a user account and all their data.</p>
+          <input type="text" id="deleteUserId" placeholder="User ID or Email" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px;">
+          <button class="btn" style="background: #ef4444; color: white; border-color: #ef4444;" onclick="if(confirm('PERMANENTLY DELETE THIS USER? This cannot be undone!')) alert('Contact support to perform this action.')">Delete User</button>
+        </div>
+      </section>
+    </main>
+
+    <style>
+      .form-card {
+        background: #f9fafb;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+      }
+      .form-group {
+        margin-bottom: 16px;
+      }
+      .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+      .form-group input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 14px;
+      }
+    </style>
+
+    <script type="module">
+      import { getCurrentUser, signOut, supabase } from "../assets/js/supabase.js";
+      import ModeratorManager from "../assets/js/moderator-ui.js";
+      import CuratorManager from "../assets/js/curator-ui.js";
+
+      async function init() {
+        const user = await getCurrentUser();
+        if (!user || user.user_metadata?.role !== "super") {
+          document.body.innerHTML = "<h1>Access Denied</h1><p>Super admin only</p>";
+          return;
+        }
+
+        // Setup logout
+        document.getElementById("logoutBtn").addEventListener("click", async () => {
+          await signOut();
+          window.location.href = "../index.html";
+        });
+
+        // Tab switching
+        const tabBtns = document.querySelectorAll(".admin-nav button");
+        const tabContents = document.querySelectorAll(".admin-card");
+
+        tabBtns.forEach(btn => {
+          btn.addEventListener("click", () => {
+            const tab = btn.dataset.tab;
+            tabBtns.forEach(b => b.classList.remove("active"));
+            tabContents.forEach(c => c.style.display = "none");
+            btn.classList.add("active");
+            document.querySelector(`[data-panel="${tab}"]`).style.display = "block";
+          });
+        });
+
+        // Initialize moderator manager
+        const modManager = new ModeratorManager();
+        await modManager.init("moderatorManagerContainer");
+
+        // Initialize curator manager
+        const curatorManager = new CuratorManager();
+        await curatorManager.init("botManagerContainer");
+
+        // Site settings form
+        document.getElementById("siteSettingsForm")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const status = document.getElementById("settingsStatus");
+          status.style.display = "block";
+          status.textContent = "Saving...";
+          status.style.color = "#0f766e";
+
+          try {
+            // Update site settings in Supabase
+            const { error } = await supabase
+              .from("site_settings")
+              .update({
+                site_name: document.getElementById("siteName").value,
+                tagline: document.getElementById("tagline").value,
+                comment_moderation: document.getElementById("commentModeration").checked
+              })
+              .eq("id", (await supabase.from("site_settings").select("id").single()).data.id);
+
+            if (error) throw error;
+
+            status.textContent = "✓ Settings saved!";
+            status.style.color = "green";
+          } catch (error) {
+            status.textContent = "Error: " + error.message;
+            status.style.color = "red";
+          }
+        });
+      }
+
+      init();
+    </script>
+  </body>
+</html>

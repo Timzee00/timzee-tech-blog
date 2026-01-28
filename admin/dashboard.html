@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Dashboard - Timzee Tech Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/admin.css">
+  </head>
+  <body class="admin-shell">
+    <div class="topbar">
+      <div class="container" style="display:flex; align-items:center; justify-content:space-between;">
+        <div class="brand">
+          <div class="logo">Timzee <span>Tech</span> Admin</div>
+          <div class="tagline" id="adminSubtitle">Content command center</div>
+        </div>
+        <div class="inline-actions">
+          <a class="btn" href="../index.html">View Site</a>
+          <button class="btn ghost" id="logoutBtn">Log Out</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="container admin-panel" id="adminApp">
+      <nav class="admin-nav">
+        <button class="active" data-tab="compose">Compose</button>
+        <button data-tab="posts">Manage Posts</button>
+        <button data-tab="comments">Moderate Comments</button>
+        <button data-tab="users">Users</button>
+        <button data-tab="themes">Themes</button>
+        <button data-tab="ads">Ads</button>
+        <button data-tab="requests">Requests</button>
+        <button data-tab="profile">My Profile</button>
+      </nav>
+
+      <section class="admin-card" data-panel="compose">
+        <h2>Create or Update Post</h2>
+        <form id="postForm" class="admin-form">
+          <input type="text" id="postTitle" placeholder="Post title" required>
+          <select id="postCategory" required></select>
+          <div id="customCategoryWrap" class="hidden">
+            <input type="text" id="customCategory" placeholder="Type a custom category name">
+          </div>
+          <input type="text" id="postTags" placeholder="Tags (comma separated)">
+          <select id="postStatus">
+            <option value="published">Publish now</option>
+            <option value="draft">Save as draft</option>
+            <option value="pending">Send for review</option>
+            <option value="scheduled">Schedule post</option>
+          </select>
+          <input type="datetime-local" id="postPublishAt" placeholder="Publish date/time">
+          <input type="text" id="postCover" placeholder="Cover image URL (optional)">
+          <input type="file" id="postCoverFile" accept="image/*">
+          <div id="coverPreview" class="image-preview"></div>
+          <label class="badge">Post Gallery (images/videos)</label>
+          <input type="file" id="postMediaFiles" accept="image/*,video/*" multiple>
+          <div class="inline-actions">
+            <button class="btn ghost" type="button" id="clearPostMediaBtn">Clear Gallery</button>
+          </div>
+          <div id="postMediaPreview" class="image-grid"></div>
+          <div class="editor-toolbar word-toolbar" id="postToolbar">
+            <button type="button" data-action="bold"><strong>B</strong></button>
+            <button type="button" data-action="italic"><em>I</em></button>
+            <button type="button" data-action="underline"><span style="text-decoration:underline;">U</span></button>
+            <span class="toolbar-sep"></span>
+            <button type="button" data-action="h2">Heading 2</button>
+            <button type="button" data-action="h3">Heading 3</button>
+            <button type="button" data-action="quote">Quote</button>
+            <span class="toolbar-sep"></span>
+            <button type="button" data-action="ul">Bullets</button>
+            <button type="button" data-action="ol">Numbering</button>
+            <span class="toolbar-sep"></span>
+            <button type="button" data-action="left">Left</button>
+            <button type="button" data-action="center">Center</button>
+            <button type="button" data-action="right">Right</button>
+            <span class="toolbar-sep"></span>
+            <button type="button" data-action="link">Link</button>
+            <button type="button" data-action="undo">Undo</button>
+            <button type="button" data-action="redo">Redo</button>
+            <button type="button" data-action="clear">Clear</button>
+          </div>
+          <div id="postEditor" class="rich-editor" contenteditable="true" data-placeholder="Write your post..." aria-label="Post editor"></div>
+          <textarea id="postContent" class="hidden" aria-hidden="true"></textarea>
+          <div class="inline-actions">
+            <button class="btn" type="submit" id="savePostBtn">Publish</button>
+            <button class="btn ghost" type="button" id="reviewPostBtn">Review Post</button>
+            <button class="btn ghost" type="button" id="resetFormBtn">Reset</button>
+          </div>
+        </form>
+        <div id="postReview" class="post-review hidden">
+          <div class="review-header">
+            <h3>Post Review</h3>
+            <button class="btn ghost" type="button" id="closeReviewBtn">Close</button>
+          </div>
+          <div class="review-body">
+            <div class="chip" id="reviewCategory">Category</div>
+            <h2 id="reviewTitle">Post title</h2>
+            <p class="tagline" id="reviewTags"></p>
+            <div id="reviewCover" class="review-cover"></div>
+            <div id="reviewContent" class="post-content"></div>
+          </div>
+        </div>
+        <p class="hint" id="postFormHint"></p>
+      </section>
+
+      <section class="admin-card" data-panel="posts" style="display:none;">
+        <h2>Posts Overview</h2>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Updated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="postsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card" data-panel="comments" style="display:none;">
+        <h2>Comment Moderation</h2>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Post</th>
+                <th>Author</th>
+                <th>Comment</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="commentsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card" data-panel="users" style="display:none;">
+        <h2>User Directory</h2>
+        <div class="inline-actions admin-search">
+          <input type="text" id="userSearchInput" placeholder="Search by name or email">
+          <button class="btn ghost" id="userSearchBtn" type="button">Search</button>
+          <button class="btn ghost" id="userClearBtn" type="button">Clear</button>
+        </div>
+        <div class="inline-actions admin-pager">
+          <button class="btn ghost" id="userPrevBtn" type="button">Prev</button>
+          <span class="hint" id="userPageInfo">Page 1</span>
+          <button class="btn ghost" id="userNextBtn" type="button">Next</button>
+        </div>
+        <p class="hint" id="usersHint">Search for members and manage verification or access status.</p>
+        <div class="table-wrap" style="margin-top:12px;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Verified</th>
+                <th>Tier</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card" data-panel="themes" style="display:none;">
+        <h2>Theme Library</h2>
+        <form id="themeForm" class="admin-form">
+          <input type="text" id="themeName" placeholder="Theme name" required>
+          <input type="text" id="themeDescription" placeholder="Short description">
+          <label class="badge">Wallpaper</label>
+          <input type="file" id="themeWallpaper" accept="image/*">
+          <div id="themeWallpaperPreview" class="image-preview">Wallpaper preview (optional)</div>
+          <label class="badge">Background</label>
+          <input type="color" id="themeBg" value="#f6f1ea">
+          <label class="badge">Background Deep</label>
+          <input type="color" id="themeBgDeep" value="#efe4d6">
+          <label class="badge">Ink</label>
+          <input type="color" id="themeInk" value="#131417">
+          <label class="badge">Muted</label>
+          <input type="color" id="themeMuted" value="#5b6573">
+          <label class="badge">Accent</label>
+          <input type="color" id="themeAccent" value="#0f766e">
+          <label class="badge">Accent Strong</label>
+          <input type="color" id="themeAccentStrong" value="#f97316">
+          <label class="badge">Accent Cool</label>
+          <input type="color" id="themeAccentCool" value="#0ea5e9">
+          <label class="badge">Card</label>
+          <input type="color" id="themeCard" value="#ffffff">
+          <button class="btn" type="submit">Add Theme</button>
+        </form>
+        <p class="hint" id="themeHint"></p>
+        <div class="theme-grid" id="themeList" style="margin-top:16px;"></div>
+      </section>
+
+      <section class="admin-card" data-panel="ads" style="display:none;">
+        <h2>Ad Manager</h2>
+        <form id="adForm" class="admin-form">
+          <input type="text" id="adTitle" placeholder="Ad title" required>
+          <input type="text" id="adBody" placeholder="Short description">
+          <input type="url" id="adLink" placeholder="Destination URL" required>
+          <input type="text" id="adImageUrl" placeholder="Ad image URL (optional)">
+          <input type="file" id="adImageFile" accept="image/*">
+          <div id="adImagePreview" class="image-preview">Ad image preview (optional)</div>
+          <select id="adPlacement">
+            <option value="home_top">Home Top</option>
+            <option value="home_sidebar">Home Sidebar</option>
+            <option value="post_inline">Post Inline</option>
+            <option value="global">Global</option>
+          </select>
+          <select id="adStatus">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <input type="datetime-local" id="adStart">
+          <input type="datetime-local" id="adEnd">
+          <button class="btn" type="submit">Save Ad</button>
+        </form>
+        <p class="hint" id="adHint"></p>
+        <div class="table-wrap" style="margin-top:12px;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Placement</th>
+                <th>Status</th>
+                <th>Window</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card" data-panel="requests" style="display:none;">
+        <h2>Requests Inbox</h2>
+        <p class="hint">Contact, support, newsletter, and ad placement submissions land here.</p>
+        <h3>Contact</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Subject</th>
+                <th>Message</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="contactTable"></tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top:20px;">Support</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Issue</th>
+                <th>Message</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="supportTable"></tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top:20px;">Newsletter</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Interest</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="newsletterTable"></tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top:20px;">Ad Applications</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Company</th>
+                <th>Budget</th>
+                <th>Message</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adsApplicationTable"></tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top:20px;">Admin Requests</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Message</th>
+                <th>Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="adminRequestTable"></tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top:20px;">Content Requests</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Query</th>
+                <th>User</th>
+                <th>Email</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="contentRequestTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card" data-panel="profile" style="display:none;">
+        <h2>Admin Profile</h2>
+        <div id="adminProfile"></div>
+        <div class="callout">Use the super admin panel to add more admins or adjust site settings.</div>
+        <a class="switch-link" href="../super/login.html">Go to God Mode</a>
+      </section>
+    </main>
+
+    <script type="module" src="../assets/js/admin.js"></script>
+  </body>
+</html>

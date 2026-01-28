@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Support - Timzee Tech Hub</title>
+    <meta name="description" content="Get help and support for your Timzee Tech Hub account.">
+    <meta name="keywords" content="Timzee Tech Hub support, help center, tech blog support">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0f766e">
+    <link rel="canonical" href="https://timzee-tech-blog.netlify.app/support.html">
+    <meta property="og:site_name" content="Timzee Tech Hub">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Support - Timzee Tech Hub">
+    <meta property="og:description" content="Get help and support for your Timzee Tech Hub account.">
+    <meta property="og:url" content="https://timzee-tech-blog.netlify.app/support.html">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Support - Timzee Tech Hub">
+    <meta name="twitter:description" content="Get help and support for your Timzee Tech Hub account.">
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline">Support & success desk</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <div class="container">
+        <section class="post-shell" data-reveal>
+          <h1>Support</h1>
+          <p class="tagline">Need help publishing, moderating, or setting up AdSense? We are here to help.</p>
+          <div class="feature-grid" style="margin-top:20px;">
+            <article class="feature-card" data-reveal>
+              <div class="feature-icon">FAQ</div>
+              <h3>Quick answers</h3>
+              <p>Find instant help for admin access, post approvals, and analytics.</p>
+            </article>
+            <article class="feature-card" data-reveal>
+              <div class="feature-icon">24/7</div>
+              <h3>Priority support</h3>
+              <p>Enterprise customers get fast escalation and onboarding support.</p>
+            </article>
+            <article class="feature-card" data-reveal>
+              <div class="feature-icon">LIVE</div>
+              <h3>Guided setup</h3>
+              <p>We can guide your team through ads, roles, and publishing workflows.</p>
+            </article>
+          </div>
+          <form class="form-grid" style="margin-top:24px;" id="supportForm">
+            <input type="text" name="name" placeholder="Full name" required>
+            <input type="email" name="email" placeholder="Email address" required>
+            <input type="text" name="issue" placeholder="What do you need help with?" required>
+            <textarea name="message" placeholder="Describe the issue..." required></textarea>
+            <button class="btn" type="submit">Submit Support Request</button>
+          </form>
+          <div class="callout" id="supportStatus" style="margin-top:18px; display:none;"></div>
+          <div class="callout" style="margin-top:12px;">Email: support@timzeetechhub.com · Response within 24 hours.</div>
+        </section>
+      </div>
+    </main>
+
+    <a class="floating-action whatsapp" id="whatsappSupportBtn" href="#" target="_blank" rel="noopener" style="display:none;">
+      <span>Chat on WhatsApp</span>
+    </a>
+
+    <button class="floating-action donate" id="donationBtn" type="button" style="display:none;">
+      <span>Donate</span>
+    </button>
+
+    <div class="donation-modal" id="donationModal" aria-hidden="true">
+      <div class="donation-card">
+        <div class="donation-header">
+          <h3 id="donationTitle">Support Timzee Tech Hub</h3>
+          <button class="btn ghost" id="donationClose" type="button">Close</button>
+        </div>
+        <p id="donationDetails">Thanks for supporting our community.</p>
+        <a class="btn" id="donationLink" href="#" target="_blank" rel="noopener">Donate now</a>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-links">
+          <a href="contact.html">Contact Us</a>
+          <a href="newsletter.html">Newsletter</a>
+          <a href="ads.html">Advertise</a>
+          <a href="discussion.html">Discussion</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="assets/js/forms.js"></script>
+  </body>
+</html>

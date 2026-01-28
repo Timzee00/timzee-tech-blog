@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Settings - Timzee Tech Hub</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <style>
+      .ai-settings { max-width: 800px; margin: 40px auto; }
+      .setting-group { border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+      .setting-group h3 { margin-top: 0; }
+      .api-key-input { font-family: monospace; font-size: 12px; }
+      .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+      .status-indicator.connected { background: #10b981; }
+      .status-indicator.disconnected { background: #ef4444; }
+      .prompt-template { background: #f9fafb; padding: 12px; border-radius: 4px; margin: 8px 0; cursor: pointer; transition: all 0.2s; }
+      .prompt-template:hover { background: #f3f4f6; }
+      .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin: 12px 0; }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+        </div>
+        <div class="header-actions">
+          <a class="btn ghost" href="profile.html">Profile</a>
+          <div class="auth-actions" id="authActions"></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <div class="container ai-settings">
+        <h1>AI Settings</h1>
+        <p class="tagline">Configure your AI assistants and preferences</p>
+
+        <!-- Groq API Configuration -->
+        <div class="setting-group">
+          <h3><span class="status-indicator disconnected" id="groqStatus"></span>Groq API</h3>
+          <p>Use Groq's fast LLMs for content generation, writing improvement, and more.</p>
+          
+          <div class="warning">
+            <strong>⚠️ Security Notice:</strong> Your API key is stored locally in your browser. Never share it. It's never sent to Timzee servers.
+          </div>
+
+          <label>API Key</label>
+          <input 
+            type="password" 
+            id="groqApiKey" 
+            placeholder="gsk_..." 
+            class="api-key-input"
+            style="width: 100%; padding: 8px; margin: 8px 0;"
+          >
+          
+          <div style="margin-top: 12px;">
+            <button class="btn" id="saveGroqBtn" type="button">Save API Key</button>
+            <button class="btn ghost" id="testGroqBtn" type="button">Test Connection</button>
+            <button class="btn ghost" id="clearGroqBtn" type="button">Clear</button>
+          </div>
+
+          <div id="groqStatus" style="margin-top: 12px; display: none;"></div>
+        </div>
+
+        <!-- Model Selection -->
+        <div class="setting-group">
+          <h3>AI Model</h3>
+          <select id="aiModel" style="width: 100%; padding: 8px; margin: 8px 0;">
+            <option value="mixtral-8x7b-32768">Mixtral 8x7B (Recommended)</option>
+            <option value="llama2-70b-4096">LLaMA 2 70B</option>
+            <option value="gemma-7b-it">Gemma 7B</option>
+          </select>
+          <p style="font-size: 12px; color: #666; margin-top: 8px;">
+            Mixtral is fastest. LLaMA 2 is most capable. Gemma is most lightweight.
+          </p>
+        </div>
+
+        <!-- System Prompts -->
+        <div class="setting-group">
+          <h3>Prompt Templates</h3>
+          <p>Quick templates for common tasks:</p>
+          
+          <div class="prompt-template" data-prompt-type="general">
+            <strong>General Assistant</strong>
+            <p style="margin: 4px 0; font-size: 12px; color: #666;">Help with questions and tasks</p>
+          </div>
+
+          <div class="prompt-template" data-prompt-type="contentIdeas">
+            <strong>Content Ideas</strong>
+            <p style="margin: 4px 0; font-size: 12px; color: #666;">Generate blog post and video ideas</p>
+          </div>
+
+          <div class="prompt-template" data-prompt-type="codeHelper">
+            <strong>Code Helper</strong>
+            <p style="margin: 4px 0; font-size: 12px; color: #666;">Programming questions and debugging</p>
+          </div>
+
+          <div class="prompt-template" data-prompt-type="seo">
+            <strong>SEO Expert</strong>
+            <p style="margin: 4px 0; font-size: 12px; color: #666;">Optimize titles and descriptions</p>
+          </div>
+
+          <div class="prompt-template" data-prompt-type="writing">
+            <strong>Writing Coach</strong>
+            <p style="margin: 4px 0; font-size: 12px; color: #666;">Improve clarity and engagement</p>
+          </div>
+        </div>
+
+        <!-- Preferences -->
+        <div class="setting-group">
+          <h3>Preferences</h3>
+          
+          <label>
+            <input type="checkbox" id="aiNotifications" checked>
+            Notify me when AI completes tasks
+          </label>
+
+          <label style="display: block; margin-top: 12px;">
+            <input type="checkbox" id="aiAutoSave" checked>
+            Auto-save generated content to drafts
+          </label>
+
+          <label style="display: block; margin-top: 12px;">
+            <input type="checkbox" id="aiUsageTracking" checked>
+            Show token usage and costs
+          </label>
+        </div>
+
+        <!-- Usage Stats -->
+        <div class="setting-group">
+          <h3>Usage This Month</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px;">
+            <div>
+              <span style="color: #666; font-size: 12px;">Tokens Used</span>
+              <div style="font-size: 24px; font-weight: bold; margin-top: 4px;" id="tokensUsed">0</div>
+            </div>
+            <div>
+              <span style="color: #666; font-size: 12px;">API Calls</span>
+              <div style="font-size: 24px; font-weight: bold; margin-top: 4px;" id="apiCalls">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div class="setting-group">
+          <h3>Quick Chat</h3>
+          <p>Test your AI setup:</p>
+          
+          <div id="chatPreview" style="
+            background: #f9fafb;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            height: 300px;
+            overflow-y: auto;
+            padding: 12px;
+            margin-bottom: 12px;
+            font-size: 12px;
+          "></div>
+
+          <form id="quickChatForm" style="display: flex; gap: 8px;">
+            <input 
+              type="text" 
+              id="quickChatInput" 
+              placeholder="Ask me anything..." 
+              style="flex: 1; padding: 8px;"
+            >
+            <button class="btn" type="submit" id="quickChatBtn">Send</button>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p style="text-align: center; font-size: 12px; color: #666;">
+          AI Settings • <a href="index.html">Home</a> • <a href="profile.html">Profile</a>
+        </p>
+      </div>
+    </footer>
+
+    <script type="module">
+      import groq, { GROQ_MODELS, SYSTEM_PROMPTS } from "./assets/js/groq.js";
+      import { getCurrentUser, signOut } from "./assets/js/supabase.js";
+
+      let state = {
+        user: null,
+        chatHistory: []
+      };
+
+      // Setup auth
+      async function setupAuth() {
+        state.user = await getCurrentUser();
+        if (!state.user) {
+          window.location.href = "login.html?next=ai-settings.html";
+          return;
+        }
+
+        const authActions = document.getElementById("authActions");
+        if (authActions) {
+          authActions.innerHTML = `
+            <span class="auth-meta">${state.user.email}</span>
+            <button class="btn ghost" id="logoutBtn">Log Out</button>
+          `;
+          document.getElementById("logoutBtn").addEventListener("click", async () => {
+            await signOut();
+            window.location.reload();
+          });
+        }
+      }
+
+      // Load current settings
+      function loadSettings() {
+        const key = groq.getGroqApiKey();
+        if (key) {
+          document.getElementById("groqApiKey").value = key;
+          document.getElementById("groqStatus").classList.remove("disconnected");
+          document.getElementById("groqStatus").classList.add("connected");
+        }
+
+        const model = localStorage.getItem("ai_model") || "mixtral-8x7b-32768";
+        document.getElementById("aiModel").value = model;
+      }
+
+      // Save Groq API key
+      document.getElementById("saveGroqBtn").addEventListener("click", () => {
+        const key = document.getElementById("groqApiKey").value.trim();
+        if (!key) {
+          alert("Please enter an API key");
+          return;
+        }
+        groq.setGroqApiKey(key);
+        alert("API key saved!");
+        loadSettings();
+      });
+
+      // Test connection
+      document.getElementById("testGroqBtn").addEventListener("click", async () => {
+        const btn = document.getElementById("testGroqBtn");
+        btn.disabled = true;
+        btn.textContent = "Testing...";
+
+        try {
+          const response = await groq.generateContent({
+            prompt: "Say 'Hello from Groq!' in exactly 4 words.",
+            model: document.getElementById("aiModel").value
+          });
+          
+          const statusEl = document.getElementById("groqStatus");
+          statusEl.style.display = "block";
+          statusEl.innerHTML = `<span class="status-indicator connected"></span><strong>✓ Connected!</strong><br>Response: ${response.slice(0, 100)}...`;
+          
+          document.getElementById("groqStatus").classList.remove("disconnected");
+          document.getElementById("groqStatus").classList.add("connected");
+        } catch (error) {
+          const statusEl = document.getElementById("groqStatus");
+          statusEl.style.display = "block";
+          statusEl.innerHTML = `<span class="status-indicator disconnected"></span><strong>✗ Failed</strong><br>${error.message}`;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Test Connection";
+        }
+      });
+
+      // Clear key
+      document.getElementById("clearGroqBtn").addEventListener("click", () => {
+        if (confirm("Clear your API key?")) {
+          groq.setGroqApiKey("");
+          document.getElementById("groqApiKey").value = "";
+          loadSettings();
+          alert("API key cleared");
+        }
+      });
+
+      // Prompt templates
+      document.querySelectorAll(".prompt-template").forEach(el => {
+        el.addEventListener("click", () => {
+          const type = el.dataset.promptType;
+          const prompt = SYSTEM_PROMPTS[type] || SYSTEM_PROMPTS.general;
+          alert("Prompt:\n\n" + prompt);
+        });
+      });
+
+      // Quick chat
+      document.getElementById("quickChatForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const input = document.getElementById("quickChatInput");
+        const message = input.value.trim();
+        if (!message) return;
+
+        const preview = document.getElementById("chatPreview");
+        const btn = document.getElementById("quickChatBtn");
+
+        // Add user message
+        state.chatHistory.push({ role: "user", content: message });
+        preview.innerHTML += `<div style="margin: 8px 0; color: #0f766e;"><strong>You:</strong> ${message}</div>`;
+        
+        input.value = "";
+        btn.disabled = true;
+        btn.textContent = "...";
+
+        try {
+          const response = await groq.chat({
+            message,
+            systemPrompt: SYSTEM_PROMPTS.general,
+            model: document.getElementById("aiModel").value
+          });
+
+          state.chatHistory.push({ role: "assistant", content: response });
+          preview.innerHTML += `<div style="margin: 8px 0; color: #666;"><strong>AI:</strong> ${response}</div>`;
+          preview.scrollTop = preview.scrollHeight;
+        } catch (error) {
+          preview.innerHTML += `<div style="margin: 8px 0; color: #ef4444;"><strong>Error:</strong> ${error.message}</div>`;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Send";
+        }
+      });
+
+      // Save model preference
+      document.getElementById("aiModel").addEventListener("change", (e) => {
+        localStorage.setItem("ai_model", e.target.value);
+      });
+
+      // Init
+      setupAuth();
+      loadSettings();
+    </script>
+  </body>
+</html>

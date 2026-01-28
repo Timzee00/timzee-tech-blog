@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Login - Timzee Tech Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/admin.css">
+  </head>
+  <body class="login-shell">
+    <div class="login-card">
+      <h1>Admin Login</h1>
+      <p class="hint">Admins can publish posts and moderate comments. Super admins can see everything.</p>
+      <form id="adminLoginForm" class="admin-form">
+        <input type="email" id="username" placeholder="Admin email" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button class="btn" type="submit">Sign In</button>
+      </form>
+      <p class="hint" id="loginMessage"></p>
+      <p class="hint">Super admin? Use the <a class="switch-link" href="../super/login.html">God Mode login</a>.</p>
+      <p class="hint">Back to <a class="switch-link" href="../index.html">home</a>.</p>
+    </div>
+    <script type="module" src="../assets/js/admin.js"></script>
+  </body>
+</html>

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Discussion - Timzee Tech Hub</title>
+    <meta name="description" content="Join real-time tech discussions, share ideas, and connect with builders on Timzee Tech Hub.">
+    <meta name="keywords" content="Timzee Tech Hub, tech discussion, community forum, tech chat, builders">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0f766e">
+    <link rel="canonical" href="https://timzee-tech-blog.netlify.app/discussion.html">
+    <meta property="og:site_name" content="Timzee Tech Hub">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Discussion - Timzee Tech Hub">
+    <meta property="og:description" content="Join real-time tech discussions, share ideas, and connect with builders.">
+    <meta property="og:url" content="https://timzee-tech-blog.netlify.app/discussion.html">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Discussion - Timzee Tech Hub">
+    <meta name="twitter:description" content="Join real-time tech discussions, share ideas, and connect with builders.">
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline" id="siteTagline">Real-time conversations on tech and daily tools.</div>
+        </div>
+        <div class="header-actions">
+          <a class="btn ghost" href="novels.html">Novels</a>
+          <a class="btn ghost" href="ads.html">Advertise</a>
+          <div class="auth-actions" id="authActions"></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <div class="container discussion-shell" id="discussionShell">
+        <aside class="discussion-sidebar">
+          <div class="discussion-card" data-reveal>
+            <h2>Topics</h2>
+            <div class="topic-list" id="topicList"></div>
+          </div>
+
+          <div class="discussion-card" data-reveal>
+            <h3>Start a Topic</h3>
+            <form id="topicForm" class="form-grid">
+              <input type="text" id="topicTitle" placeholder="Topic title" required>
+              <div class="editor-toolbar" id="topicToolbar">
+                <button type="button" data-action="h2">H2</button>
+                <button type="button" data-action="h3">H3</button>
+                <button type="button" data-action="bold">Bold</button>
+                <button type="button" data-action="italic">Italic</button>
+                <button type="button" data-action="quote">Quote</button>
+                <button type="button" data-action="ul">List</button>
+                <button type="button" data-action="ol">1-2-3</button>
+                <button type="button" data-action="link">Link</button>
+              </div>
+              <textarea id="topicDescription" placeholder="Short description" required></textarea>
+              <select id="topicThemeSelect">
+                <option value="">Default theme</option>
+              </select>
+              <input type="file" id="topicMediaFile" accept="image/*,video/*">
+              <div id="topicMediaPreview" class="image-preview">Topic media preview (optional)</div>
+              <button class="btn" type="submit">Create Topic</button>
+            </form>
+            <div class="callout" id="topicStatus" style="margin-top:12px; display:none;"></div>
+          </div>
+        </aside>
+
+        <section class="discussion-chat">
+          <div class="discussion-card" data-reveal>
+            <div class="discussion-header-row">
+              <div class="discussion-header" id="topicHeader">Select a topic to start chatting</div>
+              <div class="inline-actions">
+                <button class="btn ghost" id="followTopicBtn" type="button" style="display:none;">Follow</button>
+              </div>
+            </div>
+            <div class="topic-meta" id="topicMeta"></div>
+            <div id="topicMedia" class="topic-media"></div>
+            <div class="pinned-list" id="pinnedList"></div>
+            <div class="message-list" id="messageList"></div>
+            <form id="messageForm" class="comment-form">
+              <div class="reply-preview hidden" id="replyPreview"></div>
+              <textarea id="messageBody" placeholder="Write a message..." required></textarea>
+              <div class="message-tools">
+                <input type="file" id="messageMedia" accept="image/*,video/*">
+                <select id="messageMediaType">
+                  <option value="image">Image</option>
+                  <option value="sticker">Sticker</option>
+                  <option value="video">Video</option>
+                </select>
+              </div>
+              <div id="messageMediaPreview" class="media-preview"></div>
+              <button type="submit" class="btn">Send Message</button>
+            </form>
+            <div class="callout" id="messageStatus" style="margin-top:12px; display:none;"></div>
+          </div>
+
+          <div class="discussion-card" id="topicControls" style="display:none;">
+            <h3>Topic Controls</h3>
+            <div class="form-grid">
+              <label class="badge">Moderation</label>
+              <select id="topicModerationMode">
+                <option value="off">Off</option>
+                <option value="block">Block banned words</option>
+                <option value="mask">Mask banned words</option>
+              </select>
+              <label class="badge">Banned words (comma separated)</label>
+              <textarea id="topicBannedWords" placeholder="spam, scam, hate"></textarea>
+              <button class="btn" id="saveTopicRules" type="button">Save Rules</button>
+            </div>
+            <div class="callout" id="topicRulesStatus" style="margin-top:12px; display:none;"></div>
+            <div class="discussion-header" style="margin-top:16px;">Banned Members</div>
+            <div id="bannedUsersList" class="topic-list"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-links">
+          <a href="support.html">Support</a>
+          <a href="contact.html">Contact Us</a>
+          <a href="newsletter.html">Newsletter</a>
+          <a href="ads.html">Advertise</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="assets/js/discussion.js"></script>
+  </body>
+</html>
