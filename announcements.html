@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Announcements - Timzee Tech Hub</title>
+    <meta name="description" content="Stay updated with the latest announcements, updates, and important news from Timzee Tech Hub.">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0f766e">
+    <link rel="canonical" href="https://timzee-tech-blog.netlify.app/announcements.html">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline" id="siteTagline">System announcements and updates.</div>
+        </div>
+        <div class="header-actions">
+          <a class="btn ghost" href="novels.html">Novels</a>
+          <a class="btn ghost" href="videos.html">Videos</a>
+          <a class="btn ghost" href="marketplace.html">Marketplace</a>
+          <a class="btn ghost" href="discussion.html">Discussion</a>
+          <a class="btn ghost" href="ads.html">Advertise</a>
+          <div class="auth-actions" id="authActions"></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <div class="container">
+        <div class="page-header" data-reveal>
+          <h1>📢 Announcements & Updates</h1>
+          <p class="tagline">Stay informed about important news, features, and updates</p>
+        </div>
+
+        <div class="announcements-section" data-reveal>
+          <div class="section-filters">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="update">Updates</button>
+            <button class="filter-btn" data-filter="feature">Features</button>
+            <button class="filter-btn" data-filter="maintenance">Maintenance</button>
+            <button class="filter-btn" data-filter="event">Events</button>
+          </div>
+
+          <div id="announcementsList" class="announcements-list"></div>
+          <div id="noAnnouncements" class="callout" style="display: none;">
+            No announcements at this time. Check back soon for updates!
+          </div>
+        </div>
+
+        <div id="adminPanel" class="admin-section" style="display: none;">
+          <h2>📬 Create Announcement (Admin Only)</h2>
+          <form id="announcementForm" class="admin-form">
+            <input type="text" id="announcementTitle" placeholder="Announcement title" required>
+            <select id="announcementType" required>
+              <option value="">Select type...</option>
+              <option value="update">Update</option>
+              <option value="feature">New Feature</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="event">Event</option>
+              <option value="alert">Alert</option>
+            </select>
+            <textarea id="announcementBody" placeholder="Write your announcement..." required style="min-height: 120px;"></textarea>
+            <div class="inline-actions">
+              <label style="cursor: pointer;">
+                <input type="checkbox" id="notifyAllUsers"> Notify all users
+              </label>
+            </div>
+            <div class="inline-actions">
+              <button class="btn" type="submit">Publish Announcement</button>
+              <button class="btn ghost" type="button" id="clearAnnouncementBtn">Clear</button>
+            </div>
+            <div id="announcementStatus" class="callout" style="display: none;"></div>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="assets/js/announcements.js"></script>
+  </body>
+</html>
