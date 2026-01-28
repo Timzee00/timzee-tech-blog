@@ -997,59 +997,66 @@ function setupGroupCreation() {
   const btn = document.getElementById("newGroupBtn");
   if (!btn) return;
   btn.addEventListener("click", async () => {
-    const name = prompt("Group name");
-    if (!name) return;
-    const rawMembers = prompt("Add members by email or username (comma separated)");
-    const tokens = rawMembers
-      ? rawMembers.split(",").map((token) => token.trim()).filter(Boolean)
-      : [];
-    const memberIds = new Set([state.user.id]);
-    const missing = [];
-    for (const token of tokens) {
-      const result = await supabase
-        .from("profiles")
-        .select("id, email, username")
-        .or(`email.ilike.%${token}%,username.ilike.%${token}%,display_name.ilike.%${token}%`)
-        .limit(1)
-        .maybeSingle();
-      if (result.data?.id) {
-        memberIds.add(result.data.id);
-      } else {
-        missing.push(token);
+    try {
+      const name = prompt("Group name");
+      if (!name) return;
+      const rawMembers = prompt("Add members by email or username (comma separated)");
+      const tokens = rawMembers
+        ? rawMembers.split(",").map((token) => token.trim()).filter(Boolean)
+        : [];
+      const memberIds = new Set([state.user.id]);
+      const missing = [];
+      for (const token of tokens) {
+        const result = await supabase
+          .from("profiles")
+          .select("id, email, username")
+          .or(`email.ilike.%${token}%,username.ilike.%${token}%,display_name.ilike.%${token}%`)
+          .limit(1)
+          .maybeSingle();
+        if (result.data?.id) {
+          memberIds.add(result.data.id);
+        } else {
+          missing.push(token);
+        }
       }
+      const threadId = crypto.randomUUID();
+      const now = new Date().toISOString();
+      const createThread = await supabase.from("chat_threads").insert({
+        id: threadId,
+        name,
+        is_group: true,
+        created_by: state.user.id,
+        created_at: now
+      });
+      if (createThread.error) {
+        console.error("Error creating thread:", createThread.error);
+        alert(createThread.error.message || "Group creation failed.");
+        return;
+      }
+      const memberPayload = Array.from(memberIds).map((userId) => ({
+        id: crypto.randomUUID(),
+        thread_id: threadId,
+        user_id: userId,
+        role: userId === state.user.id ? "owner" : "member",
+        joined_at: now
+      }));
+      const memberResult = await supabase.from("chat_members").insert(memberPayload);
+      if (memberResult.error) {
+        console.error("Error creating members:", memberResult.error);
+        alert(memberResult.error.message || "Group members failed.");
+        return;
+      }
+      await loadGroups();
+      await loadThreadPreviews();
+      renderGroupList();
+      if (missing.length) {
+        alert(`Could not find: ${missing.join(", ")}`);
+      }
+      await selectGroup(threadId);
+    } catch (err) {
+      console.error("Group creation error:", err);
+      alert("An error occurred while creating the group: " + err.message);
     }
-    const threadId = crypto.randomUUID();
-    const now = new Date().toISOString();
-    const createThread = await supabase.from("chat_threads").insert({
-      id: threadId,
-      name,
-      is_group: true,
-      created_by: state.user.id,
-      created_at: now
-    });
-    if (createThread.error) {
-      alert(createThread.error.message || "Group creation failed.");
-      return;
-    }
-    const memberPayload = Array.from(memberIds).map((userId) => ({
-      id: crypto.randomUUID(),
-      thread_id: threadId,
-      user_id: userId,
-      role: userId === state.user.id ? "owner" : "member",
-      joined_at: now
-    }));
-    const memberResult = await supabase.from("chat_members").insert(memberPayload);
-    if (memberResult.error) {
-      alert(memberResult.error.message || "Group members failed.");
-      return;
-    }
-    await loadGroups();
-    await loadThreadPreviews();
-    renderGroupList();
-    if (missing.length) {
-      alert(`Could not find: ${missing.join(", ")}`);
-    }
-    await selectGroup(threadId);
   });
 }
 
