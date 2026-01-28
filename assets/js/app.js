@@ -1,4 +1,4 @@
-import { getCurrentUser, getDisplayName, getUserRole, signOut } from "./supabase.js";
+import { getCurrentUser, getCurrentUserWithRole, getDisplayName, getUserRole, signOut } from "./supabase.js";
 import {
   fetchCategories,
   fetchPosts,
@@ -853,7 +853,7 @@ function renderAds(settings) {
 }
 
 async function boot() {
-  state.user = await getCurrentUser();
+  state.user = await getCurrentUserWithRole();
   state.settings = await fetchSettings();
   applyTheme(state.settings);
   if (state.settings.themeId) {

@@ -1,4 +1,4 @@
-import { supabase, getCurrentUser, getDisplayName, signOut } from "./supabase.js";
+import { supabase, getCurrentUser, getCurrentUserWithRole, getDisplayName, signOut } from "./supabase.js";
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import { uploadMedia } from "./media.js";
@@ -1068,7 +1068,7 @@ async function boot() {
     if (theme) applyThemeVariables(theme);
   }
 
-  state.user = await getCurrentUser();
+  state.user = await getCurrentUserWithRole();
   if (!state.user) {
     window.location.href = "login.html?next=chat.html";
     return;

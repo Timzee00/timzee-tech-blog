@@ -1,4 +1,4 @@
-import { supabase, getCurrentUser, getDisplayName, signOut } from "./supabase.js";
+import { supabase, getCurrentUser, getCurrentUserWithRole, getDisplayName, signOut } from "./supabase.js";
 import { uploadMedia } from "./media.js";
 import {
   fetchBookmarks,
@@ -1015,7 +1015,7 @@ async function boot() {
     if (theme) applyThemeVariables(theme);
   }
 
-  state.user = await getCurrentUser();
+  state.user = await getCurrentUserWithRole();
   renderAuthActions();
 
   const paramId = getQueryParam("id");

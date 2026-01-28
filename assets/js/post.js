@@ -22,7 +22,7 @@ import { setupMentionInput, extractMentions, getMentionedUserIds } from "./menti
 import { uploadMedia } from "./media.js";
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
-import { supabase, SITE_URL, getCurrentUser, getDisplayName, getUserRole, signOut } from "./supabase.js";
+import { supabase, SITE_URL, getCurrentUser, getCurrentUserWithRole, getDisplayName, getUserRole, signOut } from "./supabase.js";
 import {
   formatDate,
   timeAgo,
@@ -1002,7 +1002,7 @@ async function boot() {
   try {
     console.log("🚀 post.js boot() starting...");
     
-    state.user = await getCurrentUser();
+    state.user = await getCurrentUserWithRole();
     state.settings = await fetchSettings();
     applyTheme(state.settings);
     if (state.settings.themeId) {

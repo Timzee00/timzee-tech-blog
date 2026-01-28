@@ -1,4 +1,4 @@
-import { supabase, getCurrentUser, getDisplayName, signOut } from "./supabase.js";
+import { supabase, getCurrentUser, getCurrentUserWithRole, getDisplayName, signOut } from "./supabase.js";
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import {
@@ -932,7 +932,7 @@ function setupMessageForm() {
 
 async function boot() {
   setupReveal();
-  state.user = await getCurrentUser();
+  state.user = await getCurrentUserWithRole();
   renderAuthActions();
 
   const settings = await fetchSettings();

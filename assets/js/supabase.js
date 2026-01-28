@@ -49,6 +49,43 @@ export async function signOut() {
   return supabase.auth.signOut();
 }
 
+export async function getCurrentUserWithRole() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    console.warn("User fetch failed", error);
+    return null;
+  }
+  const user = data.user;
+  if (!user) return null;
+
+  // Try to get role from user_metadata first (from JWT)
+  let role = user.user_metadata?.role;
+
+  // If role not in JWT metadata, fetch from profiles table as fallback
+  if (!role) {
+    try {
+      const profileResult = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profileResult.data?.role) {
+        role = profileResult.data.role;
+        // Update the user object so subsequent calls have it
+        if (user.user_metadata) {
+          user.user_metadata.role = role;
+        } else {
+          user.user_metadata = { role };
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch role from profiles:", err);
+    }
+  }
+
+  return user;
+}
+
 export function getUserRole(user) {
   return user?.user_metadata?.role || "user";
 }
