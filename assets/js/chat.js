@@ -941,6 +941,11 @@ function setupChatForm() {
       status.style.display = "block";
       return;
     }
+    
+    // Immediately add message to state and display it
+    state.messages.push(payload);
+    renderMessages();
+    
     form.reset();
     mediaFile = null;
     mediaType = "";
@@ -950,6 +955,8 @@ function setupChatForm() {
     }
     if (preview) preview.innerHTML = "";
     if (status) status.style.display = "none";
+    
+    // Reload thread previews to show latest message
     await loadThreadPreviews();
     renderFriendList();
     renderGroupList();
