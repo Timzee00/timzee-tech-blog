@@ -156,45 +156,6 @@ export async function callGroqAPI({
   }
 }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n").filter(line => line.trim());
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6);
-            if (data === "[DONE]") continue;
-            
-            try {
-              const json = JSON.parse(data);
-              const content = json.choices?.[0]?.delta?.content || "";
-              if (content) {
-                result += content;
-                onStream(content);
-              }
-            } catch (e) {
-              // Ignore parse errors in streaming
-            }
-          }
-        }
-      }
-      return result;
-    } else {
-      // Handle non-streaming response
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "";
-      const tokensUsed = data.usage?.total_tokens || 0;
-      return { content, tokensUsed };
-    }
-  } catch (error) {
-    console.error("Groq API error:", error);
-    throw error;
-  }
-}
-
 // Generate content with Groq
 export async function generateContent({
   prompt,

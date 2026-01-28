@@ -462,16 +462,6 @@ export async function fetchNotifications(userId) {
   return normalizeResponse(result);
 }
 
-export async function createNotification(payload) {
-  if (!payload) return { error: { message: "Notification payload missing." } };
-  const row = { ...payload };
-  if (row.link && !row.link_url) {
-    row.link_url = row.link;
-  }
-  delete row.link;
-  return supabase.from("notifications").insert(row).select().single();
-}
-
 export async function markNotificationRead(id) {
   return supabase
     .from("notifications")
