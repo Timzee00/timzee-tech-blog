@@ -68,12 +68,12 @@ export async function fetchPostByIdOrSlug({ id, slug }) {
     let query = supabase.from("posts").select("*").limit(1);
     if (id) query = query.eq("id", id);
     if (!id && slug) query = query.eq("slug", slug);
-    const result = await query.maybeSingle();
-    if (result && result.error) {
-      console.warn("Post lookup failed", result.error);
+    const { data, error } = await query.maybeSingle();
+    if (error) {
+      console.warn("Post lookup failed", error);
       return null;
     }
-    return result.data || null;
+    return data || null;
   } catch (err) {
     console.error("fetchPostByIdOrSlug exception:", err);
     return null;

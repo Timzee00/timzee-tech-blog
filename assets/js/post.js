@@ -1000,6 +1000,8 @@ function renderAds(settings) {
 
 async function boot() {
   try {
+    console.log("🚀 post.js boot() starting...");
+    
     state.user = await getCurrentUser();
     state.settings = await fetchSettings();
     applyTheme(state.settings);
@@ -1012,14 +1014,20 @@ async function boot() {
 
     const postId = getQueryParam("id");
     const slug = getQueryParam("slug");
+    console.log("📍 Query params - ID:", postId, "Slug:", slug);
+    
     const post = await fetchPostByIdOrSlug({ id: postId, slug });
+    console.log("📄 Post loaded:", post);
 
     if (!post) {
+      console.warn("⚠️ Post not found for id:", postId, "slug:", slug);
       document.getElementById("postTitle").textContent = "Post not found";
       document.getElementById("postContent").innerHTML =
         "<p>This post does not exist. Return to the homepage.</p>";
       return;
     }
+    
+    console.log("✅ Post found:", post.title);
 
     updateMeta(post);
 
