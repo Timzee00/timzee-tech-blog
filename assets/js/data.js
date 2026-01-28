@@ -462,21 +462,6 @@ export async function fetchNotifications(userId) {
   return normalizeResponse(result);
 }
 
-export async function markNotificationRead(id) {
-  return supabase
-    .from("notifications")
-    .update({ read_at: new Date().toISOString() })
-    .eq("id", id)
-    .select()
-    .single();
-}
-
-export async function markAllNotificationsRead(userId) {
-  return supabase
-    .from("notifications")
-    .update({ read_at: new Date().toISOString() })
-    .eq("user_id", userId);
-}
 
 export async function fetchUnreadNotificationCount(userId) {
   if (!userId) return 0;
