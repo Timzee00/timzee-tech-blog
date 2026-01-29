@@ -1510,7 +1510,7 @@ footer {
 
 .profile-hero {
   padding: 0;
-  overflow: hidden;
+  overflow: visible; /* allow avatar to overlap the cover */
 }
 
 .profile-cover {
@@ -1530,6 +1530,8 @@ footer {
 .profile-cover-overlay {
   position: absolute;
   inset: 0;
+  z-index: 1; /* keep overlay above cover but below avatar */
+  pointer-events: none; /* allow clicks to pass through */
   background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.35) 100%);
 }
 
@@ -1883,15 +1885,27 @@ footer {
 .chat-user img {
   width: 42px;
   height: 42px;
-  border-radius: 50%;
+  aspect-ratio: 1/1;
+  border-radius: 9999px;
   object-fit: cover;
   border: 1px solid rgba(15, 118, 110, 0.15);
+}
+
+/* Ensure all avatar-like images remain perfectly round and maintain aspect ratio */
+.chat-item-avatar,
+.seller-avatar,
+img[class*="avatar"],
+.profile-preview,
+.profile-avatar {
+  aspect-ratio: 1/1;
+  border-radius: 9999px;
+  object-fit: cover;
 }
 
 .chat-status {
   font-size: 12px;
   color: var(--muted);
-}
+} 
 
 .chat-messages {
   padding: 18px;
@@ -3112,6 +3126,29 @@ footer {
   input, textarea, select {
     padding: 10px !important;
     font-size: 15px !important;
+  }
+
+  /* Mobile-friendly touch targets and chat adjustments */
+  .btn, button, a.btn, a.button {
+    padding: 12px 18px !important;
+    font-size: 15px !important;
+    min-height: 44px;
+  }
+
+  .chat-input textarea#chatBody {
+    min-height: 56px !important;
+    padding: 12px !important;
+    font-size: 15px !important;
+  }
+
+  .chat-item {
+    padding: 12px !important;
+  }
+
+  .site-menu a, .site-menu .btn {
+    padding: 12px !important;
+    font-size: 15px !important;
+  }
   }
 }
 

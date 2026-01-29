@@ -52,7 +52,7 @@ function handleLogin() {
       message.textContent = result.message;
       return;
     }
-    window.location.href = "panel.html";
+    window.location.href = "professional-panel.html";
   });
   return true;
 }

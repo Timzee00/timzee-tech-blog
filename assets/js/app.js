@@ -162,8 +162,17 @@ function renderNav(categories) {
   nav.addEventListener("click", (event) => {
     const target = event.target.closest("a");
     if (!target) return;
+    event.preventDefault();
     state.activeCategory = target.dataset.category || "all";
+    renderTrending();
+    renderPopular();
+    renderPopularTopics();
     renderLists();
+    // Scroll to the latest section
+    const latestSection = document.getElementById("latest");
+    if (latestSection) {
+      latestSection.scrollIntoView({ behavior: "smooth" });
+    }
   });
 }
 
@@ -258,7 +267,11 @@ function buildPostCard(post, compact = false) {
 function renderTrending() {
   const target = document.getElementById("trendingList");
   if (!target) return;
-  const sorted = [...state.posts]
+  const sourcePosts = state.filteredPosts || state.posts;
+  const categoryFiltered = state.activeCategory === "all" 
+    ? sourcePosts 
+    : sourcePosts.filter((post) => post.category_id === state.activeCategory);
+  const sorted = [...categoryFiltered]
     .sort((a, b) => getPostScore(b) - getPostScore(a))
     .slice(0, 3);
   if (!sorted.length) {
@@ -272,7 +285,11 @@ function renderTrending() {
 function renderPopular() {
   const track = document.getElementById("popularTrack");
   if (!track) return;
-  const withCover = state.posts.filter((post) => !!post.cover);
+  const sourcePosts = state.filteredPosts || state.posts;
+  const categoryFiltered = state.activeCategory === "all" 
+    ? sourcePosts 
+    : sourcePosts.filter((post) => post.category_id === state.activeCategory);
+  const withCover = categoryFiltered.filter((post) => !!post.cover);
   const pinned = withCover
     .filter((post) => post.pinned)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -443,7 +460,11 @@ function renderLists() {
   }
   setupReveal(latestTarget);
 
-  const hotList = [...state.posts].sort((a, b) => getPostScore(b) - getPostScore(a)).slice(0, 4);
+  const hotPosts = state.filteredPosts || state.posts;
+  const hotCategoryFiltered = state.activeCategory === "all" 
+    ? hotPosts 
+    : hotPosts.filter((post) => post.category_id === state.activeCategory);
+  const hotList = [...hotCategoryFiltered].sort((a, b) => getPostScore(b) - getPostScore(a)).slice(0, 4);
   hotTarget.innerHTML = hotList.map((post) => buildPostCard(post, true)).join("");
   if (!hotList.length) {
     hotTarget.innerHTML = "<div class=\"callout\">No highlights yet — spark the first one.</div>";
@@ -674,6 +695,9 @@ function setupTagFilters() {
         state.searchTerm = "";
       }
       state.filteredPosts = null;
+      renderTrending();
+      renderPopular();
+      renderPopularTopics();
       renderLists();
     });
   }
@@ -682,6 +706,9 @@ function setupTagFilters() {
 async function performSearch() {
   if (!state.searchTerm && !state.activeTags.length) {
     state.filteredPosts = null;
+    renderTrending();
+    renderPopular();
+    renderPopularTopics();
     renderLists();
     return;
   }
@@ -698,10 +725,16 @@ async function performSearch() {
       state.filteredPosts = [];
     }
     
+    renderTrending();
+    renderPopular();
+    renderPopularTopics();
     renderLists();
   } catch (error) {
     console.error("Search error:", error);
     state.filteredPosts = [];
+    renderTrending();
+    renderPopular();
+    renderPopularTopics();
     renderLists();
   }
 }

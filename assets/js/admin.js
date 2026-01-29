@@ -314,8 +314,10 @@ function handleLogin() {
 function setupTabs() {
   const buttons = document.querySelectorAll(".admin-nav button");
   const panels = document.querySelectorAll("[data-panel]");
+  console.log("setupTabs: found", buttons.length, "buttons and", panels.length, "panels");
   buttons.forEach((button) => {
     button.addEventListener("click", () => {
+      console.log("tab clicked:", button.dataset.tab);
       buttons.forEach((btn) => btn.classList.remove("active"));
       button.classList.add("active");
       panels.forEach((panel) => {
@@ -323,6 +325,275 @@ function setupTabs() {
       });
     });
   });
+}
+
+async function setupAnnouncementForm() {
+  const form = document.getElementById("announcementForm");
+  const resetBtn = document.getElementById("resetAnnouncementBtn");
+  if (!form) return;
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      form.reset();
+      document.getElementById("announcementPublishAt").value = "";
+    });
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const title = document.getElementById("announcementTitle").value.trim();
+    const type = document.getElementById("announcementType").value;
+    const message = document.getElementById("announcementMessage").value.trim();
+    const status = document.getElementById("announcementStatus").value;
+    const publishAt = document.getElementById("announcementPublishAt").value;
+
+    if (!title || !type || !message) {
+      alert("Please fill all required fields");
+      return;
+    }
+
+    const payload = {
+      id: crypto.randomUUID(),
+      title,
+      type,
+      message,
+      status,
+      publish_at: publishAt ? new Date(publishAt).toISOString() : new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      created_by: state.user.id
+    };
+
+    try {
+      const result = await supabase.from("announcements").insert(payload);
+      if (result.error) throw result.error;
+      
+      alert("Announcement published successfully!");
+      form.reset();
+      document.getElementById("announcementPublishAt").value = "";
+      await renderAnnouncementsTable();
+    } catch (error) {
+      console.error("Announcement error:", error);
+      alert("Failed to publish announcement: " + error.message);
+    }
+  });
+}
+
+async function renderAnnouncementsTable() {
+  const table = document.getElementById("announcementsTable");
+  if (!table) return;
+
+  try {
+    const result = await supabase
+      .from("announcements")
+      .select("*")
+      .order("created_at", { ascending: false });
+    
+    const announcements = result.data || [];
+    if (!announcements.length) {
+      table.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#999;'>No announcements yet</td></tr>";
+      return;
+    }
+
+    table.innerHTML = announcements
+      .map((ann) => `
+        <tr>
+          <td>${escapeHTML(ann.title)}</td>
+          <td>${ann.type}</td>
+          <td>${ann.status || "published"}</td>
+          <td>${formatDate(ann.created_at)}</td>
+          <td>
+            <div class="inline-actions">
+              <button class="muted" data-action="edit" data-id="${ann.id}">Edit</button>
+              <button class="danger" data-action="delete" data-id="${ann.id}">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `)
+      .join("");
+
+    table.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const action = btn.dataset.action;
+        const announcementId = btn.dataset.id;
+        const announcement = announcements.find((a) => a.id === announcementId);
+        if (!announcement) return;
+
+        if (action === "delete") {
+          if (!confirm("Delete this announcement?")) return;
+          const result = await supabase.from("announcements").delete().eq("id", announcementId);
+          if (result.error) {
+            alert("Delete failed: " + result.error.message);
+            return;
+          }
+          await renderAnnouncementsTable();
+        }
+      });
+    });
+  } catch (error) {
+    console.error("Error loading announcements:", error);
+    table.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#f00;'>Error loading announcements</td></tr>";
+  }
+}
+
+async function setupCuratorBot() {
+  // Populate category select
+  const categorySelect = document.getElementById("curatorSourceCategory");
+  if (categorySelect && state.categories.length) {
+    categorySelect.innerHTML = state.categories
+      .map((cat) => `<option value="${cat.id}">${cat.name}</option>`)
+      .join("");
+  }
+
+  // Setup source form
+  const sourceForm = document.getElementById("curatorSourceForm");
+  const resetCuratorBtn = document.getElementById("resetCuratorBtn");
+  
+  if (resetCuratorBtn) {
+    resetCuratorBtn.addEventListener("click", () => {
+      sourceForm.reset();
+    });
+  }
+
+  if (sourceForm) {
+    sourceForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const name = document.getElementById("curatorSourceName").value.trim();
+      const url = document.getElementById("curatorSourceUrl").value.trim();
+      const categoryId = document.getElementById("curatorSourceCategory").value;
+      const description = document.getElementById("curatorSourceDescription").value.trim();
+
+      if (!name || !url || !categoryId) {
+        alert("Please fill all required fields");
+        return;
+      }
+
+      const payload = {
+        id: crypto.randomUUID(),
+        name,
+        feed_url: url,
+        category_id: categoryId,
+        description,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        created_by: state.user.id
+      };
+
+      try {
+        const result = await supabase.from("curator_sources").insert(payload);
+        if (result.error) throw result.error;
+        
+        alert("Feed source added successfully!");
+        sourceForm.reset();
+        await renderCuratorSources();
+      } catch (error) {
+        console.error("Curator source error:", error);
+        alert("Failed to add source: " + error.message);
+      }
+    });
+  }
+
+  // Setup bot settings form
+  const settingsForm = document.getElementById("botSettingsForm");
+  if (settingsForm) {
+    settingsForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const settings = {
+        check_interval: parseInt(document.getElementById("botCheckInterval").value) || 6,
+        auto_publish: document.getElementById("botAutoPublish").checked,
+        auto_approve: document.getElementById("botAutoApprove").checked,
+        max_posts_per_day: parseInt(document.getElementById("botMaxPostsPerDay").value) || 5
+      };
+
+      try {
+        const result = await supabase
+          .from("curator_settings")
+          .update(settings)
+          .eq("id", "default");
+        if (result.error) throw result.error;
+        
+        alert("Bot settings saved successfully!");
+      } catch (error) {
+        console.error("Settings error:", error);
+        alert("Failed to save settings: " + error.message);
+      }
+    });
+  }
+
+  await renderCuratorSources();
+}
+
+async function renderCuratorSources() {
+  const table = document.getElementById("curatorSourcesTable");
+  if (!table) return;
+
+  try {
+    const result = await supabase
+      .from("curator_sources")
+      .select("*")
+      .order("created_at", { ascending: false });
+    
+    const sources = result.data || [];
+    if (!sources.length) {
+      table.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#999;'>No feed sources yet</td></tr>";
+      return;
+    }
+
+    table.innerHTML = sources
+      .map((source) => {
+        const category = state.categories.find((cat) => cat.id === source.category_id);
+        return `
+          <tr>
+            <td>${escapeHTML(source.name)}</td>
+            <td>${category ? category.name : "Unknown"}</td>
+            <td><small>${source.feed_url.substring(0, 40)}...</small></td>
+            <td>${source.is_active ? "🟢 Active" : "⚪ Inactive"}</td>
+            <td>
+              <div class="inline-actions">
+                <button class="muted" data-action="toggle" data-id="${source.id}">
+                  ${source.is_active ? "Pause" : "Resume"}
+                </button>
+                <button class="danger" data-action="delete" data-id="${source.id}">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    table.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const action = btn.dataset.action;
+        const sourceId = btn.dataset.id;
+        const source = sources.find((s) => s.id === sourceId);
+        if (!source) return;
+
+        if (action === "toggle") {
+          const result = await supabase
+            .from("curator_sources")
+            .update({ is_active: !source.is_active })
+            .eq("id", sourceId);
+          if (result.error) {
+            alert("Update failed: " + result.error.message);
+            return;
+          }
+          await renderCuratorSources();
+        }
+
+        if (action === "delete") {
+          if (!confirm("Delete this feed source?")) return;
+          const result = await supabase.from("curator_sources").delete().eq("id", sourceId);
+          if (result.error) {
+            alert("Delete failed: " + result.error.message);
+            return;
+          }
+          await renderCuratorSources();
+        }
+      });
+    });
+  } catch (error) {
+    console.error("Error loading curator sources:", error);
+    table.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#f00;'>Error loading sources</td></tr>";
+  }
 }
 
 function populateCategories() {
@@ -1320,6 +1591,9 @@ async function bootDashboard() {
   renderAdsTable();
   renderRequests();
   renderProfile();
+  setupAnnouncementForm();
+  await renderAnnouncementsTable();
+  await setupCuratorBot();
   handleLogout();
 }
 

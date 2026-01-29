@@ -251,19 +251,24 @@
 
         // Images
         if (listing.images && listing.images.length > 0) {
-          document.getElementById("mainImage").src = listing.images[0];
+          const firstImg = isSafeUrl(listing.images[0]) ? listing.images[0] : '';
+          if (firstImg) document.getElementById("mainImage").src = firstImg;
           
           const thumbs = document.getElementById("thumbnails");
-          thumbs.innerHTML = listing.images.map((img, idx) => `
-            <img class="gallery-thumb ${idx === 0 ? 'active' : ''}" src="${img}" alt="Photo ${idx + 1}" data-idx="${idx}">
-          `).join("");
+          thumbs.innerHTML = listing.images.map((img, idx) => {
+            const safeImg = isSafeUrl(img) ? img : '';
+            return safeImg ? `
+              <img class="gallery-thumb ${idx === 0 ? 'active' : ''}" src="${safeImg}" alt="${escapeHTML('Photo ' + (idx + 1))}" data-idx="${idx}">
+            ` : '';
+          }).join("");
 
           thumbs.querySelectorAll(".gallery-thumb").forEach(thumb => {
             thumb.addEventListener("click", () => {
               thumbs.querySelectorAll(".gallery-thumb").forEach(t => t.classList.remove("active"));
               thumb.classList.add("active");
               const idx = parseInt(thumb.dataset.idx);
-              document.getElementById("mainImage").src = listing.images[idx];
+              const safe = isSafeUrl(listing.images[idx]) ? listing.images[idx] : '';
+              if (safe) document.getElementById("mainImage").src = safe;
             });
           });
         }
@@ -311,9 +316,9 @@
               <div class="review-item">
                 <div class="review-header">
                   <div class="review-rating">${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)}</div>
-                  <span class="review-date">${new Date(review.created_at).toLocaleDateString()}</span>
+                  <span class="review-date">${escapeHTML(new Date(review.created_at).toLocaleDateString())}</span>
                 </div>
-                <p style="margin: 8px 0 0 0;">${review.comment}</p>
+                <p style="margin: 8px 0 0 0;">${escapeHTML(review.comment || '')}</p>
               </div>
             `).join("");
           }
@@ -333,17 +338,19 @@
             .limit(6);
 
           if (data && data.length > 0) {
-            document.getElementById("similarListings").innerHTML = data.map(item => `
-              <a href="listing.html?id=${item.id}" style="text-decoration: none; color: inherit;">
+            document.getElementById("similarListings").innerHTML = data.map(item => {
+              const img = item.images && item.images[0] && isSafeUrl(item.images[0]) ? item.images[0] : '';
+              return `
+              <a href="listing.html?id=${encodeURIComponent(item.id)}" style="text-decoration: none; color: inherit;">
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; cursor: pointer;">
-                  ${item.images && item.images[0] ? `<img src="${item.images[0]}" style="width: 100%; aspect-ratio: 1; object-fit: cover;" alt="${item.title}">` : `<div style="width: 100%; aspect-ratio: 1; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">📦</div>`}
+                  ${img ? `<img src="${img}" style="width: 100%; aspect-ratio: 1; object-fit: cover;" alt="${escapeHTML(item.title || '')}">` : `<div style="width: 100%; aspect-ratio: 1; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">📦</div>`}
                   <div style="padding: 12px;">
-                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${item.title}</div>
-                    <div style="color: #0f766e; font-weight: 700;">$${parseFloat(item.price).toFixed(2)}</div>
+                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${escapeHTML(item.title || '')}</div>
+                    <div style="color: #0f766e; font-weight: 700;">$${escapeHTML((parseFloat(item.price) || 0).toFixed(2))}</div>
                   </div>
                 </div>
               </a>
-            `).join("");
+            `}).join("");
           }
         } catch (error) {
           console.error("Similar listings error:", error);

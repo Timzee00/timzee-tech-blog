@@ -231,3 +231,40 @@ export function deriveLevel(points = 0) {
   if (score >= 100) return { label: "Rising", tier: 2 };
   return { label: "Starter", tier: 1 };
 }
+
+// ----- Security & Debug helpers -----
+export function isSafeUrl(url) {
+  if (!url || typeof url !== "string") return false;
+  try {
+    const u = new URL(url, window.location.origin);
+    return (u.protocol === "http:" || u.protocol === "https:") || url.startsWith("/");
+  } catch (e) {
+    return false;
+  }
+}
+
+export function sanitizeHTML(html) {
+  if (!html) return "";
+  if (typeof DOMPurify !== "undefined" && DOMPurify.sanitize) return DOMPurify.sanitize(String(html));
+  // Fallback: escape HTML to prevent XSS
+  const div = document.createElement("div");
+  div.textContent = String(html);
+  return div.innerHTML;
+}
+
+// Simple debug logger gated to localhost or when window.DEBUG is true
+export function debug(...args) {
+  if (typeof window !== "undefined" && (window.DEBUG === true || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+}
+
+// Expose helpers globally for inline scripts that aren't modules
+if (typeof window !== "undefined") {
+  // Attach only if not already defined to avoid overwriting
+  if (!window.escapeHTML) window.escapeHTML = (t) => (typeof t === "undefined" ? "" : String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;"));
+  if (!window.sanitizeHTML) window.sanitizeHTML = sanitizeHTML;
+  if (!window.isSafeUrl) window.isSafeUrl = isSafeUrl;
+  if (!window.debug) window.debug = debug;
+}

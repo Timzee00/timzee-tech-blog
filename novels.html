@@ -182,7 +182,7 @@
 
         if (state.user) {
           authActions.innerHTML = `
-            <span class="auth-meta">${getDisplayName(state.user)}</span>
+            <span class="auth-meta">${escapeHTML(getDisplayName(state.user))}</span>
             <a class="btn ghost" href="profile.html">Profile</a>
             <button class="btn ghost" id="logoutBtn">Log Out</button>
           `;
@@ -208,7 +208,7 @@
             console.warn("Failed to determine user role for novel creation", e);
           }
         } else {
-          authActions.innerHTML = `<a class="btn ghost" href="login.html?next=novels.html">Log In</a>`;
+          authActions.innerHTML = `<a class="btn ghost" href="login.html?next=${encodeURIComponent('novels.html')}">Log In</a>`;
         }
       }
 
@@ -249,19 +249,19 @@
         }
 
         grid.innerHTML = state.novels.map(novel => `
-          <a href="novel.html?id=${novel.id}" style="text-decoration: none; color: inherit;">
+          <a href="novel.html?id=${encodeURIComponent(novel.id)}" style="text-decoration: none; color: inherit;">
             <div class="novel-card">
               <div class="novel-cover">
-                ${novel.cover_url ? `<img src="${novel.cover_url}" alt="${novel.title}">` : `📖`}
-                <div class="novel-badge">${novel.status}</div>
+                ${novel.cover_url && isSafeUrl(novel.cover_url) ? `<img src="${novel.cover_url}" alt="${escapeHTML(novel.title || '')}">` : `📖`}
+                <div class="novel-badge">${escapeHTML(novel.status || '')}</div>
               </div>
               <div class="novel-info">
-                <div class="novel-title">${novel.title}</div>
-                <div class="novel-author">by ${novel.author_name}</div>
-                <div class="novel-status">${novel.genre}</div>
+                <div class="novel-title">${escapeHTML(novel.title || '')}</div>
+                <div class="novel-author">by ${escapeHTML(novel.author_name || '')}</div>
+                <div class="novel-status">${escapeHTML(novel.genre || '')}</div>
                 <div class="novel-meta">
-                  <span>📕 ${novel.chapters_count || 0} chapters</span>
-                  <span>👁 ${novel.views || 0}</span>
+                  <span>📕 ${escapeHTML(String(novel.chapters_count || 0))} chapters</span>
+                  <span>👁 ${escapeHTML(String(novel.views || 0))}</span>
                 </div>
               </div>
             </div>

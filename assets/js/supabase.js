@@ -26,7 +26,17 @@ export async function getCurrentUser() {
 }
 
 export async function signIn(email, password) {
-  return supabase.auth.signInWithPassword({ email, password });
+  try {
+    return await supabase.auth.signInWithPassword({ email, password });
+  } catch (error) {
+    console.error("SignIn network error:", error);
+    return {
+      error: {
+        message: `Network error: ${error.message}. Check your internet connection and Supabase URL.`,
+        status: error.status
+      }
+    };
+  }
 }
 
 export async function signUp(email, password, displayName = "") {

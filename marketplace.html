@@ -172,7 +172,7 @@
         const authActions = document.getElementById("authActions");
         if (state.user) {
           authActions.innerHTML = `
-            <span class="auth-meta">${state.user.email}</span>
+            <span class="auth-meta">${escapeHTML(state.user.email || '')}</span>
             <a class="btn ghost" href="profile.html">Profile</a>
             <button class="btn ghost" id="logoutBtn">Log Out</button>
           `;
@@ -183,7 +183,7 @@
           document.getElementById("createSection").style.display = "block";
           document.getElementById("createBtnHeader").style.display = "inline-flex";
         } else {
-          authActions.innerHTML = `<a class="btn ghost" href="login.html?next=marketplace.html">Log In</a>`;
+          authActions.innerHTML = `<a class="btn ghost" href="login.html?next=${encodeURIComponent('marketplace.html')}">Log In</a>`;
         }
       }
 
@@ -221,22 +221,22 @@
         }
 
         container.innerHTML = `<div class="marketplace-grid">${state.listings.map(item => `
-          <div class="listing-card" data-id="${item.id}">
+          <div class="listing-card" data-id="${encodeURIComponent(item.id)}">
             <div class="listing-image">
-              ${item.images && item.images[0] ? `<img src="${item.images[0]}" alt="${item.title}">` : '📦'}
-              ${item.condition ? `<div class="listing-badge">${item.condition}</div>` : ''}
+              ${item.images && item.images[0] && isSafeUrl(item.images[0]) ? `<img src="${item.images[0]}" alt="${escapeHTML(item.title || '')}">` : '📦'}
+              ${item.condition ? `<div class="listing-badge">${escapeHTML(item.condition || '')}</div>` : ''}
             </div>
             <div class="listing-info">
-              <div class="listing-category">${item.category}</div>
-              <div class="listing-title">${item.title}</div>
-              <div class="listing-price">$${parseFloat(item.price).toFixed(2)}</div>
+              <div class="listing-category">${escapeHTML(item.category || '')}</div>
+              <div class="listing-title">${escapeHTML(item.title || '')}</div>
+              <div class="listing-price">$${escapeHTML((parseFloat(item.price) || 0).toFixed(2))}</div>
               <div class="listing-meta">
-                <span>👁 ${item.view_count || 0}</span>
-                <span>📍 ${item.location || "Online"}</span>
+                <span>👁 ${escapeHTML(String(item.view_count || 0))}</span>
+                <span>📍 ${escapeHTML(item.location || 'Online')}</span>
               </div>
               <div class="listing-seller">
                 <div class="seller-avatar"></div>
-                <span>${item.seller_name}</span>
+                <span>${escapeHTML(item.seller_name || '')}</span>
               </div>
             </div>
           </div>

@@ -196,7 +196,7 @@
 
         const authActions = document.getElementById("authActions");
         authActions.innerHTML = `
-          <span class="auth-meta">${state.user.email}</span>
+          <span class="auth-meta">${escapeHTML(state.user.email || '')}</span>
           <a class="btn ghost" href="profile.html">Profile</a>
           <button class="btn ghost" id="logoutBtn">Log Out</button>
         `;
@@ -211,7 +211,7 @@
           document.getElementById("verificationForm").innerHTML = `
             <div class="callout" style="background: #dbeafe; border-color: #0284c7;">
               <strong>✓ Already Verified</strong>
-              <p>Your profile has <strong>${badge.verification_level}</strong> verification status.</p>
+              <p>Your profile has <strong>${escapeHTML(badge.verification_level || '')}</strong> verification status.</p>
               <a href="profile.html" class="btn" style="margin-top: 12px;">Back to Profile</a>
             </div>
           `;
@@ -268,7 +268,7 @@
         const list = document.getElementById("docList");
         list.innerHTML = state.documents.map((doc, idx) => `
           <div class="doc-item">
-            <span>📎 ${doc.name}</span>
+            <span>📎 ${escapeHTML(doc.name || '')}</span>
             <button class="remove-doc" type="button" data-idx="${idx}">✕</button>
           </div>
         `).join("");

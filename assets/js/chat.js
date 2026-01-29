@@ -548,17 +548,20 @@ async function searchPeople(term) {
 }
 
 async function loadMessages(threadId) {
+  console.log("loadMessages called with threadId:", threadId);
   const result = await supabase
     .from("direct_messages")
     .select("*")
     .eq("thread_id", threadId)
     .order("created_at", { ascending: true });
+  console.log("loadMessages result:", result.data?.length || 0, "messages loaded");
   state.messages = result.data || [];
   renderMessages();
 }
 
 function renderMessages() {
   const list = document.getElementById("chatMessages");
+  console.log("renderMessages called, activeFriendId:", state.activeFriendId, "messages count:", state.messages.length);
   if (!list) return;
   if (!state.activeFriendId && !state.activeGroupId) {
     list.innerHTML = "<div class=\"callout\">Select a chat to start messaging.</div>";
@@ -653,7 +656,12 @@ function updateChatFormState() {
 }
 
 function subscribeToMessages(threadId) {
-  // Unsubscribe from previous channel
+  // Clear previous polling and unsubscribe from previous channel
+  if (state.pollingInterval) {
+    clearInterval(state.pollingInterval);
+    state.pollingInterval = null;
+  }
+
   if (state.channel) {
     try {
       supabase.removeChannel(state.channel);
@@ -700,10 +708,14 @@ function subscribeToMessages(threadId) {
       }
     )
     .subscribe();
+
+  // Start a lightweight polling fallback to ensure messages show even if realtime misses events
+  startMessagePoll(threadId);
 }
 
 async function selectFriend(friendId) {
   if (!friendId) return;
+  console.log("selectFriend called with:", friendId);
   state.activeFriendId = friendId;
   state.activeGroupId = null;
   renderFriendList();
@@ -797,6 +809,32 @@ async function selectGroup(groupId) {
   subscribeToMessages(groupId);
   updateChatFormState();
   setChatView("chat");
+}
+
+function startMessagePoll(threadId) {
+  if (state.pollingInterval) clearInterval(state.pollingInterval);
+  // Poll for messages newer than the last known message every 3s
+  state.pollingInterval = setInterval(async () => {
+    try {
+      const lastTs = state.messages.length ? state.messages[state.messages.length - 1].created_at : null;
+      let q = supabase.from("direct_messages").select("*").eq("thread_id", threadId).order("created_at", { ascending: true });
+      if (lastTs) q = q.gt("created_at", lastTs);
+      const res = await q;
+      if (res.data && res.data.length) {
+        res.data.forEach((m) => {
+          if (!state.messages.find((mm) => mm.id === m.id)) {
+            state.messages.push(m);
+          }
+        });
+        renderMessages();
+        await loadThreadPreviews();
+        renderFriendList();
+        renderGroupList();
+      }
+    } catch (err) {
+      console.warn("Polling messages failed:", err);
+    }
+  }, 3000);
 }
 
 function setupChatForm() {

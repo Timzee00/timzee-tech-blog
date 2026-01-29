@@ -28,6 +28,8 @@
         <button class="active" data-tab="compose">Compose</button>
         <button data-tab="posts">Manage Posts</button>
         <button data-tab="comments">Moderate Comments</button>
+        <button data-tab="announcements">Announcements</button>
+        <button data-tab="curator">🤖 Curator Bot</button>
         <button data-tab="users">Users</button>
         <button data-tab="themes">Themes</button>
         <button data-tab="ads">Ads</button>
@@ -139,6 +141,98 @@
             <tbody id="commentsTable"></tbody>
           </table>
         </div>
+      </section>
+
+      <section class="admin-card" data-panel="announcements" style="display:none;">
+        <h2>System Announcements</h2>
+        <form id="announcementForm" class="admin-form">
+          <input type="text" id="announcementTitle" placeholder="Announcement title" required>
+          <select id="announcementType" required>
+            <option value="">Select type...</option>
+            <option value="info">📢 Info</option>
+            <option value="warning">⚠️ Warning</option>
+            <option value="success">✅ Success</option>
+            <option value="critical">🔴 Critical</option>
+          </select>
+          <textarea id="announcementMessage" placeholder="Announcement message" rows="5" required></textarea>
+          <select id="announcementStatus">
+            <option value="published">Publish now</option>
+            <option value="draft">Save as draft</option>
+            <option value="scheduled">Schedule</option>
+          </select>
+          <input type="datetime-local" id="announcementPublishAt" placeholder="Publish date/time">
+          <div class="inline-actions">
+            <button class="btn" type="submit">Publish Announcement</button>
+            <button class="btn ghost" type="button" id="resetAnnouncementBtn">Reset</button>
+          </div>
+        </form>
+        <h3 style="margin-top: 30px;">Active Announcements</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Published</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="announcementsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card" data-panel="curator" style="display:none;">
+        <h2>🤖 Curator Bot Settings</h2>
+        <p class="hint">Manage automated content curation and RSS feeds</p>
+        
+        <h3>Add RSS Feed Source</h3>
+        <form id="curatorSourceForm" class="admin-form">
+          <input type="text" id="curatorSourceName" placeholder="Source name (e.g., TechCrunch)" required>
+          <input type="url" id="curatorSourceUrl" placeholder="RSS feed URL" required>
+          <select id="curatorSourceCategory" required></select>
+          <textarea id="curatorSourceDescription" placeholder="Description of this source" rows="3"></textarea>
+          <div class="inline-actions">
+            <button class="btn" type="submit">Add Source</button>
+            <button class="btn ghost" type="button" id="resetCuratorBtn">Reset</button>
+          </div>
+        </form>
+
+        <h3 style="margin-top: 30px;">Active Sources</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Source Name</th>
+                <th>Category</th>
+                <th>Feed URL</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="curatorSourcesTable"></tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top: 30px;">Bot Settings</h3>
+        <form id="botSettingsForm" class="admin-form">
+          <label class="badge">Check Interval (hours)</label>
+          <input type="number" id="botCheckInterval" value="6" min="1" max="24">
+          
+          <label class="badge">Auto-publish curated posts</label>
+          <input type="checkbox" id="botAutoPublish">
+          
+          <label class="badge">Automatically approve comments</label>
+          <input type="checkbox" id="botAutoApprove">
+          
+          <label class="badge">Max posts per day</label>
+          <input type="number" id="botMaxPostsPerDay" value="5" min="1" max="100">
+          
+          <div class="inline-actions">
+            <button class="btn" type="submit">Save Bot Settings</button>
+          </div>
+        </form>
       </section>
 
       <section class="admin-card" data-panel="users" style="display:none;">

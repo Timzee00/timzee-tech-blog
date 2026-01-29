@@ -32,7 +32,6 @@ import {
   escapeHTML,
   stripHTML,
   normalizeTags,
-  extractMentions,
   linkifyReferences
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
@@ -250,8 +249,9 @@ function renderPost(data, post) {
   `;
 
   const cover = document.getElementById("postCover");
-  cover.innerHTML = post.cover ? `<img src="${post.cover}" alt="${escapeHTML(post.title || "Post cover")}">` : "";
-  document.getElementById("postContent").innerHTML = post.content || "";
+  const safeCover = isSafeUrl(post.cover) ? post.cover : "";
+  cover.innerHTML = safeCover ? `<img src="${safeCover}" alt="${escapeHTML(post.title || "Post cover")}">` : "";
+  document.getElementById("postContent").innerHTML = sanitizeHTML(post.content || "");
 
   const gallery = document.getElementById("postGallery");
   if (gallery) {
@@ -531,13 +531,11 @@ async function notifyMentionTargets(usernames, post, commentId) {
       .filter((profile) => profile.id && profile.id !== state.user.id && profile.notify_mentions !== false)
       .map((profile) =>
         createNotification({
-          id: crypto.randomUUID(),
           user_id: profile.id,
           type: "mention",
           title: `${getDisplayName(state.user)} mentioned you`,
           body: `${getDisplayName(state.user)} mentioned you in "${post.title || "a post"}".`,
-          link,
-          created_at: new Date().toISOString()
+          link
         })
       )
   );

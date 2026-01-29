@@ -226,7 +226,7 @@
 
         if (state.user) {
           authActions.innerHTML = `
-            <span class="auth-meta">${getDisplayName(state.user)}</span>
+            <span class="auth-meta">${escapeHTML(getDisplayName(state.user))}</span>
             <a class="btn ghost" href="profile.html">Profile</a>
             <button class="btn ghost" id="logoutBtn">Log Out</button>
           `;
@@ -236,7 +236,7 @@
           });
           if (state.commentForm) document.getElementById("commentForm").style.display = "block";
         } else {
-          authActions.innerHTML = `<a class="btn ghost" href="login.html?next=novel.html%3Fid%3D${novelId}">Log In</a>`;
+          authActions.innerHTML = `<a class="btn ghost" href="login.html?next=novel.html%3Fid%3D${encodeURIComponent(novelId)}">Log In</a>`;
         }
       }
 
@@ -257,8 +257,10 @@
           document.getElementById("statusBadge").textContent = data.status;
           document.getElementById("synopsis").textContent = data.synopsis;
 
-          if (data.cover_url) {
-            document.getElementById("coverImg").innerHTML = `<img src="${data.cover_url}" alt="${data.title}">`;
+          if (data.cover_url && isSafeUrl(data.cover_url)) {
+            document.getElementById("coverImg").innerHTML = `<img src="${data.cover_url}" alt="${escapeHTML(data.title || 'Cover')}">`;
+          } else {
+            document.getElementById("coverImg").textContent = '📖';
           }
 
           // Show edit button and chapter form for author
