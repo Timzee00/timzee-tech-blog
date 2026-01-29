@@ -246,10 +246,40 @@ export function isSafeUrl(url) {
 export function sanitizeHTML(html) {
   if (!html) return "";
   if (typeof DOMPurify !== "undefined" && DOMPurify.sanitize) return DOMPurify.sanitize(String(html));
-  // Fallback: escape HTML to prevent XSS
+  // Fallback: basic DOM-based sanitizer (remove script/style and event handlers)
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(String(html), "text/html");
+    // Remove potentially dangerous elements
+    doc.querySelectorAll("script,style,link").forEach((el) => el.remove());
+    // Remove event handler attributes and javascript: hrefs
+    const all = doc.querySelectorAll("*");
+    all.forEach((el) => {
+      [...el.attributes].forEach((attr) => {
+        const name = attr.name.toLowerCase();
+        const val = attr.value || "";
+        if (name.startsWith("on") || (name === "href" && val.trim().toLowerCase().startsWith("javascript:"))) {
+          el.removeAttribute(attr.name);
+        }
+      });
+    });
+    return doc.body.innerHTML;
+  } catch (e) {
+    // As a last resort, escape HTML
+    const div = document.createElement("div");
+    div.textContent = String(html);
+    return div.innerHTML;
+  }
+}
+
+// Normalize HTML stored as escaped entities or raw HTML, then sanitize
+export function normalizeHtml(html) {
+  if (!html) return "";
+  // Unescape any HTML entities (handles legacy escaped content like &lt;p&gt;)
   const div = document.createElement("div");
-  div.textContent = String(html);
-  return div.innerHTML;
+  div.innerHTML = String(html);
+  const unescaped = div.innerHTML;
+  return sanitizeHTML(unescaped);
 }
 
 // Simple debug logger gated to localhost or when window.DEBUG is true
@@ -265,6 +295,7 @@ if (typeof window !== "undefined") {
   // Attach only if not already defined to avoid overwriting
   if (!window.escapeHTML) window.escapeHTML = (t) => (typeof t === "undefined" ? "" : String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;"));
   if (!window.sanitizeHTML) window.sanitizeHTML = sanitizeHTML;
+  if (!window.normalizeHtml) window.normalizeHtml = normalizeHtml;
   if (!window.isSafeUrl) window.isSafeUrl = isSafeUrl;
   if (!window.debug) window.debug = debug;
 }

@@ -2,17 +2,261 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=professional-panel.html">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Moved - Super Admin Panel</title>
-    <style>body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}</style>
+    <title>Deprecated — Super Admin Panel</title>
+    <meta http-equiv="refresh" content="1;url=professional-panel.html">
+    <link rel="stylesheet" href="../assets/css/admin.css">
   </head>
-  <body>
-    <div style="text-align:center;max-width:600px;padding:24px;">
-      <h1>Page moved</h1>
-      <p>This page has been consolidated into <strong><a href="professional-panel.html">professional-panel.html</a></strong>. You will be redirected shortly.</p>
-      <p>If your browser doesn't redirect automatically, <a href="professional-panel.html">click here</a>.</p>
-      <script>setTimeout(()=>{window.location.href='professional-panel.html'},100);</script>
-    </div>
+  <body class="admin-shell">
+    <main class="container" style="padding: 60px; text-align:center;">
+      <h1>Redirecting…</h1>
+      <p>This page has been merged into <a href="professional-panel.html">/super/professional-panel.html</a> and removed to avoid duplication.</p>
+      <p>If you were expecting the old panel, you will be redirected shortly. If not, click the link above.</p>
+    </main>
+
+    <main class="container admin-panel" id="superApp"> <!-- NOTE: This file is deprecated; content was merged into professional-panel.html -->
+      <nav class="admin-nav">
+        <button class="active" data-tab="admins">Admins</button>
+        <button data-tab="users">Users</button>
+        <button data-tab="analysis">Site Analysis</button>
+        <button data-tab="posts">Posts</button>
+        <button data-tab="settings">Site Settings</button>
+        <button data-tab="ads">AdSense</button>
+        <button data-tab="scout">Scout Bot</button>
+        <button data-tab="danger">Danger Zone</button>
+      </nav>
+
+      <section class="admin-card" data-panel="admins">
+        <h2>Admin Accounts</h2>
+        <form id="adminCreateForm" class="admin-form">
+          <input type="text" id="newAdminName" placeholder="Display name" required>
+          <input type="text" id="newAdminUsername" placeholder="Username (optional)">
+          <input type="email" id="newAdminUser" placeholder="Admin email" required>
+          <input type="password" id="newAdminPass" placeholder="Password (leave blank to promote existing)">
+          <button class="btn" type="submit">Add / Promote Admin</button>
+        </form>
+        <p class="hint" id="adminCreateMessage"></p>
+        <div style="margin-top:16px;">
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Admin</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Posts</th>
+                  <th>Last Post</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="adminTable"></tbody>
+            </table>
+          </div>
+          <div id="adminPostsDetail" class="callout" style="margin-top:12px; display:none;"></div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <h3>Admin Requests</h3>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th>Message</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="adminRequestTableSuper"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-card" data-panel="users" style="display:none;">
+        <h2>Users</h2>
+        <div class="inline-actions admin-search">
+          <input type="text" id="superUserSearchInput" placeholder="Search by name or email">
+          <button class="btn ghost" id="superUserSearchBtn" type="button">Search</button>
+          <button class="btn ghost" id="superUserClearBtn" type="button">Clear</button>
+        </div>
+        <div class="inline-actions admin-pager">
+          <button class="btn ghost" id="superUserPrevBtn" type="button">Prev</button>
+          <span class="hint" id="superUserPageInfo">Page 1</span>
+          <button class="btn ghost" id="superUserNextBtn" type="button">Next</button>
+        </div>
+        <p class="hint" id="superUsersHint">Verify accounts, assign tiers, or pause access.</p>
+        <div class="table-wrap" style="margin-top:12px;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Verified</th>
+                <th>Tier</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="superUsersTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card" data-panel="analysis" style="display:none;">
+        <h2>Site Analysis</h2>
+        <div class="stats-grid" id="analysisStats"></div>
+        <div class="callout" id="analysisTopPosts" style="margin-top:16px;"></div>
+      </section>
+
+      <section class="admin-card" data-panel="posts" style="display:none;">
+        <h2>Manage Posts</h2>
+        <div class="admin-panel-split">
+          <div>
+            <div class="table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="superPostsTable"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <form id="superPostForm" class="admin-form">
+              <input type="text" id="superPostTitle" placeholder="Post title" required>
+              <select id="superPostCategory" required></select>
+              <input type="text" id="superPostTags" placeholder="Tags (comma separated)">
+              <input type="text" id="superPostCover" placeholder="Cover image URL (optional)">
+              <select id="superPostStatus">
+                <option value="published">Published</option>
+                <option value="pending">Pending Review</option>
+                <option value="draft">Draft</option>
+                <option value="scheduled">Scheduled</option>
+              </select>
+              <input type="datetime-local" id="superPostPublishAt" placeholder="Publish date/time">
+              <label class="badge"><input type="checkbox" id="superPostPinned"> Mark as Popular</label>
+              <div class="editor-toolbar word-toolbar" id="superPostToolbar">
+                <button type="button" data-action="bold"><strong>B</strong></button>
+                <button type="button" data-action="italic"><em>I</em></button>
+                <button type="button" data-action="underline"><span style="text-decoration:underline;">U</span></button>
+                <span class="toolbar-sep"></span>
+                <button type="button" data-action="h2">Heading 2</button>
+                <button type="button" data-action="h3">Heading 3</button>
+                <button type="button" data-action="quote">Quote</button>
+                <span class="toolbar-sep"></span>
+                <button type="button" data-action="ul">Bullets</button>
+                <button type="button" data-action="ol">Numbering</button>
+                <span class="toolbar-sep"></span>
+                <button type="button" data-action="left">Left</button>
+                <button type="button" data-action="center">Center</button>
+                <button type="button" data-action="right">Right</button>
+                <span class="toolbar-sep"></span>
+                <button type="button" data-action="link">Link</button>
+                <button type="button" data-action="undo">Undo</button>
+                <button type="button" data-action="redo">Redo</button>
+                <button type="button" data-action="clear">Clear</button>
+              </div>
+              <div id="superPostEditor" class="rich-editor" contenteditable="true" data-placeholder="Write your post..." aria-label="Post editor"></div>
+              <textarea id="superPostContent" class="hidden" aria-hidden="true"></textarea>
+              <div class="inline-actions">
+                <button class="btn" type="submit" id="superPostSave">Save Changes</button>
+                <button class="btn ghost" type="button" id="superPostReviewBtn">Review Post</button>
+                <button class="btn ghost" type="button" id="superPostReset">Reset</button>
+              </div>
+            </form>
+            <div id="superPostReview" class="post-review hidden">
+              <div class="review-header">
+                <h3>Post Review</h3>
+                <button class="btn ghost" type="button" id="superCloseReviewBtn">Close</button>
+              </div>
+              <div class="review-body">
+                <div class="chip" id="superReviewCategory">Category</div>
+                <h2 id="superReviewTitle">Post title</h2>
+                <p class="tagline" id="superReviewTags"></p>
+                <div id="superReviewCover" class="review-cover"></div>
+                <div id="superReviewContent" class="post-content"></div>
+              </div>
+            </div>
+            <p class="hint" id="superPostHint"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-card" data-panel="settings" style="display:none;">
+        <h2>Site Settings</h2>
+        <form id="settingsForm" class="admin-form">
+          <input type="text" id="siteNameInput" placeholder="Site name" required>
+          <input type="text" id="siteTaglineInput" placeholder="Tagline" required>
+          <label class="badge">Theme Accent</label>
+          <input type="color" id="accentColorInput" value="#0f766e">
+          <label class="badge">Site Theme</label>
+          <select id="siteThemeSelect">
+            <option value="">Default</option>
+          </select>
+          <div class="inline-actions">
+            <button class="btn ghost" type="button" id="seedThemesBtn">Add Starter Themes</button>
+          </div>
+          <label class="badge">Community Rules</label>
+          <textarea id="rulesInput" placeholder="House rules shown to readers"></textarea>
+          <div>
+            <label><input type="checkbox" id="moderationToggle"> Require comment approval</label>
+          </div>
+          <div>
+            <label><input type="checkbox" id="imageToggle"> Allow image comments</label>
+          </div>
+          <h3>Support & Donations</h3>
+          <input type="text" id="whatsappNumberInput" placeholder="WhatsApp support number (+234...)">
+          <input type="text" id="whatsappMessageInput" placeholder="Default WhatsApp message">
+          <label><input type="checkbox" id="donationToggle"> Enable donation button</label>
+          <input type="text" id="donationTitleInput" placeholder="Donation title">
+          <textarea id="donationDetailsInput" placeholder="Donation details (bank, mobile money, wallet)"></textarea>
+          <input type="url" id="donationUrlInput" placeholder="Donation link (optional)">
+          <button class="btn" type="submit">Save Settings</button>
+        </form>
+      </section>
+
+      <section class="admin-card" data-panel="ads" style="display:none;">
+        <h2>AdSense Settings</h2>
+        <form id="adsForm" class="admin-form">
+          <input type="text" id="publisherIdInput" placeholder="Publisher ID (ca-pub-xxxxxxxxxxxx)">
+          <input type="text" id="homeTopSlotInput" placeholder="Home Top Slot ID">
+          <input type="text" id="sidebarSlotInput" placeholder="Sidebar Slot ID">
+          <input type="text" id="postInlineSlotInput" placeholder="Post Inline Slot ID">
+          <div>
+            <label><input type="checkbox" id="adsToggle"> Enable AdSense on site</label>
+          </div>
+          <button class="btn" type="submit">Update Ads</button>
+        </form>
+        <p class="hint">AdSense only works on a live domain with verified ownership.</p>
+      </section>
+
+      <section class="admin-card" data-panel="scout" style="display:none;">
+        <h2>News Scout Bot</h2>
+        <p class="hint">Manually trigger the bot to fetch tech news and practical tech tips. Set NEWS_FEEDS and NEWS_TIPS_FEEDS in Netlify env.</p>
+        <div class="inline-actions">
+          <button class="btn" id="runScoutBtn">Run Bot Now</button>
+        </div>
+        <p class="hint" id="scoutStatus" style="margin-top:12px;"></p>
+      </section>
+
+      <section class="admin-card" data-panel="danger" style="display:none;">
+        <h2>Danger Zone</h2>
+        <p class="hint">Reset wipes posts, comments, and settings back to the demo defaults.</p>
+        <button class="btn" id="resetDataBtn">Reset to Demo Data</button>
+      </section>
+    </main>
+
+    <!-- deprecated: panel.html merged into professional-panel.html -->
   </body>
 </html>

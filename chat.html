@@ -80,6 +80,29 @@
           </div>
         </aside>
 
+        <!-- Friend-picker modal for mobile-friendly group creation -->
+        <div class="modal hidden" id="friendPickerModal" aria-hidden="true" role="dialog" aria-labelledby="friendPickerTitle">
+          <div class="modal-panel">
+            <div class="modal-header">
+              <h3 id="friendPickerTitle">Create Group</h3>
+              <button class="btn ghost modal-close" id="friendPickerClose">Close</button>
+            </div>
+            <div class="modal-body">
+              <label for="groupNameInput" class="sr-only">Group name</label>
+              <input id="groupNameInput" type="text" placeholder="Group name" class="input" />
+              <div class="picker-search">
+                <input id="pickerSearch" type="search" placeholder="Find friends by name or username" />
+              </div>
+              <div id="pickerList" class="picker-list"></div>
+              <div id="pickerNoResults" class="callout" style="display:none;">No friends found.</div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn ghost" id="friendPickerCancel">Cancel</button>
+              <button class="btn" id="friendPickerCreate">Create Group</button>
+            </div>
+          </div>
+        </div>
+
         <section class="chat-pane" data-reveal>
           <div class="chat-pane-header" id="chatHeader">
             <button class="btn ghost chat-back" type="button" id="chatBackBtn">Back</button>

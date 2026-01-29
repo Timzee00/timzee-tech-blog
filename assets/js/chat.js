@@ -656,12 +656,7 @@ function updateChatFormState() {
 }
 
 function subscribeToMessages(threadId) {
-  // Clear previous polling and unsubscribe from previous channel
-  if (state.pollingInterval) {
-    clearInterval(state.pollingInterval);
-    state.pollingInterval = null;
-  }
-
+  // Unsubscribe from previous channel
   if (state.channel) {
     try {
       supabase.removeChannel(state.channel);
@@ -708,9 +703,6 @@ function subscribeToMessages(threadId) {
       }
     )
     .subscribe();
-
-  // Start a lightweight polling fallback to ensure messages show even if realtime misses events
-  startMessagePoll(threadId);
 }
 
 async function selectFriend(friendId) {
@@ -809,32 +801,6 @@ async function selectGroup(groupId) {
   subscribeToMessages(groupId);
   updateChatFormState();
   setChatView("chat");
-}
-
-function startMessagePoll(threadId) {
-  if (state.pollingInterval) clearInterval(state.pollingInterval);
-  // Poll for messages newer than the last known message every 3s
-  state.pollingInterval = setInterval(async () => {
-    try {
-      const lastTs = state.messages.length ? state.messages[state.messages.length - 1].created_at : null;
-      let q = supabase.from("direct_messages").select("*").eq("thread_id", threadId).order("created_at", { ascending: true });
-      if (lastTs) q = q.gt("created_at", lastTs);
-      const res = await q;
-      if (res.data && res.data.length) {
-        res.data.forEach((m) => {
-          if (!state.messages.find((mm) => mm.id === m.id)) {
-            state.messages.push(m);
-          }
-        });
-        renderMessages();
-        await loadThreadPreviews();
-        renderFriendList();
-        renderGroupList();
-      }
-    } catch (err) {
-      console.warn("Polling messages failed:", err);
-    }
-  }, 3000);
 }
 
 function setupChatForm() {
@@ -1035,28 +1001,37 @@ function setupGroupCreation() {
   const btn = document.getElementById("newGroupBtn");
   if (!btn) return;
   btn.addEventListener("click", async () => {
-    try {
-      const name = prompt("Group name");
-      if (!name) return;
-      const rawMembers = prompt("Add members by email or username (comma separated)");
-      const tokens = rawMembers
-        ? rawMembers.split(",").map((token) => token.trim()).filter(Boolean)
-        : [];
-      const memberIds = new Set([state.user.id]);
-      const missing = [];
-      for (const token of tokens) {
-        const result = await supabase
-          .from("profiles")
-          .select("id, email, username")
-          .or(`email.ilike.%${token}%,username.ilike.%${token}%,display_name.ilike.%${token}%`)
-          .limit(1)
-          .maybeSingle();
-        if (result.data?.id) {
-          memberIds.add(result.data.id);
-        } else {
-          missing.push(token);
-        }
+    showFriendPicker();
+  });
+
+  // Modal elements
+  const modal = document.getElementById("friendPickerModal");
+  const close = document.getElementById("friendPickerClose");
+  const cancel = document.getElementById("friendPickerCancel");
+  const create = document.getElementById("friendPickerCreate");
+  const pickerSearch = document.getElementById("pickerSearch");
+  const pickerList = document.getElementById("pickerList");
+  const groupNameInput = document.getElementById("groupNameInput");
+
+  if (close) close.addEventListener("click", hideFriendPicker);
+  if (cancel) cancel.addEventListener("click", hideFriendPicker);
+
+  if (pickerSearch) {
+    pickerSearch.addEventListener("input", async (e) => {
+      const q = e.target.value || "";
+      renderFriendPickerList(q);
+    });
+  }
+
+  if (create) {
+    create.addEventListener("click", async () => {
+      const selected = Array.from(pickerList.querySelectorAll('.picker-item.selected')).map((el) => el.dataset.id);
+      const name = (groupNameInput && groupNameInput.value && groupNameInput.value.trim()) || null;
+      if (!name) {
+        alert('Please enter a group name.');
+        return;
       }
+      const memberIds = new Set([state.user.id, ...selected]);
       const threadId = crypto.randomUUID();
       const now = new Date().toISOString();
       const createThread = await supabase.from("chat_threads").insert({
@@ -1073,28 +1048,112 @@ function setupGroupCreation() {
       }
       const memberPayload = Array.from(memberIds).map((userId) => ({
         id: crypto.randomUUID(),
-        thread_id: threadId,
         user_id: userId,
         role: userId === state.user.id ? "owner" : "member",
         joined_at: now
       }));
-      const memberResult = await supabase.from("chat_members").insert(memberPayload);
+      // Use the RPC helper to add members in a single trusted call to avoid RLS insert failures
+      const memberResult = await supabase.rpc("add_chat_members", { thread: threadId, members: memberPayload });
       if (memberResult.error) {
-        console.error("Error creating members:", memberResult.error);
-        alert(memberResult.error.message || "Group members failed.");
-        return;
+        console.error("Error creating members via RPC:", memberResult.error);
+        // Fallback: attempt direct insert (may fail if RLS blocks)
+        try {
+          const fallback = await supabase.from("chat_members").insert(
+            memberPayload.map((m) => ({ ...m, thread_id: threadId }))
+          );
+          if (fallback.error) throw fallback.error;
+        } catch (err) {
+          console.error("Error creating members:", err);
+          alert(err.message || "Group members failed.");
+          return;
+        }
       }
+      hideFriendPicker();
       await loadGroups();
       await loadThreadPreviews();
       renderGroupList();
-      if (missing.length) {
-        alert(`Could not find: ${missing.join(", ")}`);
-      }
       await selectGroup(threadId);
-    } catch (err) {
-      console.error("Group creation error:", err);
-      alert("An error occurred while creating the group: " + err.message);
-    }
+    });
+  }
+}
+
+let __friendPickerEscHandler = null;
+function showFriendPicker() {
+  const modal = document.getElementById("friendPickerModal");
+  const pickerList = document.getElementById("pickerList");
+  const pickerSearch = document.getElementById("pickerSearch");
+  const groupNameInput = document.getElementById("groupNameInput");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  // populate list
+  if (pickerSearch) pickerSearch.value = "";
+  if (groupNameInput) {
+    groupNameInput.value = "";
+    try { groupNameInput.focus(); } catch (e) {}
+  }
+  renderFriendPickerList();
+  // add escape key handler
+  __friendPickerEscHandler = function (e) {
+    if (e.key === 'Escape') hideFriendPicker();
+  };
+  document.addEventListener('keydown', __friendPickerEscHandler);
+}
+
+function hideFriendPicker() {
+  const modal = document.getElementById("friendPickerModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  if (__friendPickerEscHandler) {
+    document.removeEventListener('keydown', __friendPickerEscHandler);
+    __friendPickerEscHandler = null;
+  }
+}
+
+function renderFriendPickerList(query = "") {
+  const pickerList = document.getElementById("pickerList");
+  const noResults = document.getElementById("pickerNoResults");
+  if (!pickerList) return;
+  const q = query.trim().toLowerCase();
+  const friends = state.friends
+    .map((id) => ({ id, profile: state.friendProfiles[id] }))
+    .filter(Boolean)
+    .filter((item) => {
+      if (!q) return true;
+      const name = (item.profile?.display_name || "").toLowerCase();
+      const username = (item.profile?.username || "").toLowerCase();
+      const email = (item.profile?.email || "").toLowerCase();
+      return name.includes(q) || username.includes(q) || email.includes(q);
+    });
+  if (!friends.length) {
+    pickerList.innerHTML = "";
+    if (noResults) noResults.style.display = "block";
+    return;
+  }
+  if (noResults) noResults.style.display = "none";
+  pickerList.innerHTML = friends
+    .map((item) => `
+      <div class="picker-item" data-id="${item.id}" tabindex="0">
+        <img src="${item.profile?.avatar_url || 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80'}" alt="">
+        <div class="meta">
+          <div class="name">${escapeHTML(item.profile?.display_name || 'Member')}</div>
+          <div class="sub">${escapeHTML(item.profile?.username || item.profile?.email || '')}</div>
+        </div>
+      </div>
+    `)
+    .join("");
+
+  pickerList.querySelectorAll('.picker-item').forEach((el) => {
+    el.addEventListener('click', () => {
+      el.classList.toggle('selected');
+    });
+    el.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        el.classList.toggle('selected');
+      }
+    });
   });
 }
 

@@ -689,7 +689,7 @@ function renderSuperPostsTable() {
         document.getElementById("superPostStatus").dispatchEvent(new Event("change"));
         document.getElementById("superPostPinned").checked = !!post.pinned;
         const editor = document.getElementById("superPostEditor");
-        if (editor) editor.innerHTML = post.content || "";
+        if (editor) editor.innerHTML = window.normalizeHtml ? window.normalizeHtml(post.content || "") : (post.content || "");
         const hint = document.getElementById("superPostHint");
         if (hint) hint.textContent = "Editing post.";
       }
@@ -726,6 +726,7 @@ function setupSuperPostForm() {
     const editor = document.getElementById("superPostEditor");
     const contentRaw = editor?.innerHTML?.trim() || "";
     const contentText = editor?.innerText?.trim() || "";
+    const content = window.normalizeHtml ? window.normalizeHtml(contentRaw) : contentRaw;
     if (!title || !contentText) return;
     if (status === "scheduled" && !publishAt) {
       const hint = document.getElementById("superPostHint");
@@ -742,7 +743,7 @@ function setupSuperPostForm() {
       status,
       publish_at: status === "scheduled" ? publishAt : null,
       pinned,
-      content: contentRaw,
+      content,
       updated_at: new Date().toISOString()
     };
     const result = await updatePost(editingPostId, updates);
@@ -774,7 +775,8 @@ function setupSuperPostReview() {
     const tags = document.getElementById("superPostTags").value.trim();
     const coverUrl = document.getElementById("superPostCover").value.trim();
     const editor = document.getElementById("superPostEditor");
-    const content = editor?.innerHTML?.trim() || "";
+    const raw = editor?.innerHTML?.trim() || "";
+    const content = window.normalizeHtml ? window.normalizeHtml(raw) : raw;
 
     document.getElementById("superReviewTitle").textContent = title || "Untitled post";
     document.getElementById("superReviewCategory").textContent = categoryLabel;

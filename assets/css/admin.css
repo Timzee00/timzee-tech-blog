@@ -388,10 +388,33 @@ select:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
-.theme-card {
-  border-radius: 14px;
-  padding: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
+/* Responsive improvements to prevent content clipping and horizontal overflow */
+@media (max-width: 900px) {
+  .admin-panel {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .admin-nav {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px;
+    white-space: nowrap;
+  }
+  .admin-nav button {
+    flex: 0 0 auto;
+    min-width: 120px;
+  }
+  .admin-card { padding: 16px; }
+  .admin-table { font-size: 13px; min-width: 0; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .image-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+}
+
+@media (max-width: 520px) {
+  .admin-nav button { min-width: 90px; padding: 10px 8px; font-size: 13px; }
+  .rich-editor { min-height: 180px; }
+}
   background: rgba(15, 23, 42, 0.6);
   display: grid;
   gap: 8px;

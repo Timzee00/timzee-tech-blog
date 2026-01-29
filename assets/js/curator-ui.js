@@ -110,7 +110,10 @@ class CuratorManager {
               <h3>Content Sources</h3>
               <p style="color: #666; margin: 0;">RSS feeds and content sources for the bot to monitor</p>
             </div>
-            <button class="btn btn-primary" id="addSourceBtn">+ Add Source</button>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn btn-primary" id="addSourceBtn">+ Add Source</button>
+              <button class="btn btn-ghost" id="importFeedsBtn">Import Recommended Feeds</button>
+            </div>
           </div>
 
           <div id="addSourceForm" class="form-card" style="display: none; margin-bottom: 20px;">
@@ -342,6 +345,26 @@ class CuratorManager {
     this.container.querySelector("#syncNowBtn").addEventListener("click", () => {
       alert("Sync triggered! Check back in a few moments for new articles.");
     });
+
+    // Import recommended feeds
+    const importBtn = this.container.querySelector("#importFeedsBtn");
+    if (importBtn) {
+      importBtn.addEventListener("click", async () => {
+        importBtn.disabled = true;
+        importBtn.textContent = "Importing...";
+        try {
+          await this.importRecommendedFeeds();
+          alert("Recommended feeds imported. Check the sources list.");
+          await this.load();
+        } catch (err) {
+          console.error("Import failed:", err);
+          alert("Import failed: " + (err.message || err));
+        } finally {
+          importBtn.disabled = false;
+          importBtn.textContent = "Import Recommended Feeds";
+        }
+      });
+    }
   }
 
   async load() {
@@ -377,7 +400,9 @@ class CuratorManager {
       return;
     }
 
-    list.innerHTML = this.sources.map(source => `
+    list.innerHTML = this.sources.map(source => {
+      const active = (typeof source.is_active !== "undefined") ? source.is_active : source.enabled;
+      return `
       <div class="source-item">
         <div class="source-info">
           <h4>${source.name}</h4>
@@ -385,15 +410,15 @@ class CuratorManager {
           <p style="font-size: 11px; color: #0f766e;">📡 ${source.source_type.toUpperCase()} • ⏱️ Every ${source.fetch_frequency_minutes} mins</p>
         </div>
         <div class="source-actions">
-          <button class="btn ${source.is_active ? "btn-ghost" : "btn-danger"}" data-source-id="${source.id}" data-type="toggle-source">
-            ${source.is_active ? "🟢 Active" : "⚪ Inactive"}
+          <button class="btn ${active ? "btn-ghost" : "btn-danger"}" data-source-id="${source.id}" data-type="toggle-source">
+            ${active ? "🟢 Active" : "⚪ Inactive"}
           </button>
           <button class="btn btn-danger" data-source-id="${source.id}" data-type="delete-source">
             Delete
           </button>
         </div>
       </div>
-    `).join("");
+    `}).join("");
 
     list.querySelectorAll(".btn").forEach(btn => {
       btn.addEventListener("click", (e) => this.handleSourceAction(e, btn));
@@ -495,6 +520,30 @@ class CuratorManager {
     this.container.querySelector("#sourceType").value = "rss";
     this.container.querySelector("#sourceCategory").value = "";
     this.container.querySelector("#sourceDescription").value = "";
+  }
+
+  async importRecommendedFeeds() {
+    // Small curated list of high-quality tech feeds
+    try {
+      const module = await import("./recommended-feeds.js");
+      const feeds = module.RECOMMENDED_FEEDS || [];
+      for (const f of feeds) {
+        // Skip duplicates (check both possible column names)
+        const exists = (this.sources || []).some(s => s.url === f.url || s.feed_url === f.url);
+        if (exists) continue;
+        const isActive = await testCuratorSource(f.url, "rss");
+        await createCuratorSource({
+          name: f.name,
+          url: f.url,
+          source_type: "rss",
+          category: f.category,
+          description: f.description,
+          is_active: isActive
+        });
+      }
+    } catch (error) {
+      throw error;
+    }
   }
 
   loadSettings() {

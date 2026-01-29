@@ -56,6 +56,12 @@
               <p>We can guide your team through ads, roles, and publishing workflows.</p>
             </article>
           </div>
+
+          <section style="margin-top:24px;" id="faqBlock">
+            <h2>FAQ</h2>
+            <p style="color:#666;">Frequently asked questions by community members. Click a question to expand the answer.</p>
+            <div id="faqList">Loading FAQs...</div>
+          </section>
           <form class="form-grid" style="margin-top:24px;" id="supportForm">
             <input type="text" name="name" placeholder="Full name" required>
             <input type="email" name="email" placeholder="Email address" required>
@@ -65,6 +71,19 @@
           </form>
           <div class="callout" id="supportStatus" style="margin-top:18px; display:none;"></div>
           <div class="callout" style="margin-top:12px;">Email: support@timzeetechhub.com · Response within 24 hours.</div>
+
+          <script type="module">
+            import { getPublishedFaqs } from './assets/js/faq.js';
+            function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+            (async function(){
+              try{
+                const container = document.getElementById('faqList');
+                const faqs = await getPublishedFaqs();
+                if(!faqs.length){ container.innerHTML = '<p style="color:#666;">No FAQs available yet.</p>'; return; }
+                container.innerHTML = faqs.map(f => `\n                  <details style="margin-bottom:12px; padding:12px; border:1px solid #eee; border-radius:6px;"><summary style="font-weight:600; cursor:pointer;">${escapeHtml(f.question)}</summary><div style="margin-top:8px; color:#333;">${escapeHtml(f.answer).replace(/\n/g,'<br>')}</div></details>\n                `).join('');
+              }catch(err){ console.error('FAQ load failed', err); document.getElementById('faqList').innerHTML = '<p style="color:#f00;">Failed to load FAQs</p>'; }
+            })();
+          </script>
         </section>
       </div>
     </main>

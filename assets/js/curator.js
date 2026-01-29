@@ -40,19 +40,31 @@ export async function getActiveCuratorSources() {
 
 export async function createCuratorSource(sourceData) {
   try {
+    // Insert both 'url' and 'feed_url' to be compatible with mixed column names
+    const payload = {
+      name: sourceData.name,
+      url: sourceData.url,
+      feed_url: sourceData.url,
+      source_type: sourceData.source_type || "rss",
+      description: sourceData.description,
+      category: sourceData.category,
+      api_key: sourceData.api_key,
+      headers: sourceData.headers || {},
+      filter_keywords: sourceData.filter_keywords || [],
+      exclude_keywords: sourceData.exclude_keywords || []
+    };
+
+    if (typeof sourceData.is_active !== "undefined") {
+      payload.is_active = sourceData.is_active;
+      payload.enabled = sourceData.is_active; // support both column names
+    }
+    if (sourceData.created_by) payload.created_by = sourceData.created_by;
+    if (sourceData.created_at) payload.created_at = sourceData.created_at;
+    if (sourceData.fetch_frequency_minutes) payload.fetch_frequency_minutes = sourceData.fetch_frequency_minutes;
+
     const { data, error } = await supabase
       .from("curator_sources")
-      .insert({
-        name: sourceData.name,
-        url: sourceData.url,
-        source_type: sourceData.source_type || "rss",
-        description: sourceData.description,
-        category: sourceData.category,
-        api_key: sourceData.api_key,
-        headers: sourceData.headers || {},
-        filter_keywords: sourceData.filter_keywords || [],
-        exclude_keywords: sourceData.exclude_keywords || []
-      });
+      .insert(payload);
     if (error) throw error;
     return data;
   } catch (error) {
@@ -100,9 +112,10 @@ export async function deleteCuratorSource(sourceId) {
 
 export async function toggleCuratorSourceStatus(sourceId, isActive) {
   try {
+    const updatePayload = { is_active: isActive, enabled: isActive };
     const { data, error } = await supabase
       .from("curator_sources")
-      .update({ is_active: isActive })
+      .update(updatePayload)
       .eq("id", sourceId);
     if (error) throw error;
     return data;

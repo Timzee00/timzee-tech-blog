@@ -29,8 +29,10 @@
         <button data-tab="posts">Manage Posts</button>
         <button data-tab="comments">Moderate Comments</button>
         <button data-tab="announcements">Announcements</button>
+        <button data-tab="faq">FAQ</button>
         <button data-tab="curator">🤖 Curator Bot</button>
         <button data-tab="users">Users</button>
+        <button data-tab="authors">Authors</button>
         <button data-tab="themes">Themes</button>
         <button data-tab="ads">Ads</button>
         <button data-tab="requests">Requests</button>
@@ -183,11 +185,45 @@
         </div>
       </section>
 
+      <section class="admin-card" data-panel="faq" style="display:none;">
+        <h2>FAQ Manager</h2>
+        <p class="hint">Create and update the support FAQ shown on the public Support page.</p>
+        <form id="faqForm" class="admin-form">
+          <input type="hidden" id="faqId">
+          <input type="text" id="faqQuestion" placeholder="Question" required>
+          <textarea id="faqAnswer" placeholder="Answer" rows="4" required></textarea>
+          <input type="text" id="faqCategory" placeholder="Category (optional)">
+          <label style="display:block; margin-top:8px;"><input type="checkbox" id="faqPublished" checked> Published</label>
+          <div class="inline-actions" style="margin-top:12px;">
+            <button class="btn" type="submit" id="faqSaveBtn">Save FAQ</button>
+            <button class="btn ghost" type="button" id="faqResetBtn">Reset</button>
+          </div>
+        </form>
+
+        <h3 style="margin-top:20px;">FAQ List</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Question</th>
+                <th>Category</th>
+                <th>Published</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="faqTable"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="admin-card" data-panel="curator" style="display:none;">
         <h2>🤖 Curator Bot Settings</h2>
         <p class="hint">Manage automated content curation and RSS feeds</p>
         
-        <h3>Add RSS Feed Source</h3>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+          <h3 style="margin:0;">Add RSS Feed Source</h3>
+          <button class="btn btn-ghost" id="importFeedsAdminBtn" style="margin-left:12px;">Import Recommended Feeds</button>
+        </div>
         <form id="curatorSourceForm" class="admin-form">
           <input type="text" id="curatorSourceName" placeholder="Source name (e.g., TechCrunch)" required>
           <input type="url" id="curatorSourceUrl" placeholder="RSS feed URL" required>
@@ -262,6 +298,34 @@
               </tr>
             </thead>
             <tbody id="usersTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-card" data-panel="authors" style="display:none;">
+        <h2>Content Authors</h2>
+        <p class="hint">Manage authors and their posting access. Promote users to author and toggle their active status.</p>
+
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+          <input type="text" id="authorSearchInput" placeholder="Search users to promote (name or email)" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
+          <button class="btn ghost" id="authorSearchBtn" type="button">Search</button>
+        </div>
+
+        <div id="authorSearchResults" style="display:none; margin-bottom:12px;"></div>
+
+        <h3 style="margin-top:20px;">Authors Directory</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Author</th>
+                <th>Email</th>
+                <th>Posts</th>
+                <th>Active</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="authorsTable"></tbody>
           </table>
         </div>
       </section>

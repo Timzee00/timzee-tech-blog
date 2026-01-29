@@ -42,6 +42,8 @@ import {
   normalizeTags,
   escapeHTML
 } from "./utils.js";
+import { getPublishedFaqs, getAllFaqs, createFaq, updateFaq, deleteFaq } from "./faq.js";
+import { getAllAuthors, promoteToAuthor, demoteAuthor, toggleAuthorStatus, searchUsersForPromotion } from "./moderator.js";
 
 let editingPostId = null;
 let coverPreviewUrl = "";
@@ -492,29 +494,85 @@ async function setupCuratorBot() {
     });
   }
 
-  // Setup bot settings form
+  // Import recommended feeds (admin button)
+  const importAdminBtn = document.getElementById("importFeedsAdminBtn");
+  if (importAdminBtn) {
+    importAdminBtn.addEventListener("click", async () => {
+      if (!confirm("Import recommended tech RSS feeds? This will add multiple sources.")) return;
+      importAdminBtn.disabled = true;
+      importAdminBtn.textContent = "Importing...";
+      try {
+        const module = await import("./recommended-feeds.js");
+        const feeds = module.RECOMMENDED_FEEDS || [];
+        for (const f of feeds) {
+          // Skip duplicate URLs (check both 'feed_url' and 'url' columns)
+          const existing = await supabase.from("curator_sources").select("id").or(`feed_url.eq.${f.url},url.eq.${f.url}`).maybeSingle();
+          if (existing && existing.data) continue;
+          const payload = {
+            id: crypto.randomUUID(),
+            name: f.name,
+            feed_url: f.url,
+            url: f.url,
+            category_id: state.categories.length ? state.categories[0].id : null,
+            description: f.description,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            created_by: state.user.id
+          };
+          await supabase.from("curator_sources").insert(payload);
+        }
+        alert("Recommended feeds imported. Refreshing list.");
+        await renderCuratorSources();
+      } catch (error) {
+        console.error("Import feeds failed:", error);
+        alert("Import failed: " + (error.message || error));
+      } finally {
+        importAdminBtn.disabled = false;
+        importAdminBtn.textContent = "Import Recommended Feeds";
+      }
+    });
+  }
+
+  // Setup bot settings form (load and update the actual settings row)
   const settingsForm = document.getElementById("botSettingsForm");
   if (settingsForm) {
+    // Load existing settings and populate the form
+    try {
+      const settingsRow = await supabase.from("curator_settings").select("*").maybeSingle();
+      const s = settingsRow.data || null;
+      if (s) {
+        // populate only fields that exist in row
+        if (typeof s.auto_post !== "undefined") document.getElementById("botAutoPublish").checked = !!s.auto_post;
+        if (typeof s.max_posts_per_day !== "undefined") document.getElementById("botMaxPostsPerDay").value = s.max_posts_per_day;
+        // store id for updates
+        settingsForm.dataset.settingsId = s.id;
+      }
+    } catch (error) {
+      console.error("Could not load bot settings:", error);
+    }
+
     settingsForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const settings = {
-        check_interval: parseInt(document.getElementById("botCheckInterval").value) || 6,
-        auto_publish: document.getElementById("botAutoPublish").checked,
-        auto_approve: document.getElementById("botAutoApprove").checked,
-        max_posts_per_day: parseInt(document.getElementById("botMaxPostsPerDay").value) || 5
-      };
+      const updates = {};
+      const settingsId = settingsForm.dataset.settingsId;
+
+      // Only include fields that exist on the saved settings row to avoid unknown column errors
+      if (document.getElementById("botAutoPublish")) updates.auto_post = document.getElementById("botAutoPublish").checked;
+      if (document.getElementById("botMaxPostsPerDay")) updates.max_posts_per_day = parseInt(document.getElementById("botMaxPostsPerDay").value) || 5;
 
       try {
-        const result = await supabase
-          .from("curator_settings")
-          .update(settings)
-          .eq("id", "default");
+        let result;
+        if (settingsId) {
+          result = await supabase.from("curator_settings").update(updates).eq("id", settingsId);
+        } else {
+          // insert a new row if none exists
+          result = await supabase.from("curator_settings").insert(updates);
+        }
         if (result.error) throw result.error;
-        
         alert("Bot settings saved successfully!");
       } catch (error) {
         console.error("Settings error:", error);
-        alert("Failed to save settings: " + error.message);
+        alert("Failed to save settings: " + (error.message || error));
       }
     });
   }
@@ -545,7 +603,7 @@ async function renderCuratorSources() {
           <tr>
             <td>${escapeHTML(source.name)}</td>
             <td>${category ? category.name : "Unknown"}</td>
-            <td><small>${source.feed_url.substring(0, 40)}...</small></td>
+            <td><small>${(source.feed_url || source.url || "").substring(0, 40)}...</small></td>
             <td>${source.is_active ? "🟢 Active" : "⚪ Inactive"}</td>
             <td>
               <div class="inline-actions">
@@ -595,6 +653,202 @@ async function renderCuratorSources() {
     table.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#f00;'>Error loading sources</td></tr>";
   }
 }
+
+async function setupFaq() {
+  const faqForm = document.getElementById("faqForm");
+  const faqTable = document.getElementById("faqTable");
+
+  // Authors manager for admins
+  async function setupAuthors() {
+    const searchInput = document.getElementById('authorSearchInput');
+    const searchBtn = document.getElementById('authorSearchBtn');
+    const resultsDiv = document.getElementById('authorSearchResults');
+    const authorsTable = document.getElementById('authorsTable');
+
+    const renderAuthors = async () => {
+      try {
+        const authors = await getAllAuthors();
+        if (!authors.length) {
+          authorsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#999;'>No authors yet</td></tr>";
+          return;
+        }
+        authorsTable.innerHTML = authors.map(a => `
+          <tr>
+            <td>${escapeHTML(a.full_name || a.username)}</td>
+            <td>${escapeHTML(a.email)}</td>
+            <td>${a.post_count || 0}</td>
+            <td>${a.is_active ? 'Yes' : 'No'}</td>
+            <td>
+              <div class="inline-actions">
+                <button class="muted" data-action="toggle" data-id="${a.user_id}">${a.is_active ? 'Deactivate' : 'Activate'}</button>
+                <button class="danger" data-action="demote" data-id="${a.user_id}">Demote</button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+
+        authorsTable.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+            if (action === 'toggle') {
+              if (!confirm('Continue?')) return;
+              await toggleAuthorStatus(id, !authors.find(x => x.user_id === id).is_active);
+              await renderAuthors();
+            } else if (action === 'demote') {
+              if (!confirm('Remove author privileges?')) return;
+              await demoteAuthor(id);
+              await renderAuthors();
+            }
+          });
+        });
+      } catch (err) {
+        console.error('Error loading authors', err);
+        authorsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#f00;'>Error loading authors</td></tr>";
+      }
+    };
+
+    if (searchBtn && searchInput) {
+      searchBtn.addEventListener('click', async () => {
+        const q = searchInput.value.trim();
+        if (!q) return;
+        try {
+          const users = await searchUsersForPromotion(q);
+          if (!users.length) {
+            resultsDiv.innerHTML = '<div style="padding:12px; color:#999;">No users found</div>';
+            resultsDiv.style.display = 'block';
+            return;
+          }
+          resultsDiv.innerHTML = users.map(u => `
+            <div style="padding:8px; border:1px solid #eee; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong>${escapeHTML(u.display_name || u.username)}</strong><br><small style="color:#666;">${escapeHTML(u.email)}</small>
+              </div>
+              <div>
+                <button class="btn" data-id="${u.id}" data-action="promote">Promote to Author</button>
+              </div>
+            </div>
+          `).join('');
+          resultsDiv.style.display = 'block';
+
+          resultsDiv.querySelectorAll('button').forEach(b => {
+            b.addEventListener('click', async () => {
+              const id = b.dataset.id;
+              try {
+                const user = users.find(u => u.id === id) || {};
+                await promoteToAuthor(id, {
+                  username: user.username || '',
+                  full_name: user.display_name || user.username || '',
+                  email: user.email || '',
+                  avatar_url: user.avatar_url || ''
+                });
+                alert('User promoted to author');
+                resultsDiv.style.display = 'none';
+                searchInput.value = '';
+                await renderAuthors();
+              } catch (err) {
+                alert('Promotion failed: ' + (err.message || err));
+              }
+            });
+          });
+
+        } catch (err) {
+          console.error('Search error', err);
+          resultsDiv.innerHTML = '<div style="padding:12px; color:#f00;">Search failed</div>';
+          resultsDiv.style.display = 'block';
+        }
+      });
+    }
+
+    await renderAuthors();
+  }
+
+
+
+  const renderFaqs = async () => {
+    try {
+      const faqs = await getAllFaqs();
+      if (!faqs.length) {
+        faqTable.innerHTML = "<tr><td colspan='4' style='text-align:center; color:#999;'>No FAQs yet</td></tr>";
+        return;
+      }
+      faqTable.innerHTML = faqs.map(f => `
+        <tr>
+          <td>${escapeHTML(f.question)}</td>
+          <td>${escapeHTML(f.category || '')}</td>
+          <td>${f.is_published ? 'Yes' : 'No'}</td>
+          <td>
+            <div class="inline-actions">
+              <button class="muted" data-action="edit" data-id="${f.id}">Edit</button>
+              <button class="danger" data-action="delete" data-id="${f.id}">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+
+      faqTable.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const action = btn.dataset.action;
+          const id = btn.dataset.id;
+          const item = faqs.find(x => x.id === id);
+          if (action === 'edit') {
+            document.getElementById('faqId').value = item.id;
+            document.getElementById('faqQuestion').value = item.question;
+            document.getElementById('faqAnswer').value = item.answer;
+            document.getElementById('faqCategory').value = item.category || '';
+            document.getElementById('faqPublished').checked = !!item.is_published;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (action === 'delete') {
+            if (!confirm('Delete this FAQ?')) return;
+            await deleteFaq(id);
+            await renderFaqs();
+            alert('FAQ deleted');
+          }
+        });
+      });
+    } catch (err) {
+      console.error('Error loading faqs', err);
+      faqTable.innerHTML = "<tr><td colspan='4' style='text-align:center; color:#f00;'>Error loading FAQs</td></tr>";
+    }
+  };
+
+  if (faqForm) {
+    faqForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('faqId').value || null;
+      const question = document.getElementById('faqQuestion').value.trim();
+      const answer = document.getElementById('faqAnswer').value.trim();
+      const category = document.getElementById('faqCategory').value.trim();
+      const is_published = document.getElementById('faqPublished').checked;
+      if (!question || !answer) { alert('Please fill question and answer'); return; }
+      try {
+        if (id) {
+          await updateFaq(id, { question, answer, category, is_published });
+          alert('FAQ updated');
+        } else {
+          await createFaq({ question, answer, category, is_published });
+          alert('FAQ created');
+        }
+        faqForm.reset();
+        await renderFaqs();
+      } catch (err) {
+        console.error('FAQ save error', err);
+        alert('Failed to save FAQ: ' + (err.message || err));
+      }
+    });
+
+    const resetBtn = document.getElementById('faqResetBtn');
+    if (resetBtn) resetBtn.addEventListener('click', () => faqForm.reset());
+  }
+
+  await renderFaqs();
+    // Also initialize authors manager (admin-level)
+    try {
+      await setupAuthors();
+    } catch (err) {
+      console.error('Authors manager failed to initialize:', err);
+    }
+
 
 function populateCategories() {
   const select = document.getElementById("postCategory");
@@ -652,7 +906,8 @@ function setupPostReview() {
     const tags = document.getElementById("postTags").value.trim();
     const coverUrl = document.getElementById("postCover").value.trim();
     const editor = document.getElementById("postEditor");
-    const content = editor?.innerHTML?.trim() || "";
+    const raw = editor?.innerHTML?.trim() || "";
+    const content = window.normalizeHtml ? window.normalizeHtml(raw) : raw;
 
     document.getElementById("reviewTitle").textContent = title || "Untitled post";
     document.getElementById("reviewCategory").textContent = categoryLabel;
@@ -695,6 +950,7 @@ function handlePostForm() {
     const editor = document.getElementById("postEditor");
     const contentRaw = editor?.innerHTML?.trim() || "";
     const contentText = editor?.innerText?.trim() || "";
+    const content = window.normalizeHtml ? window.normalizeHtml(contentRaw) : contentRaw;
 
     if (categoryId === customCategoryValue) {
       const customInput = document.getElementById("customCategory");
@@ -866,7 +1122,7 @@ function renderPostsTable() {
         coverPreviewUrl = post.cover || "";
         updateCoverPreview(coverPreviewUrl);
         const editor = document.getElementById("postEditor");
-        if (editor) editor.innerHTML = post.content || "";
+        if (editor) editor.innerHTML = window.normalizeHtml ? window.normalizeHtml(post.content || "") : (post.content || "");
         document.getElementById("savePostBtn").textContent = "Update";
         document.getElementById("postFormHint").textContent = "Editing post.";
         resetPostMediaSelections();
@@ -1594,6 +1850,7 @@ async function bootDashboard() {
   setupAnnouncementForm();
   await renderAnnouncementsTable();
   await setupCuratorBot();
+  await setupFaq();
   handleLogout();
 }
 

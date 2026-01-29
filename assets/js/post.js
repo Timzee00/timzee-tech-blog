@@ -249,9 +249,8 @@ function renderPost(data, post) {
   `;
 
   const cover = document.getElementById("postCover");
-  const safeCover = isSafeUrl(post.cover) ? post.cover : "";
-  cover.innerHTML = safeCover ? `<img src="${safeCover}" alt="${escapeHTML(post.title || "Post cover")}">` : "";
-  document.getElementById("postContent").innerHTML = sanitizeHTML(post.content || "");
+  cover.innerHTML = post.cover ? `<img src="${post.cover}" alt="${escapeHTML(post.title || "Post cover")}">` : "";
+  document.getElementById("postContent").innerHTML = window.normalizeHtml ? window.normalizeHtml(post.content || "") : (post.content || "");
 
   const gallery = document.getElementById("postGallery");
   if (gallery) {

@@ -650,8 +650,8 @@ function setupSearch() {
     }
   });
   
-  // Also bind to the search go button if it exists
-  const goBtn = document.querySelector(".search-box span");
+  // Also bind to the search go button if it exists (support span or the new button)
+  const goBtn = document.querySelector(".search-box span") || document.getElementById("searchBtn");
   if (goBtn) {
     goBtn.addEventListener("click", performSearch);
   }
