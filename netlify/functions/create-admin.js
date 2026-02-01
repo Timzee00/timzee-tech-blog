@@ -30,7 +30,17 @@ exports.handler = async (event) => {
   if (userError || !userData?.user) {
     return jsonResponse(401, { error: "Invalid auth token." });
   }
-  const role = userData.user.user_metadata?.role;
+  let role = userData.user.user_metadata?.role;
+  if (!role) {
+    const profileResult = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userData.user.id)
+      .maybeSingle();
+    if (profileResult.data?.role) {
+      role = profileResult.data.role;
+    }
+  }
   if (role !== "super") {
     return jsonResponse(403, { error: "Only super admins can create admins." });
   }

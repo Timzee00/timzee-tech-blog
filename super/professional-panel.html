@@ -53,8 +53,7 @@
         <!-- Moderators Section -->
         <div id="moderatorManagerContainer" style="margin-bottom: 40px;"></div>
 
-        <!-- Cursor Section -->
-        <div id="curatorManagerContainer" style="margin-bottom: 40px;"></div>
+        <!-- Curator Bot moved to dedicated Curator tab -->
       </section>
 
       <section class="admin-card" data-panel="admins" style="display:none;">
@@ -63,6 +62,7 @@
         <div class="callout" style="margin-top:16px;">
           Only super admins can add/remove admins. Use the regular admin workspace for day-to-day handling.
         </div>
+        <div id="adminList" style="margin-top:20px;"></div>
       </section>
 
       <!-- Curator Bot Management -->
@@ -184,13 +184,13 @@
     </style>
 
     <script type="module">
-      import { getCurrentUser, signOut, supabase } from "../assets/js/supabase.js";
+      import { getCurrentUserWithRole, signOut, supabase, getUserRole } from "../assets/js/supabase.js";
       import ModeratorManager from "../assets/js/moderator-ui.js";
       import CuratorManager from "../assets/js/curator-ui.js";
 
       async function init() {
-        const user = await getCurrentUser();
-        if (!user || user.user_metadata?.role !== "super") {
+        const user = await getCurrentUserWithRole();
+        if (!user || getUserRole(user) !== "super") {
           document.body.innerHTML = "<h1>Access Denied</h1><p>Super admin only</p>";
           return;
         }
@@ -229,13 +229,179 @@
           }
         }
 
-        // Initialize moderator manager
-        const modManager = new ModeratorManager();
-        await modManager.init("moderatorManagerContainer");
+        const showPanelError = (containerId, message) => {
+          const el = document.getElementById(containerId);
+          if (!el) return;
+          el.innerHTML = `<div class="callout" style="border-left-color:#ef4444;">${message}</div>`;
+        };
 
-        // Initialize curator manager
-        const curatorManager = new CuratorManager();
-        await curatorManager.init("botManagerContainer");
+        // Initialize moderator manager
+        try {
+          const modManager = new ModeratorManager();
+          await modManager.init("moderatorManagerContainer");
+        } catch (err) {
+          showPanelError("moderatorManagerContainer", `Failed to load moderators. ${err?.message || ""}`);
+        }
+
+        // Initialize curator manager (curator tab)
+        try {
+          const curatorManager = new CuratorManager();
+          if (document.getElementById("botManagerContainer")) {
+            await curatorManager.init("botManagerContainer");
+          }
+        } catch (err) {
+          showPanelError("botManagerContainer", `Failed to load curator manager. ${err?.message || ""}`);
+        }
+
+        const getAuthToken = async () => {
+          const { data } = await supabase.auth.getSession();
+          return data?.session?.access_token || "";
+        };
+
+        const safeParseJson = async (response) => {
+          const text = await response.text();
+          if (!text) return { data: null, raw: "" };
+          try {
+            return { data: JSON.parse(text), raw: text };
+          } catch {
+            return { data: null, raw: text };
+          }
+        };
+
+        const fetchWithAuth = async (url, options = {}) => {
+          const token = await getAuthToken();
+          return fetch(url, {
+            ...options,
+            headers: {
+              ...(options.headers || {}),
+              Authorization: `Bearer ${token}`
+            }
+          });
+        };
+
+        const renderList = (containerId, items, emptyText) => {
+          const container = document.getElementById(containerId);
+          if (!container) return;
+          if (!items.length) {
+            container.innerHTML = `<div class="callout">${emptyText}</div>`;
+            return;
+          }
+          container.innerHTML = items.join("");
+        };
+
+        const loadAdmins = async () => {
+          try {
+            const res = await fetchWithAuth("/.netlify/functions/list-admins");
+            const parsed = await safeParseJson(res);
+            const data = parsed.data || {};
+            if (!res.ok || !parsed.data) {
+              throw new Error(data.error || `Failed to load admins. ${parsed.raw ? "Response was HTML (Netlify function not running)." : ""}`);
+            }
+            const cards = (data.admins || []).map((admin) => `
+              <div class="form-card" style="margin-bottom:12px;">
+                <strong>${admin.display_name || admin.email}</strong>
+                <div style="color:#666;font-size:12px;">${admin.email} • ${admin.role}</div>
+                <div style="color:#666;font-size:12px;">Posts: ${admin.post_count || 0}</div>
+              </div>
+            `);
+            renderList("adminList", cards, "No admins found.");
+          } catch (err) {
+            showPanelError("adminList", err.message || "Failed to load admins.");
+          }
+        };
+
+        const loadUsers = async () => {
+          try {
+            const res = await fetchWithAuth("/.netlify/functions/list-users");
+            const parsed = await safeParseJson(res);
+            const data = parsed.data || {};
+            if (!res.ok || !parsed.data) {
+              throw new Error(data.error || `Failed to load users. ${parsed.raw ? "Response was HTML (Netlify function not running)." : ""}`);
+            }
+            const cards = (data.users || []).map((user) => `
+              <div class="form-card" style="margin-bottom:12px;">
+                <strong>${user.display_name || user.email}</strong>
+                <div style="color:#666;font-size:12px;">${user.email} • ${user.role}</div>
+                <div style="color:#666;font-size:12px;">Status: ${user.account_status || "active"}</div>
+              </div>
+            `);
+            renderList("allUsersContainer", cards, "No users found.");
+          } catch (err) {
+            showPanelError("allUsersContainer", err.message || "Failed to load users.");
+          }
+        };
+
+        const loadPosts = async () => {
+          const container = document.getElementById("allPostsContainer");
+          if (!container) return;
+          container.textContent = "Loading posts...";
+          const { data, error } = await supabase
+            .from("posts")
+            .select("id, title, status, created_at, author_name")
+            .order("created_at", { ascending: false })
+            .limit(50);
+          if (error) {
+            container.innerHTML = `<div class="callout" style="border-left-color:#ef4444;">${error.message}</div>`;
+            return;
+          }
+          if (!data || !data.length) {
+            container.innerHTML = `<div class="callout">No posts found.</div>`;
+            return;
+          }
+          container.innerHTML = data
+            .map(
+              (post) => `
+                <div class="form-card" style="margin-bottom:12px;">
+                  <strong>${post.title || "Untitled"}</strong>
+                  <div style="color:#666;font-size:12px;">${post.author_name || "Unknown"} • ${post.status || "draft"}</div>
+                </div>`
+            )
+            .join("");
+        };
+
+        const loadAnalysis = async () => {
+          const statsEl = document.getElementById("analysisStats");
+          const topEl = document.getElementById("analysisTopPosts");
+          if (!statsEl || !topEl) return;
+
+          const postsCount = await supabase.from("posts").select("id", { count: "exact", head: true });
+          const commentsCount = await supabase.from("comments").select("id", { count: "exact", head: true });
+          const topicsCount = await supabase.from("discussion_topics").select("id", { count: "exact", head: true });
+          const usersRes = await fetchWithAuth("/.netlify/functions/list-users");
+          const usersParsed = await safeParseJson(usersRes);
+          const usersData = usersParsed.data || { users: [] };
+
+          statsEl.innerHTML = `
+            <div class="stat-card"><div class="stat-label">Posts</div><div class="stat-value">${postsCount.count || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Comments</div><div class="stat-value">${commentsCount.count || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Topics</div><div class="stat-value">${topicsCount.count || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Users</div><div class="stat-value">${(usersData.users || []).length}</div></div>
+          `;
+
+          const topPosts = await supabase
+            .from("posts")
+            .select("id, title, views")
+            .order("views", { ascending: false })
+            .limit(5);
+          if (!topPosts.error && topPosts.data?.length) {
+            topEl.innerHTML = `Top posts: ${topPosts.data.map((p) => p.title).join(", ")}`;
+          } else {
+            topEl.textContent = "No top posts yet.";
+          }
+        };
+
+        const loadSiteSettings = async () => {
+          const { data, error } = await supabase.from("site_settings").select("*").maybeSingle();
+          if (error || !data) return;
+          document.getElementById("siteName").value = data.site_name || "";
+          document.getElementById("tagline").value = data.tagline || "";
+          document.getElementById("commentModeration").checked = data.comment_moderation ?? true;
+          document.getElementById("publisherIdInput").value = data.adsense_publisher_id || "";
+          document.getElementById("homeTopSlotInput").value = data.adsense_home_top || "";
+          document.getElementById("sidebarSlotInput").value = data.adsense_home_sidebar || "";
+          document.getElementById("postInlineSlotInput").value = data.adsense_post_inline || "";
+          document.getElementById("adsToggle").checked = data.adsense_enabled ?? false;
+        };
 
         // Site settings form
         document.getElementById("siteSettingsForm")?.addEventListener("submit", async (e) => {
@@ -247,16 +413,18 @@
 
           try {
             // Update site settings in Supabase
-            const { error } = await supabase
-              .from("site_settings")
-              .update({
-                site_name: document.getElementById("siteName").value,
-                tagline: document.getElementById("tagline").value,
-                comment_moderation: document.getElementById("commentModeration").checked
-              })
-              .eq("id", (await supabase.from("site_settings").select("id").single()).data.id);
-
-            if (error) throw error;
+            const settingsRow = await supabase.from("site_settings").select("id").maybeSingle();
+            const payload = {
+              site_name: document.getElementById("siteName").value,
+              tagline: document.getElementById("tagline").value,
+              comment_moderation: document.getElementById("commentModeration").checked,
+              updated_at: new Date().toISOString()
+            };
+            if (settingsRow.data?.id) {
+              await supabase.from("site_settings").update(payload).eq("id", settingsRow.data.id);
+            } else {
+              await supabase.from("site_settings").insert({ id: crypto.randomUUID(), ...payload });
+            }
 
             status.textContent = "✓ Settings saved!";
             status.style.color = "green";
@@ -265,6 +433,49 @@
             status.style.color = "red";
           }
         });
+
+        // Ads settings form
+        document.getElementById("adsForm")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          try {
+            const settingsRow = await supabase.from("site_settings").select("id").maybeSingle();
+            const payload = {
+              adsense_enabled: document.getElementById("adsToggle").checked,
+              adsense_publisher_id: document.getElementById("publisherIdInput").value,
+              adsense_home_top: document.getElementById("homeTopSlotInput").value,
+              adsense_home_sidebar: document.getElementById("sidebarSlotInput").value,
+              adsense_post_inline: document.getElementById("postInlineSlotInput").value,
+              updated_at: new Date().toISOString()
+            };
+            if (settingsRow.data?.id) {
+              await supabase.from("site_settings").update(payload).eq("id", settingsRow.data.id);
+            } else {
+              await supabase.from("site_settings").insert({ id: crypto.randomUUID(), ...payload });
+            }
+            alert("Ads settings updated.");
+          } catch (err) {
+            alert(`Failed to update ads settings: ${err.message}`);
+          }
+        });
+
+        document.getElementById("runScoutBtn")?.addEventListener("click", async () => {
+          const status = document.getElementById("scoutStatus");
+          status.textContent = "Running...";
+          try {
+            const res = await fetchWithAuth("/.netlify/functions/scout-news", { method: "POST" });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Scout failed.");
+            status.textContent = "✓ Scout finished.";
+          } catch (err) {
+            status.textContent = `Error: ${err.message}`;
+          }
+        });
+
+        await loadSiteSettings();
+        await loadAdmins();
+        await loadUsers();
+        await loadPosts();
+        await loadAnalysis();
       }
 
       init();

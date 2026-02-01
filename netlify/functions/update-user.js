@@ -8,15 +8,30 @@ const jsonResponse = (statusCode, payload) => ({
   body: JSON.stringify(payload)
 });
 
+async function resolveRole(supabase, user) {
+  let role = user?.user_metadata?.role;
+  if (!role && user?.id) {
+    const profileResult = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profileResult.data?.role) {
+      role = profileResult.data.role;
+    }
+  }
+  return role || "user";
+}
+
 async function requireAdmin(supabase, token) {
   if (!token) return { error: "Missing auth token." };
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) return { error: "Invalid auth token." };
-  const role = data.user.user_metadata?.role;
+  const role = await resolveRole(supabase, data.user);
   if (role !== "admin" && role !== "super") {
     return { error: "Only admins can access this." };
   }
-  return { user: data.user };
+  return { user: data.user, role };
 }
 
 const allowedTiers = new Set(["standard", "pro", "elite"]);

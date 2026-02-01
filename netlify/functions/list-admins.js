@@ -8,13 +8,28 @@ const jsonResponse = (statusCode, payload) => ({
   body: JSON.stringify(payload)
 });
 
+async function resolveRole(supabase, user) {
+  let role = user?.user_metadata?.role;
+  if (!role && user?.id) {
+    const profileResult = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profileResult.data?.role) {
+      role = profileResult.data.role;
+    }
+  }
+  return role || "user";
+}
+
 async function requireSuper(supabase, token) {
   if (!token) return { error: "Missing auth token." };
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) return { error: "Invalid auth token." };
-  const role = data.user.user_metadata?.role;
+  const role = await resolveRole(supabase, data.user);
   if (role !== "super") return { error: "Only super admins can access this." };
-  return { user: data.user };
+  return { user: data.user, role };
 }
 
 exports.handler = async (event) => {
@@ -69,8 +84,24 @@ exports.handler = async (event) => {
     page = 1;
   }
 
+  const userIds = (users || []).map((user) => user.id);
+  let profilesById = {};
+  if (userIds.length) {
+    const profileResult = await supabase
+      .from("profiles")
+      .select("id, role")
+      .in("id", userIds);
+    if (!profileResult.error && profileResult.data) {
+      profilesById = profileResult.data.reduce((acc, profile) => {
+        acc[profile.id] = profile;
+        return acc;
+      }, {});
+    }
+  }
+
   const admins = (users || []).filter((user) => {
-    const role = user.user_metadata?.role;
+    const profileRole = profilesById[user.id]?.role;
+    const role = profileRole || user.user_metadata?.role;
     return role === "admin" || role === "super";
   });
 
@@ -103,10 +134,11 @@ exports.handler = async (event) => {
     const recent = entry.recent
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       .slice(0, 5);
+    const role = profilesById[user.id]?.role || user.user_metadata?.role || "admin";
     return {
       id: user.id,
       email: user.email,
-      role: user.user_metadata?.role || "admin",
+      role,
       display_name: user.user_metadata?.display_name || user.email?.split("@")[0] || "Admin",
       created_at: user.created_at,
       post_count: entry.count,

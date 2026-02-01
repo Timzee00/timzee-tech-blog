@@ -683,6 +683,32 @@ export async function deleteNotification(notificationId) {
   return supabase.from("notifications").delete().eq("id", notificationId);
 }
 
+// ---------------------------------------------------------------------------
+// REPORTS
+// ---------------------------------------------------------------------------
+
+export async function createContentReport({
+  reporterId,
+  contentType,
+  contentId,
+  reason = "",
+  metadata = {}
+} = {}) {
+  if (!reporterId || !contentType || !contentId) {
+    return { error: { message: "Missing report fields." } };
+  }
+  return supabase.from("content_reports").insert({
+    id: crypto.randomUUID(),
+    reporter_id: reporterId,
+    content_type: contentType,
+    content_id: contentId,
+    reason,
+    metadata,
+    status: "open",
+    created_at: new Date().toISOString()
+  }).select().single();
+}
+
 // Notification helpers for common events
 export async function notifyFriendRequest(recipientId, senderName, senderId) {
   return createNotification({

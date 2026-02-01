@@ -17,7 +17,7 @@ import {
   getUserForPromotion
 } from "./moderator.js";
 
-import { getCurrentUser } from "./supabase.js";
+import { getCurrentUserWithRole, getUserRole } from "./supabase.js";
 
 class ModeratorManager {
   constructor() {
@@ -30,8 +30,8 @@ class ModeratorManager {
     this.container = document.getElementById(containerId);
     if (!this.container) return;
 
-    this.currentUser = await getCurrentUser();
-    if (!this.currentUser || this.currentUser.user_metadata?.role !== "super") {
+    this.currentUser = await getCurrentUserWithRole();
+    if (!this.currentUser || getUserRole(this.currentUser) !== "super") {
       this.container.innerHTML = "<p style='color: red;'>Access denied. Super admin only.</p>";
       return;
     }
@@ -265,10 +265,18 @@ class ModeratorManager {
   }
 
   async load() {
-    this.moderators = await getAllModerators();
-    this.authors = await getAllAuthors();
-    this.renderModerators();
-    this.renderAuthors();
+    try {
+      this.moderators = await getAllModerators();
+      this.authors = await getAllAuthors();
+      this.renderModerators();
+      this.renderAuthors();
+    } catch (error) {
+      const message = error?.message || "Failed to load team data.";
+      const modList = this.container.querySelector("#moderatorsList");
+      const authorList = this.container.querySelector("#authorsList");
+      if (modList) modList.innerHTML = `<div style='text-align:center; padding:40px; color:#ef4444;'>${message}</div>`;
+      if (authorList) authorList.innerHTML = `<div style='text-align:center; padding:40px; color:#ef4444;'>${message}</div>`;
+    }
   }
 
   renderModerators() {

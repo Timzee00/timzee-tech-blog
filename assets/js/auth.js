@@ -1,5 +1,6 @@
 import {
   getCurrentUser,
+  getCurrentUserWithRole,
   getSession,
   getDisplayName,
   getUserRole,
@@ -18,7 +19,7 @@ export async function login(email, password, allowedRoles = []) {
         message: result.error.message || "Login failed. Check your email/password." 
       };
     }
-    const user = await getCurrentUser();
+    const user = await getCurrentUserWithRole();
     if (!user) {
       return { ok: false, message: "Login failed. Try again." };
     }
@@ -57,7 +58,7 @@ export async function register(email, password, displayName) {
 }
 
 export async function requireRole(roles = [], redirectUrl) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserWithRole();
   if (!user || (roles.length && !roles.includes(getUserRole(user)))) {
     if (redirectUrl) {
       window.location.href = redirectUrl;

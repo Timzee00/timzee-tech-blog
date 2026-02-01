@@ -16,7 +16,8 @@ import {
   incrementProfilePoints,
   fetchProfilesByUsernames,
   fetchProfilesByIds,
-  incrementPostViews
+  incrementPostViews,
+  createContentReport
 } from "./data.js";
 import { setupMentionInput, extractMentions, getMentionedUserIds } from "./mentions.js";
 import { uploadMedia } from "./media.js";
@@ -247,7 +248,31 @@ function renderPost(data, post) {
     <span>By ${escapeHTML(post.author_name || "Editor")}</span>
     <span>${formatDate(publishedAt)}</span>
     <span>${readingTime(post.content || "")}</span>
+    <button type="button" class="btn ghost small" id="reportPostBtn">Report</button>
   `;
+
+  const reportBtn = document.getElementById("reportPostBtn");
+  if (reportBtn) {
+    reportBtn.addEventListener("click", async () => {
+      if (!state.user) {
+        alert("Please log in to report.");
+        return;
+      }
+      const reason = prompt("Why are you reporting this post?");
+      if (reason === null) return;
+      const result = await createContentReport({
+        reporterId: state.user.id,
+        contentType: "post",
+        contentId: post.id,
+        reason: reason.trim()
+      });
+      if (result?.error) {
+        alert(result.error.message || "Failed to submit report.");
+      } else {
+        alert("Report submitted. Thank you.");
+      }
+    });
+  }
 
   const cover = document.getElementById("postCover");
   cover.innerHTML = post.cover && isSafeUrl(post.cover) ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}">` : "";
@@ -443,6 +468,7 @@ function renderComments(comments) {
             mentionHandle
           )}">Reply</button>`
         : "";
+      const reportButton = `<button type="button" class="btn ghost small report-comment-btn" data-id="${comment.id}">Report</button>`;
       return `
         <div class="comment-card" data-reveal id="comment-${comment.id}">
           <div class="comment-meta"><span>${
@@ -459,13 +485,14 @@ function renderComments(comments) {
               ? `<img src="${comment.image}" alt="comment image" style="border-radius:12px; max-height:200px;">`
               : ""
         }
-        ${replyButton ? `<div class="comment-actions">${replyButton}</div>` : ""}
+        <div class="comment-actions">${replyButton || ""}${reportButton}</div>
       </div>
     `;
   })
   .join("");
   setupReveal(list);
   bindCommentReplyButtons();
+  bindCommentReportButtons();
 }
 
 const MENTION_REGEX = /@([a-z0-9_]+)/gi;
@@ -503,6 +530,32 @@ function bindCommentReplyButtons() {
         }
       }
       input.focus();
+    });
+  });
+}
+
+function bindCommentReportButtons() {
+  const list = document.getElementById("commentList");
+  if (!list) return;
+  list.querySelectorAll(".report-comment-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!state.user) {
+        alert("Please log in to report.");
+        return;
+      }
+      const reason = prompt("Why are you reporting this comment?");
+      if (reason === null) return;
+      const result = await createContentReport({
+        reporterId: state.user.id,
+        contentType: "comment",
+        contentId: btn.dataset.id,
+        reason: reason.trim()
+      });
+      if (result?.error) {
+        alert(result.error.message || "Failed to submit report.");
+      } else {
+        alert("Report submitted. Thank you.");
+      }
     });
   });
 }

@@ -176,6 +176,7 @@
     <script type="module">
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
       import { incrementMarketplaceView, createMarketplaceInquiry, getSellerRating } from "./assets/js/videos-marketplace.js";
+      import { createContentReport } from "./assets/js/data.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
 
       let state = {
@@ -368,8 +369,24 @@
           alert("Opening contact with " + state.listing.seller_name);
         });
 
-        document.getElementById("reportBtn").addEventListener("click", () => {
-          alert("Report functionality coming soon");
+        document.getElementById("reportBtn").addEventListener("click", async () => {
+          if (!state.user) {
+            window.location.href = `login.html?next=listing.html?id=${state.itemId}`;
+            return;
+          }
+          const reason = prompt("Why are you reporting this listing?");
+          if (reason === null) return;
+          const result = await createContentReport({
+            reporterId: state.user.id,
+            contentType: "marketplace_item",
+            contentId: state.itemId,
+            reason: reason.trim()
+          });
+          if (result?.error) {
+            alert(result.error.message || "Failed to submit report.");
+          } else {
+            alert("Report submitted. Thank you.");
+          }
         });
 
         document.getElementById("inquiryForm").addEventListener("submit", async (e) => {

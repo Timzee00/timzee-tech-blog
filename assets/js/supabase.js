@@ -6,6 +6,9 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 export const SITE_URL = "https://timzee-tech-blog.netlify.app";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (typeof window !== "undefined" && !window.supabase) {
+  window.supabase = supabase;
+}
 
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession();

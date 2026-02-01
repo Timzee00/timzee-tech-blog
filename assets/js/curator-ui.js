@@ -20,7 +20,7 @@ import {
   testCuratorSource
 } from "./curator.js";
 
-import { getCurrentUser } from "./supabase.js";
+import { getCurrentUserWithRole, getUserRole } from "./supabase.js";
 import { escapeHTML } from "./utils.js";
 
 class CuratorManager {
@@ -35,8 +35,8 @@ class CuratorManager {
     this.container = document.getElementById(containerId);
     if (!this.container) return;
 
-    const user = await getCurrentUser();
-    if (!user || !["admin", "super"].includes(user.user_metadata?.role)) {
+    const user = await getCurrentUserWithRole();
+    if (!user || !["admin", "super"].includes(getUserRole(user))) {
       this.container.innerHTML = "<p style='color: red;'>Access denied. Admin only.</p>";
       return;
     }

@@ -1,5 +1,5 @@
 import { login, requireRole, logout, getDisplayName, getUserRole, getSession } from "./auth.js";
-import { supabase } from "./supabase.js";
+import { supabase as supabaseClient } from "./supabase.js";
 import {
   fetchCategories,
   fetchPosts,
@@ -46,6 +46,11 @@ import {
 } from "./utils.js";
 import { getPublishedFaqs, getAllFaqs, createFaq, updateFaq, deleteFaq } from "./faq.js";
 import { getAllAuthors, promoteToAuthor, demoteAuthor, toggleAuthorStatus, searchUsersForPromotion } from "./moderator.js";
+
+const supabase = supabaseClient || window.supabase;
+if (!supabase) {
+  console.error("Supabase client failed to initialize.");
+}
 
 let editingPostId = null;
 let coverPreviewUrl = "";

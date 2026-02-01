@@ -87,6 +87,7 @@
                 <button class="btn-icon primary" id="likeBtn">❤️ Like</button>
                 <button class="btn-icon" id="subscribeBtn">🔔 Subscribe</button>
                 <button class="btn-icon" id="shareBtn">📤 Share</button>
+                <button class="btn-icon" id="reportNovelBtn">🚩 Report</button>
                 <button class="btn-icon edit-btn" id="editBtn" style="display: none;">✏️ Edit</button>
               </div>
             </div>
@@ -195,6 +196,7 @@
     <script type="module">
       import { supabase, getCurrentUser, getDisplayName, signOut } from "./assets/js/supabase.js";
       import { fetchSettings } from "./assets/js/settings.js";
+      import { createContentReport } from "./assets/js/data.js";
       import { formatRichText, sanitizeHTML, escapeHTML, isSafeUrl } from "./assets/js/utils.js";
 
       const params = new URLSearchParams(window.location.search);
@@ -327,6 +329,27 @@
           }
           // TODO: Implement like functionality with likes table
           alert("Like functionality coming soon!");
+        });
+
+        // Report button
+        document.getElementById("reportNovelBtn")?.addEventListener("click", async () => {
+          if (!state.user) {
+            window.location.href = `login.html?next=novel.html%3Fid%3D${novelId}`;
+            return;
+          }
+          const reason = prompt("Why are you reporting this novel?");
+          if (reason === null) return;
+          const result = await createContentReport({
+            reporterId: state.user.id,
+            contentType: "novel",
+            contentId: novelId,
+            reason: reason.trim()
+          });
+          if (result?.error) {
+            alert(result.error.message || "Failed to submit report.");
+          } else {
+            alert("Report submitted. Thank you.");
+          }
         });
 
         // Edit button

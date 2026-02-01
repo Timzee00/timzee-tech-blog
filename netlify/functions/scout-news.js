@@ -141,7 +141,17 @@ async function requireSuperForManual(supabase, token) {
   if (!token) return { error: "Missing auth token." };
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) return { error: "Invalid auth token." };
-  const role = data.user.user_metadata?.role;
+  let role = data.user.user_metadata?.role;
+  if (!role) {
+    const profileResult = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    if (profileResult.data?.role) {
+      role = profileResult.data.role;
+    }
+  }
   if (role !== "super") return { error: "Only super admins can run manually." };
   return { user: data.user };
 }

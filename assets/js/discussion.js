@@ -7,7 +7,8 @@ import {
   fetchFollowStatus,
   createNotification,
   incrementProfilePoints,
-  fetchProfilesByUsernames
+  fetchProfilesByUsernames,
+  createContentReport
 } from "./data.js";
 import { uploadMedia } from "./media.js";
 import {
@@ -324,6 +325,7 @@ function buildMessageHtml(message) {
       ${mediaHtml}
       <div class="message-actions">
         <button data-action="reply" data-id="${message.id}">Reply</button>
+        <button data-action="report" data-id="${message.id}">Report</button>
         ${
           canModerate
             ? `<button data-action="pin" data-id="${message.id}">${
@@ -353,6 +355,26 @@ function bindMessageActions(container) {
         renderReplyPreview();
         const bodyInput = document.getElementById("messageBody");
         if (bodyInput) bodyInput.focus();
+        return;
+      }
+      if (action === "report") {
+        if (!state.user) {
+          alert("Please log in to report.");
+          return;
+        }
+        const reason = prompt("Why are you reporting this message?");
+        if (reason === null) return;
+        const result = await createContentReport({
+          reporterId: state.user.id,
+          contentType: "discussion_message",
+          contentId: message.id,
+          reason: reason.trim()
+        });
+        if (result?.error) {
+          alert(result.error.message || "Failed to submit report.");
+        } else {
+          alert("Report submitted. Thank you.");
+        }
         return;
       }
       if (!isTopicOwner()) return;

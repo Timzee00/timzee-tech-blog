@@ -278,7 +278,7 @@ export function normalizeHtml(html) {
   // Unescape any HTML entities (handles legacy escaped content like &lt;p&gt;)
   const div = document.createElement("div");
   div.innerHTML = String(html);
-  const unescaped = div.innerHTML;
+  const unescaped = div.textContent || "";
   return sanitizeHTML(unescaped);
 }
 

@@ -60,6 +60,28 @@ function renderAuthActions() {
     const label = document.createElement("span");
     label.className = "auth-meta";
     label.textContent = getDisplayName(state.user);
+    const role = getUserRole(state.user);
+    if (["author", "moderator", "admin", "super"].includes(role)) {
+      const authorPanel = document.createElement("a");
+      authorPanel.className = "btn ghost";
+      authorPanel.href = "author/dashboard.html";
+      authorPanel.textContent = "Author Studio";
+      actions.appendChild(authorPanel);
+    }
+    if (["moderator", "admin", "super"].includes(role)) {
+      const modPanel = document.createElement("a");
+      modPanel.className = "btn ghost";
+      modPanel.href = "moderator/dashboard.html";
+      modPanel.textContent = "Moderator Panel";
+      actions.appendChild(modPanel);
+    }
+    if (["admin", "super"].includes(role)) {
+      const adminPanel = document.createElement("a");
+      adminPanel.className = "btn ghost";
+      adminPanel.href = "admin/dashboard.html";
+      adminPanel.textContent = "Admin Dashboard";
+      actions.appendChild(adminPanel);
+    }
     const chat = document.createElement("a");
     chat.className = "btn ghost";
     chat.href = "chat.html";

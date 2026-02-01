@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Moderator Panel - Timzee Tech Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/admin.css">
+  </head>
+  <body class="admin-shell">
+    <div class="topbar">
+      <div class="container" style="display:flex; align-items:center; justify-content:space-between;">
+        <div class="brand">
+          <div class="logo">Timzee <span>Tech</span> Moderator Panel</div>
+          <div class="tagline">🛡️ Content Safety & Review</div>
+        </div>
+        <div class="inline-actions">
+          <a class="btn ghost" href="../index.html">🌐 View Site</a>
+          <button class="btn ghost" id="logoutBtn">Log Out</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="container admin-panel">
+      <nav class="admin-nav">
+        <button class="active" data-tab="posts">📰 Posts</button>
+        <button data-tab="comments">💬 Comments</button>
+        <button data-tab="discussions">🗣️ Discussions</button>
+        <button data-tab="marketplace">🛒 Marketplace</button>
+        <button data-tab="videos">🎥 Videos</button>
+        <button data-tab="novels">📖 Novels</button>
+        <button data-tab="reports">🚩 Reports</button>
+      </nav>
+
+      <section class="admin-card" data-panel="posts">
+        <h2>Posts</h2>
+        <div id="modPosts" class="form-card">Loading...</div>
+      </section>
+
+      <section class="admin-card" data-panel="comments" style="display:none;">
+        <h2>Comments</h2>
+        <div id="modComments" class="form-card">Loading...</div>
+      </section>
+
+      <section class="admin-card" data-panel="discussions" style="display:none;">
+        <h2>Discussions</h2>
+        <div id="modDiscussions" class="form-card">Loading...</div>
+      </section>
+
+      <section class="admin-card" data-panel="marketplace" style="display:none;">
+        <h2>Marketplace</h2>
+        <div id="modMarketplace" class="form-card">Loading...</div>
+      </section>
+
+      <section class="admin-card" data-panel="videos" style="display:none;">
+        <h2>Videos</h2>
+        <div id="modVideos" class="form-card">Loading...</div>
+      </section>
+
+      <section class="admin-card" data-panel="novels" style="display:none;">
+        <h2>Novels</h2>
+        <div id="modNovels" class="form-card">Loading...</div>
+      </section>
+
+      <section class="admin-card" data-panel="reports" style="display:none;">
+        <h2>Reports</h2>
+        <div id="modReports" class="form-card">Loading...</div>
+      </section>
+    </main>
+
+    <script type="module" src="../assets/js/moderator-panel.js"></script>
+  </body>
+</html>

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Author Studio - Timzee Tech Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/admin.css">
+  </head>
+  <body class="admin-shell">
+    <div class="topbar">
+      <div class="container" style="display:flex; align-items:center; justify-content:space-between;">
+        <div class="brand">
+          <div class="logo">Timzee <span>Tech</span> Author Studio</div>
+          <div class="tagline">✍️ Manage your novels and posts</div>
+        </div>
+        <div class="inline-actions">
+          <a class="btn ghost" href="../index.html">🌐 View Site</a>
+          <button class="btn ghost" id="logoutBtn">Log Out</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="container admin-panel">
+      <nav class="admin-nav">
+        <button class="active" data-tab="novels">📖 Novels</button>
+        <button data-tab="chapters">🧩 Chapters</button>
+        <button data-tab="posts">📰 Posts</button>
+      </nav>
+
+      <section class="admin-card" data-panel="novels">
+        <h2>Your Novels</h2>
+        <form id="novelForm" class="form-card" style="margin-bottom:16px;">
+          <div class="form-grid">
+            <input type="text" id="novelTitle" placeholder="Novel title" required>
+            <input type="text" id="novelGenre" placeholder="Genre">
+            <select id="novelStatus">
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
+              <option value="paused">Paused</option>
+            </select>
+          </div>
+          <textarea id="novelSynopsis" placeholder="Synopsis"></textarea>
+          <button class="btn" type="submit">Save Novel</button>
+          <div id="novelStatusMsg" class="callout" style="display:none; margin-top:12px;"></div>
+        </form>
+        <div id="authorNovels" class="form-card">Loading...</div>
+      </section>
+
+      <section class="admin-card" data-panel="chapters" style="display:none;">
+        <h2>Chapters</h2>
+        <form id="chapterForm" class="form-card" style="margin-bottom:16px;">
+          <select id="chapterNovel"></select>
+          <input type="number" id="chapterNumber" placeholder="Chapter number" required>
+          <input type="text" id="chapterTitle" placeholder="Chapter title" required>
+          <textarea id="chapterContent" placeholder="Chapter content"></textarea>
+          <button class="btn" type="submit">Add Chapter</button>
+          <div id="chapterStatusMsg" class="callout" style="display:none; margin-top:12px;"></div>
+        </form>
+        <div id="authorChapters" class="form-card">Select a novel to see chapters.</div>
+      </section>
+
+      <section class="admin-card" data-panel="posts" style="display:none;">
+        <h2>Your Posts</h2>
+        <div id="authorPosts" class="form-card">Loading...</div>
+      </section>
+    </main>
+
+    <script type="module" src="../assets/js/author-panel.js"></script>
+  </body>
+</html>
