@@ -998,7 +998,6 @@ function handlePostForm() {
     }
 
     const now = new Date().toISOString();
-    const content = contentRaw;
     let uploadedCover = "";
     if (coverFile) {
       uploadedCover = await uploadMedia(coverFile, "covers");
