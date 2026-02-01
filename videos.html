@@ -114,16 +114,10 @@
       import { 
         fetchVideos, 
         searchVideos, 
-        uploadVideo,
-        incrementVideoView,
-        likeVideo,
-        isVideoLiked,
-        commentOnVideo,
-        getVideoComments
+        uploadVideo
       } from "./assets/js/videos-marketplace.js";
       import { getCurrentUser, signOut } from "./assets/js/supabase.js";
-      import { timeAgo } from "./assets/js/utils.js";
-      import { uploadMedia } from "./assets/js/media.js";
+      import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
 
       let state = {
         user: null,

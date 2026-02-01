@@ -21,10 +21,16 @@ export default async (req, context) => {
 
   try {
     // Parse request body
-    const { message } = JSON.parse(req.body || "{}");
+    const parsed = JSON.parse(req.body || "{}");
+    const message = parsed.message;
+    const messages = parsed.messages;
+    const model = parsed.model || "mixtral-8x7b-32768";
+    const temperature = typeof parsed.temperature === "number" ? parsed.temperature : 0.7;
+    const maxTokens = typeof parsed.max_tokens === "number" ? parsed.max_tokens : 1024;
 
     // Validate input
-    if (!message || typeof message !== "string" || message.trim().length === 0) {
+    const hasMessages = Array.isArray(messages) && messages.length > 0;
+    if (!hasMessages && (!message || typeof message !== "string" || message.trim().length === 0)) {
       return new Response(
         JSON.stringify({ error: "Message is required and must be a non-empty string." }),
         {
@@ -49,37 +55,42 @@ export default async (req, context) => {
     }
 
     // Call Groq API
-    const groqResponse = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "mixtral-8x7b-32768",
-          messages: [
-            {
-              role: "user",
-              content: message
-            }
-          ],
-          max_tokens: 1024,
-          temperature: 0.7
-        })
-      }
-    );
+    const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model,
+        messages: hasMessages
+          ? messages
+          : [
+              {
+                role: "user",
+                content: message
+              }
+            ],
+        max_tokens: maxTokens,
+        temperature
+      })
+    });
 
     // Handle Groq API errors
     if (!groqResponse.ok) {
-      const errorData = await groqResponse.json();
+      const text = await groqResponse.text();
+      let errorData = null;
+      try {
+        errorData = text ? JSON.parse(text) : null;
+      } catch {
+        errorData = null;
+      }
       console.error("Groq API error:", errorData);
 
       return new Response(
         JSON.stringify({
           error: `Groq API error: ${groqResponse.statusText}`,
-          details: errorData
+          details: errorData || text
         }),
         {
           status: groqResponse.status,
@@ -89,7 +100,8 @@ export default async (req, context) => {
     }
 
     // Parse Groq response
-    const data = await groqResponse.json();
+    const dataText = await groqResponse.text();
+    const data = dataText ? JSON.parse(dataText) : {};
 
     // Extract response text
     const responseText =

@@ -1,30 +1,53 @@
 import { supabase } from "./supabase.js";
 
-// Groq API Configuration (Now handled by backend via Netlify function)
-// API key is stored securely in Netlify environment variables
-const NETLIFY_PROXY_URL = "/.netlify/functions/groq-proxy";
+const NETLIFY_PROXY_URL = "/.netlify/functions/llm-proxy";
+const STORAGE_KEY = "ai_api_key";
+const PROVIDER_KEY = "ai_provider";
 
-// Legacy functions - kept for compatibility but now use backend
+export const PROVIDERS = {
+  groq: "Groq",
+  openai: "OpenAI",
+  anthropic: "Anthropic"
+};
+
+export const PROVIDER_MODELS = {
+  groq: ["mixtral-8x7b-32768", "llama2-70b-4096", "gemma-7b-it"],
+  openai: ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
+  anthropic: ["claude-3-5-sonnet-20240620", "claude-3-haiku-20240307"]
+};
+
+export const DEFAULT_MODEL = PROVIDER_MODELS.groq[0];
+
+export function detectProviderFromKey(key = "") {
+  const trimmed = String(key).trim();
+  if (!trimmed) return "groq";
+  if (trimmed.startsWith("gsk_")) return "groq";
+  if (trimmed.startsWith("sk-ant-")) return "anthropic";
+  if (trimmed.startsWith("sk-") || trimmed.startsWith("sk-proj-")) return "openai";
+  return "groq";
+}
+
 export function setGroqApiKey(key) {
-  console.log("Note: API key is now managed securely by the backend. No need to set it here.");
+  const provider = detectProviderFromKey(key);
+  localStorage.setItem(STORAGE_KEY, key);
+  localStorage.setItem(PROVIDER_KEY, provider);
 }
 
 export function getGroqApiKey() {
-  return "backend-managed"; // API key is no longer exposed to frontend
+  return localStorage.getItem(STORAGE_KEY) || "";
+}
+
+export function getProvider() {
+  return localStorage.getItem(PROVIDER_KEY) || "groq";
 }
 
 export function hasGroqApiKey() {
-  return true; // Backend always has the key if configured
+  return !!getGroqApiKey();
 }
 
-// Supported Groq models
-export const GROQ_MODELS = [
-  "mixtral-8x7b-32768",
-  "llama2-70b-4096",
-  "gemma-7b-it"
-];
-
-export const DEFAULT_MODEL = "mixtral-8x7b-32768";
+export function getModelsForProvider(provider = "groq") {
+  return PROVIDER_MODELS[provider] || PROVIDER_MODELS.groq;
+}
 
 // System prompts for different use cases
 export const SYSTEM_PROMPTS = {
@@ -105,10 +128,16 @@ export async function callGroqAPI({
   model = DEFAULT_MODEL,
   temperature = 0.7,
   maxTokens = 1024,
-  onStream = null
+  onStream = null,
+  provider = null,
+  apiKey = null
 } = {}) {
+  const resolvedProvider = provider || getProvider() || "groq";
+  const resolvedKey = apiKey || getGroqApiKey();
   // Build message array with system prompt
   const payload = {
+    provider: resolvedProvider,
+    apiKey: resolvedKey || null,
     model,
     messages: [
       { role: "system", content: systemPrompt },
@@ -120,7 +149,6 @@ export async function callGroqAPI({
   };
 
   try {
-    // Use backend proxy instead of direct API call
     const response = await fetch(NETLIFY_PROXY_URL, {
       method: "POST",
       headers: {
@@ -130,11 +158,24 @@ export async function callGroqAPI({
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || `API Error: ${response.status}`);
+      const text = await response.text();
+      let parsed = null;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        parsed = null;
+      }
+      const message =
+        parsed?.error?.message ||
+        parsed?.error ||
+        parsed?.message ||
+        text ||
+        `API Error: ${response.status}`;
+      throw new Error(message);
     }
 
-    const data = await response.json();
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
     
     // Handle streaming or direct response
     if (onStream) {
@@ -209,7 +250,7 @@ export async function chat({
   });
 
   const responseContent = typeof response === "string" ? response : response.content;
-  const tokensUsed = typeof response === "string" ? 0 : response.tokensUsed;
+  const tokensUsed = typeof response === "string" ? 0 : (response.usage?.total_tokens || 0);
 
   // Save to database
   if (conversationId && userId) {

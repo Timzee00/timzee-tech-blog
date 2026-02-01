@@ -150,12 +150,11 @@
       import { 
         fetchMarketplaceItems,
         searchMarketplace,
-        createMarketplaceItem,
-        incrementMarketplaceView,
-        getSellerRating
+        createMarketplaceItem
       } from "./assets/js/videos-marketplace.js";
       import { getCurrentUser, signOut } from "./assets/js/supabase.js";
       import { uploadMedia } from "./assets/js/media.js";
+      import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
 
       let state = {
         user: null,

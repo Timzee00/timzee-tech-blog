@@ -157,6 +157,7 @@
     <script type="module">
       import { supabase, getCurrentUser, getDisplayName, signOut, getUserRole } from "./assets/js/supabase.js";
       import { fetchSettings } from "./assets/js/settings.js";
+      import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
 
       let state = {
         user: null,

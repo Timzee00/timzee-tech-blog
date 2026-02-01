@@ -540,21 +540,28 @@ export async function updateCuratorDraftStatus(id, status) {
 }
 
 export async function fetchMarketplaceListings({ status = "active" } = {}) {
-  let query = supabase.from("marketplace_listings").select("*").order("created_at", {
+  let query = supabase.from("marketplace_items").select("*").order("created_at", {
     ascending: false
   });
-  if (status) query = query.eq("status", status);
+  if (status) {
+    const normalized = String(status).toLowerCase();
+    if (normalized === "active" || normalized === "available") {
+      query = query.eq("is_available", true);
+    } else if (normalized === "inactive" || normalized === "sold") {
+      query = query.eq("is_available", false);
+    }
+  }
   const result = await query;
   return normalizeResponse(result);
 }
 
 export async function createMarketplaceListing(payload) {
-  return supabase.from("marketplace_listings").insert(payload).select().single();
+  return supabase.from("marketplace_items").insert(payload).select().single();
 }
 
 export async function updateMarketplaceListing(id, updates) {
   return supabase
-    .from("marketplace_listings")
+    .from("marketplace_items")
     .update(updates)
     .eq("id", id)
     .select()
@@ -562,16 +569,29 @@ export async function updateMarketplaceListing(id, updates) {
 }
 
 export async function fetchShortVideos({ status = "published" } = {}) {
-  let query = supabase.from("short_videos").select("*").order("created_at", {
+  let query = supabase.from("videos").select("*").eq("category", "shorts").order("created_at", {
     ascending: false
   });
-  if (status) query = query.eq("status", status);
+  if (status) {
+    const normalized = String(status).toLowerCase();
+    if (normalized === "published") {
+      query = query.eq("is_public", true);
+    } else if (normalized === "draft" || normalized === "private") {
+      query = query.eq("is_public", false);
+    }
+  }
   const result = await query;
   return normalizeResponse(result);
 }
 
 export async function createShortVideo(payload) {
-  return supabase.from("short_videos").insert(payload).select().single();
+  const normalized = { ...(payload || {}) };
+  if (!normalized.category) normalized.category = "shorts";
+  if (Object.prototype.hasOwnProperty.call(normalized, "status")) {
+    normalized.is_public = String(normalized.status).toLowerCase() === "published";
+    delete normalized.status;
+  }
+  return supabase.from("videos").insert(normalized).select().single();
 }
 
 export async function fetchProfilesByIds(ids = []) {

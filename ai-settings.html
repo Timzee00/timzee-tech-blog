@@ -20,6 +20,15 @@
       .prompt-template { background: #f9fafb; padding: 12px; border-radius: 4px; margin: 8px 0; cursor: pointer; transition: all 0.2s; }
       .prompt-template:hover { background: #f3f4f6; }
       .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin: 12px 0; }
+      .status-message { margin-top: 12px; display: none; word-break: break-word; }
+      .action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+      @media (max-width: 640px) {
+        .ai-settings { margin: 20px auto; }
+        .setting-group { padding: 16px; }
+        .action-row { flex-direction: column; align-items: stretch; }
+        #quickChatForm { flex-direction: column; }
+        #quickChatForm button { width: 100%; }
+      }
     </style>
   </head>
   <body>
@@ -40,13 +49,13 @@
         <h1>AI Settings</h1>
         <p class="tagline">Configure your AI assistants and preferences</p>
 
-        <!-- Groq API Configuration -->
+        <!-- AI Provider Configuration -->
         <div class="setting-group">
-          <h3><span class="status-indicator disconnected" id="groqStatus"></span>Groq API</h3>
-          <p>Use Groq's fast LLMs for content generation, writing improvement, and more.</p>
+          <h3><span class="status-indicator disconnected" id="aiStatusIndicator"></span><span id="aiProviderLabel">Groq</span> API</h3>
+          <p id="aiProviderHint">Use your provider's LLMs for content generation, writing improvement, and more.</p>
           
           <div class="warning">
-            <strong>⚠️ Security Notice:</strong> Your API key is stored locally in your browser. Never share it. It's never sent to Timzee servers.
+            <strong>⚠️ Security Notice:</strong> Your API key is stored locally and sent only to the secure serverless proxy for the selected provider.
           </div>
 
           <label>API Key</label>
@@ -58,13 +67,13 @@
             style="width: 100%; padding: 8px; margin: 8px 0;"
           >
           
-          <div style="margin-top: 12px;">
+          <div class="action-row" style="margin-top: 12px;">
             <button class="btn" id="saveGroqBtn" type="button">Save API Key</button>
             <button class="btn ghost" id="testGroqBtn" type="button">Test Connection</button>
             <button class="btn ghost" id="clearGroqBtn" type="button">Clear</button>
           </div>
 
-          <div id="groqStatus" style="margin-top: 12px; display: none;"></div>
+          <div id="aiStatusMessage" class="status-message"></div>
         </div>
 
         <!-- Model Selection -->
@@ -184,9 +193,10 @@
     </footer>
 
     <script type="module">
-      import groq, { GROQ_MODELS, SYSTEM_PROMPTS } from "./assets/js/groq.js";
+      import * as groq from "./assets/js/groq.js";
       import { getCurrentUser, signOut } from "./assets/js/supabase.js";
 
+      const { SYSTEM_PROMPTS, detectProviderFromKey, getModelsForProvider, getProvider } = groq;
       let state = {
         user: null,
         chatHistory: []
@@ -213,17 +223,29 @@
         }
       }
 
+      function setProviderUI(provider) {
+        const label = document.getElementById("aiProviderLabel");
+        const hint = document.getElementById("aiProviderHint");
+        if (label) label.textContent = provider.charAt(0).toUpperCase() + provider.slice(1);
+        if (hint) hint.textContent = `Use ${provider} models for content generation, writing improvement, and more.`;
+
+        const models = getModelsForProvider(provider);
+        const select = document.getElementById("aiModel");
+        select.innerHTML = models.map((m) => `<option value="${m}">${m}</option>`).join("");
+        const saved = localStorage.getItem("ai_model");
+        select.value = saved && models.includes(saved) ? saved : models[0];
+      }
+
       // Load current settings
       function loadSettings() {
         const key = groq.getGroqApiKey();
+        const provider = getProvider();
+        setProviderUI(provider);
         if (key) {
           document.getElementById("groqApiKey").value = key;
-          document.getElementById("groqStatus").classList.remove("disconnected");
-          document.getElementById("groqStatus").classList.add("connected");
+          document.getElementById("aiStatusIndicator").classList.remove("disconnected");
+          document.getElementById("aiStatusIndicator").classList.add("connected");
         }
-
-        const model = localStorage.getItem("ai_model") || "mixtral-8x7b-32768";
-        document.getElementById("aiModel").value = model;
       }
 
       // Save Groq API key
@@ -234,6 +256,7 @@
           return;
         }
         groq.setGroqApiKey(key);
+        setProviderUI(detectProviderFromKey(key));
         alert("API key saved!");
         loadSettings();
       });
@@ -246,20 +269,22 @@
 
         try {
           const response = await groq.generateContent({
-            prompt: "Say 'Hello from Groq!' in exactly 4 words.",
+            prompt: "Say 'Hello from AI!' in exactly 4 words.",
             model: document.getElementById("aiModel").value
           });
           
-          const statusEl = document.getElementById("groqStatus");
+          const statusEl = document.getElementById("aiStatusMessage");
           statusEl.style.display = "block";
-          statusEl.innerHTML = `<span class="status-indicator connected"></span><strong>✓ Connected!</strong><br>Response: ${response.slice(0, 100)}...`;
+          statusEl.innerHTML = `<strong>✓ Connected!</strong><br>Response: ${String(response).slice(0, 120)}...`;
           
-          document.getElementById("groqStatus").classList.remove("disconnected");
-          document.getElementById("groqStatus").classList.add("connected");
+          document.getElementById("aiStatusIndicator").classList.remove("disconnected");
+          document.getElementById("aiStatusIndicator").classList.add("connected");
         } catch (error) {
-          const statusEl = document.getElementById("groqStatus");
+          const statusEl = document.getElementById("aiStatusMessage");
           statusEl.style.display = "block";
-          statusEl.innerHTML = `<span class="status-indicator disconnected"></span><strong>✗ Failed</strong><br>${error.message}`;
+          statusEl.innerHTML = `<strong>✗ Failed</strong><br>${error.message}`;
+          document.getElementById("aiStatusIndicator").classList.remove("connected");
+          document.getElementById("aiStatusIndicator").classList.add("disconnected");
         } finally {
           btn.disabled = false;
           btn.textContent = "Test Connection";
@@ -271,8 +296,23 @@
         if (confirm("Clear your API key?")) {
           groq.setGroqApiKey("");
           document.getElementById("groqApiKey").value = "";
+          document.getElementById("aiStatusMessage").style.display = "none";
+          document.getElementById("aiStatusIndicator").classList.remove("connected");
+          document.getElementById("aiStatusIndicator").classList.add("disconnected");
           loadSettings();
           alert("API key cleared");
+        }
+      });
+
+      document.getElementById("groqApiKey").addEventListener("input", (e) => {
+        const key = e.target.value.trim();
+        setProviderUI(detectProviderFromKey(key));
+        if (key) {
+          document.getElementById("aiStatusIndicator").classList.add("connected");
+          document.getElementById("aiStatusIndicator").classList.remove("disconnected");
+        } else {
+          document.getElementById("aiStatusIndicator").classList.add("disconnected");
+          document.getElementById("aiStatusIndicator").classList.remove("connected");
         }
       });
 

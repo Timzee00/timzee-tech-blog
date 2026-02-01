@@ -176,6 +176,7 @@
     <script type="module">
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
       import { incrementMarketplaceView, createMarketplaceInquiry, getSellerRating } from "./assets/js/videos-marketplace.js";
+      import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
 
       let state = {
         user: null,
