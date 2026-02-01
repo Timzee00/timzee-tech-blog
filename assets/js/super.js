@@ -12,7 +12,7 @@ import {
   updateAdminRequestStatus
 } from "./data.js";
 import { fetchSettings, upsertSettings, DEFAULT_SETTINGS } from "./settings.js";
-import { toTagArray, slugify, clampText, normalizeTags, escapeHTML } from "./utils.js";
+import { toTagArray, slugify, clampText, normalizeTags, escapeHTML, isSafeUrl } from "./utils.js";
 import { startPresence, onPresenceUpdate } from "./presence.js";
 import { bindRichEditorToolbar } from "./editor-tools.js";
 
@@ -783,7 +783,7 @@ function setupSuperPostReview() {
     document.getElementById("superReviewTags").textContent = tags ? `Tags: ${tags}` : "";
     const cover = document.getElementById("superReviewCover");
     if (cover) {
-      cover.innerHTML = coverUrl ? `<img src="${coverUrl}" alt="Cover preview">` : "";
+      cover.innerHTML = coverUrl && isSafeUrl(coverUrl) ? `<img src="${escapeHTML(coverUrl)}" alt="Cover preview">` : "";
     }
     const reviewContent = document.getElementById("superReviewContent");
     if (reviewContent) reviewContent.innerHTML = content || "<p>No content yet.</p>";

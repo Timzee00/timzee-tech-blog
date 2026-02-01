@@ -32,7 +32,8 @@ import {
   escapeHTML,
   stripHTML,
   normalizeTags,
-  linkifyReferences
+  linkifyReferences,
+  isSafeUrl
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
@@ -194,7 +195,7 @@ function renderAuthActions() {
     label.textContent = getDisplayName(state.user);
     const profile = document.createElement("a");
     profile.className = "btn ghost";
-    profile.href = `profile.html?id=${state.user.id}`;
+    profile.href = `profile.html?id=${encodeURIComponent(state.user.id)}`;
     profile.textContent = "Profile";
     let notifications = document.getElementById("notificationLink");
     if (!notifications) {
@@ -249,7 +250,7 @@ function renderPost(data, post) {
   `;
 
   const cover = document.getElementById("postCover");
-  cover.innerHTML = post.cover ? `<img src="${post.cover}" alt="${escapeHTML(post.title || "Post cover")}">` : "";
+  cover.innerHTML = post.cover && isSafeUrl(post.cover) ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}">` : "";
   document.getElementById("postContent").innerHTML = window.normalizeHtml ? window.normalizeHtml(post.content || "") : (post.content || "");
 
   const gallery = document.getElementById("postGallery");
@@ -312,7 +313,7 @@ function renderAuthorMini(post) {
   const avatar =
     profile?.avatar_url ||
     "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
-  const link = profile?.id ? `profile.html?id=${profile.id}` : "profile.html";
+  const link = profile?.id ? `profile.html?id=${encodeURIComponent(profile.id)}` : "profile.html";
   const canFollow = state.user && profile?.id && profile.id !== state.user.id;
   const followBtn = canFollow
     ? `<button class="btn ghost" id="followAuthorBtn">${state.isFollowingAuthor ? "Following" : "Follow"}</button>`
@@ -344,7 +345,7 @@ function renderAuthorCard(post) {
   const avatar =
     profile?.avatar_url ||
     "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
-  const link = profile?.id ? `profile.html?id=${profile.id}` : "profile.html";
+  const link = profile?.id ? `profile.html?id=${encodeURIComponent(profile.id)}` : "profile.html";
   const postsLabel = state.authorPostCount ? `${state.authorPostCount} posts` : "Featured author";
   card.innerHTML = `
     <div class="author-card">
@@ -446,7 +447,7 @@ function renderComments(comments) {
         <div class="comment-card" data-reveal id="comment-${comment.id}">
           <div class="comment-meta"><span>${
             comment.author_id
-              ? `<a href="profile.html?id=${comment.author_id}">${escapeHTML(
+              ? `<a href="profile.html?id=${encodeURIComponent(comment.author_id)}">${escapeHTML(
                   comment.author_name || "Member"
                 )}</a>`
               : escapeHTML(comment.author_name || "Member")
@@ -530,11 +531,11 @@ async function notifyMentionTargets(usernames, post, commentId) {
       .filter((profile) => profile.id && profile.id !== state.user.id && profile.notify_mentions !== false)
       .map((profile) =>
         createNotification({
-          user_id: profile.id,
+          userId: profile.id,
           type: "mention",
           title: `${getDisplayName(state.user)} mentioned you`,
           body: `${getDisplayName(state.user)} mentioned you in "${post.title || "a post"}".`,
-          link
+          linkUrl: link
         })
       )
   );
@@ -700,13 +701,11 @@ function setupFollowAuthor(post) {
       state.authorProfile?.notify_follows !== false
     ) {
       await createNotification({
-        id: crypto.randomUUID(),
-        user_id: post.author_id,
+        userId: post.author_id,
         type: "follow",
         title: "New follower",
         body: `${getDisplayName(state.user)} followed you.`,
-        link: `profile.html?id=${state.user.id}`,
-        created_at: new Date().toISOString()
+        linkUrl: `profile.html?id=${encodeURIComponent(state.user.id)}`
       });
     }
   });
@@ -831,13 +830,11 @@ function setupCommentForm(post, comments) {
 
         if (commentReplyTo && commentReplyTo.author_id && commentReplyTo.author_id !== state.user.id) {
           await createNotification({
-            id: crypto.randomUUID(),
-            user_id: commentReplyTo.author_id,
+            userId: commentReplyTo.author_id,
             type: "reply",
             title: "New reply",
             body: `${getDisplayName(state.user)} replied to your comment.`,
-            link: `post.html?id=${post.id}#comment-${result.data?.id || newComment.id}`,
-            created_at: new Date().toISOString()
+            linkUrl: `post.html?id=${post.id}#comment-${result.data?.id || newComment.id}`
           });
         }
 
@@ -847,13 +844,11 @@ function setupCommentForm(post, comments) {
           for (const userId of uniqueMentions) {
             if (userId !== state.user.id) { // Don't notify self
               await createNotification({
-                id: crypto.randomUUID(),
-                user_id: userId,
+                userId: userId,
                 type: "mention",
                 title: "You were mentioned",
                 body: `${getDisplayName(state.user)} mentioned you in a comment.`,
-                link: `post.html?id=${post.id}#comment-${result.data?.id || newComment.id}`,
-                created_at: new Date().toISOString()
+                linkUrl: `post.html?id=${post.id}#comment-${result.data?.id || newComment.id}`
               });
             }
           }
@@ -958,10 +953,10 @@ function renderAds(settings) {
     postAd.innerHTML = `
       <div class="ad-card">
         <div class="ad-label">Sponsored</div>
-        ${ad.image_url ? `<img src="${ad.image_url}" alt="${escapeHTML(ad.title || "Ad image")}">` : ""}
+        ${ad.image_url && isSafeUrl(ad.image_url) ? `<img src="${escapeHTML(ad.image_url)}" alt="${escapeHTML(ad.title || "Ad image")}">` : ""}
         <strong>${escapeHTML(ad.title || "")}</strong>
         <p>${escapeHTML(ad.body || "")}</p>
-        <a class="btn ghost" href="${ad.link_url}" target="_blank" rel="noopener">Visit</a>
+        <a class="btn ghost" href="${isSafeUrl(ad.link_url) ? escapeHTML(ad.link_url) : '#'}" target="_blank" rel="noopener">Visit</a>
       </div>
     `;
     return;

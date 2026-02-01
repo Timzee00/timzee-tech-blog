@@ -9,7 +9,7 @@ import {
 } from "./data.js";
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
-import { timeAgo, clampText, stripHTML, escapeHTML, getQueryParam, deriveLevel } from "./utils.js";
+import { timeAgo, clampText, stripHTML, escapeHTML, getQueryParam, deriveLevel, isSafeUrl } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 
@@ -734,7 +734,7 @@ function setupProfileEditor() {
   let coverPreviewUrl = "";
 
   if (avatarPreview) {
-    if (state.profile?.avatar_url) {
+    if (state.profile?.avatar_url && isSafeUrl(state.profile.avatar_url)) {
       avatarPreview.src = state.profile.avatar_url;
       avatarPreview.style.display = "block";
     } else {
@@ -743,7 +743,7 @@ function setupProfileEditor() {
   }
 
   if (coverPreview) {
-    if (state.profile?.cover_url) {
+    if (state.profile?.cover_url && isSafeUrl(state.profile.cover_url)) {
       coverPreview.src = state.profile.cover_url;
       coverPreview.style.display = "block";
     } else {

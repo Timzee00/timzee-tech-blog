@@ -670,7 +670,7 @@ export async function notifyFriendRequest(recipientId, senderName, senderId) {
     type: "friend_request",
     title: "New Friend Request",
     body: `${senderName} sent you a friend request`,
-    linkUrl: `/profile.html?id=${senderId}`,
+    linkUrl: `/profile.html?id=${encodeURIComponent(senderId)}`,
     data: { sender_id: senderId }
   });
 }

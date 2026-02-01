@@ -21,6 +21,7 @@ import {
 } from "./curator.js";
 
 import { getCurrentUser } from "./supabase.js";
+import { escapeHTML } from "./utils.js";
 
 class CuratorManager {
   constructor() {
@@ -405,9 +406,9 @@ class CuratorManager {
       return `
       <div class="source-item">
         <div class="source-info">
-          <h4>${source.name}</h4>
-          <p>${source.description || "No description"}</p>
-          <p style="font-size: 11px; color: #0f766e;">📡 ${source.source_type.toUpperCase()} • ⏱️ Every ${source.fetch_frequency_minutes} mins</p>
+          <h4>${escapeHTML(source.name || '')}</h4>
+          <p>${escapeHTML(source.description || 'No description')}</p>
+          <p style="font-size: 11px; color: #0f766e;">📡 ${escapeHTML(String(source.source_type || '').toUpperCase())} • ⏱️ Every ${escapeHTML(String(source.fetch_frequency_minutes || ''))} mins</p>
         </div>
         <div class="source-actions">
           <button class="btn ${active ? "btn-ghost" : "btn-danger"}" data-source-id="${source.id}" data-type="toggle-source">
@@ -434,11 +435,11 @@ class CuratorManager {
 
     list.innerHTML = this.posts.map(post => `
       <div class="post-card">
-        <div class="post-title">${post.title}</div>
+        <div class="post-title">${escapeHTML(post.title || '')}</div>
         <div class="post-meta">
-          Source: ${post.curator_sources?.name || "Unknown"} • ${new Date(post.published_at).toLocaleDateString()}
+          Source: ${escapeHTML(post.curator_sources?.name || 'Unknown')} • ${escapeHTML(new Date(post.published_at).toLocaleDateString())}
         </div>
-        <p style="font-size: 13px; color: #666; margin: 0;">${post.description || "No description"}</p>
+        <p style="font-size: 13px; color: #666; margin: 0;">${escapeHTML(post.description || 'No description')}</p>
         <div class="post-actions">
           <button class="btn btn-primary" data-post-id="${post.id}" data-type="post-approve">✓ Approve & Post</button>
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-delete">✕ Reject</button>

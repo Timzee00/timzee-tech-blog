@@ -38,7 +38,6 @@
         <button data-tab="danger">⚠️ Danger Zone</button>
       </nav>
 
-      <!-- Team Management -->
       <section class="admin-card" data-panel="team">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
           <div>
@@ -58,6 +57,14 @@
         <div id="curatorManagerContainer" style="margin-bottom: 40px;"></div>
       </section>
 
+      <section class="admin-card" data-panel="admins" style="display:none;">
+        <h2>👑 Super Admins</h2>
+        <p>Manage the admin roster, promote trusted staff, or delegate workflows from the <a href="../admin/dashboard.html">Admin Dashboard</a>.</p>
+        <div class="callout" style="margin-top:16px;">
+          Only super admins can add/remove admins. Use the regular admin workspace for day-to-day handling.
+        </div>
+      </section>
+
       <!-- Curator Bot Management -->
       <section class="admin-card" data-panel="curator">
         <div id="botManagerContainer"></div>
@@ -68,6 +75,13 @@
         <h2>📰 All Posts</h2>
         <p style="color: #666; margin-bottom: 20px;">View and manage all content on the site</p>
         <div id="allPostsContainer" style="text-align: center; padding: 40px; color: #999;">Loading posts...</div>
+      </section>
+
+      <!-- Site Analysis -->
+      <section class="admin-card" data-panel="analysis" style="display:none;">
+        <h2>📈 Site Analysis</h2>
+        <div class="stats-grid" id="analysisStats"></div>
+        <div class="callout" id="analysisTopPosts" style="margin-top:16px;"></div>
       </section>
 
       <!-- Users -->
@@ -99,6 +113,28 @@
             <div id="settingsStatus" style="margin-top: 12px; display: none;"></div>
           </form>
         </div>
+      </section>
+
+      <!-- Ad Settings -->
+      <section class="admin-card" data-panel="ads" style="display:none;">
+        <h2>💰 AdSense Settings</h2>
+        <form id="adsForm" class="admin-form">
+          <input type="text" id="publisherIdInput" placeholder="Publisher ID (ca-pub-xxxxxxxxxxxx)">
+          <input type="text" id="homeTopSlotInput" placeholder="Home Top Slot ID">
+          <input type="text" id="sidebarSlotInput" placeholder="Sidebar Slot ID">
+          <input type="text" id="postInlineSlotInput" placeholder="Post Inline Slot ID">
+          <label><input type="checkbox" id="adsToggle"> Enable AdSense</label>
+          <button class="btn" type="submit">Update Ads</button>
+        </form>
+        <p class="hint">AdSense only runs on a verified domain.</p>
+      </section>
+
+      <!-- Scout Bot -->
+      <section class="admin-card" data-panel="scout" style="display:none;">
+        <h2>🚀 Scout Bot</h2>
+        <p class="hint">Trigger the scheduled news scout manually.</p>
+        <button class="btn" id="runScoutBtn">Run Bot Now</button>
+        <p id="scoutStatus" class="hint" style="margin-top:12px;"></p>
       </section>
 
       <!-- Danger Zone -->
@@ -172,12 +208,26 @@
         tabBtns.forEach(btn => {
           btn.addEventListener("click", () => {
             const tab = btn.dataset.tab;
+            const targetPanel = document.querySelector(`[data-panel="${tab}"]`);
+            if (!targetPanel) return;
             tabBtns.forEach(b => b.classList.remove("active"));
             tabContents.forEach(c => c.style.display = "none");
             btn.classList.add("active");
-            document.querySelector(`[data-panel="${tab}"]`).style.display = "block";
+            targetPanel.style.display = "block";
           });
         });
+
+        const initialTab =
+          document.querySelector(".admin-nav button.active")?.dataset.tab ||
+          tabBtns[0]?.dataset.tab;
+        if (initialTab) {
+          const initialPanel = document.querySelector(`[data-panel="${initialTab}"]`);
+          if (initialPanel) {
+            tabContents.forEach((panel) => {
+              panel.style.display = panel.dataset.panel === initialTab ? "block" : "none";
+            });
+          }
+        }
 
         // Initialize moderator manager
         const modManager = new ModeratorManager();

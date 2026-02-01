@@ -195,6 +195,7 @@
     <script type="module">
       import { supabase, getCurrentUser, getDisplayName, signOut } from "./assets/js/supabase.js";
       import { fetchSettings } from "./assets/js/settings.js";
+      import { formatRichText, sanitizeHTML, escapeHTML } from "./assets/js/utils.js";
 
       const params = new URLSearchParams(window.location.search);
       const novelId = params.get("id");
@@ -258,7 +259,7 @@
           document.getElementById("synopsis").textContent = data.synopsis;
 
           if (data.cover_url && isSafeUrl(data.cover_url)) {
-            document.getElementById("coverImg").innerHTML = `<img src="${data.cover_url}" alt="${escapeHTML(data.title || 'Cover')}">`;
+            document.getElementById("coverImg").innerHTML = `<img src="${escapeHTML(data.cover_url)}" alt="${escapeHTML(data.title || 'Cover')}">`;
           } else {
             document.getElementById("coverImg").textContent = '📖';
           }
@@ -300,14 +301,21 @@
         }
 
         list.innerHTML = state.chapters.map((ch, idx) => `
-          <div class="chapter-item" onclick="readChapter(${idx})">
+          <div class="chapter-item" data-idx="${idx}">
             <div>
-              <div class="chapter-title">Chapter ${ch.chapter_number}: ${ch.title}</div>
-              <div class="chapter-published">${new Date(ch.created_at).toLocaleDateString()}</div>
+              <div class="chapter-title">Chapter ${escapeHTML(String(ch.chapter_number || ''))}: ${escapeHTML(ch.title || '')}</div>
+              <div class="chapter-published">${escapeHTML(new Date(ch.created_at).toLocaleDateString())}</div>
             </div>
-            <div style="text-align: right; color: #999; font-size: 12px;">${ch.word_count || 0} words</div>
+            <div style="text-align: right; color: #999; font-size: 12px;">${escapeHTML(String(ch.word_count || 0))} words</div>
           </div>
         `).join("");
+
+        // Attach click handlers safely (avoid inline onclick)
+        list.querySelectorAll('.chapter-item').forEach(el => {
+          el.addEventListener('click', () => {
+            readChapter(parseInt(el.dataset.idx, 10));
+          });
+        });
       }
 
       function setupEventListeners() {
@@ -416,10 +424,11 @@
 
         document.getElementById("chaptersView").style.display = "none";
         document.getElementById("readerView").style.display = "block";
+        // Use formatRichText then sanitize to ensure safe HTML
         document.getElementById("readerContent").innerHTML = `
-          <h2>Chapter ${chapter.chapter_number}: ${chapter.title}</h2>
-          <div style="color: #999; font-size: 14px; margin-bottom: 20px;">${new Date(chapter.created_at).toLocaleDateString()} • ${chapter.word_count || 0} words</div>
-          <div>${chapter.content.split('\n').map(p => `<p>${p}</p>`).join('')}</div>
+          <h2>Chapter ${escapeHTML(String(chapter.chapter_number || ''))}: ${escapeHTML(chapter.title || '')}</h2>
+          <div style="color: #999; font-size: 14px; margin-bottom: 20px;">${escapeHTML(new Date(chapter.created_at).toLocaleDateString())} • ${escapeHTML(String(chapter.word_count || 0))} words</div>
+          <div>${sanitizeHTML(formatRichText(chapter.content || ''))}</div>
         `;
 
         // Update nav buttons

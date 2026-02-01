@@ -1,4 +1,5 @@
 import { login, requireRole, logout, getDisplayName, getUserRole, getSession } from "./auth.js";
+import { supabase } from "./supabase.js";
 import {
   fetchCategories,
   fetchPosts,
@@ -38,6 +39,7 @@ import {
   toTagArray,
   slugify,
   clampText,
+  isSafeUrl,
   stripHTML,
   normalizeTags,
   escapeHTML
@@ -108,7 +110,12 @@ function updateCoverPreview(src) {
     preview.innerHTML = "Cover preview (optional)";
     return;
   }
-  preview.innerHTML = `<img src="${src}" alt="cover preview">`;
+  // Allow blob/data URLs from file inputs or safe external URLs
+  if (src.startsWith('data:') || isSafeUrl(src)) {
+    preview.innerHTML = `<img src="${escapeHTML(src)}" alt="cover preview">`;
+  } else {
+    preview.innerHTML = "<div style='color:#f00;'>Invalid preview URL</div>";
+  }
 }
 
 function renderPostMediaPreview() {
@@ -118,8 +125,8 @@ function renderPostMediaPreview() {
     .map((item) => {
       const media =
         item.media_type === "video"
-          ? `<video src="${item.url}" controls></video>`
-          : `<img src="${item.url}" alt="post media">`;
+          ? (isSafeUrl(item.url) ? `<video src="${escapeHTML(item.url)}" controls></video>` : '<div style="color:#f00;">Invalid media URL</div>')
+          : (item.url && (item.url.startsWith('data:') || isSafeUrl(item.url)) ? `<img src="${escapeHTML(item.url)}" alt="post media">` : '<div style="color:#f00;">Invalid media URL</div>');
       return `
         <div class="media-card" data-kind="existing" data-id="${item.id}">
           ${media}
@@ -135,7 +142,9 @@ function renderPostMediaPreview() {
     .map((file, index) => {
       const url = postMediaPreviewUrls[index];
       const isVideo = file.type?.startsWith("video");
-      const media = isVideo ? `<video src="${url}" controls></video>` : `<img src="${url}" alt="new media">`;
+      const media = isVideo
+        ? (url && (url.startsWith('blob:') || isSafeUrl(url)) ? `<video src="${escapeHTML(url)}" controls></video>` : '<div style="color:#f00;">Invalid media</div>')
+        : (url && (url.startsWith('blob:') || url.startsWith('data:') || isSafeUrl(url)) ? `<img src="${escapeHTML(url)}" alt="new media">` : '<div style="color:#f00;">Invalid media</div>');
       return `
         <div class="media-card" data-kind="new" data-index="${index}">
           ${media}
@@ -199,7 +208,7 @@ function updateThemeWallpaperPreview(src) {
     preview.innerHTML = "Wallpaper preview (optional)";
     return;
   }
-  preview.innerHTML = `<img src="${src}" alt="theme wallpaper preview">`;
+  preview.innerHTML = isSafeUrl(src) ? `<img src="${escapeHTML(src)}" alt="theme wallpaper preview">` : '<div style="color:#f00;">Invalid wallpaper URL</div>';
 }
 
 function updateAdImagePreview(src) {
@@ -209,7 +218,7 @@ function updateAdImagePreview(src) {
     preview.innerHTML = "Ad image preview (optional)";
     return;
   }
-  preview.innerHTML = `<img src="${src}" alt="ad image preview">`;
+  preview.innerHTML = isSafeUrl(src) ? `<img src="${escapeHTML(src)}" alt="ad image preview">` : '<div style="color:#f00;">Invalid ad image URL</div>';
 }
 
 function setupImageInputs() {
@@ -842,13 +851,13 @@ async function setupFaq() {
   }
 
   await renderFaqs();
-    // Also initialize authors manager (admin-level)
-    try {
-      await setupAuthors();
-    } catch (err) {
-      console.error('Authors manager failed to initialize:', err);
-    }
-
+  // Also initialize authors manager (admin-level)
+  try {
+    await setupAuthors();
+  } catch (err) {
+    console.error('Authors manager failed to initialize:', err);
+  }
+}
 
 function populateCategories() {
   const select = document.getElementById("postCategory");
@@ -915,7 +924,7 @@ function setupPostReview() {
     const cover = document.getElementById("reviewCover");
     if (cover) {
       const src = coverFile ? coverPreviewUrl : coverUrl;
-      cover.innerHTML = src ? `<img src="${src}" alt="Cover preview">` : "";
+      cover.innerHTML = src && isSafeUrl(src) ? `<img src="${escapeHTML(src)}" alt="Cover preview">` : "";
     }
     const reviewContent = document.getElementById("reviewContent");
     if (reviewContent) reviewContent.innerHTML = content || "<p>No content yet.</p>";

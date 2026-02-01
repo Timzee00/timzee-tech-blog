@@ -15,7 +15,7 @@ import {
 } from "./data.js";
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
-import { timeAgo, readingTime, clampText, escapeHTML, stripHTML, normalizeTags, deriveLevel } from "./utils.js";
+import { timeAgo, readingTime, clampText, escapeHTML, stripHTML, normalizeTags, deriveLevel, isSafeUrl } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 
@@ -107,7 +107,7 @@ function renderAuthActions() {
     label.textContent = getDisplayName(state.user);
     const profile = document.createElement("a");
     profile.className = "btn ghost";
-    profile.href = `profile.html?id=${state.user.id}`;
+    profile.href = `profile.html?id=${encodeURIComponent(state.user.id)}`;
     profile.textContent = "Profile";
     let notifications = document.getElementById("notificationLink");
     if (!notifications) {
@@ -193,6 +193,25 @@ function hydrateCounts() {
   });
   state.likeCounts = likeCounts;
   state.userLikes = userLikes;
+}
+
+function showLoadingPlaceholders() {
+  const placeholders = [
+    { id: "trendingList", message: "Loading trending posts..." },
+    { id: "popularTrack", message: "Preparing popular posts..." },
+    { id: "popularTopicsTrack", message: "Gathering discussions..." },
+    { id: "categoryGrid", message: "Loading forum boards..." },
+    { id: "latestPosts", message: "Loading latest posts..." },
+    { id: "hotList", message: "Identifying highlights..." },
+    { id: "leaderboardList", message: "Updating leaderboard..." },
+    { id: "statsList", message: "Syncing stats..." }
+  ];
+  placeholders.forEach(({ id, message }) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.innerHTML = `<div class="callout">${escapeHTML(message)}</div>`;
+    }
+  });
 }
 
 function getPostScore(post) {
@@ -314,7 +333,7 @@ function renderPopular() {
       return `
         <article class="popular-card" data-reveal>
           <a class="popular-media" href="post.html?id=${post.id}">
-            ${post.cover ? `<img src="${post.cover}" alt="${escapeHTML(post.title || "Post cover")}">` : ""}
+            ${post.cover && isSafeUrl(post.cover) ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}">` : ""}
           </a>
           <div class="popular-body">
             <div class="popular-meta">
@@ -370,11 +389,12 @@ function renderPopularTopics() {
   track.innerHTML = topTopics
     .map((topic) => {
       const count = messageCounts[topic.id] || 0;
+      const mediaUrl = topic.media_url && isSafeUrl(topic.media_url) ? escapeHTML(topic.media_url) : "";
       const media =
-        topic.media_url && topic.media_type === "video"
-          ? `<video muted playsinline controls src="${topic.media_url}"></video>`
-          : topic.media_url
-            ? `<img src="${topic.media_url}" alt="${escapeHTML(topic.title || "Topic cover")}">`
+        topic.media_type === "video" && mediaUrl
+          ? `<video muted playsinline controls src="${mediaUrl}"></video>`
+          : mediaUrl
+            ? `<img src="${mediaUrl}" alt="${escapeHTML(topic.title || "Topic cover")}">`
             : "";
       return `
         <article class="popular-card topic-card" data-reveal>
@@ -773,9 +793,8 @@ function renderLeaderboard() {
   list.innerHTML = state.leaderboard
     .map((profile) => {
       const name = profile.display_name || profile.username || "Member";
-      const avatar =
-        profile.avatar_url ||
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+      const defaultAvatar = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+      const avatar = isSafeUrl(profile.avatar_url) ? profile.avatar_url : defaultAvatar;
       const points = profile.points || 0;
       const level = profile.level || deriveLevel(points).label;
       const verified = profile.is_verified ? `<span class="verified-badge small">✓</span>` : "";
@@ -806,16 +825,15 @@ function isAdActive(ad) {
 
 function buildAdCard(ad) {
   if (!ad) return "";
-  const image = ad.image_url
-    ? `<img src="${ad.image_url}" alt="${escapeHTML(ad.title || "Ad image")}">`
-    : "";
+  const image = ad.image_url && isSafeUrl(ad.image_url) ? `<img src="${escapeHTML(ad.image_url)}" alt="${escapeHTML(ad.title || "Ad image")}">` : "";
+  const safeLink = isSafeUrl(ad.link_url) ? escapeHTML(ad.link_url) : "#";
   return `
     <div class="ad-card">
       <div class="ad-label">Sponsored</div>
       ${image}
       <strong>${escapeHTML(ad.title || "")}</strong>
       <p>${escapeHTML(ad.body || "")}</p>
-      <a class="btn ghost" href="${ad.link_url}" target="_blank" rel="noopener">Visit</a>
+      <a class="btn ghost" href="${safeLink}" target="_blank" rel="noopener">Visit</a>
     </div>
   `;
 }
@@ -886,6 +904,7 @@ function renderAds(settings) {
 }
 
 async function boot() {
+  showLoadingPlaceholders();
   state.user = await getCurrentUserWithRole();
   state.settings = await fetchSettings();
   applyTheme(state.settings);

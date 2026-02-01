@@ -17,7 +17,8 @@ import {
   stripHTML,
   formatRichText,
   extractMentions,
-  linkifyReferences
+  linkifyReferences,
+  isSafeUrl
 } from "./utils.js";
 import { bindEditorToolbar } from "./editor-tools.js";
 import { setupReveal } from "./reveal.js";
@@ -53,7 +54,7 @@ function renderAuthActions() {
     label.textContent = getDisplayName(state.user);
     const profile = document.createElement("a");
     profile.className = "btn ghost";
-    profile.href = `profile.html?id=${state.user.id}`;
+    profile.href = `profile.html?id=${encodeURIComponent(state.user.id)}`;
     profile.textContent = "Profile";
     let notifications = document.getElementById("notificationLink");
     if (!notifications) {
@@ -162,11 +163,16 @@ function renderTopicMedia() {
     target.innerHTML = "";
     return;
   }
-  if (state.activeTopic.media_type === "video") {
-    target.innerHTML = `<video controls src="${state.activeTopic.media_url}"></video>`;
+  const url = state.activeTopic.media_url;
+  if (state.activeTopic.media_type === "video" && isSafeUrl(url)) {
+    target.innerHTML = `<video controls src="${escapeHTML(url)}"></video>`;
     return;
   }
-  target.innerHTML = `<img src="${state.activeTopic.media_url}" alt="topic media">`;
+  if (isSafeUrl(url)) {
+    target.innerHTML = `<img src="${escapeHTML(url)}" alt="topic media">`;
+    return;
+  }
+  target.innerHTML = "";
 }
 
 async function selectTopic(topicId) {
@@ -288,13 +294,12 @@ function buildMessageHtml(message) {
     : "";
   const bodyHtml = message.body ? linkifyReferences(message.body).replace(/\n/g, "<br>") : "";
   let mediaHtml = "";
-  if (message.media_url) {
+  if (message.media_url && isSafeUrl(message.media_url)) {
+    const safeUrl = escapeHTML(message.media_url);
     if (message.media_type === "video") {
-      mediaHtml = `<video class="message-media" controls src="${message.media_url}"></video>`;
+      mediaHtml = `<video class="message-media" controls src="${safeUrl}"></video>`;
     } else {
-      mediaHtml = `<img class="message-media ${message.media_type === "sticker" ? "sticker" : ""}" src="${
-        message.media_url
-      }" alt="message media">`;
+      mediaHtml = `<img class="message-media ${message.media_type === "sticker" ? "sticker" : ""}" src="${safeUrl}" alt="message media">`;
     }
   }
   const pinLabel = message.pinned ? " <span class=\"chip\">Pinned</span>" : "";
@@ -303,7 +308,7 @@ function buildMessageHtml(message) {
   const canBan = canModerate && message.author_id && message.author_id !== state.user?.id;
   const authorName = escapeHTML(message.author_name || "Member");
   const authorLink = message.author_id
-    ? `<a href="profile.html?id=${message.author_id}">${authorName}</a>`
+    ? `<a href="profile.html?id=${encodeURIComponent(message.author_id)}">${authorName}</a>`
     : authorName;
 
   return `
@@ -620,13 +625,11 @@ function setupFollowButton() {
         .maybeSingle();
       if (authorPref.data?.notify_follows === false) return;
       await createNotification({
-        id: crypto.randomUUID(),
-        user_id: state.activeTopic.author_id,
+        userId: state.activeTopic.author_id,
         type: "topic_follow",
         title: "New topic follower",
         body: `${getDisplayName(state.user)} followed your topic "${state.activeTopic.title}".`,
-        link: `discussion.html?topic=${state.activeTopicId}`,
-        created_at: new Date().toISOString()
+        linkUrl: `discussion.html?topic=${state.activeTopicId}`
       });
     }
   });
@@ -874,35 +877,31 @@ function setupMessageForm() {
       }
       return;
     }
-    const mentionHandles = extractMentions(finalBody || "");
-    if (mentionHandles.length) {
-      const mentioned = await fetchProfilesByUsernames(mentionHandles);
-      const link = `discussion.html?topic=${state.activeTopicId}`;
-      await Promise.all(
-        mentioned
-          .filter((profile) => profile.id && profile.id !== state.user.id && profile.notify_mentions !== false)
-          .map((profile) =>
-            createNotification({
-              id: crypto.randomUUID(),
-              user_id: profile.id,
-              type: "mention",
-              title: "You were mentioned",
-              body: `${getDisplayName(state.user)} mentioned you in "${state.activeTopic?.title || "a topic"}".`,
-              link,
-              created_at: new Date().toISOString()
-            })
-          )
-      );
-    }
+      const mentionHandles = extractMentions(finalBody || "");
+      if (mentionHandles.length) {
+        const mentioned = await fetchProfilesByUsernames(mentionHandles);
+        const link = `discussion.html?topic=${state.activeTopicId}`;
+        await Promise.all(
+          mentioned
+            .filter((profile) => profile.id && profile.id !== state.user.id && profile.notify_mentions !== false)
+            .map((profile) =>
+              createNotification({
+                userId: profile.id,
+                type: "mention",
+                title: "You were mentioned",
+                body: `${getDisplayName(state.user)} mentioned you in "${state.activeTopic?.title || "a topic"}".`,
+                linkUrl: link
+              })
+            )
+        );
+      }
     if (state.replyTo?.author_id && state.replyTo.author_id !== state.user.id) {
       await createNotification({
-        id: crypto.randomUUID(),
-        user_id: state.replyTo.author_id,
+        userId: state.replyTo.author_id,
         type: "reply",
         title: "New reply",
         body: `${getDisplayName(state.user)} replied to your message.`,
-        link: `discussion.html?topic=${state.activeTopicId}`,
-        created_at: new Date().toISOString()
+        linkUrl: `discussion.html?topic=${state.activeTopicId}`
       });
     }
     await supabase

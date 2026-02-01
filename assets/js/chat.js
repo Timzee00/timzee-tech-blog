@@ -2,7 +2,7 @@ import { supabase, getCurrentUser, getCurrentUserWithRole, getDisplayName, signO
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import { uploadMedia } from "./media.js";
-import { timeAgo, escapeHTML } from "./utils.js";
+import { timeAgo, escapeHTML, isSafeUrl } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 
@@ -40,7 +40,7 @@ function renderAuthActions() {
     label.textContent = getDisplayName(state.user);
     const profile = document.createElement("a");
     profile.className = "btn ghost";
-    profile.href = `profile.html?id=${state.user.id}`;
+    profile.href = `profile.html?id=${encodeURIComponent(state.user.id)}`;
     profile.textContent = "Profile";
     let notifications = document.getElementById("notificationLink");
     if (!notifications) {
@@ -548,20 +548,17 @@ async function searchPeople(term) {
 }
 
 async function loadMessages(threadId) {
-  console.log("loadMessages called with threadId:", threadId);
   const result = await supabase
     .from("direct_messages")
     .select("*")
     .eq("thread_id", threadId)
     .order("created_at", { ascending: true });
-  console.log("loadMessages result:", result.data?.length || 0, "messages loaded");
   state.messages = result.data || [];
   renderMessages();
 }
 
 function renderMessages() {
   const list = document.getElementById("chatMessages");
-  console.log("renderMessages called, activeFriendId:", state.activeFriendId, "messages count:", state.messages.length);
   if (!list) return;
   if (!state.activeFriendId && !state.activeGroupId) {
     list.innerHTML = "<div class=\"callout\">Select a chat to start messaging.</div>";
@@ -707,7 +704,6 @@ function subscribeToMessages(threadId) {
 
 async function selectFriend(friendId) {
   if (!friendId) return;
-  console.log("selectFriend called with:", friendId);
   state.activeFriendId = friendId;
   state.activeGroupId = null;
   renderFriendList();
@@ -724,7 +720,7 @@ async function selectFriend(friendId) {
   }
   if (name) name.textContent = profile?.display_name || "Friend";
   if (statusText) statusText.textContent = profile?.headline || "Available";
-  if (profileBtn) profileBtn.href = `profile.html?id=${friendId}`;
+  if (profileBtn) profileBtn.href = `profile.html?id=${encodeURIComponent(friendId)}`;
   if (removeBtn) {
     removeBtn.onclick = async () => {
       if (!confirm("Remove this friend?")) return;
@@ -1135,7 +1131,7 @@ function renderFriendPickerList(query = "") {
   pickerList.innerHTML = friends
     .map((item) => `
       <div class="picker-item" data-id="${item.id}" tabindex="0">
-        <img src="${item.profile?.avatar_url || 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80'}" alt="">
+        <img src="${isSafeUrl(item.profile?.avatar_url) ? escapeHTML(item.profile?.avatar_url) : 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80'}" alt="">
         <div class="meta">
           <div class="name">${escapeHTML(item.profile?.display_name || 'Member')}</div>
           <div class="sub">${escapeHTML(item.profile?.username || item.profile?.email || '')}</div>
