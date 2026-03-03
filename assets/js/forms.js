@@ -2,6 +2,7 @@ import { supabase } from "./supabase.js";
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import { setupReveal } from "./reveal.js";
+import { extractErrorMessage, reportAppError } from "./utils.js";
 import "./nav.js";
 
 async function applySiteTheme(settings) {
@@ -164,4 +165,15 @@ async function boot() {
   });
 }
 
-boot();
+boot().catch((error) => {
+  reportAppError(error, "Form page load failed");
+  const message = extractErrorMessage(error, "Unable to initialize this page.");
+  const statuses = ["contactStatus", "supportStatus", "newsletterStatus", "adsStatus"];
+  statuses.forEach((id) => {
+    const target = document.getElementById(id);
+    if (target) {
+      target.textContent = message;
+      target.style.display = "block";
+    }
+  });
+});

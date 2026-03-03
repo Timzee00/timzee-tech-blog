@@ -11,6 +11,7 @@ import {
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import { setupReveal } from "./reveal.js";
+import { extractErrorMessage, reportAppError } from "./utils.js";
 import "./nav.js";
 
 function setMessage(target, message, show = true) {
@@ -264,4 +265,12 @@ async function boot() {
   }
 }
 
-boot();
+boot().catch((error) => {
+  reportAppError(error, "Auth page load failed");
+  const message = extractErrorMessage(error, "Unable to load authentication tools.");
+  const loginMessage = document.getElementById("loginMessage");
+  if (loginMessage) {
+    loginMessage.textContent = message;
+    loginMessage.style.display = "block";
+  }
+});

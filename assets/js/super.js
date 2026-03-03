@@ -12,7 +12,16 @@ import {
   updateAdminRequestStatus
 } from "./data.js";
 import { fetchSettings, upsertSettings, DEFAULT_SETTINGS } from "./settings.js";
-import { toTagArray, slugify, clampText, normalizeTags, escapeHTML, isSafeUrl } from "./utils.js";
+import {
+  toTagArray,
+  slugify,
+  clampText,
+  normalizeTags,
+  escapeHTML,
+  isSafeUrl,
+  extractErrorMessage,
+  reportAppError
+} from "./utils.js";
 import { startPresence, onPresenceUpdate } from "./presence.js";
 import { bindRichEditorToolbar } from "./editor-tools.js";
 
@@ -31,6 +40,19 @@ let userPage = 1;
 let userHasMore = false;
 const userPerPage = 200;
 
+async function parseJsonSafe(response) {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return {
+      error: `Unexpected response format (${response.status}).`,
+      raw: text
+    };
+  }
+}
+
 function toLocalDateTimeValue(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -44,15 +66,22 @@ function handleLogin() {
   if (!form) return false;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const email = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value.trim();
+    const email = document.getElementById("username")?.value.trim();
+    const password = document.getElementById("password")?.value.trim();
     const message = document.getElementById("loginMessage");
-    const result = await login(email, password, ["super"]);
-    if (!result.ok) {
-      message.textContent = result.message;
-      return;
+    try {
+      const result = await login(email, password, ["super"]);
+      if (!result.ok) {
+        if (message) message.textContent = result.message;
+        return;
+      }
+      window.location.href = "professional-panel.html";
+    } catch (error) {
+      reportAppError(error, "Super login failed");
+      if (message) {
+        message.textContent = extractErrorMessage(error, "Login failed.");
+      }
     }
-    window.location.href = "professional-panel.html";
   });
   return true;
 }
@@ -116,7 +145,7 @@ async function setupAdminCreate() {
       },
       body: JSON.stringify({ displayName: name, username, email, password })
     });
-    const result = await response.json();
+    const result = await parseJsonSafe(response);
     if (!response.ok) {
       setMessage(message, result.error || "Admin creation failed.", true);
       return;
@@ -144,21 +173,26 @@ function renderAdminTableNote() {
 }
 
 async function fetchAdmins() {
-  const session = await getSession();
-  const token = session?.access_token;
-  if (!token) {
-    return { error: "Auth token missing." };
-  }
-  const response = await fetch("/.netlify/functions/list-admins", {
-    headers: {
-      Authorization: `Bearer ${token}`
+  try {
+    const session = await getSession();
+    const token = session?.access_token;
+    if (!token) {
+      return { error: "Auth token missing." };
     }
-  });
-  const result = await response.json();
-  if (!response.ok) {
-    return { error: result.error || "Failed to load admins." };
+    const response = await fetch("/.netlify/functions/list-admins", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    const result = await parseJsonSafe(response);
+    if (!response.ok) {
+      return { error: result.error || "Failed to load admins." };
+    }
+    return { data: result.admins || [] };
+  } catch (error) {
+    reportAppError(error, "Admin list fetch failed");
+    return { error: extractErrorMessage(error, "Failed to load admins.") };
   }
-  return { data: result.admins || [] };
 }
 
 function renderAdminsTable(admins) {
@@ -232,7 +266,7 @@ function renderAdminsTable(admins) {
           },
           body: JSON.stringify({ action: "reset_password", userId, password: newPass })
         });
-        const result = await response.json();
+        const result = await parseJsonSafe(response);
         if (!response.ok) {
           alert(result.error || "Password reset failed.");
           return;
@@ -249,7 +283,7 @@ function renderAdminsTable(admins) {
           },
           body: JSON.stringify({ action: "delete", userId })
         });
-        const result = await response.json();
+        const result = await parseJsonSafe(response);
         if (!response.ok) {
           alert(result.error || "Admin removal failed.");
           return;
@@ -330,7 +364,7 @@ function renderAdminRequests() {
             username: request.user_name ? request.user_name.toLowerCase().replace(/\s+/g, "") : ""
           })
         });
-        const result = await response.json();
+        const result = await parseJsonSafe(response);
         if (!response.ok) {
           alert(result.error || "Admin promotion failed.");
           return;
@@ -350,45 +384,55 @@ async function loadAdminRequests() {
 }
 
 async function fetchUsers({ search = "", page = 1, perPage = userPerPage } = {}) {
-  const session = await getSession();
-  const token = session?.access_token;
-  if (!token) {
-    return { error: "Auth token missing." };
-  }
-  const params = new URLSearchParams();
-  if (search) params.set("search", search);
-  params.set("perPage", perPage);
-  if (!search) params.set("page", String(page));
-  const query = params.toString() ? `?${params.toString()}` : "";
-  const response = await fetch(`/.netlify/functions/list-users${query}`, {
-    headers: {
-      Authorization: `Bearer ${token}`
+  try {
+    const session = await getSession();
+    const token = session?.access_token;
+    if (!token) {
+      return { error: "Auth token missing." };
     }
-  });
-  const result = await response.json();
-  if (!response.ok) {
-    return { error: result.error || "Failed to load users." };
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    params.set("perPage", perPage);
+    if (!search) params.set("page", String(page));
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const response = await fetch(`/.netlify/functions/list-users${query}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    const result = await parseJsonSafe(response);
+    if (!response.ok) {
+      return { error: result.error || "Failed to load users." };
+    }
+    return { data: result.users || [], page: result.page || page, hasMore: !!result.hasMore };
+  } catch (error) {
+    reportAppError(error, "User list fetch failed");
+    return { error: extractErrorMessage(error, "Failed to load users.") };
   }
-  return { data: result.users || [], page: result.page || page, hasMore: !!result.hasMore };
 }
 
 async function updateUserAction(userId, action, tier) {
-  const session = await getSession();
-  const token = session?.access_token;
-  if (!token) return { error: "Auth token missing." };
-  const response = await fetch("/.netlify/functions/update-user", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ userId, action, verificationTier: tier })
-  });
-  const result = await response.json();
-  if (!response.ok) {
-    return { error: result.error || "User update failed." };
+  try {
+    const session = await getSession();
+    const token = session?.access_token;
+    if (!token) return { error: "Auth token missing." };
+    const response = await fetch("/.netlify/functions/update-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ userId, action, verificationTier: tier })
+    });
+    const result = await parseJsonSafe(response);
+    if (!response.ok) {
+      return { error: result.error || "User update failed." };
+    }
+    return { data: result.profile || null };
+  } catch (error) {
+    reportAppError(error, "User update failed");
+    return { error: extractErrorMessage(error, "User update failed.") };
   }
-  return { data: result.profile || null };
 }
 
 function renderUsersTable(users) {
@@ -1013,7 +1057,7 @@ async function setupScoutBot() {
     clearTimeout(timeout);
     let result = null;
     try {
-      result = await response.json();
+      result = await parseJsonSafe(response);
     } catch (error) {
       setStatus("Scout bot returned an unexpected response.", true);
       return;
@@ -1100,5 +1144,13 @@ async function bootPanel() {
 }
 
 if (!handleLogin()) {
-  bootPanel();
+  bootPanel().catch((error) => {
+    reportAppError(error, "Super panel failed");
+    const app = document.getElementById("superApp");
+    if (app) {
+      app.innerHTML = `<section class="admin-card"><h2>Panel Error</h2><p>${escapeHTML(
+        extractErrorMessage(error, "Unable to load super admin panel.")
+      )}</p></section>`;
+    }
+  });
 }

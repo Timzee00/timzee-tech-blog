@@ -187,6 +187,7 @@
       import { getCurrentUserWithRole, signOut, supabase, getUserRole } from "../assets/js/supabase.js";
       import ModeratorManager from "../assets/js/moderator-ui.js";
       import CuratorManager from "../assets/js/curator-ui.js";
+      const SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
       async function init() {
         const user = await getCurrentUserWithRole();
@@ -306,7 +307,24 @@
             `);
             renderList("adminList", cards, "No admins found.");
           } catch (err) {
-            showPanelError("adminList", err.message || "Failed to load admins.");
+            console.warn("Falling back to Supabase admin list:", err);
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("id, display_name, username, role, created_at, email")
+              .in("role", ["admin", "super"])
+              .order("created_at", { ascending: false });
+            if (error) {
+              showPanelError("adminList", err.message || error.message || "Failed to load admins.");
+              return;
+            }
+            const cards = (data || []).map((admin) => `
+              <div class="form-card" style="margin-bottom:12px;">
+                <strong>${admin.display_name || admin.username || "Admin"}</strong>
+                <div style="color:#666;font-size:12px;">${admin.email || admin.username || "—"} • ${admin.role || "admin"}</div>
+                <div style="color:#666;font-size:12px;">Joined: ${admin.created_at ? new Date(admin.created_at).toLocaleDateString() : "—"}</div>
+              </div>
+            `);
+            renderList("adminList", cards, "No admins found.");
           }
         };
 
@@ -327,7 +345,24 @@
             `);
             renderList("allUsersContainer", cards, "No users found.");
           } catch (err) {
-            showPanelError("allUsersContainer", err.message || "Failed to load users.");
+            console.warn("Falling back to Supabase user list:", err);
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("id, display_name, username, role, status, created_at")
+              .order("created_at", { ascending: false })
+              .limit(200);
+            if (error) {
+              showPanelError("allUsersContainer", err.message || error.message || "Failed to load users.");
+              return;
+            }
+            const cards = (data || []).map((user) => `
+              <div class="form-card" style="margin-bottom:12px;">
+                <strong>${user.display_name || user.username || "Member"}</strong>
+                <div style="color:#666;font-size:12px;">${user.username || "—"} • ${user.role || "user"}</div>
+                <div style="color:#666;font-size:12px;">Status: ${user.status || "active"}</div>
+              </div>
+            `);
+            renderList("allUsersContainer", cards, "No users found.");
           }
         };
 
@@ -391,7 +426,11 @@
         };
 
         const loadSiteSettings = async () => {
-          const { data, error } = await supabase.from("site_settings").select("*").maybeSingle();
+          const { data, error } = await supabase
+            .from("site_settings")
+            .select("*")
+            .eq("id", SETTINGS_ID)
+            .maybeSingle();
           if (error || !data) return;
           document.getElementById("siteName").value = data.site_name || "";
           document.getElementById("tagline").value = data.tagline || "";
@@ -412,19 +451,14 @@
           status.style.color = "#0f766e";
 
           try {
-            // Update site settings in Supabase
-            const settingsRow = await supabase.from("site_settings").select("id").maybeSingle();
             const payload = {
+              id: SETTINGS_ID,
               site_name: document.getElementById("siteName").value,
               tagline: document.getElementById("tagline").value,
               comment_moderation: document.getElementById("commentModeration").checked,
               updated_at: new Date().toISOString()
             };
-            if (settingsRow.data?.id) {
-              await supabase.from("site_settings").update(payload).eq("id", settingsRow.data.id);
-            } else {
-              await supabase.from("site_settings").insert({ id: crypto.randomUUID(), ...payload });
-            }
+            await supabase.from("site_settings").upsert(payload);
 
             status.textContent = "✓ Settings saved!";
             status.style.color = "green";
@@ -438,8 +472,8 @@
         document.getElementById("adsForm")?.addEventListener("submit", async (e) => {
           e.preventDefault();
           try {
-            const settingsRow = await supabase.from("site_settings").select("id").maybeSingle();
             const payload = {
+              id: SETTINGS_ID,
               adsense_enabled: document.getElementById("adsToggle").checked,
               adsense_publisher_id: document.getElementById("publisherIdInput").value,
               adsense_home_top: document.getElementById("homeTopSlotInput").value,
@@ -447,11 +481,7 @@
               adsense_post_inline: document.getElementById("postInlineSlotInput").value,
               updated_at: new Date().toISOString()
             };
-            if (settingsRow.data?.id) {
-              await supabase.from("site_settings").update(payload).eq("id", settingsRow.data.id);
-            } else {
-              await supabase.from("site_settings").insert({ id: crypto.randomUUID(), ...payload });
-            }
+            await supabase.from("site_settings").upsert(payload);
             alert("Ads settings updated.");
           } catch (err) {
             alert(`Failed to update ads settings: ${err.message}`);
@@ -478,7 +508,21 @@
         await loadAnalysis();
       }
 
-      init();
+      init().catch((err) => {
+        console.error("Super panel init failed:", err);
+        const safe = String((err && err.message) ? err.message : "Failed to initialize super admin interface.")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        document.body.innerHTML = `
+          <main class="container" style="padding:40px;">
+            <section class="admin-card">
+              <h2>Super Admin Error</h2>
+              <p>${safe}</p>
+            </section>
+          </main>
+        `;
+      });
     </script>
   </body>
 </html>

@@ -1,6 +1,20 @@
 import { startPresence } from "./presence.js";
 import { supabase, getCurrentUser } from "./supabase.js";
 import { fetchUnreadNotificationCount } from "./data.js";
+import { extractErrorMessage, reportAppError } from "./utils.js";
+
+function setupGlobalErrorHandlers() {
+  if (typeof window === "undefined" || window.__timzeeErrorHandlersReady) return;
+  window.__timzeeErrorHandlersReady = true;
+  window.addEventListener("error", (event) => {
+    const message = event?.error || event?.message || "Unexpected website error.";
+    reportAppError(message, "Website error");
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    const message = extractErrorMessage(event?.reason, "Unhandled backend error.");
+    reportAppError(message, "Backend error");
+  });
+}
 
 function setupMobileMenu() {
   const wrap = document.querySelector(".site-header .wrap");
@@ -63,6 +77,7 @@ function setupMobileMenu() {
   });
 }
 
+setupGlobalErrorHandlers();
 setupMobileMenu();
 startPresence(window.location.pathname);
 

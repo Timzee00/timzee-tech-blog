@@ -1,8 +1,9 @@
 import { supabase } from "./supabase.js";
+import { reportAppError } from "./utils.js";
 
 function normalizeResponse(result) {
   if (result.error) {
-    console.warn("Supabase query failed", result.error);
+    reportAppError(result.error, "Database query failed");
     return [];
   }
   return result.data || [];

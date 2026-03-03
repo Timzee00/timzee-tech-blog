@@ -15,7 +15,18 @@ import {
 } from "./data.js";
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
-import { timeAgo, readingTime, clampText, escapeHTML, stripHTML, normalizeTags, deriveLevel, isSafeUrl } from "./utils.js";
+import {
+  timeAgo,
+  readingTime,
+  clampText,
+  escapeHTML,
+  stripHTML,
+  normalizeTags,
+  deriveLevel,
+  isSafeUrl,
+  extractErrorMessage,
+  reportAppError
+} from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 
@@ -217,6 +228,21 @@ function showLoadingPlaceholders() {
 function getPostScore(post) {
   const likes = state.likeCounts[post.id] || 0;
   return likes * 2 + (post.views || 0);
+}
+
+function fallbackFilterPosts(posts, query = "", tags = []) {
+  const search = (query || "").toLowerCase().trim();
+  const activeTags = (tags || []).map((tag) => tag.toLowerCase());
+  return posts.filter((post) => {
+    const postTags = normalizeTags(post.tags);
+    const matchesTags = !activeTags.length || activeTags.every((tag) => postTags.includes(tag));
+    const matchesQuery =
+      !search ||
+      [post.title, stripHTML(post.content || ""), post.summary, postTags.join(" ")].some((text) =>
+        (text || "").toLowerCase().includes(search)
+      );
+    return matchesTags && matchesQuery;
+  });
 }
 
 function renderStats() {
@@ -448,7 +474,6 @@ function renderLists() {
   const hotTarget = document.getElementById("hotList");
   if (!latestTarget || !hotTarget) return;
 
-  const query = state.searchTerm.toLowerCase();
   const sourcePosts = state.filteredPosts || state.posts;
   const filtered = sourcePosts
     .filter((post) =>
@@ -732,26 +757,31 @@ async function performSearch() {
     renderLists();
     return;
   }
-  
+
+  const fallback = () => {
+    state.filteredPosts = fallbackFilterPosts(state.posts, state.searchTerm, state.activeTags);
+  };
+
   try {
     const results = await searchPosts({
       query: state.searchTerm,
       tags: state.activeTags
     });
-    
+
     if (results && Array.isArray(results)) {
       state.filteredPosts = results;
+      if (!results.length) fallback();
     } else {
-      state.filteredPosts = [];
+      fallback();
     }
-    
+
     renderTrending();
     renderPopular();
     renderPopularTopics();
     renderLists();
   } catch (error) {
     console.error("Search error:", error);
-    state.filteredPosts = [];
+    fallback();
     renderTrending();
     renderPopular();
     renderPopularTopics();
@@ -952,4 +982,12 @@ async function boot() {
   setupReveal();
 }
 
-boot();
+boot().catch((error) => {
+  reportAppError(error, "Homepage load failed");
+  showLoadingPlaceholders();
+  const message = extractErrorMessage(error, "Failed to load data.");
+  const latest = document.getElementById("latestPosts");
+  if (latest) {
+    latest.innerHTML = `<div class="callout">${escapeHTML(message)}</div>`;
+  }
+});

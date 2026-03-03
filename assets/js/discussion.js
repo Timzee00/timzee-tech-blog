@@ -19,7 +19,9 @@ import {
   formatRichText,
   extractMentions,
   linkifyReferences,
-  isSafeUrl
+  isSafeUrl,
+  extractErrorMessage,
+  reportAppError
 } from "./utils.js";
 import { bindEditorToolbar } from "./editor-tools.js";
 import { setupReveal } from "./reveal.js";
@@ -978,4 +980,15 @@ async function boot() {
   updateMessageFormState();
 }
 
-boot();
+boot().catch((error) => {
+  reportAppError(error, "Discussion load failed");
+  const message = extractErrorMessage(error, "Unable to load discussion right now.");
+  const topicList = document.getElementById("topicList");
+  if (topicList) {
+    topicList.innerHTML = `<div class="callout">${escapeHTML(message)}</div>`;
+  }
+  const messageList = document.getElementById("messageList");
+  if (messageList) {
+    messageList.innerHTML = `<div class="callout">${escapeHTML(message)}</div>`;
+  }
+});

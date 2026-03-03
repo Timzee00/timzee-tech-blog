@@ -46,13 +46,34 @@ export function readingTime(text) {
   return `${minutes} min read`;
 }
 
+function toText(value) {
+  return value === null || typeof value === "undefined" ? "" : String(value);
+}
+
+export function decodeHtmlEntities(text) {
+  const value = toText(text);
+  if (!value) return "";
+  if (typeof document === "undefined") {
+    return value
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&amp;/gi, "&")
+      .replace(/&quot;/gi, "\"")
+      .replace(/&#039;/gi, "'");
+  }
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = value;
+  return textarea.value;
+}
+
 export function stripHTML(text) {
-  if (!text) return "";
-  return text.replace(/<[^>]*>/g, " ");
+  const decoded = decodeHtmlEntities(text);
+  if (!decoded) return "";
+  return decoded.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 export function escapeHTML(text) {
-  return text
+  return toText(text)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -206,12 +227,13 @@ export function normalizeTags(tags) {
 }
 
 export function clampText(text, limit = 120) {
-  if (text.length <= limit) return text;
-  return `${text.slice(0, limit)}...`;
+  const value = toText(text);
+  if (value.length <= limit) return value;
+  return `${value.slice(0, limit)}...`;
 }
 
 export function getQueryParam(name) {
-  const params = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
   return params.get(name);
 }
 
@@ -275,11 +297,64 @@ export function sanitizeHTML(html) {
 // Normalize HTML stored as escaped entities or raw HTML, then sanitize
 export function normalizeHtml(html) {
   if (!html) return "";
-  // Unescape any HTML entities (handles legacy escaped content like &lt;p&gt;)
-  const div = document.createElement("div");
-  div.innerHTML = String(html);
-  const unescaped = div.textContent || "";
-  return sanitizeHTML(unescaped);
+  const input = String(html);
+  if (/<[a-z][\s\S]*>/i.test(input)) {
+    return sanitizeHTML(input);
+  }
+  let decoded = input;
+  for (let i = 0; i < 2; i += 1) {
+    const next = decodeHtmlEntities(decoded);
+    if (next === decoded) break;
+    decoded = next;
+  }
+  if (/<[a-z][\s\S]*>/i.test(decoded)) {
+    return sanitizeHTML(decoded);
+  }
+  return escapeHTML(decoded).replace(/\r?\n/g, "<br>");
+}
+
+export function extractErrorMessage(error, fallback = "Unknown error.") {
+  if (!error) return fallback;
+  if (typeof error === "string") return error;
+  if (error.message) return error.message;
+  if (error.error_description) return error.error_description;
+  if (error.details) return error.details;
+  if (error.hint) return error.hint;
+  if (error.error && typeof error.error === "object") {
+    return extractErrorMessage(error.error, fallback);
+  }
+  if (error.error && typeof error.error === "string") return error.error;
+  return fallback;
+}
+
+let lastErrorKey = "";
+let lastErrorAt = 0;
+
+function showRuntimeErrorBanner(message) {
+  if (typeof document === "undefined") return;
+  let banner = document.getElementById("runtimeErrorBanner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "runtimeErrorBanner";
+    banner.style.cssText =
+      "position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;padding:12px 14px;border-radius:10px;background:#7f1d1d;color:#fff;font:500 13px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.25);";
+    const host = document.body || document.documentElement;
+    if (!host) return;
+    host.appendChild(banner);
+  }
+  banner.textContent = message;
+  banner.style.display = "block";
+}
+
+export function reportAppError(error, context = "Error") {
+  const message = extractErrorMessage(error, "Unexpected error.");
+  const key = `${context}:${message}`;
+  const now = Date.now();
+  if (key === lastErrorKey && now - lastErrorAt < 5000) return;
+  lastErrorKey = key;
+  lastErrorAt = now;
+  console.error(`[${context}]`, error);
+  showRuntimeErrorBanner(`${context}: ${message}`);
 }
 
 // Simple debug logger gated to localhost or when window.DEBUG is true
@@ -294,8 +369,11 @@ export function debug(...args) {
 if (typeof window !== "undefined") {
   // Attach only if not already defined to avoid overwriting
   if (!window.escapeHTML) window.escapeHTML = (t) => (typeof t === "undefined" ? "" : String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;"));
+  if (!window.decodeHtmlEntities) window.decodeHtmlEntities = decodeHtmlEntities;
   if (!window.sanitizeHTML) window.sanitizeHTML = sanitizeHTML;
   if (!window.normalizeHtml) window.normalizeHtml = normalizeHtml;
+  if (!window.extractErrorMessage) window.extractErrorMessage = extractErrorMessage;
+  if (!window.reportAppError) window.reportAppError = reportAppError;
   if (!window.isSafeUrl) window.isSafeUrl = isSafeUrl;
   if (!window.debug) window.debug = debug;
 }

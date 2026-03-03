@@ -1,4 +1,4 @@
-import { supabase, getCurrentUser, getCurrentUserWithRole, getDisplayName, signOut } from "./supabase.js";
+import { supabase, getCurrentUser, getCurrentUserWithRole, getDisplayName, getUserRole, signOut } from "./supabase.js";
 import { uploadMedia } from "./media.js";
 import {
   fetchBookmarks,
@@ -9,7 +9,17 @@ import {
 } from "./data.js";
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
-import { timeAgo, clampText, stripHTML, escapeHTML, getQueryParam, deriveLevel, isSafeUrl } from "./utils.js";
+import {
+  timeAgo,
+  clampText,
+  stripHTML,
+  escapeHTML,
+  getQueryParam,
+  deriveLevel,
+  isSafeUrl,
+  extractErrorMessage,
+  reportAppError
+} from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 
@@ -1157,4 +1167,10 @@ function setupAdminRequestForm() {
   });
 }
 
-boot();
+boot().catch((error) => {
+  reportAppError(error, "Profile load failed");
+  const title = document.getElementById("profileName");
+  if (title) title.textContent = "Error loading profile";
+  const bio = document.getElementById("profileBio");
+  if (bio) bio.textContent = extractErrorMessage(error, "Unable to load this profile right now.");
+});

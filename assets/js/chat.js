@@ -2,7 +2,7 @@ import { supabase, getCurrentUser, getCurrentUserWithRole, getDisplayName, signO
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import { uploadMedia } from "./media.js";
-import { timeAgo, escapeHTML, isSafeUrl } from "./utils.js";
+import { timeAgo, escapeHTML, isSafeUrl, extractErrorMessage, reportAppError } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 
@@ -1195,4 +1195,16 @@ async function boot() {
   }
 }
 
-boot();
+boot().catch((error) => {
+  reportAppError(error, "Chat load failed");
+  const message = extractErrorMessage(error, "Unable to load chat right now.");
+  const list = document.getElementById("chatMessages");
+  if (list) {
+    list.innerHTML = `<div class="callout">Chat failed to load: ${escapeHTML(message)}</div>`;
+  }
+  const status = document.getElementById("chatStatus");
+  if (status) {
+    status.textContent = message;
+    status.style.display = "block";
+  }
+});

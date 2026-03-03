@@ -1,7 +1,7 @@
 import { supabase, getCurrentUserWithRole, getDisplayName, signOut } from "./supabase.js";
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
-import { timeAgo, escapeHTML } from "./utils.js";
+import { timeAgo, escapeHTML, extractErrorMessage, reportAppError } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 
@@ -96,25 +96,26 @@ function renderAnnouncements(announcements = state.announcements) {
   noMsg.style.display = "none";
   container.innerHTML = announcements
     .map(announcement => {
+      const type = (announcement.type || "update").toString().toLowerCase();
       const typeIcon = {
         update: "📝",
         feature: "✨",
         maintenance: "🔧",
         event: "🎉",
         alert: "⚠️"
-      }[announcement.type] || "📢";
+      }[type] || "📢";
       
       return `
-        <div class="announcement-card" data-type="${announcement.type}">
+        <div class="announcement-card" data-type="${escapeHTML(type)}">
           <div class="announcement-header">
             <div>
-              <span class="announcement-type-badge">${typeIcon} ${announcement.type.charAt(0).toUpperCase() + announcement.type.slice(1)}</span>
-              <h3>${escapeHTML(announcement.title)}</h3>
+              <span class="announcement-type-badge">${typeIcon} ${escapeHTML(type.charAt(0).toUpperCase() + type.slice(1))}</span>
+              <h3>${escapeHTML(announcement.title || "Announcement")}</h3>
             </div>
             <span class="announcement-date">${timeAgo(announcement.created_at)}</span>
           </div>
           <div class="announcement-body">
-            ${escapeHTML(announcement.body)}
+            ${escapeHTML(announcement.body || "")}
           </div>
         </div>
       `;
@@ -270,4 +271,11 @@ async function boot() {
   setupRealTimeAnnouncements();
 }
 
-boot();
+boot().catch((error) => {
+  reportAppError(error, "Announcements load failed");
+  const message = extractErrorMessage(error, "Unable to load announcements.");
+  const list = document.getElementById("announcementsList");
+  if (list) {
+    list.innerHTML = `<div class="callout">${escapeHTML(message)}</div>`;
+  }
+});

@@ -1,7 +1,5 @@
 import { supabase } from "./supabase.js";
 
-import { supabase } from "./supabase.js";
-
 // ============================================================================
 // VIDEO FUNCTIONS
 // ============================================================================
@@ -404,6 +402,7 @@ export async function getMarketplaceItemById(itemId) {
 export async function createMarketplaceInquiry({
   itemId,
   buyerId,
+  sellerId = null,
   buyerName,
   message
 } = {}) {
@@ -411,7 +410,8 @@ export async function createMarketplaceInquiry({
     id: crypto.randomUUID(),
     item_id: itemId,
     buyer_id: buyerId,
-    buyer_name: buyerName,
+    seller_id: sellerId,
+    buyer_name: buyerName || "Buyer",
     message,
     status: "pending",
     created_at: new Date().toISOString()
@@ -486,10 +486,13 @@ export async function getSellerRating(userId) {
   const reviews = await getSellerReviews(userId);
   if (reviews.length === 0) return null;
   
-  const average = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  const average = reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / reviews.length;
+  const rounded = Number(average.toFixed(1));
   return {
-    rating: average.toFixed(1),
-    reviewCount: reviews.length
+    rating: rounded,
+    reviewCount: reviews.length,
+    average_rating: rounded,
+    total_reviews: reviews.length
   };
 }
 

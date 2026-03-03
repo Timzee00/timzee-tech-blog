@@ -42,7 +42,9 @@ import {
   isSafeUrl,
   stripHTML,
   normalizeTags,
-  escapeHTML
+  escapeHTML,
+  extractErrorMessage,
+  reportAppError
 } from "./utils.js";
 import { getPublishedFaqs, getAllFaqs, createFaq, updateFaq, deleteFaq } from "./faq.js";
 import { getAllAuthors, promoteToAuthor, demoteAuthor, toggleAuthorStatus, searchUsersForPromotion } from "./moderator.js";
@@ -94,6 +96,19 @@ const state = {
   userHasMore: false,
   userPerPage: 200
 };
+
+async function parseJsonSafe(response) {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return {
+      error: `Unexpected response format (${response.status}).`,
+      raw: text
+    };
+  }
+}
 
 function pickCategoryColor() {
   return categoryPalette[Math.floor(Math.random() * categoryPalette.length)];
@@ -314,15 +329,22 @@ function handleLogin() {
   if (!form) return false;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const email = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value.trim();
+    const email = document.getElementById("username")?.value.trim();
+    const password = document.getElementById("password")?.value.trim();
     const message = document.getElementById("loginMessage");
-    const result = await login(email, password, ["admin", "super"]);
-    if (!result.ok) {
-      message.textContent = result.message;
-      return;
+    try {
+      const result = await login(email, password, ["admin", "super"]);
+      if (!result.ok) {
+        if (message) message.textContent = result.message;
+        return;
+      }
+      window.location.href = "dashboard.html";
+    } catch (error) {
+      reportAppError(error, "Admin login failed");
+      if (message) {
+        message.textContent = extractErrorMessage(error, "Login failed.");
+      }
     }
-    window.location.href = "dashboard.html";
   });
   return true;
 }
@@ -1204,43 +1226,53 @@ function toLocalDateTimeValue(value) {
 }
 
 async function fetchUsers({ search = "", page = 1, perPage = state.userPerPage } = {}) {
-  const session = await getSession();
-  const token = session?.access_token;
-  if (!token) return { error: "Auth token missing." };
-  const params = new URLSearchParams();
-  if (search) params.set("search", search);
-  params.set("perPage", perPage);
-  if (!search) params.set("page", String(page));
-  const query = params.toString() ? `?${params.toString()}` : "";
-  const response = await fetch(`/.netlify/functions/list-users${query}`, {
-    headers: {
-      Authorization: `Bearer ${token}`
+  try {
+    const session = await getSession();
+    const token = session?.access_token;
+    if (!token) return { error: "Auth token missing." };
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    params.set("perPage", perPage);
+    if (!search) params.set("page", String(page));
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const response = await fetch(`/.netlify/functions/list-users${query}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    const result = await parseJsonSafe(response);
+    if (!response.ok) {
+      return { error: result.error || "Failed to load users." };
     }
-  });
-  const result = await response.json();
-  if (!response.ok) {
-    return { error: result.error || "Failed to load users." };
+    return { data: result.users || [], page: result.page || page, hasMore: !!result.hasMore };
+  } catch (error) {
+    reportAppError(error, "User list fetch failed");
+    return { error: extractErrorMessage(error, "Failed to load users.") };
   }
-  return { data: result.users || [], page: result.page || page, hasMore: !!result.hasMore };
 }
 
 async function updateUserAction(userId, action, tier) {
-  const session = await getSession();
-  const token = session?.access_token;
-  if (!token) return { error: "Auth token missing." };
-  const response = await fetch("/.netlify/functions/update-user", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ userId, action, verificationTier: tier })
-  });
-  const result = await response.json();
-  if (!response.ok) {
-    return { error: result.error || "User update failed." };
+  try {
+    const session = await getSession();
+    const token = session?.access_token;
+    if (!token) return { error: "Auth token missing." };
+    const response = await fetch("/.netlify/functions/update-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ userId, action, verificationTier: tier })
+    });
+    const result = await parseJsonSafe(response);
+    if (!response.ok) {
+      return { error: result.error || "User update failed." };
+    }
+    return { data: result.profile || null };
+  } catch (error) {
+    reportAppError(error, "User update failed");
+    return { error: extractErrorMessage(error, "User update failed.") };
   }
-  return { data: result.profile || null };
 }
 
 function renderUsersTable(users) {
@@ -1868,5 +1900,13 @@ async function bootDashboard() {
 }
 
 if (!handleLogin()) {
-  bootDashboard();
+  bootDashboard().catch((error) => {
+    reportAppError(error, "Admin dashboard failed");
+    const app = document.getElementById("adminApp");
+    if (app) {
+      app.innerHTML = `<section class="admin-card"><h2>Dashboard Error</h2><p>${escapeHTML(
+        extractErrorMessage(error, "Unable to load admin dashboard.")
+      )}</p></section>`;
+    }
+  });
 }

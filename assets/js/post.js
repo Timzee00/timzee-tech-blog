@@ -34,7 +34,10 @@ import {
   stripHTML,
   normalizeTags,
   linkifyReferences,
-  isSafeUrl
+  isSafeUrl,
+  normalizeHtml,
+  extractErrorMessage,
+  reportAppError
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
@@ -53,10 +56,12 @@ const state = {
   isBookmarked: false,
   isFollowingAuthor: false,
   commentAuthors: {},
-  commentIndex: {}
+  commentIndex: {},
+  comments: []
 };
 
 let commentReplyTo = null;
+let commentChannel = null;
 
 const FALLBACK_OG_IMAGE =
   "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80";
@@ -275,8 +280,16 @@ function renderPost(data, post) {
   }
 
   const cover = document.getElementById("postCover");
-  cover.innerHTML = post.cover && isSafeUrl(post.cover) ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}">` : "";
-  document.getElementById("postContent").innerHTML = window.normalizeHtml ? window.normalizeHtml(post.content || "") : (post.content || "");
+  if (cover) {
+    cover.innerHTML =
+      post.cover && isSafeUrl(post.cover)
+        ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}">`
+        : "";
+  }
+  const postBody = document.getElementById("postContent");
+  if (postBody) {
+    postBody.innerHTML = normalizeHtml(post.content || "");
+  }
 
   const gallery = document.getElementById("postGallery");
   if (gallery) {
@@ -923,6 +936,7 @@ function setupCommentForm(post, comments) {
           }
           if (result.data) {
             comments.push(result.data);
+            state.comments = comments;
           }
           if (state.user) {
             state.commentAuthors[state.user.id] = {
@@ -984,6 +998,46 @@ function setupCommentForm(post, comments) {
       await commitComment();
     }
   });
+}
+
+function handleIncomingComment(payload, postId) {
+  const comment = payload?.new;
+  if (!comment || comment.post_id !== postId) return;
+  if (comment.status && comment.status !== "approved") return;
+  const idx = state.comments.findIndex((item) => item.id === comment.id);
+  if (idx >= 0) {
+    state.comments[idx] = comment;
+  } else {
+    state.comments.push(comment);
+  }
+  state.comments.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  loadCommentAuthors([comment]);
+  renderComments(state.comments);
+}
+
+function subscribeToComments(postId) {
+  if (!postId || typeof supabase?.channel !== "function") return;
+  if (commentChannel) {
+    supabase.removeChannel(commentChannel);
+    commentChannel = null;
+  }
+  commentChannel = supabase
+    .channel(`comments-live-${postId}`)
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "comments", filter: `post_id=eq.${postId}` },
+      (payload) => handleIncomingComment(payload, postId)
+    )
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "comments", filter: `post_id=eq.${postId}` },
+      (payload) => handleIncomingComment(payload, postId)
+    )
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        console.log("📡 Live comments subscribed for", postId);
+      }
+    });
 }
 
 function renderAds(settings) {
@@ -1113,8 +1167,9 @@ async function boot() {
 
     renderPost({ categories }, post);
     renderGallery(state.postMedia);
-    await loadCommentAuthors(comments);
-    renderComments(comments);
+    state.comments = comments || [];
+    await loadCommentAuthors(state.comments);
+    renderComments(state.comments);
     renderRelated({ posts: relatedPosts }, post);
     renderTakeaways(post);
     renderAuthorMini(post);
@@ -1125,13 +1180,15 @@ async function boot() {
     setupBookmark(post);
     setupFollowAuthor(post);
     setupShare(post);
-    setupCommentForm(post, comments);
+    setupCommentForm(post, state.comments);
+    subscribeToComments(post.id);
     setupReveal();
   } catch (err) {
-    console.error("post boot failed:", err);
+    reportAppError(err, "Post load failed");
+    const message = extractErrorMessage(err, "Something went wrong while loading this post.");
     document.getElementById("postTitle").textContent = "Error loading post";
     document.getElementById("postContent").innerHTML =
-      "<p>Something went wrong while loading this post. Try refreshing or contact support.</p>";
+      `<p>${escapeHTML(message)}</p>`;
   }
 }
 
