@@ -9,7 +9,7 @@ const jsonResponse = (statusCode, payload) => ({
 });
 
 async function resolveRole(supabase, user) {
-  let role = user?.user_metadata?.role;
+  let role = user?.user_metadata?.role || user?.app_metadata?.role;
   if (!role && user?.id) {
     const profileResult = await supabase
       .from("profiles")

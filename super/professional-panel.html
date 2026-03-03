@@ -290,6 +290,13 @@
           container.innerHTML = items.join("");
         };
 
+        const ensureSupabaseOk = (result, fallbackMessage) => {
+          if (result?.error) {
+            throw new Error(result.error.message || fallbackMessage);
+          }
+          return result?.data ?? null;
+        };
+
         const loadAdmins = async () => {
           try {
             const res = await fetchWithAuth("/.netlify/functions/list-admins");
@@ -426,12 +433,22 @@
         };
 
         const loadSiteSettings = async () => {
-          const { data, error } = await supabase
+          const settingsStatus = document.getElementById("settingsStatus");
+          const result = await supabase
             .from("site_settings")
             .select("*")
             .eq("id", SETTINGS_ID)
             .maybeSingle();
-          if (error || !data) return;
+          if (result.error) {
+            if (settingsStatus) {
+              settingsStatus.style.display = "block";
+              settingsStatus.style.color = "red";
+              settingsStatus.textContent = `Failed to load settings: ${result.error.message}`;
+            }
+            return;
+          }
+          const data = result.data;
+          if (!data) return;
           document.getElementById("siteName").value = data.site_name || "";
           document.getElementById("tagline").value = data.tagline || "";
           document.getElementById("commentModeration").checked = data.comment_moderation ?? true;
@@ -446,6 +463,7 @@
         document.getElementById("siteSettingsForm")?.addEventListener("submit", async (e) => {
           e.preventDefault();
           const status = document.getElementById("settingsStatus");
+          if (!status) return;
           status.style.display = "block";
           status.textContent = "Saving...";
           status.style.color = "#0f766e";
@@ -458,7 +476,8 @@
               comment_moderation: document.getElementById("commentModeration").checked,
               updated_at: new Date().toISOString()
             };
-            await supabase.from("site_settings").upsert(payload);
+            const saveResult = await supabase.from("site_settings").upsert(payload);
+            ensureSupabaseOk(saveResult, "Settings save failed.");
 
             status.textContent = "✓ Settings saved!";
             status.style.color = "green";
@@ -471,6 +490,12 @@
         // Ads settings form
         document.getElementById("adsForm")?.addEventListener("submit", async (e) => {
           e.preventDefault();
+          const status = document.getElementById("settingsStatus");
+          if (status) {
+            status.style.display = "block";
+            status.style.color = "#0f766e";
+            status.textContent = "Saving ad settings...";
+          }
           try {
             const payload = {
               id: SETTINGS_ID,
@@ -481,20 +506,33 @@
               adsense_post_inline: document.getElementById("postInlineSlotInput").value,
               updated_at: new Date().toISOString()
             };
-            await supabase.from("site_settings").upsert(payload);
-            alert("Ads settings updated.");
+            const saveResult = await supabase.from("site_settings").upsert(payload);
+            ensureSupabaseOk(saveResult, "Ads settings save failed.");
+            if (status) {
+              status.style.color = "green";
+              status.textContent = "✓ Ad settings saved!";
+            }
           } catch (err) {
-            alert(`Failed to update ads settings: ${err.message}`);
+            if (status) {
+              status.style.color = "red";
+              status.textContent = `Failed to update ads settings: ${err.message}`;
+            } else {
+              alert(`Failed to update ads settings: ${err.message}`);
+            }
           }
         });
 
         document.getElementById("runScoutBtn")?.addEventListener("click", async () => {
           const status = document.getElementById("scoutStatus");
+          if (!status) return;
           status.textContent = "Running...";
           try {
             const res = await fetchWithAuth("/.netlify/functions/scout-news", { method: "POST" });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Scout failed.");
+            const parsed = await safeParseJson(res);
+            const data = parsed.data || {};
+            if (!res.ok || !parsed.data) {
+              throw new Error(data.error || `Scout failed (${res.status}).`);
+            }
             status.textContent = "✓ Scout finished.";
           } catch (err) {
             status.textContent = `Error: ${err.message}`;

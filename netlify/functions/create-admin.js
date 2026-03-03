@@ -30,7 +30,7 @@ exports.handler = async (event) => {
   if (userError || !userData?.user) {
     return jsonResponse(401, { error: "Invalid auth token." });
   }
-  let role = userData.user.user_metadata?.role;
+  let role = userData.user.user_metadata?.role || userData.user.app_metadata?.role;
   if (!role) {
     const profileResult = await supabase
       .from("profiles")
@@ -101,14 +101,20 @@ exports.handler = async (event) => {
 
   const promoteExisting = async (userId, existingUser = {}) => {
     const currentMeta = existingUser.user_metadata || {};
+    const currentAppMeta = existingUser.app_metadata || {};
     const updatedMeta = {
       ...currentMeta,
       role: "admin",
       display_name: displayName || currentMeta.display_name || email.split("@")[0],
       username: normalizedUsername || currentMeta.username
     };
+    const updatedAppMeta = {
+      ...currentAppMeta,
+      role: "admin"
+    };
     const { error } = await supabase.auth.admin.updateUserById(userId, {
-      user_metadata: updatedMeta
+      user_metadata: updatedMeta,
+      app_metadata: updatedAppMeta
     });
     if (error) {
       return jsonResponse(400, { error: error.message });
@@ -142,6 +148,9 @@ exports.handler = async (event) => {
     email,
     password,
     email_confirm: true,
+    app_metadata: {
+      role: "admin"
+    },
     user_metadata: {
       role: "admin",
       display_name: displayName || email.split("@")[0],

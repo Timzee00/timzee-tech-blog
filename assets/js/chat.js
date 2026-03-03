@@ -30,6 +30,69 @@ const state = {
   peopleResults: []
 };
 
+function ensureSupabaseSuccess(result, fallbackMessage) {
+  if (result?.error) {
+    throw new Error(extractErrorMessage(result.error, fallbackMessage));
+  }
+  return result?.data || [];
+}
+
+function renderLoggedOutState() {
+  setChatView("chat");
+  const loginHref = "login.html?next=chat.html";
+  const loginMessage = `Log in to use chat. <a href="${loginHref}">Sign in</a>.`;
+
+  const chatName = document.getElementById("chatName");
+  const chatStatusText = document.getElementById("chatStatusText");
+  const avatar = document.getElementById("chatAvatar");
+  if (chatName) chatName.textContent = "Chat requires login";
+  if (chatStatusText) chatStatusText.textContent = "Sign in to view conversations.";
+  if (avatar) {
+    avatar.src =
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+  }
+
+  const messages = document.getElementById("chatMessages");
+  if (messages) {
+    messages.innerHTML = `<div class="callout">${loginMessage}</div>`;
+  }
+
+  const status = document.getElementById("chatStatus");
+  if (status) {
+    status.innerHTML = loginMessage;
+    status.style.display = "block";
+  }
+
+  const infoBlocks = [
+    ["groupList", "Sign in to access group chats."],
+    ["friendList", "Sign in to view your friend list."],
+    ["peopleResults", "Sign in to search for people."],
+    ["friendRequests", "Sign in to manage requests."],
+    ["friendRequestsSent", "Sign in to view sent requests."],
+    ["blockedList", "Sign in to view blocked users."]
+  ];
+  infoBlocks.forEach(([id, text]) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = `<div class="callout">${text}</div>`;
+  });
+
+  ["chatBody", "chatMedia", "recordVoiceBtn", "chatSearch", "peopleSearch", "newGroupBtn"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = true;
+  });
+
+  const form = document.getElementById("chatForm");
+  if (form) {
+    const submit = form.querySelector("button[type='submit']");
+    if (submit) submit.disabled = true;
+  }
+
+  ["chatProfileBtn", "chatRemoveBtn", "chatBlockBtn"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+}
+
 function renderAuthActions() {
   const actions = document.getElementById("authActions");
   if (!actions) return;
@@ -92,7 +155,7 @@ async function loadFriendships() {
     .from("friendships")
     .select("*")
     .or(`requester_id.eq.${state.user.id},addressee_id.eq.${state.user.id}`);
-  const friendships = result.data || [];
+  const friendships = ensureSupabaseSuccess(result, "Failed to load friendships.");
   state.friendships = friendships;
   state.friends = friendships
     .filter((row) => row.status === "accepted")
@@ -122,9 +185,10 @@ async function loadFriendships() {
     state.blockedProfiles = {};
     return;
   }
-  const profiles = await supabase.from("profiles").select("*").in("id", Array.from(profileIds));
+  const profilesResult = await supabase.from("profiles").select("*").in("id", Array.from(profileIds));
+  const profiles = ensureSupabaseSuccess(profilesResult, "Failed to load chat profiles.");
   const map = {};
-  (profiles.data || []).forEach((profile) => {
+  profiles.forEach((profile) => {
     map[profile.id] = profile;
     state.profileCache[profile.id] = profile;
   });
@@ -144,7 +208,8 @@ async function loadThreadPreviews() {
     .select("thread_id, body, media_type, created_at, sender_id")
     .in("thread_id", threadIds)
     .order("created_at", { ascending: false });
-  (result.data || []).forEach((message) => {
+  const rows = ensureSupabaseSuccess(result, "Failed to load message previews.");
+  rows.forEach((message) => {
     if (!state.lastMessages[message.thread_id]) {
       state.lastMessages[message.thread_id] = message;
     }
@@ -539,7 +604,8 @@ async function searchPeople(term) {
     .select("id, display_name, username, email, avatar_url, headline, show_email")
     .or(`display_name.ilike.%${query}%,username.ilike.%${query}%,email.ilike.%${query}%`)
     .limit(20);
-  const rows = (result.data || []).filter((profile) => profile.id !== state.user.id);
+  const rows = ensureSupabaseSuccess(result, "Failed to search users.")
+    .filter((profile) => profile.id !== state.user.id);
   state.peopleResults = rows;
   rows.forEach((profile) => {
     state.profileCache[profile.id] = profile;
@@ -553,7 +619,7 @@ async function loadMessages(threadId) {
     .select("*")
     .eq("thread_id", threadId)
     .order("created_at", { ascending: true });
-  state.messages = result.data || [];
+  state.messages = ensureSupabaseSuccess(result, "Failed to load messages.");
   renderMessages();
 }
 
@@ -616,7 +682,10 @@ function updateChatFormState() {
   const activeGroup = state.activeGroupId;
   let disabledReason = "";
 
-  if (!activeId && !activeGroup) {
+  if (!state.user) {
+    disabledReason = "Log in to send messages.";
+    if (statusText) statusText.textContent = "Sign in required";
+  } else if (!activeId && !activeGroup) {
     disabledReason = "Select a chat to start messaging.";
     if (statusText) statusText.textContent = "Ready when you are.";
   } else if (activeGroup) {
@@ -1162,11 +1231,11 @@ async function boot() {
   }
 
   state.user = await getCurrentUserWithRole();
+  renderAuthActions();
   if (!state.user) {
-    window.location.href = "login.html?next=chat.html";
+    renderLoggedOutState();
     return;
   }
-  renderAuthActions();
   setChatView("list");
   const headerAvatar = document.getElementById("chatAvatar");
   if (headerAvatar) {

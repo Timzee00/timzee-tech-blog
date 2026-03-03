@@ -9,7 +9,7 @@ const jsonResponse = (statusCode, payload) => ({
 });
 
 async function resolveRole(supabase, user) {
-  let role = user?.user_metadata?.role;
+  let role = user?.user_metadata?.role || user?.app_metadata?.role;
   if (!role && user?.id) {
     const profileResult = await supabase
       .from("profiles")
@@ -119,7 +119,7 @@ exports.handler = async (event) => {
     return {
       id: user.id,
       email: user.email,
-      role: profile.role || user.user_metadata?.role || "user",
+      role: profile.role || user.user_metadata?.role || user.app_metadata?.role || "user",
       display_name:
         profile.display_name ||
         user.user_metadata?.display_name ||

@@ -9,7 +9,7 @@ const jsonResponse = (statusCode, payload) => ({
 });
 
 async function resolveRole(supabase, user) {
-  let role = user?.user_metadata?.role;
+  let role = user?.user_metadata?.role || user?.app_metadata?.role;
   if (!role && user?.id) {
     const profileResult = await supabase
       .from("profiles")
@@ -101,7 +101,7 @@ exports.handler = async (event) => {
 
   const admins = (users || []).filter((user) => {
     const profileRole = profilesById[user.id]?.role;
-    const role = profileRole || user.user_metadata?.role;
+    const role = profileRole || user.user_metadata?.role || user.app_metadata?.role;
     return role === "admin" || role === "super";
   });
 
@@ -134,7 +134,7 @@ exports.handler = async (event) => {
     const recent = entry.recent
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       .slice(0, 5);
-    const role = profilesById[user.id]?.role || user.user_metadata?.role || "admin";
+    const role = profilesById[user.id]?.role || user.user_metadata?.role || user.app_metadata?.role || "admin";
     return {
       id: user.id,
       email: user.email,

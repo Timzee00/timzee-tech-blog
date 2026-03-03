@@ -71,8 +71,8 @@ export async function getCurrentUserWithRole() {
   const user = data.user;
   if (!user) return null;
 
-  // Try to get role from user_metadata first (from JWT)
-  let role = user.user_metadata?.role;
+  // Try JWT metadata first.
+  let role = user.user_metadata?.role || user.app_metadata?.role;
 
   // If role not in JWT metadata, fetch from profiles table as fallback
   if (!role) {
@@ -100,7 +100,7 @@ export async function getCurrentUserWithRole() {
 }
 
 export function getUserRole(user) {
-  return user?.user_metadata?.role || "user";
+  return user?.user_metadata?.role || user?.app_metadata?.role || "user";
 }
 
 export function getDisplayName(user) {
