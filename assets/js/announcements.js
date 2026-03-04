@@ -12,13 +12,17 @@ const state = {
   settings: null
 };
 
+// ============================================================
+// DB FETCHING
+// ============================================================
+
 async function fetchAnnouncements() {
   try {
     const { data, error } = await supabase
       .from("announcements")
       .select("*")
       .order("created_at", { ascending: false });
-    
+
     if (error) {
       console.warn("Fetch announcements error:", error);
       return [];
@@ -32,32 +36,39 @@ async function fetchAnnouncements() {
 
 async function createAnnouncement(announcement) {
   try {
+    // Remove undefined keys so Supabase doesn't reject unknown/undefined values
+    Object.keys(announcement).forEach((k) => {
+      if (announcement[k] === undefined) delete announcement[k];
+    });
+
     const { data, error } = await supabase
       .from("announcements")
       .insert(announcement)
       .select()
       .single();
-    
+
     if (error) return { error };
     return { data };
   } catch (err) {
-    return { error: err.message };
+    return { error: err };
   }
 }
 
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
 async function broadcastNotificationToAllUsers(title, body, type = "announcement") {
   try {
-    // Get all user IDs from profiles table
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
       .select("id");
-    
+
     if (profilesError) throw profilesError;
-    
-    const userIds = profiles.map(p => p.id);
-    
-    // Create notifications for each user
-    const notifications = userIds.map(userId => ({
+
+    const userIds = (profiles || []).map((p) => p.id);
+
+    const notifications = userIds.map((userId) => ({
       id: crypto.randomUUID(),
       user_id: userId,
       type: type,
@@ -67,55 +78,67 @@ async function broadcastNotificationToAllUsers(title, body, type = "announcement
       created_at: new Date().toISOString(),
       read_at: null
     }));
-    
+
     if (notifications.length > 0) {
       const { error: notifError } = await supabase
         .from("notifications")
         .insert(notifications);
-      
+
       if (notifError) throw notifError;
     }
-    
+
     return { ok: true };
   } catch (err) {
     console.error("Broadcast error:", err);
-    return { error: err.message };
+    return { error: err.message || String(err) };
   }
 }
+
+// ============================================================
+// UI RENDERING
+// ============================================================
 
 function renderAnnouncements(announcements = state.announcements) {
   const container = document.getElementById("announcementsList");
   const noMsg = document.getElementById("noAnnouncements");
-  
+
+  if (!container || !noMsg) return;
+
   if (!announcements.length) {
     container.innerHTML = "";
     noMsg.style.display = "block";
     return;
   }
-  
+
   noMsg.style.display = "none";
   container.innerHTML = announcements
-    .map(announcement => {
+    .map((announcement) => {
       const type = (announcement.type || "update").toString().toLowerCase();
-      const typeIcon = {
-        update: "📝",
-        feature: "✨",
-        maintenance: "🔧",
-        event: "🎉",
-        alert: "⚠️"
-      }[type] || "📢";
-      
+      const typeIcon =
+        {
+          update: "📝",
+          feature: "✨",
+          maintenance: "🔧",
+          event: "🎉",
+          alert: "⚠️"
+        }[type] || "📢";
+
+      const createdAt = announcement.created_at || announcement.publish_at || new Date().toISOString();
+      const bodyText = announcement.body ?? announcement.message ?? "";
+
       return `
         <div class="announcement-card" data-type="${escapeHTML(type)}">
           <div class="announcement-header">
             <div>
-              <span class="announcement-type-badge">${typeIcon} ${escapeHTML(type.charAt(0).toUpperCase() + type.slice(1))}</span>
+              <span class="announcement-type-badge">${typeIcon} ${escapeHTML(
+                type.charAt(0).toUpperCase() + type.slice(1)
+              )}</span>
               <h3>${escapeHTML(announcement.title || "Announcement")}</h3>
             </div>
-            <span class="announcement-date">${timeAgo(announcement.created_at)}</span>
+            <span class="announcement-date">${timeAgo(createdAt)}</span>
           </div>
           <div class="announcement-body">
-            ${escapeHTML(announcement.body || "")}
+            ${escapeHTML(bodyText)}
           </div>
         </div>
       `;
@@ -125,73 +148,102 @@ function renderAnnouncements(announcements = state.announcements) {
 
 function filterAnnouncements(filter) {
   state.activeFilter = filter;
-  
+
   if (filter === "all") {
     renderAnnouncements(state.announcements);
   } else {
-    const filtered = state.announcements.filter(a => a.type === filter);
+    const filtered = state.announcements.filter((a) => (a.type || "update") === filter);
     renderAnnouncements(filtered);
   }
 }
 
 function setupFilters() {
-  document.querySelectorAll(".filter-btn").forEach(btn => {
+  document.querySelectorAll(".filter-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       filterAnnouncements(btn.dataset.filter);
     });
   });
 }
 
+// ============================================================
+// ADMIN PANEL + FORM
+// ============================================================
+
 function showAdminPanel() {
   const user = state.user;
   if (!user) return;
-  
-  // Check if user is admin or super
+
   const role = user.user_metadata?.role;
   if (role === "admin" || role === "super") {
-    document.getElementById("adminPanel").style.display = "block";
+    const adminPanel = document.getElementById("adminPanel");
+    if (adminPanel) adminPanel.style.display = "block";
     setupAnnouncementForm();
   }
+}
+
+function readPublishModeAndTime() {
+  // Optional UI controls (if they exist)
+  // - A dropdown that might say: "Publish now" or "Schedule"
+  // - A datetime input for scheduling
+  const modeEl = document.getElementById("publishMode"); // optional
+  const timeEl = document.getElementById("publishTime"); // optional
+
+  const mode = (modeEl?.value || "now").toLowerCase();
+  const rawTime = timeEl?.value || "";
+
+  if (mode.includes("schedule") && rawTime) {
+    const dt = new Date(rawTime);
+    if (!isNaN(dt.getTime())) return dt.toISOString();
+  }
+
+  return new Date().toISOString();
 }
 
 function setupAnnouncementForm() {
   const form = document.getElementById("announcementForm");
   const clearBtn = document.getElementById("clearAnnouncementBtn");
-  
+
   if (!form) return;
-  
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    
-    const title = document.getElementById("announcementTitle").value.trim();
-    const type = document.getElementById("announcementType").value;
-    const body = document.getElementById("announcementBody").value.trim();
-    const notifyAll = document.getElementById("notifyAllUsers").checked;
-    
+
+    const title = (document.getElementById("announcementTitle")?.value || "").trim();
+    const type = (document.getElementById("announcementType")?.value || "").trim();
+    const body = (document.getElementById("announcementBody")?.value || "").trim();
+    const notifyAll = !!document.getElementById("notifyAllUsers")?.checked;
+
     if (!title || !type || !body) {
       showStatus("All fields are required.", true);
       return;
     }
-    
+
+    const publish_at = readPublishModeAndTime();
+
+    // ✅ Important: Send BOTH body and message so whichever your DB expects is satisfied
+    // ✅ Also include status/publish_at for your UI
     const announcement = {
       id: crypto.randomUUID(),
       title,
       type,
       body,
-      created_by: state.user.id,
+      message: body,
+      status: "success",
+      publish_at,
+      created_by: state.user?.id || null,
       created_at: new Date().toISOString()
     };
-    
+
     const result = await createAnnouncement(announcement);
-    
+
     if (result.error) {
-      showStatus("Failed to create announcement: " + result.error.message, true);
+      const msg = result.error?.message || String(result.error);
+      showStatus("Failed to create announcement: " + msg, true);
       return;
     }
-    
-    // Broadcast notification if checkbox is checked
+
     if (notifyAll) {
       const broadcastResult = await broadcastNotificationToAllUsers(title, body, "announcement");
       if (broadcastResult.error) {
@@ -202,26 +254,23 @@ function setupAnnouncementForm() {
     } else {
       showStatus("✓ Announcement published!", false);
     }
-    
-    // Reset form and refresh list
+
     form.reset();
     state.announcements = await fetchAnnouncements();
     renderAnnouncements();
   });
-  
-  clearBtn.addEventListener("click", () => {
-    form.reset();
-  });
+
+  clearBtn?.addEventListener("click", () => form.reset());
 }
 
 function showStatus(message, isError = false) {
   const status = document.getElementById("announcementStatus");
   if (!status) return;
-  
+
   status.textContent = message;
   status.style.display = "block";
   status.style.color = isError ? "#ef4444" : "#059669";
-  
+
   if (!isError) {
     setTimeout(() => {
       status.style.display = "none";
@@ -229,20 +278,22 @@ function showStatus(message, isError = false) {
   }
 }
 
+// ============================================================
+// REALTIME
+// ============================================================
+
 async function setupRealTimeAnnouncements() {
   try {
-    const channel = supabase
+    supabase
       .channel("announcements_updates")
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "announcements"
-        },
+        { event: "INSERT", schema: "public", table: "announcements" },
         async (payload) => {
           state.announcements.unshift(payload.new);
-          renderAnnouncements();
+          // respect current filter
+          if (state.activeFilter === "all") renderAnnouncements();
+          else filterAnnouncements(state.activeFilter);
         }
       )
       .subscribe();
@@ -251,19 +302,22 @@ async function setupRealTimeAnnouncements() {
   }
 }
 
+// ============================================================
+// BOOT
+// ============================================================
+
 async function boot() {
   setupReveal();
-  
+
   const settings = await fetchSettings();
-  if (settings.themeId) {
+  if (settings?.themeId) {
     const theme = await fetchThemeById(settings.themeId);
     if (theme) applyThemeVariables(theme);
   }
   state.settings = settings;
-  
+
   state.user = await getCurrentUserWithRole();
-  
-  // Fetch announcements
+
   state.announcements = await fetchAnnouncements();
   renderAnnouncements();
   setupFilters();
