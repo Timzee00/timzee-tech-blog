@@ -1,70 +1,125 @@
 /**
- * Curator Bot Management System
- * Manages RSS sources, fetched posts, and bot configuration
+ * Curator Bot Management System (Stable Version)
+ * - Works with Supabase table: public.curator_sources / curator_posts / curator_settings
+ * - Prevents url being null (fixes NOT NULL errors)
+ * - Keeps compatibility with "url" + "feed_url" and "is_active" + "enabled"
  */
 
 import { supabase } from "./supabase.js";
+
+// ============================================================
+// Helpers
+// ============================================================
+
+function pickUrl(sourceData) {
+  const url =
+    sourceData?.url ??
+    sourceData?.feed_url ??
+    sourceData?.feedUrl ??
+    sourceData?.link ??
+    sourceData?.rss_url ??
+    sourceData?.rssUrl ??
+    "";
+
+  return String(url).trim();
+}
+
+function cleanText(v) {
+  if (v === undefined || v === null) return null;
+  const s = String(v).trim();
+  return s.length ? s : null;
+}
+
+function cleanStringArray(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map((x) => String(x ?? "").trim())
+    .filter((x) => x.length > 0);
+}
+
+function cleanHeaders(headers) {
+  if (!headers || typeof headers !== "object" || Array.isArray(headers)) return {};
+  return headers;
+}
 
 // ============================================================
 // CURATOR SOURCES (RSS Feeds Management)
 // ============================================================
 
 export async function getAllCuratorSources() {
-  try {
-    const { data, error } = await supabase
-      .from("curator_sources")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
+  const { data, error } = await supabase
+    .from("curator_sources")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
     console.error("Error fetching curator sources:", error);
     throw error;
   }
+  return data || [];
 }
 
 export async function getActiveCuratorSources() {
-  try {
-    const { data, error } = await supabase
-      .from("curator_sources")
-      .select("*")
-      .eq("is_active", true)
-      .order("last_fetched_at", { ascending: true });
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
+  // Support both is_active and enabled (some schemas use one)
+  const { data, error } = await supabase
+    .from("curator_sources")
+    .select("*")
+    .or("is_active.eq.true,enabled.eq.true")
+    .order("last_fetched_at", { ascending: true });
+
+  if (error) {
     console.error("Error fetching active sources:", error);
     return [];
   }
+  return data || [];
 }
 
 export async function createCuratorSource(sourceData) {
   try {
-    // Insert both 'url' and 'feed_url' to be compatible with mixed column names
+    const url = pickUrl(sourceData);
+    if (!url) {
+      throw new Error("Feed URL is required. Paste a valid RSS feed URL.");
+    }
+
+    // Prefer explicit active state, else default true
+    const isActive =
+      typeof sourceData?.is_active === "boolean"
+        ? sourceData.is_active
+        : typeof sourceData?.enabled === "boolean"
+          ? sourceData.enabled
+          : true;
+
     const payload = {
-      name: sourceData.name,
-      url: sourceData.url,
-      feed_url: sourceData.url,
-      source_type: sourceData.source_type || "rss",
-      description: sourceData.description,
-      category: sourceData.category,
-      api_key: sourceData.api_key,
-      headers: sourceData.headers || {},
-      filter_keywords: sourceData.filter_keywords || [],
-      exclude_keywords: sourceData.exclude_keywords || []
+      name: cleanText(sourceData?.name) || "Untitled Feed",
+      url,              // NOT NULL
+      feed_url: url,    // keep both
+      source_type: cleanText(sourceData?.source_type) || "rss",
+      description: cleanText(sourceData?.description),
+      category: cleanText(sourceData?.category),
+      category_id: sourceData?.category_id || null,
+      api_key: cleanText(sourceData?.api_key),
+      headers: cleanHeaders(sourceData?.headers),
+      filter_keywords: cleanStringArray(sourceData?.filter_keywords),
+      exclude_keywords: cleanStringArray(sourceData?.exclude_keywords),
+      is_active: isActive,
+      enabled: isActive,
+      fetch_frequency_minutes:
+        Number.isFinite(Number(sourceData?.fetch_frequency_minutes))
+          ? Number(sourceData.fetch_frequency_minutes)
+          : undefined,
+      created_by: sourceData?.created_by || undefined,
+      created_at: sourceData?.created_at || undefined
     };
 
-    if (typeof sourceData.is_active !== "undefined") {
-      payload.is_active = sourceData.is_active;
-      payload.enabled = sourceData.is_active; // support both column names
-    }
-    if (sourceData.created_by) payload.created_by = sourceData.created_by;
-    if (sourceData.created_at) payload.created_at = sourceData.created_at;
-    if (sourceData.fetch_frequency_minutes) payload.fetch_frequency_minutes = sourceData.fetch_frequency_minutes;
+    // remove undefined fields so Supabase doesn't complain
+    Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
 
     const { data, error } = await supabase
       .from("curator_sources")
-      .insert(payload);
+      .insert(payload)
+      .select()
+      .single();
+
     if (error) throw error;
     return data;
   } catch (error) {
@@ -75,19 +130,47 @@ export async function createCuratorSource(sourceData) {
 
 export async function updateCuratorSource(sourceId, sourceData) {
   try {
+    const updatePayload = {
+      name: cleanText(sourceData?.name) ?? undefined,
+      description: cleanText(sourceData?.description) ?? undefined,
+      category: cleanText(sourceData?.category) ?? undefined,
+      category_id: sourceData?.category_id ?? undefined,
+      api_key: cleanText(sourceData?.api_key) ?? undefined,
+      filter_keywords: sourceData?.filter_keywords ? cleanStringArray(sourceData.filter_keywords) : undefined,
+      exclude_keywords: sourceData?.exclude_keywords ? cleanStringArray(sourceData.exclude_keywords) : undefined,
+      headers: sourceData?.headers ? cleanHeaders(sourceData.headers) : undefined,
+      fetch_frequency_minutes:
+        Number.isFinite(Number(sourceData?.fetch_frequency_minutes))
+          ? Number(sourceData.fetch_frequency_minutes)
+          : undefined
+    };
+
+    // handle status toggles
+    if (typeof sourceData?.is_active === "boolean") {
+      updatePayload.is_active = sourceData.is_active;
+      updatePayload.enabled = sourceData.is_active;
+    }
+    if (typeof sourceData?.enabled === "boolean") {
+      updatePayload.enabled = sourceData.enabled;
+      updatePayload.is_active = sourceData.enabled;
+    }
+
+    // allow updating URL safely
+    const url = pickUrl(sourceData);
+    if (url) {
+      updatePayload.url = url;
+      updatePayload.feed_url = url;
+    }
+
+    Object.keys(updatePayload).forEach((k) => updatePayload[k] === undefined && delete updatePayload[k]);
+
     const { data, error } = await supabase
       .from("curator_sources")
-      .update({
-        name: sourceData.name,
-        description: sourceData.description,
-        category: sourceData.category,
-        is_active: sourceData.is_active,
-        fetch_frequency_minutes: sourceData.fetch_frequency_minutes,
-        api_key: sourceData.api_key,
-        filter_keywords: sourceData.filter_keywords,
-        exclude_keywords: sourceData.exclude_keywords
-      })
-      .eq("id", sourceId);
+      .update(updatePayload)
+      .eq("id", sourceId)
+      .select()
+      .single();
+
     if (error) throw error;
     return data;
   } catch (error) {
@@ -102,6 +185,7 @@ export async function deleteCuratorSource(sourceId) {
       .from("curator_sources")
       .delete()
       .eq("id", sourceId);
+
     if (error) throw error;
     return true;
   } catch (error) {
@@ -112,11 +196,14 @@ export async function deleteCuratorSource(sourceId) {
 
 export async function toggleCuratorSourceStatus(sourceId, isActive) {
   try {
-    const updatePayload = { is_active: isActive, enabled: isActive };
+    const active = !!isActive;
     const { data, error } = await supabase
       .from("curator_sources")
-      .update(updatePayload)
-      .eq("id", sourceId);
+      .update({ is_active: active, enabled: active })
+      .eq("id", sourceId)
+      .select()
+      .single();
+
     if (error) throw error;
     return data;
   } catch (error) {
@@ -136,6 +223,7 @@ export async function getAllCuratorPosts(limit = 50, offset = 0) {
       .select("*, curator_sources(name, category)")
       .order("published_at", { ascending: false })
       .range(offset, offset + limit - 1);
+
     if (error) throw error;
     return data || [];
   } catch (error) {
@@ -152,6 +240,7 @@ export async function getUnpostedCuratorPosts(limit = 20) {
       .eq("is_posted", false)
       .order("published_at", { ascending: false })
       .limit(limit);
+
     if (error) throw error;
     return data || [];
   } catch (error) {
@@ -162,19 +251,27 @@ export async function getUnpostedCuratorPosts(limit = 20) {
 
 export async function createCuratorPost(postData) {
   try {
+    const url = cleanText(postData?.url);
+    if (!url) throw new Error("Curator post URL is required.");
+
+    const payload = {
+      source_id: postData?.source_id || null,
+      title: cleanText(postData?.title) || "Untitled",
+      description: cleanText(postData?.description),
+      content: cleanText(postData?.content),
+      url,
+      author: cleanText(postData?.author),
+      published_at: postData?.published_at || null,
+      image_url: cleanText(postData?.image_url),
+      tags: cleanStringArray(postData?.tags)
+    };
+
     const { data, error } = await supabase
       .from("curator_posts")
-      .insert({
-        source_id: postData.source_id,
-        title: postData.title,
-        description: postData.description,
-        content: postData.content,
-        url: postData.url,
-        author: postData.author,
-        published_at: postData.published_at,
-        image_url: postData.image_url,
-        tags: postData.tags || []
-      });
+      .insert(payload)
+      .select()
+      .single();
+
     if (error) throw error;
     return data;
   } catch (error) {
@@ -187,8 +284,11 @@ export async function markCuratorPostAsPosted(curatorPostId, postId) {
   try {
     const { data, error } = await supabase
       .from("curator_posts")
-      .update({ is_posted: true, post_id: postId })
-      .eq("id", curatorPostId);
+      .update({ is_posted: true, post_id: postId || null })
+      .eq("id", curatorPostId)
+      .select()
+      .single();
+
     if (error) throw error;
     return data;
   } catch (error) {
@@ -203,6 +303,7 @@ export async function deleteCuratorPost(curatorPostId) {
       .from("curator_posts")
       .delete()
       .eq("id", curatorPostId);
+
     if (error) throw error;
     return true;
   } catch (error) {
@@ -221,7 +322,9 @@ export async function getCuratorSettings() {
       .from("curator_settings")
       .select("*")
       .single();
-    if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows
+
+    // PGRST116 = No rows found
+    if (error && error.code !== "PGRST116") throw error;
     return data || null;
   } catch (error) {
     console.error("Error fetching curator settings:", error);
@@ -231,41 +334,42 @@ export async function getCuratorSettings() {
 
 export async function updateCuratorSettings(settingsData) {
   try {
-    // Get existing settings first
     const existing = await getCuratorSettings();
 
-    if (existing) {
-      // Update existing
+    const basePayload = {
+      auto_post: !!settingsData?.auto_post,
+      auto_post_hour: Number.isFinite(Number(settingsData?.auto_post_hour)) ? Number(settingsData.auto_post_hour) : 9,
+      min_quality_score: Number.isFinite(Number(settingsData?.min_quality_score)) ? Number(settingsData.min_quality_score) : 60,
+      duplicate_check: settingsData?.duplicate_check !== false,
+      notify_admins: settingsData?.notify_admins !== false,
+      max_posts_per_day: Number.isFinite(Number(settingsData?.max_posts_per_day)) ? Number(settingsData.max_posts_per_day) : 5,
+      updated_at: new Date().toISOString()
+    };
+
+    if (existing?.id) {
       const { data, error } = await supabase
         .from("curator_settings")
-        .update({
-          auto_post: settingsData.auto_post,
-          auto_post_hour: settingsData.auto_post_hour,
-          min_quality_score: settingsData.min_quality_score,
-          duplicate_check: settingsData.duplicate_check,
-          notify_admins: settingsData.notify_admins,
-          max_posts_per_day: settingsData.max_posts_per_day,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", existing.id);
-      if (error) throw error;
-      return data;
-    } else {
-      // Create new
-      const { data, error } = await supabase
-        .from("curator_settings")
-        .insert({
-          api_key: crypto.randomUUID(),
-          auto_post: settingsData.auto_post || false,
-          auto_post_hour: settingsData.auto_post_hour || 9,
-          min_quality_score: settingsData.min_quality_score || 60,
-          duplicate_check: settingsData.duplicate_check !== false,
-          notify_admins: settingsData.notify_admins !== false,
-          max_posts_per_day: settingsData.max_posts_per_day || 5
-        });
+        .update(basePayload)
+        .eq("id", existing.id)
+        .select()
+        .single();
+
       if (error) throw error;
       return data;
     }
+
+    // Create first row if none exists
+    const { data, error } = await supabase
+      .from("curator_settings")
+      .insert({
+        api_key: crypto.randomUUID(),
+        ...basePayload
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error("Error updating curator settings:", error);
     throw error;
@@ -274,23 +378,31 @@ export async function updateCuratorSettings(settingsData) {
 
 export async function getCuratorStats() {
   try {
-    const { count: totalSources } = await supabase
+    const { count: totalSources, error: e1 } = await supabase
       .from("curator_sources")
       .select("*", { count: "exact", head: true });
 
-    const { count: activeSources } = await supabase
+    if (e1) throw e1;
+
+    const { count: activeSources, error: e2 } = await supabase
       .from("curator_sources")
       .select("*", { count: "exact", head: true })
-      .eq("is_active", true);
+      .or("is_active.eq.true,enabled.eq.true");
 
-    const { count: totalPosts } = await supabase
+    if (e2) throw e2;
+
+    const { count: totalPosts, error: e3 } = await supabase
       .from("curator_posts")
       .select("*", { count: "exact", head: true });
 
-    const { count: unpostedPosts } = await supabase
+    if (e3) throw e3;
+
+    const { count: unpostedPosts, error: e4 } = await supabase
       .from("curator_posts")
       .select("*", { count: "exact", head: true })
       .eq("is_posted", false);
+
+    if (e4) throw e4;
 
     return {
       totalSources: totalSources || 0,
@@ -310,11 +422,14 @@ export async function getCuratorStats() {
 
 export async function testCuratorSource(sourceUrl, sourceType = "rss") {
   try {
-    // This would be called by the bot or admin to test connectivity
-    const response = await fetch(sourceUrl, {
+    const url = String(sourceUrl || "").trim();
+    if (!url) return false;
+
+    const response = await fetch(url, {
       method: "HEAD",
       headers: { "User-Agent": "Timzee-Tech-Bot/1.0" }
     });
+
     return response.ok;
   } catch (error) {
     console.error("Error testing source:", error);
@@ -323,8 +438,6 @@ export async function testCuratorSource(sourceUrl, sourceType = "rss") {
 }
 
 export async function importCuratorPostsFromSource(sourceId) {
-  // This would trigger the bot to fetch from this specific source
-  // Typically called as a serverless function
+  // Placeholder: typically a server-side function should do fetching/parsing.
   console.log("Triggering import for source:", sourceId);
-  // Implementation would call a Netlify function or external service
 }
