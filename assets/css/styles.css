@@ -3970,3 +3970,105 @@ body::after {
     z-index: 9999;
   }
 }
+/* ==========================================================
+   FIX: Mobile menu looks like giant pills / broken layout
+   Paste this at the VERY BOTTOM of style.css
+   ========================================================== */
+
+/* Make the mobile menu behave like a normal dropdown panel */
+@media (max-width: 960px) {
+  /* The dropdown container created by nav.js */
+  body.nav-open .site-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: calc(100% - 24px);
+    max-width: 560px;
+    margin: 12px auto 0;
+    padding: 12px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(15, 118, 110, 0.12);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+  }
+
+  /* Reset the nav pill behavior INSIDE the dropdown */
+  body.nav-open .site-menu .nav-pill {
+    width: 100%;
+    display: flex;
+    flex-direction: column;     /* stack links */
+    gap: 10px;
+    flex-wrap: nowrap;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  /* Make links look like normal menu items */
+  body.nav-open .site-menu .nav-pill a {
+    width: 100%;
+    display: block;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    background: rgba(15, 118, 110, 0.08);
+    border: 1px solid rgba(15, 118, 110, 0.14);
+    transform: none;            /* stop hover translate issues on mobile */
+  }
+
+  body.nav-open .site-menu .nav-pill a:hover {
+    background: rgba(15, 118, 110, 0.14);
+  }
+
+  /* Ensure header actions (buttons, search, auth) don't become huge ovals */
+  body.nav-open .site-menu .header-actions,
+  body.nav-open .site-menu .auth-actions {
+    width: 100%;
+    display: grid;
+    gap: 10px;
+  }
+
+  body.nav-open .site-menu .header-actions .btn,
+  body.nav-open .site-menu .auth-actions .btn,
+  body.nav-open .site-menu .header-actions a.btn,
+  body.nav-open .site-menu .auth-actions a.btn {
+    width: 100%;
+    border-radius: 12px; /* not 999px */
+    justify-content: center;
+  }
+
+  body.nav-open .site-menu .search-box,
+  body.nav-open .site-menu .search-box input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Keep the toggle button stable */
+  .menu-toggle {
+    border-radius: 12px;
+  }
+}
+
+/* Dark mode dropdown background */
+@media (max-width: 960px) {
+  :root[data-theme="dark"] body.nav-open .site-menu {
+    background: rgba(15, 23, 42, 0.92);
+    border-color: rgba(148, 163, 184, 0.22);
+  }
+
+  :root[data-theme="dark"] body.nav-open .site-menu .nav-pill a {
+    background: rgba(148, 163, 184, 0.10);
+    border-color: rgba(148, 163, 184, 0.22);
+    color: var(--ink);
+  }
+
+  :root[data-theme="dark"] body.nav-open .site-menu .nav-pill a:hover {
+    background: rgba(148, 163, 184, 0.16);
+  }
+                     }
