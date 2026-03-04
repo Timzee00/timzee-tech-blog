@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Apply for Verification - Timzee Tech Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <style>
+      .verify-container { max-width: 600px; margin: 40px auto; }
+      .verify-header { text-align: center; margin-bottom: 40px; }
+      .verify-header h1 { margin: 0 0 8px 0; }
+      .verify-header p { margin: 0; color: #666; }
+      .badge-showcase { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 40px; }
+      .badge-info { text-align: center; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+      .badge-info.selected { border-color: #0f766e; background: #f0fdfa; }
+      .badge-icon { font-size: 32px; margin-bottom: 8px; }
+      .badge-name { font-weight: 600; margin-bottom: 4px; }
+      .badge-desc { font-size: 12px; color: #999; }
+      .form-section { margin-bottom: 24px; }
+      .form-section h3 { margin: 0 0 12px 0; font-size: 14px; font-weight: 600; }
+      .doc-upload { border: 2px dashed #ddd; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; }
+      .doc-upload:hover { border-color: #0f766e; background: #f9fafb; }
+      .doc-upload.dragover { border-color: #0f766e; background: #f0fdfa; }
+      .doc-list { margin-top: 12px; }
+      .doc-item { background: #f9fafb; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+      .remove-doc { background: none; border: none; color: #ef4444; cursor: pointer; padding: 0; }
+      .perks-list { list-style: none; padding: 0; margin: 12px 0 0 0; }
+      .perks-list li { padding: 8px 0; padding-left: 24px; position: relative; font-size: 14px; }
+      .perks-list li:before { content: "✓"; position: absolute; left: 0; color: #10b981; font-weight: bold; }
+      .status-box { padding: 12px; border-radius: 6px; margin-bottom: 16px; display: none; }
+      .status-box.success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+      .status-box.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+      .badge-levels { display: grid; gap: 16px; }
+      .level-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+      .level-card.selected { border-color: #0f766e; background: #f0fdfa; }
+    </style>
+      <script defer src="assets/js/theme-init.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline">Get Verified</div>
+        </div>
+        <nav class="nav-pill">
+          <a href="index.html">Home</a>
+          <a href="profile.html">Profile</a>
+        </nav>
+        <div class="header-actions" id="authActions"></div>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <div class="verify-container">
+        <div class="verify-header">
+          <h1>Get Verified</h1>
+          <p>Stand out in the community with an official verification badge</p>
+        </div>
+
+        <!-- Verification Levels -->
+        <div class="form-section">
+          <h3>Select Verification Level</h3>
+          <div class="badge-levels">
+            <div class="level-card" data-level="silver">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 28px;">🟩</span>
+                <div>
+                  <strong>Silver</strong>
+                  <p style="margin: 4px 0; font-size: 13px; color: #666;">For active community members</p>
+                </div>
+              </div>
+              <ul class="perks-list">
+                <li>Silver verification badge</li>
+                <li>Custom profile background</li>
+                <li>Increased visibility in search</li>
+              </ul>
+            </div>
+
+            <div class="level-card" data-level="gold">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 28px;">🟨</span>
+                <div>
+                  <strong>Gold</strong>
+                  <p style="margin: 4px 0; font-size: 13px; color: #666;">For prominent creators</p>
+                </div>
+              </div>
+              <ul class="perks-list">
+                <li>Gold verification badge</li>
+                <li>Premium profile design options</li>
+                <li>Priority support</li>
+                <li>Featured in creator directory</li>
+              </ul>
+            </div>
+
+            <div class="level-card" data-level="platinum">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 28px;">⬜</span>
+                <div>
+                  <strong>Platinum</strong>
+                  <p style="margin: 4px 0; font-size: 13px; color: #666;">For industry leaders</p>
+                </div>
+              </div>
+              <ul class="perks-list">
+                <li>Platinum verification badge</li>
+                <li>Exclusive features</li>
+                <li>24/7 priority support</li>
+                <li>Featured on homepage</li>
+              </ul>
+            </div>
+
+            <div class="level-card" data-level="business">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 28px;">🏢</span>
+                <div>
+                  <strong>Business</strong>
+                  <p style="margin: 4px 0; font-size: 13px; color: #666;">For companies and organizations</p>
+                </div>
+              </div>
+              <ul class="perks-list">
+                <li>Business verification badge</li>
+                <li>Business profile page</li>
+                <li>Analytics dashboard</li>
+                <li>Custom branding options</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form -->
+        <form id="verificationForm">
+          <div id="statusBox" class="status-box"></div>
+
+          <div class="form-section">
+            <h3>Why should you be verified?</h3>
+            <textarea id="reason" placeholder="Tell us about your contributions to the community..." style="min-height: 100px;"></textarea>
+            <small style="color: #999;">Minimum 20 characters</small>
+          </div>
+
+          <div class="form-section">
+            <h3>Upload Supporting Documents</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 12px;">Examples: ID, Portfolio, Press Features, Social Media Screenshots</p>
+            
+            <div class="doc-upload" id="docUpload">
+              <div style="font-size: 32px; margin-bottom: 8px;">📄</div>
+              <p style="margin: 0; font-weight: 500;">Drop files here or click to upload</p>
+              <small style="color: #999;">Max 5MB per file, PNG/JPG/PDF</small>
+              <input type="file" id="docInput" multiple accept=".pdf,.png,.jpg,.jpeg" style="display: none;">
+            </div>
+
+            <div class="doc-list" id="docList"></div>
+          </div>
+
+          <div class="form-section">
+            <label>
+              <input type="checkbox" id="agreeTerms" required>
+              <span>I agree to Timzee's verification guidelines and terms</span>
+            </label>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="btn" type="submit" id="submitBtn">Submit Application</button>
+            <a href="profile.html" class="btn ghost">Cancel</a>
+          </div>
+        </form>
+
+        <!-- Info Box -->
+        <div class="callout" style="margin-top: 40px;">
+          <strong>ℹ️ Review Process</strong>
+          <p>Applications are reviewed within 3-5 business days. You'll receive an email notification about the decision. Approval is based on community activity, authenticity, and contribution to the platform.</p>
+        </div>
+      </div>
+    </main>
+
+    <script type="module">
+      import { getCurrentUser, signOut } from "./assets/js/supabase.js";
+      import { createVerificationApplication, getUserVerificationBadge } from "./assets/js/data.js";
+      import { escapeHTML } from "./assets/js/utils.js";
+
+      let state = {
+        user: null,
+        selectedLevel: "gold",
+        documents: [],
+        hasExistingApplication: false
+      };
+
+      // Setup auth
+      async function setupAuth() {
+        state.user = await getCurrentUser();
+        
+        if (!state.user) {
+          window.location.href = `login.html?next=verify.html`;
+          return;
+        }
+
+        const authActions = document.getElementById("authActions");
+        authActions.innerHTML = `
+          <span class="auth-meta">${escapeHTML(state.user.email || '')}</span>
+          <a class="btn ghost" href="profile.html">Profile</a>
+          <button class="btn ghost" id="logoutBtn">Log Out</button>
+        `;
+        document.getElementById("logoutBtn").addEventListener("click", async () => {
+          await signOut();
+          window.location.reload();
+        });
+
+        // Check for existing verification
+        const badge = await getUserVerificationBadge(state.user.id);
+        if (badge?.verification_level && badge.verification_level !== "none") {
+          document.getElementById("verificationForm").innerHTML = `
+            <div class="callout" style="background: #dbeafe; border-color: #0284c7;">
+              <strong>✓ Already Verified</strong>
+              <p>Your profile has <strong>${escapeHTML(badge.verification_level || '')}</strong> verification status.</p>
+              <a href="profile.html" class="btn" style="margin-top: 12px;">Back to Profile</a>
+            </div>
+          `;
+          state.hasExistingApplication = true;
+        }
+      }
+
+      // Level selection
+      document.querySelectorAll(".level-card").forEach(card => {
+        card.addEventListener("click", () => {
+          document.querySelectorAll(".level-card").forEach(c => c.classList.remove("selected"));
+          card.classList.add("selected");
+          state.selectedLevel = card.dataset.level;
+        });
+      });
+
+      // Set initial selection
+      document.querySelector("[data-level='gold']").classList.add("selected");
+
+      // Document upload
+      const docUpload = document.getElementById("docUpload");
+      const docInput = document.getElementById("docInput");
+
+      docUpload.addEventListener("click", () => docInput.click());
+      docUpload.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        docUpload.classList.add("dragover");
+      });
+      docUpload.addEventListener("dragleave", () => {
+        docUpload.classList.remove("dragover");
+      });
+      docUpload.addEventListener("drop", (e) => {
+        e.preventDefault();
+        docUpload.classList.remove("dragover");
+        handleFiles(e.dataTransfer.files);
+      });
+
+      docInput.addEventListener("change", (e) => {
+        handleFiles(e.target.files);
+      });
+
+      function handleFiles(files) {
+        for (const file of files) {
+          if (file.size > 5 * 1024 * 1024) {
+            alert(`${file.name} is too large (max 5MB)`);
+            continue;
+          }
+          state.documents.push(file);
+        }
+        renderDocuments();
+      }
+
+      function renderDocuments() {
+        const list = document.getElementById("docList");
+        list.innerHTML = state.documents.map((doc, idx) => `
+          <div class="doc-item">
+            <span>📎 ${escapeHTML(doc.name || '')}</span>
+            <button class="remove-doc" type="button" data-idx="${idx}">✕</button>
+          </div>
+        `).join("");
+
+        list.querySelectorAll(".remove-doc").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            state.documents.splice(parseInt(btn.dataset.idx), 1);
+            renderDocuments();
+          });
+        });
+      }
+
+      // Form submission
+      document.getElementById("verificationForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        if (state.hasExistingApplication) {
+          alert("You already have a verification");
+          return;
+        }
+
+        const reason = document.getElementById("reason").value.trim();
+        if (reason.length < 20) {
+          alert("Please provide at least 20 characters");
+          return;
+        }
+
+        const status = document.getElementById("statusBox");
+        const btn = document.getElementById("submitBtn");
+
+        btn.disabled = true;
+        status.classList.remove("error", "success");
+        status.textContent = "Submitting...";
+        status.style.display = "block";
+
+        try {
+          // Convert documents to base64
+          const documentsData = [];
+          for (const doc of state.documents) {
+            const base64 = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.readAsDataURL(doc);
+            });
+            documentsData.push({
+              name: doc.name,
+              type: doc.type,
+              data: base64
+            });
+          }
+
+          const result = await createVerificationApplication({
+            userId: state.user.id,
+            verificationLevel: state.selectedLevel,
+            reason,
+            documents: documentsData
+          });
+
+          if (result.error) {
+            status.classList.add("error");
+            status.textContent = `Error: ${result.error.message}`;
+          } else {
+            status.classList.add("success");
+            status.textContent = "✓ Application submitted! We'll review it within 3-5 business days.";
+            document.getElementById("verificationForm").style.display = "none";
+          }
+        } catch (error) {
+          status.classList.add("error");
+          status.textContent = `Error: ${error.message}`;
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      setupAuth();
+    </script>
+  </body>
+</html>
+
+
+

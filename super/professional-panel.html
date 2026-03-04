@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Super Admin Control - Timzee Tech Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/admin.css">
+      <script defer src="../assets/js/theme-init.js"></script>
+  </head>
+  <body class="admin-shell">
+    <div class="topbar">
+      <div class="container" style="display:flex; align-items:center; justify-content:space-between;">
+        <div class="brand">
+          <div class="logo">Timzee <span>Tech</span> Control Panel</div>
+          <div class="tagline">👑 Super Admin - Full System Control</div>
+        </div>
+        <div class="inline-actions">
+          <a class="btn" href="../admin/dashboard.html">📊 Admin Dashboard</a>
+          <a class="btn ghost" href="../index.html">🌐 View Site</a>
+          <button class="btn ghost" id="logoutBtn">Log Out</button>
+        </div>
+      </div>
+    </div>
+
+    <main id="superApp" class="container admin-panel">
+      <nav class="admin-nav">
+        <button class="active" data-tab="team">👥 Team Management</button>
+        <button data-tab="admins">👑 Admins</button>
+        <button data-tab="curator">🤖 Curator + Scout Bot</button>
+        <button data-tab="posts">📰 All Posts</button>
+        <button data-tab="analysis">📈 Site Analysis</button>
+        <button data-tab="users">👤 Users</button>
+        <button data-tab="settings">⚙️ Site Settings</button>
+        <button data-tab="ads">💰 Ad Settings</button>
+        <button data-tab="danger">⚠️ Danger Zone</button>
+      </nav>
+
+      <section class="admin-card" data-panel="team">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+          <div>
+            <h2>👥 Team Management</h2>
+            <p>Promote and manage moderators, authors, and admins</p>
+          </div>
+          <div style="text-align: right;">
+            <a class="btn" href="https://www.notion.so" style="margin: 8px;">📖 View Guide</a>
+            <button class="btn ghost" onclick="alert('Quick tips:\n✅ Start with trusted community members\n✅ Document their roles\n✅ Review monthly\n✅ Keep backup list')">💡 Tips</button>
+          </div>
+        </div>
+
+        <!-- Moderators Section -->
+        <div id="moderatorManagerContainer" style="margin-bottom: 40px;"></div>
+
+        <!-- Curator Bot moved to dedicated Curator tab -->
+      </section>
+
+      <section class="admin-card" data-panel="admins" style="display:none;">
+        <h2>👑 Super Admins</h2>
+        <p>Manage the admin roster, promote trusted staff, or delegate workflows from the <a href="../admin/dashboard.html">Admin Dashboard</a>.</p>
+        <div class="callout" style="margin-top:16px;">
+          Only super admins can add/remove admins. Use the regular admin workspace for day-to-day handling.
+        </div>
+        <div id="adminList" style="margin-top:20px;"></div>
+      </section>
+
+      <!-- Curator Bot Management -->
+      <section class="admin-card" data-panel="curator">
+        <h2>🤖 Curator + Scout Bot</h2>
+        <p style="color: #666; margin-bottom: 16px;">
+          Manage feed sources and run Scout manually from one unified workspace.
+        </p>
+
+        <div class="form-card" style="margin-bottom:16px;">
+          <h3 style="margin-top:0;">🚀 Scout Controls</h3>
+          <p class="hint" style="margin-top:0;">
+            Trigger the Scout bot manually and keep Scout preferences aligned with Curator settings.
+          </p>
+          <div class="inline-actions" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <button class="btn" id="runScoutBtn" type="button">Run Scout Now</button>
+            <label style="display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" id="scoutEnabled" checked>
+              <span>Scout enabled</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px;">
+              <span>Interval (minutes)</span>
+              <input type="number" id="scoutIntervalMinutes" min="5" max="1440" value="60" style="width:100px;">
+            </label>
+            <button class="btn ghost" id="saveScoutSettingsBtn" type="button">Save Scout Settings</button>
+          </div>
+          <p id="scoutStatus" class="hint" style="margin-top:12px;"></p>
+          <p id="scoutSettingsStatus" class="hint" style="margin-top:4px;"></p>
+        </div>
+
+        <div id="botManagerContainer"></div>
+      </section>
+
+      <!-- All Posts -->
+      <section class="admin-card" data-panel="posts">
+        <h2>📰 All Posts</h2>
+        <p style="color: #666; margin-bottom: 20px;">View and manage all content on the site</p>
+        <div id="allPostsContainer" style="text-align: center; padding: 40px; color: #999;">Loading posts...</div>
+      </section>
+
+      <!-- Site Analysis -->
+      <section class="admin-card" data-panel="analysis" style="display:none;">
+        <h2>📈 Site Analysis</h2>
+        <div class="stats-grid" id="analysisStats"></div>
+        <div class="callout" id="analysisTopPosts" style="margin-top:16px;"></div>
+      </section>
+
+      <!-- Users -->
+      <section class="admin-card" data-panel="users">
+        <h2>👤 Users</h2>
+        <p style="color: #666; margin-bottom: 20px;">View and manage user accounts</p>
+        <div id="allUsersContainer" style="text-align: center; padding: 40px; color: #999;">Loading users...</div>
+      </section>
+
+      <!-- Site Settings -->
+      <section class="admin-card" data-panel="settings">
+        <h2>⚙️ Site Settings</h2>
+        <p style="color: #666; margin-bottom: 20px;">Configure global site settings</p>
+        <div class="form-card">
+          <form id="siteSettingsForm">
+            <div class="form-group">
+              <label>Site Name</label>
+              <input type="text" id="siteName" placeholder="Timzee Tech Hub">
+            </div>
+            <div class="form-group">
+              <label>Tagline</label>
+              <input type="text" id="tagline" placeholder="Your site description">
+            </div>
+            <div class="form-group">
+              <label>Comment Moderation Enabled</label>
+              <input type="checkbox" id="commentModeration" checked>
+            </div>
+            <button class="btn" type="submit">💾 Save Settings</button>
+            <div id="settingsStatus" style="margin-top: 12px; display: none;"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Ad Settings -->
+      <section class="admin-card" data-panel="ads" style="display:none;">
+        <h2>💰 AdSense Settings</h2>
+        <form id="adsForm" class="admin-form">
+          <input type="text" id="publisherIdInput" placeholder="Publisher ID (ca-pub-xxxxxxxxxxxx)">
+          <input type="text" id="homeTopSlotInput" placeholder="Home Top Slot ID">
+          <input type="text" id="sidebarSlotInput" placeholder="Sidebar Slot ID">
+          <input type="text" id="postInlineSlotInput" placeholder="Post Inline Slot ID">
+          <label><input type="checkbox" id="adsToggle"> Enable AdSense</label>
+          <button class="btn" type="submit">Update Ads</button>
+        </form>
+        <p class="hint">AdSense only runs on a verified domain.</p>
+      </section>
+
+      <!-- Danger Zone -->
+      <section class="admin-card" data-panel="danger">
+        <h2 style="color: #ef4444;">⚠️ DANGER ZONE</h2>
+        <p style="color: #666; margin-bottom: 20px;">Irreversible actions. Use with extreme caution.</p>
+        
+        <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin: 0 0 12px 0; color: #ef4444;">🗑️ Reset Database</h3>
+          <p style="margin: 0 0 12px 0; color: #666;">Delete ALL content, posts, comments, and discussions. Users remain.</p>
+          <button class="btn" style="background: #ef4444; color: white; border-color: #ef4444;" onclick="if(confirm('DELETE ALL POSTS AND COMMENTS? This cannot be undone!')) alert('Contact support to perform this action.')">Delete All Content</button>
+        </div>
+
+        <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px;">
+          <h3 style="margin: 0 0 12px 0; color: #ef4444;">👤 Delete User</h3>
+          <p style="margin: 0 0 12px 0; color: #666;">Permanently delete a user account and all their data.</p>
+          <input type="text" id="deleteUserId" placeholder="User ID or Email" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px;">
+          <button class="btn" style="background: #ef4444; color: white; border-color: #ef4444;" onclick="if(confirm('PERMANENTLY DELETE THIS USER? This cannot be undone!')) alert('Contact support to perform this action.')">Delete User</button>
+        </div>
+      </section>
+    </main>
+
+    <style>
+      .form-card {
+        background: #f9fafb;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+      }
+      .form-group {
+        margin-bottom: 16px;
+      }
+      .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+      .form-group input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 14px;
+      }
+    </style>
+
+    <script type="module">
+      import { getCurrentUserWithRole, signOut, supabase, getUserRole } from "../assets/js/supabase.js";
+      import ModeratorManager from "../assets/js/moderator-ui.js";
+      import CuratorManager from "../assets/js/curator-ui.js";
+      const SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
+      let scoutSettingsRowId = null;
+
+      async function init() {
+        const user = await getCurrentUserWithRole();
+        if (!user || getUserRole(user) !== "super") {
+          document.body.innerHTML = "<h1>Access Denied</h1><p>Super admin only</p>";
+          return;
+        }
+
+        // Setup logout
+        document.getElementById("logoutBtn").addEventListener("click", async () => {
+          await signOut();
+          window.location.href = "../index.html";
+        });
+
+        // Tab switching
+        const tabBtns = document.querySelectorAll(".admin-nav button");
+        const tabContents = document.querySelectorAll(".admin-card");
+
+        tabBtns.forEach(btn => {
+          btn.addEventListener("click", () => {
+            const tab = btn.dataset.tab;
+            const targetPanel = document.querySelector(`[data-panel="${tab}"]`);
+            if (!targetPanel) return;
+            tabBtns.forEach(b => b.classList.remove("active"));
+            tabContents.forEach(c => c.style.display = "none");
+            btn.classList.add("active");
+            targetPanel.style.display = "block";
+          });
+        });
+
+        const initialTab =
+          document.querySelector(".admin-nav button.active")?.dataset.tab ||
+          tabBtns[0]?.dataset.tab;
+        if (initialTab) {
+          const initialPanel = document.querySelector(`[data-panel="${initialTab}"]`);
+          if (initialPanel) {
+            tabContents.forEach((panel) => {
+              panel.style.display = panel.dataset.panel === initialTab ? "block" : "none";
+            });
+          }
+        }
+
+        const showPanelError = (containerId, message) => {
+          const el = document.getElementById(containerId);
+          if (!el) return;
+          el.innerHTML = `<div class="callout" style="border-left-color:#ef4444;">${message}</div>`;
+        };
+
+        // Initialize moderator manager
+        try {
+          const modManager = new ModeratorManager();
+          await modManager.init("moderatorManagerContainer");
+        } catch (err) {
+          showPanelError("moderatorManagerContainer", `Failed to load moderators. ${err?.message || ""}`);
+        }
+
+        // Initialize curator manager (curator tab)
+        try {
+          const curatorManager = new CuratorManager();
+          if (document.getElementById("botManagerContainer")) {
+            await curatorManager.init("botManagerContainer");
+          }
+        } catch (err) {
+          showPanelError("botManagerContainer", `Failed to load curator manager. ${err?.message || ""}`);
+        }
+
+        const getAuthToken = async () => {
+          const { data } = await supabase.auth.getSession();
+          return data?.session?.access_token || "";
+        };
+
+        const safeParseJson = async (response) => {
+          const text = await response.text();
+          if (!text) return { data: null, raw: "" };
+          try {
+            return { data: JSON.parse(text), raw: text };
+          } catch {
+            return { data: null, raw: text };
+          }
+        };
+
+        const fetchWithAuth = async (url, options = {}) => {
+          const token = await getAuthToken();
+          return fetch(url, {
+            ...options,
+            headers: {
+              ...(options.headers || {}),
+              Authorization: `Bearer ${token}`
+            }
+          });
+        };
+
+        const scoutElements = () => ({
+          enabled: document.getElementById("scoutEnabled"),
+          interval: document.getElementById("scoutIntervalMinutes"),
+          runStatus: document.getElementById("scoutStatus"),
+          settingsStatus: document.getElementById("scoutSettingsStatus")
+        });
+
+        const setScoutRunStatus = (message, tone = "info") => {
+          const { runStatus } = scoutElements();
+          if (!runStatus) return;
+          runStatus.textContent = message || "";
+          runStatus.style.color = tone === "error" ? "#b91c1c" : tone === "success" ? "#0f766e" : "#666";
+        };
+
+        const setScoutSettingsStatus = (message, tone = "info") => {
+          const { settingsStatus } = scoutElements();
+          if (!settingsStatus) return;
+          settingsStatus.textContent = message || "";
+          settingsStatus.style.color = tone === "error" ? "#b91c1c" : tone === "success" ? "#0f766e" : "#666";
+        };
+
+        const clampScoutInterval = (value) => {
+          const parsed = Number(value);
+          if (!Number.isFinite(parsed)) return 60;
+          return Math.min(1440, Math.max(5, Math.round(parsed)));
+        };
+
+        const buildLastScoutRunMessage = (row) => {
+          if (!row?.scout_last_run_at) return "Last Scout run: never";
+          const dateText = new Date(row.scout_last_run_at).toLocaleString();
+          const statusText = row.scout_last_status ? ` (${row.scout_last_status})` : "";
+          return `Last Scout run: ${dateText}${statusText}`;
+        };
+
+        const generateUuid = () => {
+          if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+          return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+            const r = Math.floor(Math.random() * 16);
+            const v = c === "x" ? r : ((r & 0x3) | 0x8);
+            return v.toString(16);
+          });
+        };
+
+        const loadScoutSettings = async () => {
+          const { enabled, interval } = scoutElements();
+          if (!enabled || !interval) return;
+
+          const rowResult = await supabase
+            .from("curator_settings")
+            .select("*")
+            .maybeSingle();
+
+          if (rowResult.error) {
+            setScoutSettingsStatus(`Could not load Scout settings: ${rowResult.error.message}`, "error");
+            return;
+          }
+
+          const row = rowResult.data || null;
+          scoutSettingsRowId = row?.id || null;
+          enabled.checked = typeof row?.scout_enabled === "boolean" ? row.scout_enabled : (row?.enabled ?? true);
+          interval.value = String(
+            clampScoutInterval(row?.scout_interval_minutes ?? row?.fetch_frequency_minutes ?? 60)
+          );
+          setScoutSettingsStatus(buildLastScoutRunMessage(row), "info");
+        };
+
+        const saveScoutSettings = async () => {
+          const { enabled, interval } = scoutElements();
+          if (!enabled || !interval) return;
+
+          const now = new Date().toISOString();
+          const normalizedInterval = clampScoutInterval(interval.value);
+          interval.value = String(normalizedInterval);
+
+          const payload = {
+            scout_enabled: !!enabled.checked,
+            scout_interval_minutes: normalizedInterval,
+            updated_at: now
+          };
+
+          setScoutSettingsStatus("Saving Scout settings...", "info");
+
+          try {
+            let result;
+            if (scoutSettingsRowId) {
+              result = await supabase
+                .from("curator_settings")
+                .update(payload)
+                .eq("id", scoutSettingsRowId)
+                .select("*")
+                .single();
+            } else {
+              const id = generateUuid();
+              result = await supabase
+                .from("curator_settings")
+                .insert({
+                  id,
+                  api_key: generateUuid(),
+                  enabled: true,
+                  posts_per_source: 5,
+                  ...payload
+                })
+                .select("*")
+                .single();
+            }
+
+            if (result?.error) throw result.error;
+            if (result?.data?.id) scoutSettingsRowId = result.data.id;
+            setScoutSettingsStatus(`Scout settings saved. ${buildLastScoutRunMessage(result?.data)}`, "success");
+          } catch (error) {
+            setScoutSettingsStatus(`Failed to save Scout settings: ${error.message}`, "error");
+          }
+        };
+
+        const recordScoutRun = async (runState) => {
+          const now = new Date().toISOString();
+          const payload = {
+            scout_last_run_at: now,
+            scout_last_status: runState,
+            updated_at: now
+          };
+
+          try {
+            if (scoutSettingsRowId) {
+              const updateResult = await supabase
+                .from("curator_settings")
+                .update(payload)
+                .eq("id", scoutSettingsRowId)
+                .select("*")
+                .single();
+              if (!updateResult.error && updateResult.data?.id) {
+                scoutSettingsRowId = updateResult.data.id;
+                setScoutSettingsStatus(buildLastScoutRunMessage(updateResult.data), "info");
+              }
+              return;
+            }
+
+            const id = generateUuid();
+            const insertResult = await supabase
+              .from("curator_settings")
+              .insert({
+                id,
+                api_key: generateUuid(),
+                enabled: true,
+                posts_per_source: 5,
+                ...payload
+              })
+              .select("*")
+              .single();
+            if (!insertResult.error && insertResult.data?.id) {
+              scoutSettingsRowId = insertResult.data.id;
+              setScoutSettingsStatus(buildLastScoutRunMessage(insertResult.data), "info");
+            }
+          } catch (error) {
+            console.warn("Could not persist Scout run state:", error);
+          }
+        };
+
+        const renderList = (containerId, items, emptyText) => {
+          const container = document.getElementById(containerId);
+          if (!container) return;
+          if (!items.length) {
+            container.innerHTML = `<div class="callout">${emptyText}</div>`;
+            return;
+          }
+          container.innerHTML = items.join("");
+        };
+
+        const ensureSupabaseOk = (result, fallbackMessage) => {
+          if (result?.error) {
+            throw new Error(result.error.message || fallbackMessage);
+          }
+          return result?.data ?? null;
+        };
+
+        const loadAdmins = async () => {
+          try {
+            const res = await fetchWithAuth("/.netlify/functions/list-admins");
+            const parsed = await safeParseJson(res);
+            const data = parsed.data || {};
+            if (!res.ok || !parsed.data) {
+              throw new Error(data.error || `Failed to load admins. ${parsed.raw ? "Response was HTML (Netlify function not running)." : ""}`);
+            }
+            const cards = (data.admins || []).map((admin) => `
+              <div class="form-card" style="margin-bottom:12px;">
+                <strong>${admin.display_name || admin.email}</strong>
+                <div style="color:#666;font-size:12px;">${admin.email} • ${admin.role}</div>
+                <div style="color:#666;font-size:12px;">Posts: ${admin.post_count || 0}</div>
+              </div>
+            `);
+            renderList("adminList", cards, "No admins found.");
+          } catch (err) {
+            console.warn("Falling back to Supabase admin list:", err);
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("id, display_name, username, role, created_at, email")
+              .in("role", ["admin", "super"])
+              .order("created_at", { ascending: false });
+            if (error) {
+              showPanelError("adminList", err.message || error.message || "Failed to load admins.");
+              return;
+            }
+            const cards = (data || []).map((admin) => `
+              <div class="form-card" style="margin-bottom:12px;">
+                <strong>${admin.display_name || admin.username || "Admin"}</strong>
+                <div style="color:#666;font-size:12px;">${admin.email || admin.username || "—"} • ${admin.role || "admin"}</div>
+                <div style="color:#666;font-size:12px;">Joined: ${admin.created_at ? new Date(admin.created_at).toLocaleDateString() : "—"}</div>
+              </div>
+            `);
+            renderList("adminList", cards, "No admins found.");
+          }
+        };
+
+        const loadUsers = async () => {
+          try {
+            const res = await fetchWithAuth("/.netlify/functions/list-users");
+            const parsed = await safeParseJson(res);
+            const data = parsed.data || {};
+            if (!res.ok || !parsed.data) {
+              throw new Error(data.error || `Failed to load users. ${parsed.raw ? "Response was HTML (Netlify function not running)." : ""}`);
+            }
+            const cards = (data.users || []).map((user) => `
+              <div class="form-card" style="margin-bottom:12px;">
+                <strong>${user.display_name || user.email}</strong>
+                <div style="color:#666;font-size:12px;">${user.email} • ${user.role}</div>
+                <div style="color:#666;font-size:12px;">Status: ${user.account_status || "active"}</div>
+              </div>
+            `);
+            renderList("allUsersContainer", cards, "No users found.");
+          } catch (err) {
+            console.warn("Falling back to Supabase user list:", err);
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("id, display_name, username, role, status, created_at")
+              .order("created_at", { ascending: false })
+              .limit(200);
+            if (error) {
+              showPanelError("allUsersContainer", err.message || error.message || "Failed to load users.");
+              return;
+            }
+            const cards = (data || []).map((user) => `
+              <div class="form-card" style="margin-bottom:12px;">
+                <strong>${user.display_name || user.username || "Member"}</strong>
+                <div style="color:#666;font-size:12px;">${user.username || "—"} • ${user.role || "user"}</div>
+                <div style="color:#666;font-size:12px;">Status: ${user.status || "active"}</div>
+              </div>
+            `);
+            renderList("allUsersContainer", cards, "No users found.");
+          }
+        };
+
+        const loadPosts = async () => {
+          const container = document.getElementById("allPostsContainer");
+          if (!container) return;
+          container.textContent = "Loading posts...";
+          const { data, error } = await supabase
+            .from("posts")
+            .select("id, title, status, created_at, author_name")
+            .order("created_at", { ascending: false })
+            .limit(50);
+          if (error) {
+            container.innerHTML = `<div class="callout" style="border-left-color:#ef4444;">${error.message}</div>`;
+            return;
+          }
+          if (!data || !data.length) {
+            container.innerHTML = `<div class="callout">No posts found.</div>`;
+            return;
+          }
+          container.innerHTML = data
+            .map(
+              (post) => `
+                <div class="form-card" style="margin-bottom:12px;">
+                  <strong>${post.title || "Untitled"}</strong>
+                  <div style="color:#666;font-size:12px;">${post.author_name || "Unknown"} • ${post.status || "draft"}</div>
+                </div>`
+            )
+            .join("");
+        };
+
+        const loadAnalysis = async () => {
+          const statsEl = document.getElementById("analysisStats");
+          const topEl = document.getElementById("analysisTopPosts");
+          if (!statsEl || !topEl) return;
+
+          const postsCount = await supabase.from("posts").select("id", { count: "exact", head: true });
+          const commentsCount = await supabase.from("comments").select("id", { count: "exact", head: true });
+          const topicsCount = await supabase.from("discussion_topics").select("id", { count: "exact", head: true });
+          const usersRes = await fetchWithAuth("/.netlify/functions/list-users");
+          const usersParsed = await safeParseJson(usersRes);
+          const usersData = usersParsed.data || { users: [] };
+
+          statsEl.innerHTML = `
+            <div class="stat-card"><div class="stat-label">Posts</div><div class="stat-value">${postsCount.count || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Comments</div><div class="stat-value">${commentsCount.count || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Topics</div><div class="stat-value">${topicsCount.count || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Users</div><div class="stat-value">${(usersData.users || []).length}</div></div>
+          `;
+
+          const topPosts = await supabase
+            .from("posts")
+            .select("id, title, views")
+            .order("views", { ascending: false })
+            .limit(5);
+          if (!topPosts.error && topPosts.data?.length) {
+            topEl.innerHTML = `Top posts: ${topPosts.data.map((p) => p.title).join(", ")}`;
+          } else {
+            topEl.textContent = "No top posts yet.";
+          }
+        };
+
+        const loadSiteSettings = async () => {
+          const settingsStatus = document.getElementById("settingsStatus");
+          const result = await supabase
+            .from("site_settings")
+            .select("*")
+            .eq("id", SETTINGS_ID)
+            .maybeSingle();
+          if (result.error) {
+            if (settingsStatus) {
+              settingsStatus.style.display = "block";
+              settingsStatus.style.color = "red";
+              settingsStatus.textContent = `Failed to load settings: ${result.error.message}`;
+            }
+            return;
+          }
+          const data = result.data;
+          if (!data) return;
+          document.getElementById("siteName").value = data.site_name || "";
+          document.getElementById("tagline").value = data.tagline || "";
+          document.getElementById("commentModeration").checked = data.comment_moderation ?? true;
+          document.getElementById("publisherIdInput").value = data.adsense_publisher_id || "";
+          document.getElementById("homeTopSlotInput").value = data.adsense_home_top || "";
+          document.getElementById("sidebarSlotInput").value = data.adsense_home_sidebar || "";
+          document.getElementById("postInlineSlotInput").value = data.adsense_post_inline || "";
+          document.getElementById("adsToggle").checked = data.adsense_enabled ?? false;
+        };
+
+        // Site settings form
+        document.getElementById("siteSettingsForm")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const status = document.getElementById("settingsStatus");
+          if (!status) return;
+          status.style.display = "block";
+          status.textContent = "Saving...";
+          status.style.color = "#0f766e";
+
+          try {
+            const payload = {
+              id: SETTINGS_ID,
+              site_name: document.getElementById("siteName").value,
+              tagline: document.getElementById("tagline").value,
+              comment_moderation: document.getElementById("commentModeration").checked,
+              updated_at: new Date().toISOString()
+            };
+            const saveResult = await supabase.from("site_settings").upsert(payload);
+            ensureSupabaseOk(saveResult, "Settings save failed.");
+
+            status.textContent = "✓ Settings saved!";
+            status.style.color = "green";
+          } catch (error) {
+            status.textContent = "Error: " + error.message;
+            status.style.color = "red";
+          }
+        });
+
+        // Ads settings form
+        document.getElementById("adsForm")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const status = document.getElementById("settingsStatus");
+          if (status) {
+            status.style.display = "block";
+            status.style.color = "#0f766e";
+            status.textContent = "Saving ad settings...";
+          }
+          try {
+            const payload = {
+              id: SETTINGS_ID,
+              adsense_enabled: document.getElementById("adsToggle").checked,
+              adsense_publisher_id: document.getElementById("publisherIdInput").value,
+              adsense_home_top: document.getElementById("homeTopSlotInput").value,
+              adsense_home_sidebar: document.getElementById("sidebarSlotInput").value,
+              adsense_post_inline: document.getElementById("postInlineSlotInput").value,
+              updated_at: new Date().toISOString()
+            };
+            const saveResult = await supabase.from("site_settings").upsert(payload);
+            ensureSupabaseOk(saveResult, "Ads settings save failed.");
+            if (status) {
+              status.style.color = "green";
+              status.textContent = "✓ Ad settings saved!";
+            }
+          } catch (err) {
+            if (status) {
+              status.style.color = "red";
+              status.textContent = `Failed to update ads settings: ${err.message}`;
+            } else {
+              alert(`Failed to update ads settings: ${err.message}`);
+            }
+          }
+        });
+
+        document.getElementById("saveScoutSettingsBtn")?.addEventListener("click", saveScoutSettings);
+
+        document.getElementById("runScoutBtn")?.addEventListener("click", async () => {
+          setScoutRunStatus("Running Scout...", "info");
+          try {
+            const res = await fetchWithAuth("/.netlify/functions/scout-news", { method: "POST" });
+            const parsed = await safeParseJson(res);
+            const data = parsed.data || {};
+            if (!res.ok || !parsed.data) {
+              throw new Error(data.error || `Scout failed (${res.status}).`);
+            }
+            const postedCount = Array.isArray(data.posted) ? data.posted.length : 0;
+            const feedErrors = Array.isArray(data.feedErrors) ? data.feedErrors.length : 0;
+            const suffix = feedErrors ? ` (${feedErrors} feeds failed)` : "";
+            setScoutRunStatus(`Scout finished. Submitted ${postedCount} items${suffix}.`, "success");
+            await recordScoutRun("success");
+          } catch (err) {
+            setScoutRunStatus(`Error: ${err.message}`, "error");
+            await recordScoutRun("failed");
+          }
+        });
+
+        await loadSiteSettings();
+        await loadScoutSettings();
+        await loadAdmins();
+        await loadUsers();
+        await loadPosts();
+        await loadAnalysis();
+      }
+
+      init().catch((err) => {
+        console.error("Super panel init failed:", err);
+        const safe = String((err && err.message) ? err.message : "Failed to initialize super admin interface.")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        document.body.innerHTML = `
+          <main class="container" style="padding:40px;">
+            <section class="admin-card">
+              <h2>Super Admin Error</h2>
+              <p>${safe}</p>
+            </section>
+          </main>
+        `;
+      });
+    </script>
+  </body>
+</html>
+
+
+

@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Profile - Timzee Tech Hub</title>
+    <meta name="description" content="View member profiles, activity, and community connections on Timzee Tech Hub.">
+    <meta name="keywords" content="Timzee Tech Hub, member profile, tech community, creators">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0f766e">
+    <link rel="canonical" href="https://timzee-tech-blog.netlify.app/profile.html">
+    <meta property="og:site_name" content="Timzee Tech Hub">
+    <meta property="og:type" content="profile">
+    <meta property="og:title" content="Profile - Timzee Tech Hub">
+    <meta property="og:description" content="View member profiles, activity, and community connections on Timzee Tech Hub.">
+    <meta property="og:url" content="https://timzee-tech-blog.netlify.app/profile.html">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Profile - Timzee Tech Hub">
+    <meta name="twitter:description" content="View member profiles, activity, and community connections on Timzee Tech Hub.">
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+      <script defer src="assets/js/theme-init.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline" id="siteTagline">Profiles, activity, and community connections.</div>
+        </div>
+        <div class="header-actions">
+          <a class="btn ghost" href="novels.html">Novels</a>          <a class="btn ghost" href="videos.html">Videos</a>
+          <a class="btn ghost" href="marketplace.html">Marketplace</a>          <a class="btn ghost" href="discussion.html">Discussion</a>
+          <a class="btn ghost" href="announcements.html">Announcements</a>
+          <a class="btn ghost" href="chat.html">Chat</a>
+          <div class="auth-actions" id="authActions"></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-shell profile-page">
+      <div class="container">
+        <div class="profile-tabs" id="profileTabs">
+          <button class="active" data-tab="overview" type="button">Overview</button>
+          <button data-tab="activity" type="button">Activity</button>
+          <button data-tab="bookmarks" type="button">Saved</button>
+          <button data-tab="notifications" type="button">Notifications</button>
+          <button data-tab="settings" type="button">Settings</button>
+        </div>
+      </div>
+
+      <section class="container profile-grid active" data-profile-section="overview">
+        <section class="profile-main">
+          <section class="discussion-card profile-card profile-hero" data-reveal>
+            <div class="profile-cover">
+              <img id="profileCoverImg" alt="Profile cover">
+              <div class="profile-cover-overlay"></div>
+            </div>
+            <div class="profile-identity">
+              <div class="profile-avatar-wrap">
+                <img id="profileAvatar" class="profile-avatar" alt="Profile avatar">
+              </div>
+              <div class="profile-body">
+                <div class="chip" id="profileRole">Member</div>
+                <h2 id="profileName">Loading...</h2>
+                <p id="profileHeadline" class="profile-headline"></p>
+                <div id="profileBadges" class="author-badges"></div>
+                <div class="profile-actions" id="profileActions"></div>
+              </div>
+            </div>
+            <p id="profileBio" class="profile-bio"></p>
+            <div class="stats-list profile-stats" id="profileStats"></div>
+          </section>
+        </section>
+
+        <aside class="profile-sidebar">
+          <section class="discussion-card profile-card" data-reveal>
+            <h3>Intro</h3>
+            <div class="profile-about" id="profileAbout"></div>
+          </section>
+          <section class="discussion-card profile-card" data-reveal>
+            <h3>Verification</h3>
+            <div id="profileVerification" class="verification-card"></div>
+          </section>
+          <section class="discussion-card profile-card" data-reveal>
+            <h3>Friends</h3>
+            <div id="profileFriends" class="profile-friends"></div>
+          </section>
+        </aside>
+      </section>
+
+      <section class="container profile-activity" data-profile-section="activity">
+        <section class="discussion-card profile-card" data-reveal>
+          <div class="profile-section-title">
+            <h3>Activity</h3>
+            <p class="tagline">Topics, comments, and share history.</p>
+          </div>
+          <div class="activity-section">
+            <h4>Topics Created</h4>
+            <div id="profileTopics" class="activity-list"></div>
+          </div>
+          <div class="activity-section">
+            <h4>Recent Comments</h4>
+            <div id="profileComments" class="activity-list"></div>
+          </div>
+          <div class="activity-section">
+            <h4>Posts Shared</h4>
+            <div id="profileShares" class="activity-list"></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="container profile-activity" data-profile-section="bookmarks">
+        <section class="discussion-card profile-card" data-reveal>
+          <div class="profile-section-title">
+            <h3>Saved Posts</h3>
+            <p class="tagline">Your bookmarks and read-later list.</p>
+          </div>
+          <div id="profileBookmarks" class="activity-list"></div>
+        </section>
+      </section>
+
+      <section class="container profile-activity" data-profile-section="notifications">
+        <section class="discussion-card profile-card" data-reveal>
+          <div class="profile-section-title">
+            <h3>Notifications</h3>
+            <p class="tagline">Follows, mentions, and updates.</p>
+          </div>
+          <div class="inline-actions" style="margin-bottom:12px;">
+            <button class="btn ghost" id="markAllReadBtn" type="button">Mark all read</button>
+          </div>
+          <div id="profileNotifications" class="notification-list"></div>
+        </section>
+      </section>
+
+      <section class="container profile-settings" data-profile-section="settings">
+        <div class="discussion-card" id="profileEditor">
+          <h3>Profile Settings</h3>
+          <div class="settings-grid">
+            <form id="profileForm" class="form-grid">
+              <h4>Profile Details</h4>
+              <input type="text" id="editDisplayName" placeholder="Display name" required>
+              <input type="text" id="editUsername" placeholder="Username (unique)">
+              <input type="text" id="editHeadline" placeholder="Headline (e.g. Product builder, DevOps)">
+              <textarea id="editBio" placeholder="Short bio"></textarea>
+              <input type="text" id="editLocation" placeholder="Location">
+              <input type="text" id="editWebsite" placeholder="Website URL">
+              <input type="text" id="editAvatarUrl" placeholder="Avatar URL (optional)">
+              <input type="file" id="editAvatarFile" accept="image/*">
+              <img id="editAvatarPreview" class="profile-preview" alt="Avatar preview">
+              <input type="text" id="editCoverUrl" placeholder="Cover image URL (optional)">
+              <input type="file" id="editCoverFile" accept="image/*">
+              <img id="editCoverPreview" class="profile-preview" alt="Cover preview">
+              <button type="submit" class="btn">Save Profile</button>
+              <div class="callout" id="profileStatus" style="margin-top:12px; display:none;"></div>
+            </form>
+
+            <form id="privacyForm" class="form-grid">
+              <h4>Privacy & Notifications</h4>
+              <label><input type="checkbox" id="toggleMessages"> Allow direct messages</label>
+              <label><input type="checkbox" id="toggleRequests"> Allow friend requests</label>
+              <label><input type="checkbox" id="toggleEmail"> Show email on profile</label>
+              <label><input type="checkbox" id="toggleMsgNotify"> Email me about new messages</label>
+              <label><input type="checkbox" id="toggleReplyNotify"> Email me about replies</label>
+              <label><input type="checkbox" id="toggleFollowNotify"> Email me about new followers</label>
+              <label><input type="checkbox" id="toggleMentionNotify"> Email me about mentions</label>
+              <button type="submit" class="btn ghost">Update Preferences</button>
+              <div class="callout" id="privacyStatus" style="margin-top:12px; display:none;"></div>
+            </form>
+
+            <form id="securityForm" class="form-grid">
+              <h4>Account Security</h4>
+              <input type="email" id="securityEmail" placeholder="Current email" readonly>
+              <input type="email" id="securityNewEmail" placeholder="New email (optional)">
+              <input type="password" id="securityPassword" placeholder="New password">
+              <input type="password" id="securityPasswordConfirm" placeholder="Confirm new password">
+              <button type="submit" class="btn secondary">Reset Password</button>
+              <div class="callout" id="securityStatus" style="margin-top:12px; display:none;"></div>
+            </form>
+
+            <form id="adminRequestForm" class="form-grid">
+              <h4>Admin Access</h4>
+              <textarea id="adminRequestMessage" placeholder="Tell us why you want to be an admin"></textarea>
+              <button type="submit" class="btn ghost">Request admin access</button>
+              <div class="callout" id="adminRequestStatus" style="margin-top:12px; display:none;"></div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-links">
+          <a href="support.html">Support</a>
+          <a href="contact.html">Contact Us</a>
+          <a href="newsletter.html">Newsletter</a>
+          <a href="ads.html">Advertise</a>
+          <a href="discussion.html">Discussion</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="assets/js/profile.js"></script>
+  </body>
+</html>
+
+
+

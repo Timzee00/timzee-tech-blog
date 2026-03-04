@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Post - Timzee Tech Hub</title>
+    <meta name="description" id="metaDescription" content="Read the latest post on Timzee Tech Hub.">
+    <meta name="keywords" content="Timzee Tech Hub, tech blog, tech news, build logs, startups, product reviews">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0f766e">
+    <link rel="canonical" id="canonicalLink" href="https://timzee-tech-blog.netlify.app/post.html">
+    <meta property="og:site_name" content="Timzee Tech Hub">
+    <meta property="og:type" content="article">
+    <meta property="og:title" id="ogTitle" content="Post - Timzee Tech Hub">
+    <meta property="og:description" id="ogDescription" content="Read the latest post on Timzee Tech Hub.">
+    <meta property="og:url" id="ogUrl" content="https://timzee-tech-blog.netlify.app/post.html">
+    <meta property="og:image" id="ogImage" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" id="twitterTitle" content="Post - Timzee Tech Hub">
+    <meta name="twitter:description" id="twitterDescription" content="Read the latest post on Timzee Tech Hub.">
+    <meta name="twitter:image" id="twitterImage" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <script type="application/ld+json" id="postSchema">{}</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+      <script defer src="assets/js/theme-init.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline" id="siteTagline">Forum-inspired tech news, builds, and community experiments.</div>
+        </div>
+        <div class="header-actions">
+          <a class="btn ghost" href="novels.html">Novels</a>
+          <a class="btn ghost" href="videos.html">Videos</a>
+          <a class="btn ghost" href="marketplace.html">Marketplace</a>
+          <a class="btn ghost" href="discussion.html">Discussion</a>
+          <a class="btn ghost" href="announcements.html">Announcements</a>
+          <a class="btn ghost" href="ads.html">Advertise</a>
+          <div class="auth-actions" id="authActions"></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="post-hero">
+      <div class="container post-layout" id="post-app">
+        <article class="post-shell post-article" data-reveal>
+          <div class="post-header">
+            <div class="post-kicker">
+              <div class="chip" id="postCategory">Category</div>
+              <span class="post-date" id="postDate"></span>
+            </div>
+            <h1 id="postTitle">Post title</h1>
+            <p class="post-dek" id="postDek"></p>
+            <div class="post-meta post-meta-row" id="postMeta"></div>
+          </div>
+
+          <div class="author-mini" id="authorMini"></div>
+          <section class="post-highlights">
+            <h3>Key Takeaways</h3>
+            <ul id="postTakeaways"></ul>
+          </section>
+
+          <div class="post-cover" id="postCover"></div>
+          <div class="post-content" id="postContent"></div>
+          <div class="post-gallery" id="postGallery"></div>
+
+          <div class="post-tags-row">
+            <div class="tag-list" id="postTags"></div>
+            <div class="post-actions-inline">
+              <button class="btn ghost" id="likePostBtn">Like</button>
+              <button class="btn ghost bookmark-btn" id="bookmarkBtn">Save</button>
+              <span id="likeCount">0 likes</span>
+              <span id="viewCount">0 views</span>
+            </div>
+          </div>
+
+          <div class="post-actions">
+            <button class="btn ghost" id="shareBtn">Share</button>
+            <button class="btn ghost" id="copyLinkBtn">Copy Link</button>
+          </div>
+          <div class="notice" id="commentNotice" style="display: none;"></div>
+
+          <section class="author-profile-card" id="authorProfileCard"></section>
+
+          <section id="comments" style="margin-top: 24px;">
+            <h2 class="section-title">Comments</h2>
+            <div id="commentList" class="post-list"></div>
+            <form id="commentForm" class="comment-form" data-reveal>
+              <div class="callout" id="commentAs" style="display:none;"></div>
+              <div class="reply-preview hidden" id="commentReplyPreview"></div>
+              <textarea id="commentBody" placeholder="Join the discussion..." required></textarea>
+              <input type="file" id="commentImage" accept="image/*">
+              <img id="commentPreview" style="max-height: 160px; border-radius: 12px; display: none;" alt="preview">
+              <button type="submit" class="btn">Post Comment</button>
+            </form>
+          </section>
+        </article>
+
+        <aside class="side-card" data-reveal>
+          <h3>Related Topics</h3>
+          <div id="relatedPosts" class="post-list"></div>
+          <div class="ad-slot" id="postInlineAd">Ad slot: Post Inline</div>
+          <div class="callout">Upload an image with your comment to show screenshots or receipts.</div>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div>Back to <a href="index.html">home</a>.</div>
+        <div class="footer-links">
+          <a href="support.html">Support</a>
+          <a href="contact.html">Contact Us</a>
+          <a href="newsletter.html">Newsletter</a>
+          <a href="ads.html">Advertise</a>
+          <a href="discussion.html">Discussion</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="assets/js/post.js"></script>
+  </body>
+</html>
+
+
+

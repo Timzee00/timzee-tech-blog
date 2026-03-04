@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Novels - Timzee Tech Hub</title>
+    <meta name="description" content="Discover and share tech-inspired novels and serialized stories">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <style>
+      .novel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin: 30px 0; }
+      @media (max-width: 768px) { .novel-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; } }
+      .novel-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; transition: all 0.3s; cursor: pointer; }
+      .novel-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); border-color: #0f766e; }
+      .novel-cover { width: 100%; aspect-ratio: 3/4; background: linear-gradient(135deg, #0f766e, #14b8a6); display: flex; align-items: center; justify-content: center; font-size: 48px; position: relative; }
+      .novel-cover img { width: 100%; height: 100%; object-fit: cover; }
+      .novel-badge { position: absolute; top: 8px; right: 8px; background: #0f766e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+      .novel-info { padding: 16px; }
+      .novel-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .novel-author { font-size: 13px; color: #666; margin-bottom: 8px; }
+      .novel-status { display: inline-block; background: #f0fdfa; color: #0f766e; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 8px; }
+      .novel-meta { display: flex; gap: 12px; font-size: 12px; color: #999; }
+      .novel-create-btn { background: #0f766e; color: white; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+      .novel-create-btn:hover { background: #0d5f5a; }
+      .filter-tabs { display: flex; gap: 8px; margin: 20px 0; overflow-x: auto; }
+      .filter-tab { padding: 8px 16px; background: #f0f0f0; border: none; border-radius: 20px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+      .filter-tab.active { background: #0f766e; color: white; }
+      .novel-form { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 40px; }
+      .form-group { margin-bottom: 16px; }
+      .form-group label { display: block; font-weight: 600; margin-bottom: 6px; }
+      .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; }
+      .form-group textarea { min-height: 120px; resize: vertical; }
+      .chapters-section { background: #f9fafb; border-radius: 8px; padding: 16px; margin-top: 16px; }
+      .chapter-item { background: white; padding: 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+      .chapter-title { font-weight: 600; }
+      .chapter-meta { font-size: 12px; color: #999; }
+      .story-content { max-width: 800px; margin: 40px auto; padding: 20px; background: white; border-radius: 8px; line-height: 1.8; }
+      .story-content p { margin-bottom: 16px; }
+    </style>
+      <script defer src="assets/js/theme-init.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline">Stories & Serialized Fiction</div>
+        </div>
+        <nav class="nav-pill">
+          <a href="index.html">Home</a>
+          <a href="videos.html">Videos</a>
+          <a href="marketplace.html">Marketplace</a>
+          <a href="discussion.html">Discussion</a>
+          <a href="chat.html">Chat</a>
+          <a href="announcements.html">Announcements</a>
+        </nav>
+        <div class="header-actions" id="authActions"></div>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+          <div>
+            <h1 style="margin: 0;">Tech Novels & Stories</h1>
+            <p style="margin: 8px 0 0 0; color: #666;">Discover serialized fiction, tech thrillers, and community stories</p>
+          </div>
+          <button class="novel-create-btn" id="createNovelBtn" style="display: none;">Start Writing</button>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all">All Novels</button>
+          <button class="filter-tab" data-filter="ongoing">Ongoing</button>
+          <button class="filter-tab" data-filter="completed">Completed</button>
+          <button class="filter-tab" data-filter="paused">On Hiatus</button>
+          <button class="filter-tab" data-filter="trending">Trending</button>
+        </div>
+
+        <!-- Create Form (logged-in users only) -->
+        <div class="novel-form" id="createForm" style="display: none;">
+          <h3 style="margin-top: 0;">Create New Novel</h3>
+          <form id="novelForm">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label>Novel Title *</label>
+                <input type="text" id="novelTitle" placeholder="The Quantum Code" required>
+              </div>
+              <div class="form-group">
+                <label>Genre *</label>
+                <select id="novelGenre" required>
+                  <option value="">Select a genre</option>
+                  <option value="scifi">Science Fiction</option>
+                  <option value="fantasy">Fantasy</option>
+                  <option value="mystery">Mystery/Thriller</option>
+                  <option value="romance">Romance</option>
+                  <option value="adventure">Adventure</option>
+                  <option value="dystopian">Dystopian</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Synopsis *</label>
+              <textarea id="novelSynopsis" placeholder="Brief description of your story..." required></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label>Cover Image URL</label>
+                <input type="text" id="novelCoverUrl" placeholder="https://example.com/cover.jpg">
+              </div>
+              <div class="form-group">
+                <label>Status *</label>
+                <select id="novelStatus" required>
+                  <option value="ongoing">Ongoing</option>
+                  <option value="completed">Completed</option>
+                  <option value="paused">On Hiatus</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Tags (comma separated)</label>
+              <input type="text" id="novelTags" placeholder="tech, thriller, series">
+            </div>
+
+            <button type="submit" class="novel-create-btn">Create Novel</button>
+            <button type="button" class="btn ghost" id="cancelCreate" style="margin-left: 8px;">Cancel</button>
+            <div id="createStatus" style="margin-top: 12px; display: none;"></div>
+          </form>
+        </div>
+
+        <!-- Novels Grid -->
+        <div class="novel-grid" id="novelsGrid">
+          <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
+            <p>Loading novels...</p>
+          </div>
+        </div>
+
+        <!-- Load More -->
+        <div style="text-align: center; margin-top: 40px;">
+          <button class="btn ghost" id="loadMoreBtn" style="display: none;">Load More Stories</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="discussion.html">Discussion</a>
+          <a href="contact.html">Contact</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module">
+      import { supabase, getCurrentUser, getDisplayName, signOut, getUserRole } from "./assets/js/supabase.js";
+      import { fetchSettings } from "./assets/js/settings.js";
+      import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+
+      const uuid = () => (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+      const notify = (message, tone = "info") => {
+        if (window.appUI?.toast) {
+          window.appUI.toast(message, { tone, title: tone === "error" ? "Novel" : "Notice" });
+          return;
+        }
+        if (tone === "error") console.error(message);
+        else console.log(message);
+      };
+
+      const state = {
+        user: null,
+        settings: null,
+        novels: [],
+        offset: 0,
+        filter: "all",
+        limit: 12,
+        canCreateNovel: false
+      };
+
+      async function init() {
+        state.user = await getCurrentUser();
+        state.settings = await fetchSettings();
+
+        setupAuth();
+        setupEventListeners();
+        await loadNovels();
+      }
+
+      function setupAuth() {
+        const authActions = document.getElementById("authActions");
+        const createBtn = document.getElementById("createNovelBtn");
+        const createForm = document.getElementById("createForm");
+        if (!authActions || !createBtn || !createForm) return;
+
+        createBtn.style.display = "none";
+        createForm.style.display = "none";
+
+        if (!state.user) {
+          authActions.innerHTML = `<a class="btn ghost" href="login.html?next=${encodeURIComponent("novels.html")}">Log In</a>`;
+          return;
+        }
+
+        authActions.innerHTML = `
+          <span class="auth-meta">${escapeHTML(getDisplayName(state.user))}</span>
+          <a class="btn ghost" href="profile.html">Profile</a>
+          <button class="btn ghost" id="logoutBtn">Log Out</button>
+        `;
+
+        document.getElementById("logoutBtn")?.addEventListener("click", async () => {
+          await signOut();
+          window.location.reload();
+        });
+
+        const role = getUserRole(state.user) || "user";
+        state.canCreateNovel = ["author", "moderator", "admin", "super"].includes(role);
+        createBtn.style.display = state.canCreateNovel ? "inline-block" : "none";
+      }
+
+      async function fetchNovelLikeCounts(novelIds = []) {
+        if (!novelIds.length) return {};
+        const likesResult = await supabase
+          .from("novel_likes")
+          .select("novel_id")
+          .in("novel_id", novelIds);
+        if (likesResult.error) return {};
+
+        const counts = {};
+        (likesResult.data || []).forEach((row) => {
+          const id = row.novel_id;
+          counts[id] = (counts[id] || 0) + 1;
+        });
+        return counts;
+      }
+
+      function scoreNovelForTrending(novel) {
+        const likes = Number(novel._likeCount || novel.likes || 0);
+        const views = Number(novel.views || 0);
+        const chapters = Number(novel.chapters_count || 0);
+        return likes * 3 + views + chapters * 2;
+      }
+
+      async function loadNovels() {
+        const grid = document.getElementById("novelsGrid");
+        const loadMoreBtn = document.getElementById("loadMoreBtn");
+        if (!grid || !loadMoreBtn) return;
+
+        if (state.offset === 0) {
+          grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px;"><p>Loading novels...</p></div>`;
+        }
+
+        try {
+          let pageData = [];
+          let hasMore = false;
+
+          if (state.filter === "trending") {
+            const fetchResult = await supabase
+              .from("novels")
+              .select("*")
+              .order("created_at", { ascending: false })
+              .limit(200);
+            if (fetchResult.error) throw fetchResult.error;
+
+            const rows = fetchResult.data || [];
+            const counts = await fetchNovelLikeCounts(rows.map((row) => row.id));
+            const sorted = rows
+              .map((row) => ({ ...row, _likeCount: counts[row.id] || 0 }))
+              .sort((a, b) => scoreNovelForTrending(b) - scoreNovelForTrending(a));
+
+            const start = state.offset;
+            const end = start + state.limit;
+            pageData = sorted.slice(start, end);
+            hasMore = sorted.length > end;
+          } else {
+            let query = supabase.from("novels").select("*");
+            if (state.filter !== "all") {
+              query = query.eq("status", state.filter);
+            }
+            const fetchResult = await query
+              .order("created_at", { ascending: false })
+              .range(state.offset, state.offset + state.limit - 1);
+            if (fetchResult.error) throw fetchResult.error;
+
+            const rows = fetchResult.data || [];
+            const counts = await fetchNovelLikeCounts(rows.map((row) => row.id));
+            pageData = rows.map((row) => ({ ...row, _likeCount: counts[row.id] || 0 }));
+            hasMore = rows.length === state.limit;
+          }
+
+          if (state.offset === 0) state.novels = pageData;
+          else state.novels.push(...pageData);
+
+          renderNovels();
+          loadMoreBtn.style.display = hasMore ? "inline-block" : "none";
+        } catch (error) {
+          console.error("Load novels error:", error);
+          notify(error?.message || "Failed to load novels.", "error");
+          grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px;"><p>${escapeHTML(error?.message || "Error loading novels.")}</p></div>`;
+        }
+      }
+
+      function renderNovels() {
+        const grid = document.getElementById("novelsGrid");
+        if (!grid) return;
+
+        if (!state.novels.length) {
+          const emptyMessage = state.filter === "all"
+            ? "No novels yet. Start writing!"
+            : `No ${state.filter} novels found.`;
+          grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px;"><p>${escapeHTML(emptyMessage)}</p></div>`;
+          return;
+        }
+
+        grid.innerHTML = state.novels.map((novel) => {
+          const likeCount = novel._likeCount ?? novel.likes ?? 0;
+          return `
+            <a href="novel.html?id=${encodeURIComponent(novel.id)}" style="text-decoration: none; color: inherit;">
+              <div class="novel-card">
+                <div class="novel-cover">
+                  ${novel.cover_url && isSafeUrl(novel.cover_url) ? `<img src="${escapeHTML(novel.cover_url)}" alt="${escapeHTML(novel.title || "")}">` : "📖"}
+                  <div class="novel-badge">${escapeHTML(novel.status || "")}</div>
+                </div>
+                <div class="novel-info">
+                  <div class="novel-title">${escapeHTML(novel.title || "")}</div>
+                  <div class="novel-author">by ${escapeHTML(novel.author_name || "")}</div>
+                  <div class="novel-status">${escapeHTML(novel.genre || "")}</div>
+                  <div class="novel-meta">
+                    <span>📕 ${escapeHTML(String(novel.chapters_count || 0))} chapters</span>
+                    <span>👁 ${escapeHTML(String(novel.views || 0))}</span>
+                    <span>❤️ ${escapeHTML(String(likeCount))}</span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          `;
+        }).join("");
+      }
+
+      function setupEventListeners() {
+        document.querySelectorAll(".filter-tab").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            document.querySelectorAll(".filter-tab").forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            state.filter = btn.dataset.filter || "all";
+            state.offset = 0;
+            await loadNovels();
+          });
+        });
+
+        document.getElementById("createNovelBtn")?.addEventListener("click", () => {
+          if (!state.canCreateNovel) return;
+          const createForm = document.getElementById("createForm");
+          if (!createForm) return;
+          createForm.style.display = "block";
+          createForm.scrollIntoView({ behavior: "smooth", block: "start" });
+          document.getElementById("novelTitle")?.focus();
+        });
+
+        document.getElementById("novelForm")?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          if (!state.user || !state.canCreateNovel) {
+            notify("You are not allowed to create novels with this account.", "error");
+            return;
+          }
+
+          const status = document.getElementById("createStatus");
+          const submitBtn = document.querySelector("#novelForm button[type='submit']");
+          if (!status || !submitBtn) return;
+
+          submitBtn.disabled = true;
+          status.style.display = "block";
+          status.textContent = "Creating...";
+          status.style.color = "#0f766e";
+
+          try {
+            const tags = (document.getElementById("novelTags").value || "")
+              .split(",")
+              .map((tag) => tag.trim())
+              .filter(Boolean);
+
+            const novel = {
+              id: uuid(),
+              author_id: state.user.id,
+              author_name: getDisplayName(state.user),
+              title: document.getElementById("novelTitle").value.trim(),
+              synopsis: document.getElementById("novelSynopsis").value.trim(),
+              genre: document.getElementById("novelGenre").value,
+              status: document.getElementById("novelStatus").value,
+              cover_url: document.getElementById("novelCoverUrl").value.trim() || null,
+              tags,
+              chapters_count: 0,
+              views: 0,
+              likes: 0,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+
+            const insertResult = await supabase.from("novels").insert(novel);
+            if (insertResult.error) throw insertResult.error;
+
+            status.textContent = "Novel created. Redirecting...";
+            status.style.color = "#047857";
+            notify("Novel created successfully.", "success");
+            setTimeout(() => {
+              window.location.href = `novel.html?id=${encodeURIComponent(novel.id)}`;
+            }, 1200);
+          } catch (error) {
+            status.textContent = `Error: ${error.message || "Failed to create novel."}`;
+            status.style.color = "#b91c1c";
+            notify(error?.message || "Failed to create novel.", "error");
+          } finally {
+            submitBtn.disabled = false;
+          }
+        });
+
+        document.getElementById("cancelCreate")?.addEventListener("click", () => {
+          document.getElementById("novelForm")?.reset();
+          document.getElementById("createForm").style.display = "none";
+          const status = document.getElementById("createStatus");
+          if (status) status.style.display = "none";
+        });
+
+        document.getElementById("loadMoreBtn")?.addEventListener("click", async () => {
+          state.offset += state.limit;
+          await loadNovels();
+        });
+      }
+
+      init();
+    </script>
+  </body>
+</html>
+
+
+
