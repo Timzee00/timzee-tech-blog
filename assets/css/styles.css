@@ -4072,3 +4072,605 @@ body::after {
     background: rgba(148, 163, 184, 0.16);
   }
                      }
+/* =================================================================
+   TIMZEE TECH HUB — HEADER FIX v2
+   Paste at the VERY END of style.css
+   Written to match the exact DOM nav.js produces:
+     .site-header .wrap
+       .brand
+       .menu-toggle  ← created by JS: contains .menu-icon + "Menu" text
+         .menu-icon
+         span "Menu"
+       .site-menu    ← created by JS, moved here
+         .nav-pill
+           a × N
+         .header-actions
+           .search-box
+           .auth-actions
+             [auth buttons / user info]
+   ================================================================= */
+
+
+/* ── 0. NEUTRALISE PROBLEM RULES FROM EARLIER BLOCKS ─────────── */
+
+/* 2026-01-28 block set a { display:inline-block; padding:8px 12px } on ALL
+   links at 768px — breaks inline text links, mentions, footer links etc.
+   Reset here without touching intentional interactive links. */
+@media (max-width: 768px) {
+  a:not(.btn):not([class*="action"]):not([class*="pill"] a) {
+    min-height: unset;
+    display: revert;
+    padding: revert;
+  }
+}
+
+/* Same block set input { width:100%!important } globally.
+   Undo for elements that need auto sizing. */
+@media (max-width: 768px) {
+  .search-box input {
+    width: auto !important;
+    min-width: 0;
+  }
+}
+
+
+/* ── 1. HEADER SHELL ─────────────────────────────────────────── */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: rgba(246, 241, 234, 0.95);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(15, 118, 110, 0.12);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.07);
+}
+
+:root[data-theme="dark"] .site-header {
+  background: rgba(11, 18, 32, 0.96);
+  border-bottom-color: rgba(94, 234, 212, 0.14);
+}
+
+/* Flex row — brand | [site-menu grows to fill] | toggle */
+.site-header .wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  flex-wrap: nowrap;
+}
+
+
+/* ── 2. BRAND ────────────────────────────────────────────────── */
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.logo {
+  font-family: "Fraunces", "Times New Roman", serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.logo span { color: var(--accent-strong); }
+
+.tagline {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+
+/* ── 3. HAMBURGER BUTTON ─────────────────────────────────────── */
+/* nav.js creates: <button class="menu-toggle">
+                     <span class="menu-icon"></span>
+                     <span>Menu</span>
+                   </button>                                        */
+
+.menu-toggle {
+  display: none;           /* visible only at ≤960px */
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-left: auto;       /* push right when visible */
+  flex-shrink: 0;
+  min-width: 76px;
+  height: 42px;
+  padding: 0 14px;
+  border: 1.5px solid rgba(15, 118, 110, 0.25);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #0c4a45;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s ease, border-color 0.18s ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.menu-toggle:hover,
+.menu-toggle:focus-visible {
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.4);
+  outline: none;
+}
+
+.menu-toggle:focus-visible {
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+}
+
+.menu-toggle.active {
+  background: rgba(15, 118, 110, 0.14);
+  border-color: rgba(15, 118, 110, 0.45);
+}
+
+:root[data-theme="dark"] .menu-toggle {
+  background: rgba(15, 23, 42, 0.75);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #d1d5db;
+}
+
+:root[data-theme="dark"] .menu-toggle:hover {
+  background: rgba(94, 234, 212, 0.1);
+  border-color: rgba(94, 234, 212, 0.3);
+}
+
+/* ── Hamburger bars ── */
+.menu-toggle .menu-icon {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 17px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+  transition: background 0.2s ease;
+}
+
+.menu-toggle .menu-icon::before,
+.menu-toggle .menu-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 17px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+  transition: transform 0.25s ease, top 0.2s ease;
+}
+
+.menu-toggle .menu-icon::before { top: -5px; }
+.menu-toggle .menu-icon::after  { top:  5px; }
+
+/* Animate to × when open */
+.menu-toggle.active .menu-icon              { background: transparent; }
+.menu-toggle.active .menu-icon::before      { top: 0; transform: rotate(45deg); }
+.menu-toggle.active .menu-icon::after       { top: 0; transform: rotate(-45deg); }
+
+
+/* ── 4. DESKTOP LAYOUT (≥961px) ──────────────────────────────── */
+
+@media (min-width: 961px) {
+
+  .site-menu {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    margin-left: 16px;
+    min-width: 0;
+  }
+
+  /* Scrollable pill strip */
+  .site-menu .nav-pill {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(15, 118, 110, 0.12);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    min-width: 0;
+  }
+
+  .site-menu .nav-pill::-webkit-scrollbar { display: none; }
+
+  .site-menu .nav-pill a {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 11px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #0b3f3a;
+    border: 1px solid transparent;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .site-menu .nav-pill a:hover  { background: rgba(15, 118, 110, 0.12); color: #0f766e; }
+  .site-menu .nav-pill a.active { background: rgba(15, 118, 110, 0.16); color: #0f766e; border-color: rgba(15, 118, 110, 0.2); }
+
+  :root[data-theme="dark"] .site-menu .nav-pill {
+    background: rgba(15, 23, 42, 0.5);
+    border-color: rgba(94, 234, 212, 0.14);
+  }
+
+  :root[data-theme="dark"] .site-menu .nav-pill a { color: #94a3b8; }
+  :root[data-theme="dark"] .site-menu .nav-pill a:hover,
+  :root[data-theme="dark"] .site-menu .nav-pill a.active {
+    background: rgba(94, 234, 212, 0.1);
+    color: #5eead4;
+  }
+
+  /* Header actions — pushed to far right */
+  .site-menu .header-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    margin-left: auto;
+    width: auto !important;
+    grid-template-columns: unset !important;
+  }
+
+  .site-menu .auth-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    grid-template-columns: unset !important;
+  }
+
+  /* Search */
+  .search-box { position: relative; }
+
+  .search-box input {
+    padding: 8px 48px 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 118, 110, 0.2);
+    background: rgba(255, 255, 255, 0.92);
+    font-size: 13px;
+    width: 185px;
+    transition: width 0.25s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .search-box input:focus {
+    outline: none;
+    width: 225px;
+    border-color: rgba(14, 165, 233, 0.5);
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+  }
+
+  :root[data-theme="dark"] .search-box input {
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(148, 163, 184, 0.3);
+    color: var(--ink);
+  }
+
+  .search-box span {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, var(--accent), var(--accent-cool));
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 4px 9px;
+    border-radius: 999px;
+    pointer-events: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .auth-meta {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+}
+
+
+/* ── 5. MOBILE DRAWER (≤960px) ───────────────────────────────── */
+
+@media (max-width: 960px) {
+
+  .menu-toggle { display: inline-flex; }
+
+  /* Full-screen drawer, sits below the sticky header */
+  .site-menu {
+    display: none;
+    position: fixed;
+    top: 62px;    /* matches .site-header height — tweak if needed */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 199;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+    background: rgba(246, 241, 234, 0.98);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    border-top: 1px solid rgba(15, 118, 110, 0.1);
+  }
+
+  :root[data-theme="dark"] .site-menu {
+    background: rgba(11, 18, 32, 0.98);
+    border-top-color: rgba(94, 234, 212, 0.1);
+  }
+
+  /* JS toggles body.nav-open */
+  body.nav-open .site-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  body.nav-open { overflow: hidden; }
+
+  /* ── Nav links: vertical list ── */
+  .site-menu .nav-pill {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px;
+    width: 100%;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  .site-menu .nav-pill a {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    background: rgba(15, 118, 110, 0.06);
+    border: 1px solid rgba(15, 118, 110, 0.1);
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .site-menu .nav-pill a:hover,
+  .site-menu .nav-pill a.active {
+    background: rgba(15, 118, 110, 0.14);
+    border-color: rgba(15, 118, 110, 0.28);
+    color: #0f766e;
+  }
+
+  :root[data-theme="dark"] .site-menu .nav-pill a {
+    background: rgba(148, 163, 184, 0.08);
+    border-color: rgba(148, 163, 184, 0.14);
+    color: var(--ink);
+  }
+
+  :root[data-theme="dark"] .site-menu .nav-pill a:hover,
+  :root[data-theme="dark"] .site-menu .nav-pill a.active {
+    background: rgba(94, 234, 212, 0.1);
+    border-color: rgba(94, 234, 212, 0.22);
+    color: #5eead4;
+  }
+
+  /* Divider line between nav links and action buttons */
+  .site-menu .header-actions {
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(15, 118, 110, 0.1);
+  }
+
+  :root[data-theme="dark"] .site-menu .header-actions {
+    border-top-color: rgba(148, 163, 184, 0.15);
+  }
+
+  /* ── Header actions: vertical stack ── */
+  .site-menu .header-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px;
+    width: 100%;
+    grid-template-columns: unset !important;
+  }
+
+  /* ── Search: full width in drawer ── */
+  .site-menu .search-box { width: 100%; }
+
+  .site-menu .search-box input {
+    width: 100% !important;
+    padding: 12px 50px 12px 16px !important;
+    border-radius: 14px !important;
+    font-size: 16px !important;
+    border: 1.5px solid rgba(15, 118, 110, 0.2) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    height: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  :root[data-theme="dark"] .site-menu .search-box input {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border-color: rgba(148, 163, 184, 0.3) !important;
+    color: var(--ink) !important;
+  }
+
+  .site-menu .search-box input:focus {
+    outline: none !important;
+    border-color: rgba(14, 165, 233, 0.5) !important;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12) !important;
+  }
+
+  /* ── Auth actions: 2-col grid ── */
+  .site-menu .auth-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .site-menu .auth-actions > *:only-child {
+    grid-column: 1 / -1;
+  }
+
+  /* All buttons in drawer: full width, tap-friendly */
+  .site-menu .header-actions .btn,
+  .site-menu .auth-actions .btn,
+  .site-menu .header-actions a.btn,
+  .site-menu .auth-actions a.btn,
+  .site-menu .header-actions button.btn,
+  .site-menu .auth-actions button.btn {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-height: 48px !important;
+    padding: 12px 16px !important;
+    border-radius: 12px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+  }
+
+  .site-menu .auth-meta {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+    text-align: center;
+    padding: 4px 8px;
+  }
+}
+
+
+/* ── 6. TABLET (641–960px) ───────────────────────────────────── */
+
+@media (min-width: 641px) and (max-width: 960px) {
+  .site-menu .auth-actions {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+
+/* ── 7. SMALL PHONES (<480px) ────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .logo    { font-size: 20px; }
+  .tagline { display: none; }
+
+  .menu-toggle {
+    min-width: 68px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .site-menu { top: 56px; }
+
+  .site-menu .nav-pill a {
+    font-size: 14px;
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  .site-menu .auth-actions {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* ── 8. NOTIFICATION BADGE ───────────────────────────────────── */
+/* Overrides inline styles set by setupNotificationBadge() in nav.js */
+
+#notificationLink {
+  position: relative !important;
+}
+
+#notificationCount {
+  position: absolute !important;
+  top: -7px !important;
+  right: -7px !important;
+  min-width: 18px !important;
+  height: 18px !important;
+  width: auto !important;
+  padding: 0 4px !important;
+  border-radius: 999px !important;
+  background: #ef4444 !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  border: 2px solid var(--card-solid) !important;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4) !important;
+  /* JS toggles display between none / inline-flex */
+}
+
+
+/* ── 9. THEME TOGGLE ──────────────────────────────────────────── */
+
+.theme-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 210;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  background: var(--card-solid);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-toggle:hover         { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16); }
+.theme-toggle:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 3px; }
+
+:root[data-theme="dark"] .theme-toggle {
+  border-color: rgba(94, 234, 212, 0.2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 480px) {
+  .theme-toggle {
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
