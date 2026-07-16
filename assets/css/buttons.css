@@ -1,0 +1,75 @@
+/* ==========================================================================
+   buttons.css — consistent button system
+   Layers on top of the existing .btn / .btn.ghost classes already used
+   throughout the markup (they stay fully backward compatible) and adds
+   the missing variants requested: secondary, outline, danger, ghost,
+   icon, loading, disabled — with consistent sizing/spacing/radius.
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 8px);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-sm, 0.9rem);
+  line-height: 1.2;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm, 12px);
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"],
+.btn.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Primary is the existing default .btn look — untouched, just confirmed here */
+.btn.secondary {
+  background: var(--color-secondary, var(--accent-cool));
+  color: #fff;
+  box-shadow: var(--elevation-1);
+}
+
+.btn.outline {
+  background: transparent;
+  color: var(--color-primary, var(--accent));
+  border-color: var(--color-primary, var(--accent));
+}
+
+.btn.outline:hover { background: rgba(15, 118, 110, 0.08); }
+
+.btn.danger {
+  background: var(--color-danger, #dc2626);
+  color: #fff;
+}
+
+.btn.danger:hover { background: var(--color-danger-hover, #b91c1c); }
+
+/* .ghost already exists in base.css; this only fills gaps if unset */
+.btn.ghost {
+  background: transparent;
+  border-color: var(--color-border-strong, rgba(15,23,42,0.18));
+}
+
+.btn.icon-only {
+  padding: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full, 9999px);
+}
+
+.btn.sm { padding: 6px 12px; font-size: var(--text-xs, 0.75rem); }
+.btn.lg { padding: 13px 24px; font-size: var(--text-base, 1rem); }
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-secondary, #0ea5e9);
+  outline-offset: 2px;
+}

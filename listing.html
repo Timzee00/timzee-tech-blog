@@ -8,45 +8,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
-    <style>
-      .listing-hero { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 40px; }
-      @media (max-width: 768px) { .listing-hero { grid-template-columns: 1fr; } }
-      .listing-gallery { aspect-ratio: 1; background: #f0f0f0; border-radius: 8px; overflow: hidden; }
-      .gallery-main { width: 100%; height: 100%; object-fit: cover; }
-      .gallery-thumbs { display: flex; gap: 8px; margin-top: 8px; }
-      .gallery-thumb { width: 60px; height: 60px; border-radius: 4px; border: 2px solid #ddd; cursor: pointer; }
-      .gallery-thumb.active { border-color: #0f766e; }
-      .listing-sidebar { display: flex; flex-direction: column; gap: 16px; }
-      .seller-info { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-      .seller-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-      .seller-avatar { width: 48px; height: 48px; border-radius: 50%; background: #e2e8f0; }
-      .seller-name { font-weight: 600; }
-      .seller-rating { font-size: 12px; color: #999; }
-      .action-buttons { display: grid; gap: 8px; }
-      .btn-full { width: 100%; }
-      .listing-details { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; }
-      .detail-row { display: grid; grid-template-columns: 120px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
-      .detail-row:last-child { border-bottom: none; }
-      .detail-label { font-weight: 600; color: #666; }
-      .detail-value { color: #333; }
-      .inquiry-section { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-top: 24px; }
-      .inquiry-section h3 { margin: 0 0 16px 0; }
-      .inquiry-form { display: grid; gap: 12px; }
-      .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-      .status-badge.available { background: #d1fae5; color: #065f46; }
-      .status-badge.sold { background: #fee2e2; color: #991b1b; }
-      .description-text { line-height: 1.6; }
-      .reviews-section { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 24px; }
-      .review-item { padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; }
-      .review-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-      .review-rating { color: #f59e0b; }
-      .review-date { font-size: 12px; color: #999; }
-      .similar-listings { margin-top: 40px; }
-      .similar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
-    </style>
       <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
         <div class="brand">
@@ -61,7 +26,7 @@
       </div>
     </header>
 
-    <main class="page-shell">
+    <main id="main-content" class="page-shell">
       <div class="container">
         <!-- Breadcrumb -->
         <div style="margin-bottom: 20px;">
@@ -135,8 +100,8 @@
           </div>
 
           <!-- Description -->
-          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-top: 24px;">
-            <h3 style="margin: 0 0 12px 0;">Description</h3>
+          <div class="description-box">
+            <h3>Description</h3>
             <p class="description-text" id="description"></p>
           </div>
 
@@ -344,12 +309,12 @@
             document.getElementById("similarListings").innerHTML = data.map(item => {
               const img = item.images && item.images[0] && isSafeUrl(item.images[0]) ? item.images[0] : '';
               return `
-              <a href="listing.html?id=${encodeURIComponent(item.id)}" style="text-decoration: none; color: inherit;">
-                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; cursor: pointer;">
-                  ${img ? `<img src="${img}" style="width: 100%; aspect-ratio: 1; object-fit: cover;" alt="${escapeHTML(item.title || '')}">` : `<div style="width: 100%; aspect-ratio: 1; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">📦</div>`}
-                  <div style="padding: 12px;">
-                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${escapeHTML(item.title || '')}</div>
-                    <div style="color: #0f766e; font-weight: 700;">$${escapeHTML((parseFloat(item.price) || 0).toFixed(2))}</div>
+              <a href="listing.html?id=${encodeURIComponent(item.id)}" class="similar-card-link">
+                <div class="similar-card">
+                  ${img ? `<img src="${img}" alt="${escapeHTML(item.title || '')}">` : `<div class="similar-card-placeholder">📦</div>`}
+                  <div class="similar-card-info">
+                    <div class="similar-card-title">${escapeHTML(item.title || '')}</div>
+                    <div class="similar-card-price">$${escapeHTML((parseFloat(item.price) || 0).toFixed(2))}</div>
                   </div>
                 </div>
               </a>

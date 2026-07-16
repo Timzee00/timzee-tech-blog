@@ -9,39 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
-    <style>
-      .novel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin: 30px 0; }
-      @media (max-width: 768px) { .novel-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; } }
-      .novel-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; transition: all 0.3s; cursor: pointer; }
-      .novel-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); border-color: #0f766e; }
-      .novel-cover { width: 100%; aspect-ratio: 3/4; background: linear-gradient(135deg, #0f766e, #14b8a6); display: flex; align-items: center; justify-content: center; font-size: 48px; position: relative; }
-      .novel-cover img { width: 100%; height: 100%; object-fit: cover; }
-      .novel-badge { position: absolute; top: 8px; right: 8px; background: #0f766e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-      .novel-info { padding: 16px; }
-      .novel-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .novel-author { font-size: 13px; color: #666; margin-bottom: 8px; }
-      .novel-status { display: inline-block; background: #f0fdfa; color: #0f766e; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 8px; }
-      .novel-meta { display: flex; gap: 12px; font-size: 12px; color: #999; }
-      .novel-create-btn { background: #0f766e; color: white; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
-      .novel-create-btn:hover { background: #0d5f5a; }
-      .filter-tabs { display: flex; gap: 8px; margin: 20px 0; overflow-x: auto; }
-      .filter-tab { padding: 8px 16px; background: #f0f0f0; border: none; border-radius: 20px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
-      .filter-tab.active { background: #0f766e; color: white; }
-      .novel-form { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 40px; }
-      .form-group { margin-bottom: 16px; }
-      .form-group label { display: block; font-weight: 600; margin-bottom: 6px; }
-      .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; }
-      .form-group textarea { min-height: 120px; resize: vertical; }
-      .chapters-section { background: #f9fafb; border-radius: 8px; padding: 16px; margin-top: 16px; }
-      .chapter-item { background: white; padding: 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-      .chapter-title { font-weight: 600; }
-      .chapter-meta { font-size: 12px; color: #999; }
-      .story-content { max-width: 800px; margin: 40px auto; padding: 20px; background: white; border-radius: 8px; line-height: 1.8; }
-      .story-content p { margin-bottom: 16px; }
-    </style>
       <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
         <div class="brand">
@@ -60,7 +31,7 @@
       </div>
     </header>
 
-    <main class="page-shell">
+    <main id="main-content" class="page-shell">
       <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
           <div>

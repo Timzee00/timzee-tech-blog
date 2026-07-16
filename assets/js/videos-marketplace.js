@@ -64,8 +64,7 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
     
     // Upload video to storage
     const videoPath = `videos/${userId}/${timestamp}-${safeVideoName}`;
-    console.log("Uploading video to storage:", videoPath);
-    
+
     const videoResult = await supabase.storage
       .from("media")
       .upload(videoPath, videoFile, getUploadOptions(videoFile, "video/mp4"));
@@ -74,8 +73,6 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
       console.error("Storage upload error:", videoResult.error);
       throw new Error(`Storage upload failed: ${videoResult.error.message}`);
     }
-    
-    console.log("Storage upload successful");
 
     let thumbnailUrl = "";
     
@@ -100,7 +97,6 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
         .from("media")
         .getPublicUrl(thumbnailPath);
       thumbnailUrl = data.publicUrl;
-      console.log("Thumbnail URL:", thumbnailUrl);
     }
 
     // Get public URL for video
@@ -109,7 +105,6 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
       .getPublicUrl(videoPath);
     
     const videoUrl = data.publicUrl;
-    console.log("Video URL:", videoUrl);
 
     if (!videoUrl) {
       throw new Error("Failed to get video URL from storage");
@@ -131,16 +126,13 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
       created_at: new Date().toISOString()
     };
 
-    console.log("Inserting video metadata:", payload);
-    
     const result = await supabase.from("videos").insert(payload).select().single();
     
     if (result.error) {
       console.error("Insert error:", result.error);
       throw new Error(`Database insert failed: ${result.error.message}`);
     }
-    
-    console.log("Video upload complete:", result.data);
+
     return result;
   } catch (error) {
     console.error("uploadVideo exception:", error);

@@ -165,11 +165,7 @@ async function setupNotificationBadge() {
         },
         updateCount
       )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          console.log("Notifications subscribed");
-        }
-      });
+      .subscribe();
   }
 }
 

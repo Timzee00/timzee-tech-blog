@@ -11,9 +11,20 @@ export const PROVIDERS = {
 };
 
 export const PROVIDER_MODELS = {
-  groq: ["mixtral-8x7b-32768", "llama2-70b-4096", "gemma-7b-it"],
+  // mixtral-8x7b-32768, llama2-70b-4096, and gemma-7b-it were all removed
+  // from Groq's model list (confirmed against console.groq.com/docs/models)
+  // — every request using the old defaults below was failing with a
+  // decommissioned-model error, which is why the AI assistant "wasn't
+  // working". Replaced with Groq's current production models.
+  groq: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-120b"],
+  // gpt-4o and gpt-3.5-turbo are still active as of writing but are on
+  // OpenAI's confirmed deprecation list for October 23, 2026 — worth
+  // revisiting before then. gpt-4o-mini has no announced shutdown date.
   openai: ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
-  anthropic: ["claude-3-5-sonnet-20240620", "claude-3-haiku-20240307"]
+  // claude-3-5-sonnet-20240620 (retired Jan 5, 2026) and
+  // claude-3-haiku-20240307 (retired Feb 19, 2026) were both already
+  // retired — every Anthropic request here was failing too.
+  anthropic: ["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"]
 };
 
 export const DEFAULT_MODEL = PROVIDER_MODELS.groq[0];

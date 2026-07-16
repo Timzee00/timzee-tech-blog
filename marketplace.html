@@ -9,28 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
-    <style>
-      .marketplace-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 20px 0; }
-      @media (max-width: 768px) { .marketplace-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
-      .listing-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.2s; }
-      .listing-card:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: #0f766e; }
-      .listing-image { width: 100%; aspect-ratio: 1; background: #f9fafb; display: flex; align-items: center; justify-content: center; font-size: 48px; position: relative; }
-      .listing-image img { width: 100%; height: 100%; object-fit: cover; }
-      .listing-badge { position: absolute; top: 8px; right: 8px; background: #0f766e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; }
-      .listing-info { padding: 12px; }
-      .listing-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .listing-category { font-size: 11px; color: #999; margin-bottom: 8px; }
-      .listing-price { font-size: 18px; font-weight: 700; color: #0f766e; margin-bottom: 8px; }
-      .listing-meta { font-size: 12px; color: #666; display: flex; gap: 8px; flex-wrap: wrap; }
-      .category-filter { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; }
-      .filter-btn { white-space: nowrap; padding: 8px 16px; background: #f0fdfa; border: 1px solid #99ede8; border-radius: 20px; cursor: pointer; transition: all 0.2s; }
-      .filter-btn.active { background: #0f766e; color: white; border-color: #0f766e; }
-      .listing-seller { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #f0f0f0; font-size: 12px; }
-      .seller-avatar { width: 24px; height: 24px; border-radius: 50%; background: #e2e8f0; }
-    </style>
       <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
         <div class="brand">
@@ -52,7 +34,7 @@
       </div>
     </header>
 
-    <main class="page-shell">
+    <main id="main-content" class="page-shell">
       <div class="container">
         <h1>Marketplace</h1>
         <p class="tagline">Discover tech products, services, and gear from our community</p>
@@ -68,10 +50,10 @@
         </div>
 
         <!-- Create Listing Section -->
-        <div id="createSection" style="display: none; margin-bottom: 40px; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; background: #f9fafb;">
-          <h2 style="margin-top: 0;">Create Listing</h2>
+        <div id="createSection" class="market-panel" style="display: none;">
+          <h2>Create Listing</h2>
           <form id="createForm">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div class="market-form-row">
               <div>
                 <label><strong>Title</strong></label>
                 <input type="text" id="listingTitle" placeholder="What are you selling?" required>
@@ -91,7 +73,7 @@
             <label><strong>Description</strong></label>
             <textarea id="listingDescription" placeholder="Describe your item..." style="margin-bottom: 16px;"></textarea>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div class="market-form-row">
               <div>
                 <label><strong>Price</strong></label>
                 <input type="number" id="listingPrice" placeholder="0.00" step="0.01" required>
@@ -107,7 +89,7 @@
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div class="market-form-row">
               <div>
                 <label><strong>Location</strong></label>
                 <input type="text" id="listingLocation" placeholder="Your city/state">
@@ -118,9 +100,9 @@
               </div>
             </div>
 
-            <div id="createStatus" style="display: none; margin-bottom: 12px;"></div>
+            <div id="createStatus" class="market-status" style="display: none;"></div>
             <button class="btn" type="submit">Create Listing</button>
-            <button class="btn ghost" type="button" id="cancelCreate" style="margin-left: 8px;">Cancel</button>
+            <button class="btn ghost market-cancel-btn" type="button" id="cancelCreate">Cancel</button>
           </form>
         </div>
 
@@ -130,7 +112,7 @@
         </div>
 
         <!-- Load More -->
-        <div style="text-align: center; margin-top: 40px;">
+        <div class="market-load-more">
           <button class="btn ghost" id="loadMoreBtn" style="display: none;">Load More</button>
         </div>
       </div>

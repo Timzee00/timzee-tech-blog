@@ -58,7 +58,13 @@ export default async (req) => {
     return jsonResponse({ error: "API key not configured on server." }, 500);
   }
 
-  const model = payload.model || (provider === "openai" ? "gpt-4o-mini" : "mixtral-8x7b-32768");
+  const model =
+    payload.model ||
+    (provider === "openai"
+      ? "gpt-4o-mini"
+      : provider === "anthropic"
+        ? "claude-sonnet-5"
+        : "llama-3.3-70b-versatile");
   const temperature = typeof payload.temperature === "number" ? payload.temperature : 0.7;
   const maxTokens = typeof payload.max_tokens === "number" ? payload.max_tokens : 1024;
   const messages = normalizeMessages(payload.messages, payload.systemPrompt);

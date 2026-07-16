@@ -1,0 +1,144 @@
+/* ==========================================================================
+   avatars.css — Universal circular avatar system
+   Root cause of the "oval avatar" bug: several selectors in the legacy
+   stylesheet set `width:auto; height:auto` as a base and only forced a
+   fixed square size back with !important inside a single 900px media
+   query. Outside that breakpoint (or on elements those selectors didn't
+   cover), the browser sized width/height independently, breaking the
+   1:1 aspect ratio.
+
+   This file is the single source of truth for avatar sizing. It uses a
+   reusable .avatar utility class (apply anywhere) AND high-specificity
+   attribute/class selectors so every existing avatar element already in
+   the markup — .profile-avatar, .chat-item-avatar, .seller-avatar,
+   .group-avatar, .author-mini img, .author-card img, .user-avatar,
+   .user-preview-avatar, .comment-avatar, .reply-avatar, .notification-
+   avatar, .leaderboard-avatar, [class*="avatar"] — is fixed globally,
+   without editing any HTML or JS.
+   ========================================================================== */
+
+/* Reusable utility — add class="avatar avatar--md" etc. to any new image */
+.avatar {
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--avatar-md, 42px);
+  height: var(--avatar-md, 42px);
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-full, 9999px);
+  object-fit: cover;
+  object-position: center;
+  background: var(--color-surface-muted, #eef0f3);
+  border: 1px solid var(--color-border, rgba(15, 23, 42, 0.1));
+}
+
+.avatar--xs { width: var(--avatar-xs, 24px); height: var(--avatar-xs, 24px); }
+.avatar--sm { width: var(--avatar-sm, 32px); height: var(--avatar-sm, 32px); }
+.avatar--md { width: var(--avatar-md, 42px); height: var(--avatar-md, 42px); }
+.avatar--lg { width: var(--avatar-lg, 64px); height: var(--avatar-lg, 64px); }
+.avatar--xl { width: var(--avatar-xl, 96px); height: var(--avatar-xl, 96px); }
+.avatar--2xl { width: var(--avatar-2xl, 128px); height: var(--avatar-2xl, 128px); }
+
+/* Global enforcement across every avatar variant already used in the app.
+   High specificity + !important is intentional and scoped ONLY to the
+   handful of sizing properties that cause the oval bug — it does not
+   touch color, margin, or positioning so existing layouts are preserved. */
+.profile-avatar,
+.profile-avatar-wrap img,
+.profile-preview,
+.chat-item-avatar,
+.group-avatar,
+.seller-avatar,
+.author-mini img,
+.author-card img,
+.user-avatar,
+.user-preview-avatar,
+.comment-avatar,
+.reply-avatar,
+.notification-avatar,
+.leaderboard-avatar,
+.mention-avatar,
+.moderator-avatar,
+.curator-avatar,
+img[class*="avatar"],
+img[class*="Avatar"] {
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  flex-shrink: 0 !important;
+}
+
+/* Several of these classes are also used on plain <div> elements holding
+   initials (e.g. moderator-ui.js renders `<div class="user-avatar">M</div>`
+   with no prior CSS at all). Center that text and give it a visible
+   background so it reads as an avatar instead of an unstyled square. */
+div.user-avatar,
+div.user-preview-avatar,
+div.moderator-avatar,
+div.curator-avatar,
+div[class*="avatar"]:not(img) {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary, var(--accent, #0f766e)) !important;
+  color: #fff;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Fixed square sizes per component — consistent at every breakpoint,
+   not just inside a single media query like the legacy rule. */
+.chat-item-avatar,
+.comment-avatar,
+.reply-avatar,
+.notification-avatar,
+.mention-avatar { width: var(--avatar-sm, 32px) !important; height: var(--avatar-sm, 32px) !important; }
+
+.author-mini img,
+.user-preview-avatar,
+.moderator-avatar,
+.curator-avatar { width: var(--avatar-md, 42px) !important; height: var(--avatar-md, 42px) !important; }
+
+.author-card img,
+.seller-avatar,
+.group-avatar,
+.leaderboard-avatar,
+.user-avatar { width: var(--avatar-lg, 64px) !important; height: var(--avatar-lg, 64px) !important; }
+
+/* .profile-avatar sits inside .profile-avatar-wrap, which already
+   controls its own square size (see base.css) — so we only enforce
+   shape here (aspect-ratio/border-radius/object-fit above), not a
+   competing fixed width/height that would overflow the wrap. */
+.profile-avatar,
+.profile-avatar-wrap img,
+.profile-preview { width: 100% !important; height: 100% !important; }
+
+@media (max-width: 900px) {
+  .author-card img,
+  .seller-avatar,
+  .group-avatar,
+  .leaderboard-avatar,
+  .user-avatar { width: var(--avatar-md, 42px) !important; height: var(--avatar-md, 42px) !important; }
+}
+
+/* Avatar with online/status indicator — dot stays anchored regardless
+   of avatar size above. */
+.avatar-status-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.avatar-status-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--color-surface, #fff);
+  background: var(--color-text-subtle, #8a93a3);
+}
+
+.avatar-status-dot.is-online { background: var(--color-success, #16a34a); }
+.avatar-status-dot.is-away { background: var(--color-warning, #d97706); }
