@@ -1,0 +1,103 @@
+/* ==========================================================================
+   forms.css — consistent input/select/textarea/checkbox states
+   Additive layer: existing form markup keeps its current classes/IDs and
+   JS validation hooks; this only standardizes visuals + adds missing
+   focus/error/success/disabled states.
+   ========================================================================== */
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,
+select {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm, 0.95rem);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm, 12px);
+  border: 1px solid var(--color-border-strong, rgba(15,23,42,0.18));
+  background: var(--color-surface, #fff);
+  color: var(--color-text, var(--ink));
+}
+
+textarea { min-height: 96px; resize: vertical; }
+
+input::placeholder,
+textarea::placeholder { color: var(--color-text-subtle, #8a93a3); }
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-secondary, var(--accent-cool));
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background: var(--color-surface-muted, #f3f1ec);
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+  margin-bottom: var(--space-4, 16px);
+}
+
+.field label {
+  font-size: var(--text-sm, 0.85rem);
+  font-weight: 600;
+  color: var(--color-text, var(--ink));
+}
+
+.field-hint {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-muted, var(--muted));
+}
+
+.field.has-error input,
+.field.has-error textarea,
+.field.has-error select,
+input.is-invalid,
+textarea.is-invalid {
+  border-color: var(--color-danger, #dc2626);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.field-error {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-danger, #dc2626);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.field.is-valid input,
+.field.is-valid textarea {
+  border-color: var(--color-success, #16a34a);
+}
+
+/* Checkbox / radio: keep native semantics for a11y, just size + spacing */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary, var(--accent));
+  cursor: pointer;
+}
+
+.checkbox-row,
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  font-size: var(--text-sm);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-3, 12px);
+  margin-top: var(--space-4, 16px);
+}

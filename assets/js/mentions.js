@@ -104,7 +104,9 @@ async function showMentionDropdown(field, searchTerm) {
     
     item.innerHTML = `
       <img src="${user.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI4IiBmaWxsPSIjZTJlOGYwIi8+PC9zdmc+'}" 
-           style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;">
+           alt="${user.display_name || user.username}"
+           class="avatar avatar--xs"
+           style="border-radius: 50%; object-fit: cover;">
       <div style="flex: 1; min-width: 0;">
         <div style="font-weight: 600; font-size: 13px;">${user.display_name || user.username}</div>
         <div style="font-size: 12px; color: #999;">@${user.username}</div>

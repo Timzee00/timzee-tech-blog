@@ -1,0 +1,123 @@
+/* ==========================================================================
+   animations.css — Subtle, purposeful motion
+   Reusable keyframes + utility classes layered on top of the existing
+   [data-reveal] system (see reveal.js) and .btn/.card hover states.
+   Kept restrained per design brief: no page-transition gimmicks, no
+   bouncing, nothing that fights prefers-reduced-motion.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulseSoft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: calc(200px + 100%) 0; }
+  }
+
+  .fade-in { animation: fadeIn var(--duration-slow, 320ms) var(--ease-out, ease) both; }
+  .rise-in { animation: riseIn var(--duration-slow, 320ms) var(--ease-out, ease) both; }
+
+  /* Interactive elements get a quick, consistent transition */
+  .btn,
+  .card,
+  a.btn,
+  button,
+  input,
+  textarea,
+  select,
+  .avatar,
+  .badge,
+  .chip {
+    transition: transform var(--duration-fast, 120ms) var(--ease-standard, ease),
+      box-shadow var(--duration-base, 200ms) var(--ease-standard, ease),
+      background var(--duration-base, 200ms) var(--ease-standard, ease),
+      border-color var(--duration-base, 200ms) var(--ease-standard, ease),
+      opacity var(--duration-base, 200ms) var(--ease-standard, ease);
+  }
+
+  .btn:hover,
+  a.btn:hover { transform: translateY(-1px); }
+  .btn:active,
+  a.btn:active { transform: translateY(0); }
+
+  .card:hover,
+  [class$="-card"]:hover {
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Loading spinner, used by .btn.is-loading / loading buttons */
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: -0.15em;
+}
+
+.btn.is-loading {
+  color: transparent !important;
+  pointer-events: none;
+  position: relative;
+}
+
+.btn.is-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Skeleton loading placeholders for cards/lists while data fetches */
+.skeleton {
+  background: linear-gradient(90deg, var(--color-surface-muted, #eee) 25%, rgba(255,255,255,0.6) 37%, var(--color-surface-muted, #eee) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: var(--radius-sm, 12px);
+}
+
+/* Dropdown / menu open animation */
+.dropdown-menu,
+.menu-panel {
+  animation: riseIn var(--duration-base, 200ms) var(--ease-out, ease) both;
+}
+
+/* Unread / notification pulse */
+.is-unread .avatar-status-dot,
+.notification-dot {
+  animation: pulseSoft 1.8s ease-in-out infinite;
+}

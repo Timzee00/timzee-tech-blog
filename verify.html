@@ -8,38 +8,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
-    <style>
-      .verify-container { max-width: 600px; margin: 40px auto; }
-      .verify-header { text-align: center; margin-bottom: 40px; }
-      .verify-header h1 { margin: 0 0 8px 0; }
-      .verify-header p { margin: 0; color: #666; }
-      .badge-showcase { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 40px; }
-      .badge-info { text-align: center; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-      .badge-info.selected { border-color: #0f766e; background: #f0fdfa; }
-      .badge-icon { font-size: 32px; margin-bottom: 8px; }
-      .badge-name { font-weight: 600; margin-bottom: 4px; }
-      .badge-desc { font-size: 12px; color: #999; }
-      .form-section { margin-bottom: 24px; }
-      .form-section h3 { margin: 0 0 12px 0; font-size: 14px; font-weight: 600; }
-      .doc-upload { border: 2px dashed #ddd; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; }
-      .doc-upload:hover { border-color: #0f766e; background: #f9fafb; }
-      .doc-upload.dragover { border-color: #0f766e; background: #f0fdfa; }
-      .doc-list { margin-top: 12px; }
-      .doc-item { background: #f9fafb; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-      .remove-doc { background: none; border: none; color: #ef4444; cursor: pointer; padding: 0; }
-      .perks-list { list-style: none; padding: 0; margin: 12px 0 0 0; }
-      .perks-list li { padding: 8px 0; padding-left: 24px; position: relative; font-size: 14px; }
-      .perks-list li:before { content: "✓"; position: absolute; left: 0; color: #10b981; font-weight: bold; }
-      .status-box { padding: 12px; border-radius: 6px; margin-bottom: 16px; display: none; }
-      .status-box.success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
-      .status-box.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-      .badge-levels { display: grid; gap: 16px; }
-      .level-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
-      .level-card.selected { border-color: #0f766e; background: #f0fdfa; }
-    </style>
       <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
         <div class="brand">
@@ -54,7 +26,7 @@
       </div>
     </header>
 
-    <main class="page-shell">
+    <main id="main-content" class="page-shell">
       <div class="verify-container">
         <div class="verify-header">
           <h1>Get Verified</h1>

@@ -352,10 +352,8 @@ function handleLogin() {
 function setupTabs() {
   const buttons = document.querySelectorAll(".admin-nav button");
   const panels = document.querySelectorAll("[data-panel]");
-  console.log("setupTabs: found", buttons.length, "buttons and", panels.length, "panels");
   buttons.forEach((button) => {
     button.addEventListener("click", () => {
-      console.log("tab clicked:", button.dataset.tab);
       buttons.forEach((btn) => btn.classList.remove("active"));
       button.classList.add("active");
       panels.forEach((panel) => {

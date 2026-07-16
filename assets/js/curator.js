@@ -1,8 +1,29 @@
 /**
- * Curator Bot Management System (Stable Version)
- * - Works with Supabase table: public.curator_sources / curator_posts / curator_settings
- * - Prevents url being null (fixes NOT NULL errors)
- * - Keeps compatibility with "url" + "feed_url" and "is_active" + "enabled"
+ * Curator / Scout Bot data layer
+ *
+ * IMPORTANT — schema note (read before editing):
+ * This project accumulated two different, never-reconciled designs for
+ * these tables. An older "Curator Bot" design (see
+ * MODERATOR_AND_CURATOR_SCHEMA.sql) used curator_posts.url/description/
+ * author/is_posted/post_id and curator_settings.auto_post/min_quality_score/
+ * max_posts_per_day/duplicate_check/notify_admins. A newer "Scout" design
+ * (see SUPABASE_SCHEMA.sql, netlify/functions/scout-news.js, and the
+ * working Scout section in super/professional-panel.html) uses
+ * curator_posts.source_url/excerpt/status and curator_settings.enabled/
+ * posts_per_source. Only curator_sources (is_active/feed_url, added by
+ * FIX_RLS_POLICIES.sql) was ever reconciled between the two — curator_posts
+ * and the rest of curator_settings never were. This file previously matched
+ * the OLDER design, which meant every read/write here targeted columns
+ * that don't exist on the live curator_posts table (querying or inserting
+ * a nonexistent column is a hard Postgres error, not a silent no-op) — the
+ * actual cause of "the bot isn't working": the scheduled scout-news
+ * function was fetching articles successfully, but this module could never
+ * see them, and the "Add Source" form could never insert a new source at
+ * all (description/category/api_key/headers/etc. aren't real columns).
+ *
+ * Every function below is now written against the confirmed live schema
+ * (source_url/excerpt/status, enabled/posts_per_source), matching what
+ * scout-news.js and the working Scout settings UI actually use.
  */
 
 import { supabase } from "./supabase.js";
@@ -11,16 +32,15 @@ import { supabase } from "./supabase.js";
 // Helpers
 // ============================================================
 
-function pickUrl(sourceData) {
+function pickFeedUrl(sourceData) {
   const url =
-    sourceData?.url ??
     sourceData?.feed_url ??
+    sourceData?.url ??
     sourceData?.feedUrl ??
     sourceData?.link ??
     sourceData?.rss_url ??
     sourceData?.rssUrl ??
     "";
-
   return String(url).trim();
 }
 
@@ -37,13 +57,10 @@ function cleanStringArray(arr) {
     .filter((x) => x.length > 0);
 }
 
-function cleanHeaders(headers) {
-  if (!headers || typeof headers !== "object" || Array.isArray(headers)) return {};
-  return headers;
-}
-
 // ============================================================
-// CURATOR SOURCES (RSS Feeds Management)
+// CURATOR SOURCES (RSS / GDELT feeds the bot monitors)
+// Columns (live schema): id, name, source_type, feed_url, query, tags,
+// image_credit, max_items, enabled, is_active (compat), created_at, updated_at
 // ============================================================
 
 export async function getAllCuratorSources() {
@@ -60,12 +77,11 @@ export async function getAllCuratorSources() {
 }
 
 export async function getActiveCuratorSources() {
-  // Support both is_active and enabled (some schemas use one)
   const { data, error } = await supabase
     .from("curator_sources")
     .select("*")
     .or("is_active.eq.true,enabled.eq.true")
-    .order("last_fetched_at", { ascending: true });
+    .order("created_at", { ascending: true });
 
   if (error) {
     console.error("Error fetching active sources:", error);
@@ -76,12 +92,11 @@ export async function getActiveCuratorSources() {
 
 export async function createCuratorSource(sourceData) {
   try {
-    const url = pickUrl(sourceData);
-    if (!url) {
+    const feedUrl = pickFeedUrl(sourceData);
+    if (!feedUrl) {
       throw new Error("Feed URL is required. Paste a valid RSS feed URL.");
     }
 
-    // Prefer explicit active state, else default true
     const isActive =
       typeof sourceData?.is_active === "boolean"
         ? sourceData.is_active
@@ -91,27 +106,16 @@ export async function createCuratorSource(sourceData) {
 
     const payload = {
       name: cleanText(sourceData?.name) || "Untitled Feed",
-      url,              // NOT NULL
-      feed_url: url,    // keep both
+      feed_url: feedUrl,
       source_type: cleanText(sourceData?.source_type) || "rss",
-      description: cleanText(sourceData?.description),
-      category: cleanText(sourceData?.category),
-      category_id: sourceData?.category_id || null,
-      api_key: cleanText(sourceData?.api_key),
-      headers: cleanHeaders(sourceData?.headers),
-      filter_keywords: cleanStringArray(sourceData?.filter_keywords),
-      exclude_keywords: cleanStringArray(sourceData?.exclude_keywords),
-      is_active: isActive,
+      query: cleanText(sourceData?.query),
+      tags: cleanStringArray(sourceData?.tags),
+      image_credit: cleanText(sourceData?.image_credit) || cleanText(sourceData?.name),
+      max_items: Number.isFinite(Number(sourceData?.max_items)) ? Number(sourceData.max_items) : 30,
       enabled: isActive,
-      fetch_frequency_minutes:
-        Number.isFinite(Number(sourceData?.fetch_frequency_minutes))
-          ? Number(sourceData.fetch_frequency_minutes)
-          : undefined,
-      created_by: sourceData?.created_by || undefined,
-      created_at: sourceData?.created_at || undefined
+      is_active: isActive
     };
 
-    // remove undefined fields so Supabase doesn't complain
     Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
 
     const { data, error } = await supabase
@@ -132,20 +136,12 @@ export async function updateCuratorSource(sourceId, sourceData) {
   try {
     const updatePayload = {
       name: cleanText(sourceData?.name) ?? undefined,
-      description: cleanText(sourceData?.description) ?? undefined,
-      category: cleanText(sourceData?.category) ?? undefined,
-      category_id: sourceData?.category_id ?? undefined,
-      api_key: cleanText(sourceData?.api_key) ?? undefined,
-      filter_keywords: sourceData?.filter_keywords ? cleanStringArray(sourceData.filter_keywords) : undefined,
-      exclude_keywords: sourceData?.exclude_keywords ? cleanStringArray(sourceData.exclude_keywords) : undefined,
-      headers: sourceData?.headers ? cleanHeaders(sourceData.headers) : undefined,
-      fetch_frequency_minutes:
-        Number.isFinite(Number(sourceData?.fetch_frequency_minutes))
-          ? Number(sourceData.fetch_frequency_minutes)
-          : undefined
+      query: cleanText(sourceData?.query) ?? undefined,
+      image_credit: cleanText(sourceData?.image_credit) ?? undefined,
+      tags: sourceData?.tags ? cleanStringArray(sourceData.tags) : undefined,
+      max_items: Number.isFinite(Number(sourceData?.max_items)) ? Number(sourceData.max_items) : undefined
     };
 
-    // handle status toggles
     if (typeof sourceData?.is_active === "boolean") {
       updatePayload.is_active = sourceData.is_active;
       updatePayload.enabled = sourceData.is_active;
@@ -155,11 +151,9 @@ export async function updateCuratorSource(sourceId, sourceData) {
       updatePayload.is_active = sourceData.enabled;
     }
 
-    // allow updating URL safely
-    const url = pickUrl(sourceData);
-    if (url) {
-      updatePayload.url = url;
-      updatePayload.feed_url = url;
+    const feedUrl = pickFeedUrl(sourceData);
+    if (feedUrl) {
+      updatePayload.feed_url = feedUrl;
     }
 
     Object.keys(updatePayload).forEach((k) => updatePayload[k] === undefined && delete updatePayload[k]);
@@ -213,14 +207,17 @@ export async function toggleCuratorSourceStatus(sourceId, isActive) {
 }
 
 // ============================================================
-// CURATOR POSTS (Fetched Articles)
+// CURATOR POSTS (articles scout-news.js fetches and stores)
+// Columns (live schema): id, source_id, source_name, title, slug, excerpt,
+// content, source_url, published_at, tags, image_url, image_source_url,
+// image_credit, status ('draft' | 'posted'), created_at, updated_at
 // ============================================================
 
 export async function getAllCuratorPosts(limit = 50, offset = 0) {
   try {
     const { data, error } = await supabase
       .from("curator_posts")
-      .select("*, curator_sources(name, category)")
+      .select("*, curator_sources(name)")
       .order("published_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -236,8 +233,8 @@ export async function getUnpostedCuratorPosts(limit = 20) {
   try {
     const { data, error } = await supabase
       .from("curator_posts")
-      .select("*, curator_sources(name, category)")
-      .eq("is_posted", false)
+      .select("*, curator_sources(name)")
+      .neq("status", "posted")
       .order("published_at", { ascending: false })
       .limit(limit);
 
@@ -251,19 +248,22 @@ export async function getUnpostedCuratorPosts(limit = 20) {
 
 export async function createCuratorPost(postData) {
   try {
-    const url = cleanText(postData?.url);
-    if (!url) throw new Error("Curator post URL is required.");
+    const sourceUrl = cleanText(postData?.source_url ?? postData?.url);
+    if (!sourceUrl) throw new Error("Curator post source URL is required.");
 
     const payload = {
       source_id: postData?.source_id || null,
+      source_name: cleanText(postData?.source_name),
       title: cleanText(postData?.title) || "Untitled",
-      description: cleanText(postData?.description),
+      excerpt: cleanText(postData?.excerpt ?? postData?.description),
       content: cleanText(postData?.content),
-      url,
-      author: cleanText(postData?.author),
+      source_url: sourceUrl,
       published_at: postData?.published_at || null,
       image_url: cleanText(postData?.image_url),
-      tags: cleanStringArray(postData?.tags)
+      image_source_url: cleanText(postData?.image_source_url) || sourceUrl,
+      image_credit: cleanText(postData?.image_credit),
+      tags: cleanStringArray(postData?.tags),
+      status: cleanText(postData?.status) || "draft"
     };
 
     const { data, error } = await supabase
@@ -280,11 +280,11 @@ export async function createCuratorPost(postData) {
   }
 }
 
-export async function markCuratorPostAsPosted(curatorPostId, postId) {
+export async function markCuratorPostAsPosted(curatorPostId) {
   try {
     const { data, error } = await supabase
       .from("curator_posts")
-      .update({ is_posted: true, post_id: postId || null })
+      .update({ status: "posted", updated_at: new Date().toISOString() })
       .eq("id", curatorPostId)
       .select()
       .single();
@@ -313,7 +313,11 @@ export async function deleteCuratorPost(curatorPostId) {
 }
 
 // ============================================================
-// CURATOR SETTINGS (Bot Configuration)
+// CURATOR SETTINGS (bot configuration)
+// Columns (live schema): id, enabled, posts_per_source, plus scout_enabled/
+// scout_interval_minutes/scout_last_run_at/scout_last_status added by
+// CURATOR_SCOUT_MERGE_MIGRATION.sql. `enabled` is the field scout-news.js
+// actually reads to decide whether to run at all.
 // ============================================================
 
 export async function getCuratorSettings() {
@@ -321,10 +325,9 @@ export async function getCuratorSettings() {
     const { data, error } = await supabase
       .from("curator_settings")
       .select("*")
-      .single();
+      .maybeSingle();
 
-    // PGRST116 = No rows found
-    if (error && error.code !== "PGRST116") throw error;
+    if (error) throw error;
     return data || null;
   } catch (error) {
     console.error("Error fetching curator settings:", error);
@@ -337,12 +340,10 @@ export async function updateCuratorSettings(settingsData) {
     const existing = await getCuratorSettings();
 
     const basePayload = {
-      auto_post: !!settingsData?.auto_post,
-      auto_post_hour: Number.isFinite(Number(settingsData?.auto_post_hour)) ? Number(settingsData.auto_post_hour) : 9,
-      min_quality_score: Number.isFinite(Number(settingsData?.min_quality_score)) ? Number(settingsData.min_quality_score) : 60,
-      duplicate_check: settingsData?.duplicate_check !== false,
-      notify_admins: settingsData?.notify_admins !== false,
-      max_posts_per_day: Number.isFinite(Number(settingsData?.max_posts_per_day)) ? Number(settingsData.max_posts_per_day) : 5,
+      enabled: settingsData?.enabled !== false,
+      posts_per_source: Number.isFinite(Number(settingsData?.posts_per_source))
+        ? Number(settingsData.posts_per_source)
+        : 5,
       updated_at: new Date().toISOString()
     };
 
@@ -358,11 +359,10 @@ export async function updateCuratorSettings(settingsData) {
       return data;
     }
 
-    // Create first row if none exists
     const { data, error } = await supabase
       .from("curator_settings")
       .insert({
-        api_key: crypto.randomUUID(),
+        id: crypto.randomUUID(),
         ...basePayload
       })
       .select()
@@ -381,27 +381,23 @@ export async function getCuratorStats() {
     const { count: totalSources, error: e1 } = await supabase
       .from("curator_sources")
       .select("*", { count: "exact", head: true });
-
     if (e1) throw e1;
 
     const { count: activeSources, error: e2 } = await supabase
       .from("curator_sources")
       .select("*", { count: "exact", head: true })
       .or("is_active.eq.true,enabled.eq.true");
-
     if (e2) throw e2;
 
     const { count: totalPosts, error: e3 } = await supabase
       .from("curator_posts")
       .select("*", { count: "exact", head: true });
-
     if (e3) throw e3;
 
     const { count: unpostedPosts, error: e4 } = await supabase
       .from("curator_posts")
       .select("*", { count: "exact", head: true })
-      .eq("is_posted", false);
-
+      .neq("status", "posted");
     if (e4) throw e4;
 
     return {
@@ -420,7 +416,7 @@ export async function getCuratorStats() {
 // UTILITY FUNCTIONS
 // ============================================================
 
-export async function testCuratorSource(sourceUrl, sourceType = "rss") {
+export async function testCuratorSource(sourceUrl) {
   try {
     const url = String(sourceUrl || "").trim();
     if (!url) return false;
@@ -437,7 +433,30 @@ export async function testCuratorSource(sourceUrl, sourceType = "rss") {
   }
 }
 
-export async function importCuratorPostsFromSource(sourceId) {
-  // Placeholder: typically a server-side function should do fetching/parsing.
-  console.log("Triggering import for source:", sourceId);
+/**
+ * Manually triggers the scheduled scout-news Netlify function (the same
+ * bot netlify.toml runs hourly). Requires a signed-in super admin — the
+ * function itself checks the role server-side, this just supplies the
+ * session token. Mirrors the working pattern already used in
+ * assets/js/super.js and super/professional-panel.html so there is now
+ * one canonical implementation other UI can reuse instead of re-writing
+ * this fetch call a third time.
+ */
+export async function triggerScoutSync() {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+
+  const token = sessionData?.session?.access_token;
+  if (!token) throw new Error("You must be signed in to run the bot.");
+
+  const response = await fetch("/.netlify/functions/scout-news", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result?.error || `Scout bot failed (${response.status}).`);
+  }
+  return result;
 }

@@ -1,0 +1,146 @@
+/* ==========================================================================
+   chat.css — visual pass on the chat experience
+   Layered after base.css: reuses every existing class chat.js already
+   renders (.chat-layout, .chat-item, .chat-bubble, .message-file, etc.)
+   with zero markup/JS changes required. Only visual refinement + a few
+   new opt-in patterns (typing indicator, empty state, online dot) that
+   chat.js can adopt later without anything breaking today.
+   ========================================================================== */
+
+.chat-layout {
+  gap: var(--space-5, 20px);
+}
+
+.chat-sidebar {
+  border-radius: var(--radius-md, 20px);
+  box-shadow: var(--elevation-2);
+  border-color: var(--color-border, rgba(15,23,42,0.1));
+  background: var(--color-surface, var(--card));
+}
+
+.chat-sidebar h4 {
+  font-size: var(--text-xs, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-subtle, #8a93a3);
+  margin: 0 0 6px;
+}
+
+.chat-item {
+  border-radius: var(--radius-sm, 14px);
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.chat-item:hover {
+  background: var(--color-surface-muted, rgba(15,118,110,0.06));
+  transform: none; /* modern apps: no lift on list rows, just a fill */
+  box-shadow: none;
+}
+
+.chat-item.active {
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.25);
+  box-shadow: none;
+}
+
+.chat-pane {
+  border-radius: var(--radius-md, 20px);
+  box-shadow: var(--elevation-3);
+  border-color: var(--color-border, rgba(15,23,42,0.1));
+}
+
+.chat-pane-header {
+  background: var(--color-surface, #fff);
+  border-bottom-color: var(--color-border, rgba(15,23,42,0.1));
+}
+
+.chat-messages {
+  background: var(--color-bg, #f8f7f4);
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(15,118,110,0.04) 0%, transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(14,165,233,0.04) 0%, transparent 45%);
+}
+
+/* Empty states inside the message list (chat.js renders `.callout` for
+   these — style it as a proper centered empty state without touching
+   the JS that generates it) */
+.chat-messages > .callout:only-child {
+  margin: auto;
+  max-width: 320px;
+  text-align: center;
+  background: var(--color-surface, #fff);
+  border: 1px dashed var(--color-border-strong, rgba(15,23,42,0.18));
+  border-radius: var(--radius-md, 16px);
+  padding: var(--space-6, 24px);
+  color: var(--color-text-muted, var(--muted));
+}
+
+/* Bubbles — softer, modern asymmetric corners instead of a uniform radius,
+   and the incoming/outgoing colors mapped to design tokens instead of the
+   old flat green so it matches the rest of the product + dark mode. */
+.chat-bubble {
+  border-radius: var(--radius-sm, 14px) var(--radius-sm, 14px) var(--radius-sm, 14px) 4px;
+  background: var(--color-surface, #fff);
+  border-color: var(--color-border, rgba(15,23,42,0.08));
+  box-shadow: var(--elevation-1);
+  max-width: min(75%, 480px);
+}
+
+.chat-bubble.self {
+  border-radius: var(--radius-sm, 14px) var(--radius-sm, 14px) 4px var(--radius-sm, 14px);
+  background: linear-gradient(135deg, var(--color-primary, #0f766e), var(--color-secondary, #0ea5e9));
+  border-color: transparent;
+  color: #fff;
+}
+
+.chat-bubble.self .chat-meta,
+.chat-bubble.self .message-file-hint { color: rgba(255,255,255,0.78); }
+
+.chat-bubble.self .message-file {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.28);
+  color: #fff;
+}
+
+.message-media {
+  border-radius: var(--radius-xs, 10px);
+  max-width: 100%;
+  display: block;
+}
+
+/* Typing indicator — three dots, opt-in via .chat-typing element */
+.chat-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm) var(--radius-sm) var(--radius-sm) 4px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.08));
+  width: fit-content;
+}
+
+.chat-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-subtle, #8a93a3);
+  animation: pulseSoft 1s ease-in-out infinite;
+}
+
+.chat-typing span:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+.chat-input {
+  background: var(--color-surface, #fff);
+  border-top-color: var(--color-border, rgba(15,23,42,0.1));
+}
+
+.chat-input textarea {
+  border-radius: var(--radius-sm, 14px);
+}
+
+@media (max-width: 900px) {
+  .chat-layout { gap: var(--space-3, 12px); }
+}

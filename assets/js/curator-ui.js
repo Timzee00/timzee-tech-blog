@@ -7,28 +7,26 @@
 import {
   getAllCuratorSources,
   createCuratorSource,
-  updateCuratorSource,
   deleteCuratorSource,
   toggleCuratorSourceStatus,
-  getAllCuratorPosts,
   getUnpostedCuratorPosts,
   markCuratorPostAsPosted,
   deleteCuratorPost,
-  getCuratorSettings,
-  updateCuratorSettings,
   getCuratorStats,
-  testCuratorSource
+  testCuratorSource,
+  triggerScoutSync
 } from "./curator.js";
 
 import { getCurrentUserWithRole, getUserRole } from "./supabase.js";
-import { escapeHTML } from "./utils.js";
+import { escapeHTML, slugify } from "./utils.js";
+import { createPost } from "./data.js";
 
 class CuratorManager {
   constructor() {
     this.sources = [];
     this.posts = [];
-    this.settings = null;
     this.stats = null;
+    this.currentUser = null;
   }
 
   async init(containerId) {
@@ -40,6 +38,7 @@ class CuratorManager {
       this.container.innerHTML = "<p style='color: red;'>Access denied. Admin only.</p>";
       return;
     }
+    this.currentUser = user;
 
     this.render();
     await this.load();
@@ -69,7 +68,6 @@ class CuratorManager {
           <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
           <button class="tab-btn" data-tab="sources">📡 Manage Sources</button>
           <button class="tab-btn" data-tab="posts">📰 Articles</button>
-          <button class="tab-btn" data-tab="settings">⚙️ Bot Settings</button>
         </div>
 
         <!-- Dashboard Tab -->
@@ -124,23 +122,19 @@ class CuratorManager {
               <input type="text" id="sourceName" placeholder="e.g., TechCrunch RSS" required>
             </div>
             <div class="form-group">
-              <label>RSS/API URL *</label>
+              <label>RSS Feed URL *</label>
               <input type="url" id="sourceUrl" placeholder="https://example.com/feed.xml" required>
             </div>
             <div class="form-group">
               <label>Source Type</label>
               <select id="sourceType">
                 <option value="rss">RSS Feed</option>
-                <option value="api">API Endpoint</option>
+                <option value="gdelt">GDELT Query</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Category</label>
-              <input type="text" id="sourceCategory" placeholder="e.g., Technology, News">
-            </div>
-            <div class="form-group">
-              <label>Description</label>
-              <textarea id="sourceDescription" placeholder="What is this source about?" style="min-height: 60px;"></textarea>
+              <label>Max Articles Per Fetch</label>
+              <input type="number" id="sourceMaxItems" min="1" max="100" value="30">
             </div>
             <div style="display: flex; gap: 8px;">
               <button class="btn btn-primary" id="confirmSourceBtn">✓ Add Source</button>
@@ -161,59 +155,6 @@ class CuratorManager {
           </div>
           <div id="postsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
             <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;">Loading articles...</div>
-          </div>
-        </div>
-
-        <!-- Settings Tab -->
-        <div class="tab-content" data-tab="settings" style="display: none;">
-          <div class="section-header">
-            <h3>Bot Configuration</h3>
-            <p>Configure how the curator bot operates</p>
-          </div>
-          <div class="form-card">
-            <form id="settingsForm">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div class="form-group">
-                  <label>Auto-Post Mode</label>
-                  <label style="display: flex; align-items: center; gap: 8px; font-weight: 400; margin-top: 6px;">
-                    <input type="checkbox" id="autoPostEnabled">
-                    <span>Enable automatic posting</span>
-                  </label>
-                  <p style="font-size: 12px; color: #999; margin: 6px 0 0 0;">Posts approved articles automatically</p>
-                </div>
-                <div class="form-group">
-                  <label>Post Time (if auto-post enabled)</label>
-                  <input type="time" id="autoPostHour">
-                </div>
-              </div>
-
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div class="form-group">
-                  <label>Quality Score Minimum (0-100)</label>
-                  <input type="number" id="minQualityScore" min="0" max="100">
-                  <p style="font-size: 12px; color: #999; margin: 6px 0 0 0;">Articles below this score are skipped</p>
-                </div>
-                <div class="form-group">
-                  <label>Max Posts Per Day</label>
-                  <input type="number" id="maxPostsPerDay" min="1" max="50">
-                  <p style="font-size: 12px; color: #999; margin: 6px 0 0 0;">Limit daily posts to prevent spam</p>
-                </div>
-              </div>
-
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #f9fafb; border-radius: 6px;">
-                  <input type="checkbox" id="duplicateCheck">
-                  <span style="font-weight: 600;">Check for duplicates</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #f9fafb; border-radius: 6px;">
-                  <input type="checkbox" id="notifyAdmins">
-                  <span style="font-weight: 600;">Notify admins on posts</span>
-                </label>
-              </div>
-
-              <button type="submit" class="btn btn-primary" style="margin-top: 20px;">💾 Save Settings</button>
-              <div id="settingsStatus" style="margin-top: 12px; display: none;"></div>
-            </form>
           </div>
         </div>
       </div>
@@ -336,15 +277,10 @@ class CuratorManager {
       this.handleAddSource();
     });
 
-    // Settings form
-    this.container.querySelector("#settingsForm").addEventListener("submit", (e) => {
-      e.preventDefault();
-      this.handleSaveSettings();
-    });
-
-    // Sync button
-    this.container.querySelector("#syncNowBtn").addEventListener("click", () => {
-      alert("Sync triggered! Check back in a few moments for new articles.");
+    // Sync button — actually runs the scout-news bot now (previously just
+    // showed a fake alert and did nothing)
+    this.container.querySelector("#syncNowBtn").addEventListener("click", (e) => {
+      this.handleSyncNow(e.currentTarget);
     });
 
     // Import recommended feeds
@@ -368,17 +304,37 @@ class CuratorManager {
     }
   }
 
+  async handleSyncNow(btn) {
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "🔄 Syncing...";
+    const lastSync = this.container.querySelector("#lastSync");
+    try {
+      const result = await triggerScoutSync();
+      const count = result.posted ? result.posted.length : 0;
+      const errorCount = result.feedErrors ? result.feedErrors.length : 0;
+      if (lastSync) {
+        lastSync.textContent = `Synced ${new Date().toLocaleTimeString()} — ${count} new article${count === 1 ? "" : "s"}${errorCount ? `, ${errorCount} feed error${errorCount === 1 ? "" : "s"}` : ""}`;
+      }
+      await this.load();
+    } catch (error) {
+      if (lastSync) lastSync.textContent = `Sync failed: ${error.message}`;
+      alert(`Sync failed: ${error.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+
   async load() {
     try {
       this.sources = await getAllCuratorSources();
       this.posts = await getUnpostedCuratorPosts(50);
-      this.settings = await getCuratorSettings();
       this.stats = await getCuratorStats();
 
       this.renderStats();
       this.renderSources();
       this.renderPosts();
-      this.loadSettings();
     } catch (error) {
       console.error("Error loading curator data:", error);
     }
@@ -407,8 +363,8 @@ class CuratorManager {
       <div class="source-item">
         <div class="source-info">
           <h4>${escapeHTML(source.name || '')}</h4>
-          <p>${escapeHTML(source.description || 'No description')}</p>
-          <p style="font-size: 11px; color: #0f766e;">📡 ${escapeHTML(String(source.source_type || '').toUpperCase())} • ⏱️ Every ${escapeHTML(String(source.fetch_frequency_minutes || ''))} mins</p>
+          <p>${escapeHTML(source.feed_url || source.query || 'No feed URL')}</p>
+          <p style="font-size: 11px; color: #0f766e;">📡 ${escapeHTML(String(source.source_type || '').toUpperCase())} • 📄 Up to ${escapeHTML(String(source.max_items ?? 30))} articles per sync</p>
         </div>
         <div class="source-actions">
           <button class="btn ${active ? "btn-ghost" : "btn-danger"}" data-source-id="${source.id}" data-type="toggle-source">
@@ -433,19 +389,21 @@ class CuratorManager {
       return;
     }
 
-    list.innerHTML = this.posts.map(post => `
+    list.innerHTML = this.posts.map(post => {
+      const dateText = post.published_at ? new Date(post.published_at).toLocaleDateString() : "Unknown date";
+      return `
       <div class="post-card">
         <div class="post-title">${escapeHTML(post.title || '')}</div>
         <div class="post-meta">
-          Source: ${escapeHTML(post.curator_sources?.name || 'Unknown')} • ${escapeHTML(new Date(post.published_at).toLocaleDateString())}
+          Source: ${escapeHTML(post.curator_sources?.name || post.source_name || 'Unknown')} • ${escapeHTML(dateText)}
         </div>
-        <p style="font-size: 13px; color: #666; margin: 0;">${escapeHTML(post.description || 'No description')}</p>
+        <p style="font-size: 13px; color: #666; margin: 0;">${escapeHTML(post.excerpt || 'No summary available')}</p>
         <div class="post-actions">
           <button class="btn btn-primary" data-post-id="${post.id}" data-type="post-approve">✓ Approve & Post</button>
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-delete">✕ Reject</button>
         </div>
       </div>
-    `).join("");
+    `}).join("");
 
     list.querySelectorAll(".btn").forEach(btn => {
       btn.addEventListener("click", (e) => this.handlePostAction(e, btn));
@@ -473,8 +431,7 @@ class CuratorManager {
     const type = btn.dataset.type;
 
     if (type === "post-approve") {
-      alert("This will create a new post on your site with this article content.");
-      // TODO: Create post from curator post
+      await this.approveCuratorPost(postId, btn);
     } else if (type === "post-delete") {
       if (confirm("Reject this article?")) {
         await deleteCuratorPost(postId);
@@ -483,12 +440,55 @@ class CuratorManager {
     }
   }
 
+  async approveCuratorPost(curatorPostId, btn) {
+    const curatorPost = this.posts.find(p => p.id === curatorPostId);
+    if (!curatorPost) return;
+    if (!confirm(`Publish "${curatorPost.title}" to the site?`)) return;
+
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Publishing...";
+
+    try {
+      const title = curatorPost.title || "Untitled";
+      const content = curatorPost.content
+        || (curatorPost.excerpt ? `<p>${escapeHTML(curatorPost.excerpt)}</p>` : "");
+      const now = new Date().toISOString();
+
+      const result = await createPost({
+        id: crypto.randomUUID(),
+        title,
+        slug: slugify(title),
+        category_id: null,
+        author_id: this.currentUser?.id || null,
+        author_name: curatorPost.curator_sources?.name || curatorPost.source_name || "Content Curator Bot",
+        created_at: now,
+        updated_at: now,
+        cover: curatorPost.image_url || "",
+        tags: curatorPost.tags || [],
+        content,
+        pinned: false,
+        status: "published",
+        publish_at: null,
+        views: 0
+      });
+
+      if (result.error) throw result.error;
+
+      await markCuratorPostAsPosted(curatorPostId);
+      await this.load();
+    } catch (error) {
+      alert(`Failed to publish: ${error.message}`);
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+
   async handleAddSource() {
     const name = this.container.querySelector("#sourceName").value;
     const url = this.container.querySelector("#sourceUrl").value;
     const sourceType = this.container.querySelector("#sourceType").value;
-    const category = this.container.querySelector("#sourceCategory").value;
-    const description = this.container.querySelector("#sourceDescription").value;
+    const maxItems = this.container.querySelector("#sourceMaxItems").value;
 
     if (!name || !url) {
       alert("Please fill in required fields");
@@ -496,13 +496,12 @@ class CuratorManager {
     }
 
     try {
-      const isActive = await testCuratorSource(url, sourceType);
+      const isActive = await testCuratorSource(url);
       await createCuratorSource({
         name,
-        url,
+        feed_url: url,
         source_type: sourceType,
-        category,
-        description,
+        max_items: maxItems,
         is_active: isActive
       });
 
@@ -519,8 +518,7 @@ class CuratorManager {
     this.container.querySelector("#sourceName").value = "";
     this.container.querySelector("#sourceUrl").value = "";
     this.container.querySelector("#sourceType").value = "rss";
-    this.container.querySelector("#sourceCategory").value = "";
-    this.container.querySelector("#sourceDescription").value = "";
+    this.container.querySelector("#sourceMaxItems").value = "30";
   }
 
   async importRecommendedFeeds() {
@@ -529,61 +527,19 @@ class CuratorManager {
       const module = await import("./recommended-feeds.js");
       const feeds = module.RECOMMENDED_FEEDS || [];
       for (const f of feeds) {
-        // Skip duplicates (check both possible column names)
-        const exists = (this.sources || []).some(s => s.url === f.url || s.feed_url === f.url);
+        const exists = (this.sources || []).some(s => s.feed_url === f.url);
         if (exists) continue;
-        const isActive = await testCuratorSource(f.url, "rss");
+        const isActive = await testCuratorSource(f.url);
         await createCuratorSource({
           name: f.name,
-          url: f.url,
+          feed_url: f.url,
           source_type: "rss",
-          category: f.category,
-          description: f.description,
+          image_credit: f.name,
           is_active: isActive
         });
       }
     } catch (error) {
       throw error;
-    }
-  }
-
-  loadSettings() {
-    if (!this.settings) return;
-
-    this.container.querySelector("#autoPostEnabled").checked = this.settings.auto_post;
-    this.container.querySelector("#autoPostHour").value = String(this.settings.auto_post_hour).padStart(2, "0") + ":00";
-    this.container.querySelector("#minQualityScore").value = this.settings.min_quality_score;
-    this.container.querySelector("#maxPostsPerDay").value = this.settings.max_posts_per_day;
-    this.container.querySelector("#duplicateCheck").checked = this.settings.duplicate_check;
-    this.container.querySelector("#notifyAdmins").checked = this.settings.notify_admins;
-  }
-
-  async handleSaveSettings() {
-    try {
-      const autoPostHour = parseInt(this.container.querySelector("#autoPostHour").value.split(":")[0]);
-
-      await updateCuratorSettings({
-        auto_post: this.container.querySelector("#autoPostEnabled").checked,
-        auto_post_hour: autoPostHour,
-        min_quality_score: parseInt(this.container.querySelector("#minQualityScore").value),
-        max_posts_per_day: parseInt(this.container.querySelector("#maxPostsPerDay").value),
-        duplicate_check: this.container.querySelector("#duplicateCheck").checked,
-        notify_admins: this.container.querySelector("#notifyAdmins").checked
-      });
-
-      const status = this.container.querySelector("#settingsStatus");
-      status.style.display = "block";
-      status.style.color = "green";
-      status.textContent = "✓ Settings saved successfully!";
-
-      setTimeout(() => {
-        status.style.display = "none";
-      }, 3000);
-    } catch (error) {
-      const status = this.container.querySelector("#settingsStatus");
-      status.style.display = "block";
-      status.style.color = "red";
-      status.textContent = `Error: ${error.message}`;
     }
   }
 }

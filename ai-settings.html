@@ -9,30 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
-    <style>
-      .ai-settings { max-width: 800px; margin: 40px auto; }
-      .setting-group { border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-      .setting-group h3 { margin-top: 0; }
-      .api-key-input { font-family: monospace; font-size: 12px; }
-      .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
-      .status-indicator.connected { background: #10b981; }
-      .status-indicator.disconnected { background: #ef4444; }
-      .prompt-template { background: #f9fafb; padding: 12px; border-radius: 4px; margin: 8px 0; cursor: pointer; transition: all 0.2s; }
-      .prompt-template:hover { background: #f3f4f6; }
-      .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin: 12px 0; }
-      .status-message { margin-top: 12px; display: none; word-break: break-word; }
-      .action-row { display: flex; gap: 8px; flex-wrap: wrap; }
-      @media (max-width: 640px) {
-        .ai-settings { margin: 20px auto; }
-        .setting-group { padding: 16px; }
-        .action-row { flex-direction: column; align-items: stretch; }
-        #quickChatForm { flex-direction: column; }
-        #quickChatForm button { width: 100%; }
-      }
-    </style>
       <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
         <div class="brand">
@@ -45,7 +25,7 @@
       </div>
     </header>
 
-    <main class="page-shell">
+    <main id="main-content" class="page-shell">
       <div class="container ai-settings">
         <h1>AI Settings</h1>
         <p class="tagline">Configure your AI assistants and preferences</p>
@@ -81,12 +61,12 @@
         <div class="setting-group">
           <h3>AI Model</h3>
           <select id="aiModel" style="width: 100%; padding: 8px; margin: 8px 0;">
-            <option value="mixtral-8x7b-32768">Mixtral 8x7B (Recommended)</option>
-            <option value="llama2-70b-4096">LLaMA 2 70B</option>
-            <option value="gemma-7b-it">Gemma 7B</option>
+            <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Recommended)</option>
+            <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fastest)</option>
+            <option value="openai/gpt-oss-120b">GPT-OSS 120B</option>
           </select>
           <p style="font-size: 12px; color: #666; margin-top: 8px;">
-            Mixtral is fastest. LLaMA 2 is most capable. Gemma is most lightweight.
+            Llama 3.3 70B is most capable. Llama 3.1 8B is fastest. GPT-OSS 120B is largest.
           </p>
         </div>
 
