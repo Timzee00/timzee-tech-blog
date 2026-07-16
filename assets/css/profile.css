@@ -1,0 +1,78 @@
+/* ==========================================================================
+   profile.css — visual pass on profile pages
+   Layered after base.css; every selector below already exists in the
+   markup rendered by profile.js — this only refines spacing, elevation,
+   and typography to match the new design system tokens.
+   ========================================================================== */
+
+.profile-cover {
+  border-radius: var(--radius-md, 20px) var(--radius-md, 20px) 0 0;
+  background: linear-gradient(135deg, var(--color-primary, #0f766e), var(--color-secondary, #0ea5e9));
+}
+
+.profile-avatar-wrap {
+  box-shadow: var(--elevation-3);
+  border: 3px solid var(--color-surface, #fff);
+}
+
+.profile-identity {
+  gap: var(--space-5, 20px);
+}
+
+.profile-tabs {
+  gap: var(--space-2, 8px);
+  border-bottom: 1px solid var(--color-border, rgba(15,23,42,0.1));
+  padding-bottom: var(--space-3, 12px);
+}
+
+.profile-tabs button {
+  border-radius: var(--radius-full, 999px);
+  border-color: var(--color-border-strong, rgba(15,23,42,0.15));
+  background: var(--color-surface, #fff);
+  font-size: var(--text-sm, 0.9rem);
+}
+
+.profile-tabs button:hover {
+  border-color: var(--color-primary, var(--accent));
+}
+
+.profile-tabs button.active {
+  background: var(--color-primary, var(--accent));
+  box-shadow: var(--elevation-1);
+}
+
+.profile-card {
+  border-radius: var(--radius-md, 20px);
+  box-shadow: var(--elevation-2);
+}
+
+.profile-stats {
+  display: flex;
+  gap: var(--space-6, 24px);
+  flex-wrap: wrap;
+}
+
+.profile-bio {
+  font-size: var(--text-sm, 0.95rem);
+  line-height: var(--leading-relaxed, 1.7);
+}
+
+.profile-about .about-item {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted, var(--muted));
+}
+
+.verified-badge {
+  box-shadow: var(--elevation-1);
+}
+
+@media (max-width: 600px) {
+  .profile-identity {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-bottom: var(--space-4, 16px);
+  }
+  .profile-actions { justify-content: center; }
+  .profile-bio, .profile-stats { text-align: center; justify-content: center; }
+}

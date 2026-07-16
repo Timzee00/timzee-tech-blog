@@ -1,0 +1,37 @@
+/* ==========================================================================
+   styles.css — main stylesheet entry point
+   Split into modular files (see /assets/css/*.css) per the design-system
+   refactor. Every page in the project links only this one file, so the
+   modular split required zero changes to any HTML <head>.
+
+   Load order matters (cascade):
+   1. variables.css   — design tokens (extends the tokens already defined
+                         at the top of base.css)
+   2. base.css        — the full original stylesheet, byte-for-byte
+                         preserved, so all existing selectors/behaviour
+                         keep working exactly as before
+   3. buttons.css      forms.css      — component polish layers
+   4. avatars.css     — global circular-avatar fix (see file header for
+                         the root-cause explanation)
+   5. chat.css / profile.css / marketplace.css / discussion.css —
+                         page-specific visual passes (Refactor Pass 2)
+   6. animations.css  — subtle motion utilities
+   7. utilities.css   — small reusable helper classes
+   8. responsive.css  — cross-breakpoint safety net, loaded last so it
+                         wins layout-safety concerns in the cascade
+   ========================================================================== */
+
+@import url("variables.css");
+@import url("base.css");
+@import url("buttons.css");
+@import url("forms.css");
+@import url("avatars.css");
+@import url("chat.css");
+@import url("profile.css");
+@import url("marketplace.css");
+@import url("discussion.css");
+@import url("novels.css");
+@import url("content-pages.css");
+@import url("animations.css");
+@import url("utilities.css");
+@import url("responsive.css");

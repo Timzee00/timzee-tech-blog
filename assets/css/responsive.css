@@ -1,0 +1,107 @@
+/* ==========================================================================
+   responsive.css — cross-breakpoint safety net
+   Loaded LAST so it can win the cascade for layout-safety concerns without
+   !important abuse. Targets the required test widths: 320, 375, 425,
+   768, 1024, 1280, 1440. Goals: no horizontal scroll, no overflow, no
+   cut-off text, no overlapping controls.
+   ========================================================================== */
+
+/* Universal overflow guard */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img, video, svg, canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Prevent any flex/grid child from forcing overflow */
+.container,
+.wrap,
+.grid,
+[class*="-grid"],
+[class*="-list"] {
+  min-width: 0;
+}
+
+.container * {
+  min-width: 0;
+}
+
+/* --- ≥1440px: cap content width so it doesn't stretch on ultra-wide screens --- */
+@media (min-width: 1440px) {
+  .container { max-width: 1320px; margin-inline: auto; }
+}
+
+/* --- 1280px and down: tighten grid columns slightly --- */
+@media (max-width: 1280px) {
+  .container { padding-inline: var(--space-6, 24px); }
+}
+
+/* --- 1024px: nav/header starts compressing, sidebar layouts stack earlier --- */
+@media (max-width: 1024px) {
+  .header-actions { flex-wrap: wrap; row-gap: var(--space-2); }
+  .search-box { flex: 1 1 160px; min-width: 0; }
+}
+
+/* --- 768px: tablet — collapse multi-column layouts to single/two column --- */
+@media (max-width: 768px) {
+  .container { padding-inline: var(--space-4, 16px); }
+  .hero-grid,
+  [class*="-grid"] {
+    grid-template-columns: 1fr !important;
+  }
+  .site-header .wrap {
+    flex-wrap: wrap;
+    row-gap: var(--space-3);
+  }
+  .nav-pill { order: 3; width: 100%; overflow-x: auto; }
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+
+/* --- 425px: large phones --- */
+@media (max-width: 425px) {
+  .container { padding-inline: var(--space-3, 12px); }
+  h1, .hero-card h1 { font-size: var(--text-2xl, 1.75rem); line-height: var(--leading-tight); }
+  h2 { font-size: var(--text-xl, 1.375rem); }
+  .btn { width: 100%; justify-content: center; }
+  .cta { flex-direction: column; align-items: stretch; }
+  .modal-panel { max-width: 100%; margin: 0 var(--space-3); }
+}
+
+/* --- 375px --- */
+@media (max-width: 375px) {
+  .container { padding-inline: var(--space-2, 8px); }
+  .search-box input { font-size: 16px; } /* prevents iOS auto-zoom on focus */
+}
+
+/* --- 320px: smallest supported width --- */
+@media (max-width: 320px) {
+  h1, .hero-card h1 { font-size: var(--text-xl, 1.375rem); }
+  .brand .tagline { display: none; }
+  .card, [class$="-card"] { padding: var(--space-3, 12px); }
+}
+
+/* Buttons never overlap on narrow widths */
+@media (max-width: 480px) {
+  .cta,
+  .form-actions,
+  .modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .cta .btn,
+  .form-actions .btn,
+  .modal-actions .btn {
+    width: 100%;
+  }
+}
+
+/* Long text never gets clipped inside cards/badges */
+.card, [class$="-card"], .badge, .chip {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

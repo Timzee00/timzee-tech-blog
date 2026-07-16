@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Videos - Timzee Tech Hub</title>
+    <meta name="description" content="Watch tech videos from our community">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+      <script defer src="assets/js/theme-init.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline">Watch tech content</div>
+        </div>
+        <nav class="nav-pill">
+          <a href="index.html">Home</a>
+          <a href="discussion.html">Discussion</a>
+          <a href="marketplace.html">Marketplace</a>
+        </nav>
+        <div class="header-actions">
+          <div class="search-box">
+            <input type="search" id="videoSearch" placeholder="Search videos...">
+          </div>
+          <a class="btn" href="#upload" id="uploadBtnHeader" style="display: none;">Upload Video</a>
+          <div class="auth-actions" id="authActions"></div>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" class="page-shell">
+      <div class="container">
+        <h1>Videos</h1>
+        <p class="tagline">Discover tech tutorials, demos, and community content</p>
+
+        <!-- Category Tabs -->
+        <div class="nav-pill" id="categoryTabs" style="margin: 20px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+          <a href="#all" data-category="all">All</a>
+          <a href="#tutorial" data-category="tutorial">Tutorials</a>
+          <a href="#demo" data-category="demo">Demos</a>
+          <a href="#review" data-category="review">Reviews</a>
+          <a href="#news" data-category="news">News</a>
+        </div>
+
+        <!-- Upload Section (For Logged In Users) -->
+        <div id="uploadSection" style="display: none; margin-bottom: 40px;">
+          <h2>Upload Video</h2>
+          <div class="upload-area" id="uploadArea">
+            <div style="font-size: 48px; margin-bottom: 12px;">📹</div>
+            <p><strong>Drag and drop your video here</strong></p>
+            <p style="color: #666; font-size: 12px; margin: 8px 0;">or click to browse (MP4, WebM, OGG)</p>
+            <input type="file" id="videoFile" accept="video/*" style="display: none;">
+          </div>
+          
+          <form id="uploadForm" style="display: none;">
+            <input type="text" id="videoTitle" placeholder="Video title" required>
+            <textarea id="videoDescription" placeholder="Video description" style="margin-top: 8px;"></textarea>
+            <select id="videoCategory" style="margin-top: 8px;">
+              <option value="tutorial">Tutorial</option>
+              <option value="demo">Demo</option>
+              <option value="review">Review</option>
+              <option value="news">News</option>
+              <option value="other">Other</option>
+            </select>
+            <input type="text" id="videoTags" placeholder="Tags (comma separated)" style="margin-top: 8px;">
+            <div id="uploadStatus" style="margin-top: 12px; display: none;"></div>
+            <button class="btn" type="submit" style="margin-top: 12px;">Upload</button>
+          </form>
+        </div>
+
+        <!-- Videos Grid -->
+        <div id="videosContainer">
+          <div class="callout">Loading videos...</div>
+        </div>
+
+        <!-- Load More -->
+        <div style="text-align: center; margin-top: 40px;">
+          <button class="btn ghost" id="loadMoreBtn" style="display: none;">Load More</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="discussion.html">Discussion</a>
+          <a href="marketplace.html">Marketplace</a>
+          <a href="contact.html">Contact</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module">
+      import { 
+        fetchVideos, 
+        searchVideos, 
+        uploadVideo,
+        detectVideoDuration
+      } from "./assets/js/videos-marketplace.js";
+      import { getCurrentUser, signOut } from "./assets/js/supabase.js";
+      import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+
+      let state = {
+        user: null,
+        videos: [],
+        offset: 0,
+        category: "all",
+        limit: 20,
+        selectedVideoDuration: 0
+      };
+
+      // Setup auth
+      async function setupAuth() {
+        state.user = await getCurrentUser();
+        
+        const authActions = document.getElementById("authActions");
+        if (state.user) {
+          authActions.innerHTML = `
+            <span class="auth-meta">${escapeHTML(state.user.email || '')}</span>
+            <a class="btn ghost" href="profile.html">Profile</a>
+            <button class="btn ghost" id="logoutBtn">Log Out</button>
+          `;
+          document.getElementById("logoutBtn").addEventListener("click", async () => {
+            await signOut();
+            window.location.reload();
+          });
+          document.getElementById("uploadSection").style.display = "block";
+          document.getElementById("uploadBtnHeader").style.display = "inline-flex";
+        } else {
+          authActions.innerHTML = `<a class="btn ghost" href="login.html?next=${encodeURIComponent('videos.html')}">Log In</a>`;
+        }
+      }
+
+      // Load videos
+      async function loadVideos() {
+        try {
+          const videos = await fetchVideos({
+            category: state.category === "all" ? null : state.category,
+            limit: state.limit,
+            offset: state.offset
+          });
+
+          if (state.offset === 0) {
+            state.videos = videos;
+          } else {
+            state.videos.push(...videos);
+          }
+
+          renderVideos();
+          document.getElementById("loadMoreBtn").style.display = videos.length === state.limit ? "inline-flex" : "none";
+        } catch (error) {
+          console.error("Load error:", error);
+          document.getElementById("videosContainer").innerHTML = `<div class="callout">Failed to load videos</div>`;
+        }
+      }
+
+      // Render videos
+      function renderVideos() {
+        const container = document.getElementById("videosContainer");
+        
+        if (!state.videos.length) {
+          container.innerHTML = `<div class="callout">No videos yet in this category</div>`;
+          return;
+        }
+
+        container.innerHTML = `<div class="video-grid">${state.videos.map(v => `
+          <div class="video-card" data-id="${escapeHTML(v.id || '')}">
+            <div class="video-thumbnail">
+              ${v.thumbnail_url && isSafeUrl(v.thumbnail_url) ? `<img src="${v.thumbnail_url}" alt="${escapeHTML(v.title || '')}">` : '📹'}
+              <div class="video-duration">${escapeHTML(String(v.duration || 0))}s</div>
+            </div>
+            <div class="video-info">
+              <div class="video-title">${escapeHTML(v.title || '')}</div>
+              <div class="video-meta">
+                <span>👁 ${escapeHTML(String(v.view_count || 0))}</span>
+                <span>❤ ${escapeHTML(String(v.like_count || 0))}</span>
+              </div>
+            </div>
+          </div>
+        `).join("")}</div>`;
+
+        // Add click handlers
+        container.querySelectorAll(".video-card").forEach(card => {
+          card.addEventListener("click", () => {
+            const videoId = card.dataset.id;
+            window.location.href = `video.html?id=${videoId}`;
+          });
+        });
+      }
+
+      // Category tabs
+      document.getElementById("categoryTabs").addEventListener("click", (e) => {
+        if (e.target.dataset.category) {
+          state.category = e.target.dataset.category;
+          state.offset = 0;
+          loadVideos();
+        }
+      });
+
+      // Search
+      let searchTimer;
+      document.getElementById("videoSearch").addEventListener("input", async (e) => {
+        clearTimeout(searchTimer);
+        const term = e.target.value.trim();
+        
+        if (term.length < 2) {
+          state.offset = 0;
+          loadVideos();
+          return;
+        }
+
+        searchTimer = setTimeout(async () => {
+          try {
+            const results = await searchVideos({ query: term, limit: state.limit });
+            state.videos = results;
+            state.offset = 0;
+            renderVideos();
+          } catch (error) {
+            console.error("Search error:", error);
+          }
+        }, 300);
+      });
+
+      // Upload handlers
+      const uploadArea = document.getElementById("uploadArea");
+      const videoFile = document.getElementById("videoFile");
+      const uploadForm = document.getElementById("uploadForm");
+
+      uploadArea.addEventListener("click", () => videoFile.click());
+
+      uploadArea.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        uploadArea.classList.add("drag");
+      });
+
+      uploadArea.addEventListener("dragleave", () => {
+        uploadArea.classList.remove("drag");
+      });
+
+      uploadArea.addEventListener("drop", (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove("drag");
+        if (e.dataTransfer.files[0]) {
+          videoFile.files = e.dataTransfer.files;
+          void showUploadForm();
+        }
+      });
+
+      videoFile.addEventListener("change", () => {
+        void showUploadForm();
+      });
+
+      async function showUploadForm() {
+        const file = videoFile.files[0];
+        if (file) {
+          uploadArea.style.display = "none";
+          uploadForm.style.display = "block";
+          state.selectedVideoDuration = 0;
+          const status = document.getElementById("uploadStatus");
+          if (status) {
+            status.style.display = "block";
+            status.textContent = "Reading video details...";
+            status.style.color = "#0f766e";
+          }
+          try {
+            state.selectedVideoDuration = await detectVideoDuration(file);
+            if (status) {
+              if (state.selectedVideoDuration > 0) {
+                status.textContent = `Video selected (${state.selectedVideoDuration}s). Complete the form and upload.`;
+                status.style.color = "#0f766e";
+              } else {
+                status.style.display = "none";
+              }
+            }
+          } catch (durationError) {
+            console.warn("Duration detection failed:", durationError);
+            if (status) {
+              status.textContent = "Video selected. Duration could not be detected, upload will continue.";
+              status.style.color = "#f59e0b";
+            }
+          }
+        }
+      }
+
+      uploadForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        if (!state.user) {
+          alert("Please log in to upload");
+          return;
+        }
+
+        const status = document.getElementById("uploadStatus");
+        const btn = uploadForm.querySelector("button");
+        
+        btn.disabled = true;
+        status.style.display = "block";
+        status.textContent = "Uploading...";
+        status.style.color = "#0f766e";
+
+        try {
+          const result = await uploadVideo(
+            state.user.id,
+            state.user.user_metadata?.display_name || state.user.email,
+            videoFile.files[0],
+            null,
+            {
+              title: document.getElementById("videoTitle").value,
+              description: document.getElementById("videoDescription").value,
+              category: document.getElementById("videoCategory").value,
+              tags: document.getElementById("videoTags").value.split(",").map(t => t.trim()).filter(Boolean),
+              duration: state.selectedVideoDuration || 0
+            }
+          );
+
+          if (result.error) {
+            status.textContent = `Error: ${result.error}`;
+            status.style.color = "#ef4444";
+          } else {
+            status.textContent = "✓ Video uploaded successfully!";
+            status.style.color = "#10b981";
+            uploadForm.reset();
+            uploadArea.style.display = "block";
+            uploadForm.style.display = "none";
+            state.selectedVideoDuration = 0;
+            setTimeout(() => {
+              state.offset = 0;
+              loadVideos();
+            }, 1500);
+          }
+        } catch (error) {
+          status.textContent = `Error: ${error.message}`;
+          status.style.color = "#ef4444";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      // Load more
+      document.getElementById("loadMoreBtn").addEventListener("click", () => {
+        state.offset += state.limit;
+        loadVideos();
+      });
+
+      // Init
+      setupAuth();
+      loadVideos();
+    </script>
+  </body>
+</html>
+
+
+

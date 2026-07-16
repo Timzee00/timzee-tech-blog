@@ -1,0 +1,110 @@
+/* ==========================================================================
+   variables.css — Design tokens
+   Extends the original :root tokens (defined in base.css) with a fuller,
+   production-grade scale. Values here are additive; nothing in base.css's
+   :root block is removed, so every existing component keeps working.
+   ========================================================================== */
+
+:root {
+  /* --- Semantic color roles (new) --- */
+  --color-primary: var(--accent, #0f766e);
+  --color-primary-hover: #0c5f58;
+  --color-secondary: var(--accent-cool, #0ea5e9);
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+
+  --color-bg: var(--bg, #f6f1ea);
+  --color-surface: var(--card-solid, #ffffff);
+  --color-surface-muted: #f3f1ec;
+  --color-border: rgba(15, 23, 42, 0.1);
+  --color-border-strong: rgba(15, 23, 42, 0.18);
+  --color-text: var(--ink, #131417);
+  --color-text-muted: var(--muted, #5b6573);
+  --color-text-subtle: #8a93a3;
+
+  /* --- Elevation --- */
+  --elevation-1: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 1px rgba(15, 23, 42, 0.04);
+  --elevation-2: 0 6px 16px rgba(15, 23, 42, 0.08);
+  --elevation-3: var(--shadow-soft, 0 16px 30px rgba(15, 23, 42, 0.1));
+  --elevation-4: var(--shadow, 0 22px 40px rgba(15, 23, 42, 0.16));
+
+  /* --- Radius scale --- */
+  --radius-xs: 8px;
+  --radius-sm: var(--radius-sm, 12px);
+  --radius-md: var(--radius, 20px);
+  --radius-lg: var(--radius-lg, 30px);
+  --radius-full: 9999px;
+
+  /* --- Spacing scale (4px base) --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* --- Typography scale --- */
+  --font-display: "Fraunces", "Times New Roman", serif;
+  --font-body: "Sora", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.375rem;   /* 22px */
+  --text-2xl: 1.75rem;   /* 28px */
+  --text-3xl: 2.25rem;   /* 36px */
+  --text-4xl: 2.75rem;   /* 44px */
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  /* --- Motion --- */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+
+  /* --- Avatar sizes (reusable scale) --- */
+  --avatar-xs: 24px;
+  --avatar-sm: 32px;
+  --avatar-md: 42px;
+  --avatar-lg: 64px;
+  --avatar-xl: 96px;
+  --avatar-2xl: 128px;
+
+  /* --- Z-index scale --- */
+  --z-dropdown: 60;
+  --z-sticky: 70;
+  --z-header: 80;
+  --z-overlay: 90;
+  --z-modal: 100;
+  --z-toast: 110;
+}
+
+/* --- Dark mode tokens ---
+   The project already toggles a data-theme/[data-theme="dark"] or
+   .dark-mode hook via themes.js. We map the semantic roles so any
+   component using the new tokens above adapts automatically without
+   requiring changes to theme-toggle logic. */
+:root[data-theme="dark"],
+:root.dark-mode,
+:root.theme-dark {
+  --color-bg: #0f1115;
+  --color-surface: #171a21;
+  --color-surface-muted: #1d2128;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+  --color-text: #f1f3f6;
+  --color-text-muted: #a7afbd;
+  --color-text-subtle: #78808f;
+  --color-primary-hover: #14b8a6;
+}

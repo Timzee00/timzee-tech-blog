@@ -1,0 +1,384 @@
+/* ==========================================================================
+   marketplace.css — marketplace grid, listing cards, listing detail page
+   Before this file existed, .listing-card/.marketplace-grid/.listing-*
+   and the entire listing.html detail page (.listing-hero/.gallery-*/
+   .seller-*/.inquiry-*/.reviews-*/.similar-*) had NO CSS at all — they
+   rendered as unstyled stacked divs. This file is net-new coverage, not
+   a refinement of existing rules.
+   ========================================================================== */
+
+/* --- Category filter pills --- */
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  margin: var(--space-4, 16px) 0 var(--space-6, 24px);
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-full, 999px);
+  border: 1px solid var(--color-border-strong, rgba(15,23,42,0.15));
+  background: var(--color-surface, #fff);
+  color: var(--color-text, var(--ink));
+  font-weight: 600;
+  font-size: var(--text-sm, 0.875rem);
+  cursor: pointer;
+}
+
+.filter-btn:hover { border-color: var(--color-primary, var(--accent)); }
+
+.filter-btn.active {
+  background: var(--color-primary, var(--accent));
+  color: #fff;
+  border-color: transparent;
+}
+
+/* --- Create-listing panel (replaces inline styles previously on #createSection) --- */
+.market-panel {
+  margin-bottom: var(--space-8, 32px);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.1));
+  padding: var(--space-6, 24px);
+  border-radius: var(--radius-md, 16px);
+  background: var(--color-surface, #fff);
+  box-shadow: var(--elevation-2);
+}
+
+.market-panel h2 { margin-top: 0; }
+
+.market-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4, 16px);
+  margin-bottom: var(--space-4, 16px);
+}
+
+.market-form-row .field label,
+.market-panel label { display: block; margin-bottom: 4px; font-weight: 600; font-size: var(--text-sm); }
+
+.market-status {
+  margin-bottom: var(--space-3, 12px);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.market-cancel-btn { margin-left: var(--space-2, 8px); }
+
+.market-load-more {
+  text-align: center;
+  margin-top: var(--space-8, 32px);
+}
+
+/* --- Listings grid --- */
+.marketplace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-5, 20px);
+}
+
+.listing-card {
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.1));
+  border-radius: var(--radius-md, 16px);
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: var(--elevation-1);
+  display: flex;
+  flex-direction: column;
+}
+
+.listing-card:hover {
+  box-shadow: var(--elevation-3);
+  transform: translateY(-2px);
+}
+
+.listing-image {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--color-surface-muted, #f0efe9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  overflow: hidden;
+}
+
+.listing-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.listing-badge {
+  position: absolute;
+  top: var(--space-2, 8px);
+  right: var(--space-2, 8px);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font-size: var(--text-xs, 0.7rem);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.listing-info {
+  padding: var(--space-4, 16px);
+  display: grid;
+  gap: 4px;
+  flex: 1;
+}
+
+.listing-category {
+  font-size: var(--text-xs, 0.7rem);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-subtle, #8a93a3);
+  font-weight: 600;
+}
+
+.listing-title {
+  font-size: var(--text-base, 1rem);
+  font-weight: 700;
+  color: var(--color-text, var(--ink));
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.listing-price {
+  font-size: var(--text-lg, 1.15rem);
+  font-weight: 800;
+  color: var(--color-primary, var(--accent));
+  margin: 2px 0;
+}
+
+.listing-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-muted, var(--muted));
+}
+
+.listing-seller {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  margin-top: var(--space-2, 8px);
+  padding-top: var(--space-2, 8px);
+  border-top: 1px solid var(--color-border, rgba(15,23,42,0.08));
+  font-size: var(--text-sm, 0.85rem);
+  font-weight: 600;
+}
+
+.seller-avatar {
+  width: var(--avatar-xs, 24px);
+  height: var(--avatar-xs, 24px);
+}
+
+/* ==========================================================================
+   Listing detail page (listing.html)
+   ========================================================================== */
+
+.listing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: var(--space-8, 32px);
+  align-items: start;
+  margin-top: var(--space-4, 16px);
+}
+
+.listing-gallery { display: grid; gap: var(--space-2, 8px); }
+
+.gallery-main {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md, 16px);
+  object-fit: cover;
+  background: var(--color-surface-muted, #f0efe9);
+  box-shadow: var(--elevation-2);
+}
+
+.gallery-thumbs {
+  display: flex;
+  gap: var(--space-2, 8px);
+  overflow-x: auto;
+}
+
+.gallery-thumbs img {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm, 10px);
+  object-fit: cover;
+  cursor: pointer;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+
+.gallery-thumbs img.active { border-color: var(--color-primary, var(--accent)); }
+
+.listing-details {
+  display: grid;
+  gap: var(--space-4, 16px);
+  align-content: start;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--color-success, #16a34a);
+}
+
+.chip {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-muted, #f0efe9);
+  color: var(--color-text-muted, var(--muted));
+  font-size: var(--text-xs);
+  font-weight: 600;
+  width: fit-content;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-2, 8px) 0;
+  border-bottom: 1px solid var(--color-border, rgba(15,23,42,0.08));
+  font-size: var(--text-sm);
+}
+
+.detail-label { color: var(--color-text-muted, var(--muted)); }
+.detail-value { font-weight: 600; text-align: right; }
+
+.description-text {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed, 1.7);
+  color: var(--color-text, var(--ink));
+}
+
+.seller-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-4, 16px);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.1));
+  border-radius: var(--radius-md, 14px);
+  background: var(--color-surface, #fff);
+}
+
+.seller-header .seller-avatar { width: var(--avatar-lg, 56px); height: var(--avatar-lg, 56px); }
+
+.seller-info { display: grid; gap: 2px; }
+.seller-name { font-weight: 700; }
+.seller-rating { font-size: var(--text-sm); color: var(--color-text-muted, var(--muted)); }
+
+.inquiry-section {
+  margin-top: var(--space-4, 16px);
+  padding: var(--space-4, 16px);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.1));
+  border-radius: var(--radius-md, 14px);
+  background: var(--color-surface, #fff);
+}
+
+.inquiry-form { display: grid; gap: var(--space-3, 12px); margin-top: var(--space-3, 12px); }
+
+.reviews-section { margin-top: var(--space-8, 32px); }
+
+.review-item {
+  padding: var(--space-4, 16px) 0;
+  border-bottom: 1px solid var(--color-border, rgba(15,23,42,0.08));
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.review-date { font-size: var(--text-xs); color: var(--color-text-subtle, #8a93a3); }
+.review-rating { color: var(--color-warning, #d97706); font-weight: 700; }
+
+.similar-listings { margin-top: var(--space-10, 40px); }
+.similar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4, 16px);
+  margin-top: var(--space-4, 16px);
+}
+
+@media (max-width: 900px) {
+  .listing-hero { grid-template-columns: 1fr; }
+  .market-form-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .marketplace-grid { grid-template-columns: 1fr 1fr; gap: var(--space-3, 12px); }
+  .listing-price { font-size: var(--text-base); }
+}
+
+@media (max-width: 360px) {
+  .marketplace-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- New token-based classes replacing inline styles removed
+   from listing.html (description box + "similar listings" cards) ---------- */
+
+.description-box {
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.1));
+  border-radius: var(--radius-sm, 8px);
+  padding: var(--space-5, 20px);
+  margin-top: var(--space-6, 24px);
+}
+
+.description-box h3 { margin: 0 0 var(--space-3, 12px) 0; }
+
+.similar-card-link { text-decoration: none; color: inherit; }
+
+.similar-card {
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.1));
+  border-radius: var(--radius-sm, 8px);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.similar-card:hover { border-color: var(--color-primary, var(--accent)); box-shadow: var(--elevation-2); }
+
+.similar-card img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+
+.similar-card-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--color-surface-muted, #f0f0f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
+.similar-card-info { padding: var(--space-3, 12px); }
+
+.similar-card-title {
+  font-weight: 600;
+  font-size: var(--text-sm, 14px);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.similar-card-price {
+  color: var(--color-primary, var(--accent));
+  font-weight: 700;
+}

@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marketplace - Timzee Tech Hub</title>
+    <meta name="description" content="Buy and sell tech products and services">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+      <script defer src="assets/js/theme-init.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline">Buy & sell tech</div>
+        </div>
+        <nav class="nav-pill">
+          <a href="index.html">Home</a>
+          <a href="discussion.html">Discussion</a>
+          <a href="videos.html">Videos</a>
+        </nav>
+        <div class="header-actions">
+          <div class="search-box">
+            <input type="search" id="marketplaceSearch" placeholder="Search listings...">
+          </div>
+          <a class="btn" href="#create" id="createBtnHeader" style="display: none;">Sell Item</a>
+          <div class="auth-actions" id="authActions"></div>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" class="page-shell">
+      <div class="container">
+        <h1>Marketplace</h1>
+        <p class="tagline">Discover tech products, services, and gear from our community</p>
+
+        <!-- Category Filters -->
+        <div class="category-filter" id="categoryFilter">
+          <button class="filter-btn active" data-category="all">All</button>
+          <button class="filter-btn" data-category="electronics">Electronics</button>
+          <button class="filter-btn" data-category="software">Software</button>
+          <button class="filter-btn" data-category="hardware">Hardware</button>
+          <button class="filter-btn" data-category="services">Services</button>
+          <button class="filter-btn" data-category="other">Other</button>
+        </div>
+
+        <!-- Create Listing Section -->
+        <div id="createSection" class="market-panel" style="display: none;">
+          <h2>Create Listing</h2>
+          <form id="createForm">
+            <div class="market-form-row">
+              <div>
+                <label><strong>Title</strong></label>
+                <input type="text" id="listingTitle" placeholder="What are you selling?" required>
+              </div>
+              <div>
+                <label><strong>Category</strong></label>
+                <select id="listingCategory" required>
+                  <option value="electronics">Electronics</option>
+                  <option value="software">Software</option>
+                  <option value="hardware">Hardware</option>
+                  <option value="services">Services</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <label><strong>Description</strong></label>
+            <textarea id="listingDescription" placeholder="Describe your item..." style="margin-bottom: 16px;"></textarea>
+
+            <div class="market-form-row">
+              <div>
+                <label><strong>Price</strong></label>
+                <input type="number" id="listingPrice" placeholder="0.00" step="0.01" required>
+              </div>
+              <div>
+                <label><strong>Condition</strong></label>
+                <select id="listingCondition" required>
+                  <option value="new">New</option>
+                  <option value="like-new">Like New</option>
+                  <option value="used">Used</option>
+                  <option value="refurbished">Refurbished</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="market-form-row">
+              <div>
+                <label><strong>Location</strong></label>
+                <input type="text" id="listingLocation" placeholder="Your city/state">
+              </div>
+              <div>
+                <label><strong>Photos</strong></label>
+                <input type="file" id="listingPhotos" multiple accept="image/*">
+              </div>
+            </div>
+
+            <div id="createStatus" class="market-status" style="display: none;"></div>
+            <button class="btn" type="submit">Create Listing</button>
+            <button class="btn ghost market-cancel-btn" type="button" id="cancelCreate">Cancel</button>
+          </form>
+        </div>
+
+        <!-- Listings Grid -->
+        <div id="listingsContainer">
+          <div class="callout">Loading marketplace...</div>
+        </div>
+
+        <!-- Load More -->
+        <div class="market-load-more">
+          <button class="btn ghost" id="loadMoreBtn" style="display: none;">Load More</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="discussion.html">Discussion</a>
+          <a href="videos.html">Videos</a>
+          <a href="contact.html">Contact</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module">
+      import { 
+        fetchMarketplaceItems,
+        searchMarketplace,
+        createMarketplaceItem
+      } from "./assets/js/videos-marketplace.js";
+      import { getCurrentUser, signOut } from "./assets/js/supabase.js";
+      import { uploadMedia } from "./assets/js/media.js";
+      import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+
+      let state = {
+        user: null,
+        listings: [],
+        offset: 0,
+        category: "all",
+        limit: 20
+      };
+
+      // Setup auth
+      async function setupAuth() {
+        state.user = await getCurrentUser();
+        
+        const authActions = document.getElementById("authActions");
+        if (state.user) {
+          authActions.innerHTML = `
+            <span class="auth-meta">${escapeHTML(state.user.email || '')}</span>
+            <a class="btn ghost" href="profile.html">Profile</a>
+            <button class="btn ghost" id="logoutBtn">Log Out</button>
+          `;
+          document.getElementById("logoutBtn").addEventListener("click", async () => {
+            await signOut();
+            window.location.reload();
+          });
+          document.getElementById("createSection").style.display = "block";
+          document.getElementById("createBtnHeader").style.display = "inline-flex";
+        } else {
+          authActions.innerHTML = `<a class="btn ghost" href="login.html?next=${encodeURIComponent('marketplace.html')}">Log In</a>`;
+        }
+      }
+
+      // Load listings
+      async function loadListings() {
+        try {
+          const listings = await fetchMarketplaceItems({
+            category: state.category === "all" ? null : state.category,
+            limit: state.limit,
+            offset: state.offset,
+            onlyAvailable: true
+          });
+
+          if (state.offset === 0) {
+            state.listings = listings;
+          } else {
+            state.listings.push(...listings);
+          }
+
+          renderListings();
+          document.getElementById("loadMoreBtn").style.display = listings.length === state.limit ? "inline-flex" : "none";
+        } catch (error) {
+          console.error("Load error:", error);
+          document.getElementById("listingsContainer").innerHTML = `<div class="callout">Failed to load listings</div>`;
+        }
+      }
+
+      // Render listings
+      async function renderListings() {
+        const container = document.getElementById("listingsContainer");
+        
+        if (!state.listings.length) {
+          container.innerHTML = `<div class="callout">No listings in this category</div>`;
+          return;
+        }
+
+        container.innerHTML = `<div class="marketplace-grid">${state.listings.map(item => `
+          <div class="listing-card" data-id="${encodeURIComponent(item.id)}">
+            <div class="listing-image">
+              ${item.images && item.images[0] && isSafeUrl(item.images[0]) ? `<img src="${item.images[0]}" alt="${escapeHTML(item.title || '')}">` : '📦'}
+              ${item.condition ? `<div class="listing-badge">${escapeHTML(item.condition || '')}</div>` : ''}
+            </div>
+            <div class="listing-info">
+              <div class="listing-category">${escapeHTML(item.category || '')}</div>
+              <div class="listing-title">${escapeHTML(item.title || '')}</div>
+              <div class="listing-price">$${escapeHTML((parseFloat(item.price) || 0).toFixed(2))}</div>
+              <div class="listing-meta">
+                <span>👁 ${escapeHTML(String(item.view_count || 0))}</span>
+                <span>📍 ${escapeHTML(item.location || 'Online')}</span>
+              </div>
+              <div class="listing-seller">
+                <div class="seller-avatar"></div>
+                <span>${escapeHTML(item.seller_name || '')}</span>
+              </div>
+            </div>
+          </div>
+        `).join("")}</div>`;
+
+        // Add click handlers
+        container.querySelectorAll(".listing-card").forEach(card => {
+          card.addEventListener("click", () => {
+            const itemId = card.dataset.id;
+            window.location.href = `listing.html?id=${itemId}`;
+          });
+        });
+      }
+
+      // Category filters
+      document.getElementById("categoryFilter").addEventListener("click", (e) => {
+        if (e.target.classList.contains("filter-btn")) {
+          document.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
+          e.target.classList.add("active");
+          state.category = e.target.dataset.category;
+          state.offset = 0;
+          loadListings();
+        }
+      });
+
+      // Search
+      let searchTimer;
+      document.getElementById("marketplaceSearch").addEventListener("input", async (e) => {
+        clearTimeout(searchTimer);
+        const term = e.target.value.trim();
+        
+        if (term.length < 2) {
+          state.offset = 0;
+          loadListings();
+          return;
+        }
+
+        searchTimer = setTimeout(async () => {
+          try {
+            const results = await searchMarketplace({ 
+              query: term, 
+              category: state.category === "all" ? null : state.category,
+              limit: state.limit 
+            });
+            state.listings = results;
+            state.offset = 0;
+            renderListings();
+          } catch (error) {
+            console.error("Search error:", error);
+          }
+        }, 300);
+      });
+
+      // Create listing
+      document.getElementById("createForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        if (!state.user) {
+          alert("Please log in");
+          return;
+        }
+
+        const status = document.getElementById("createStatus");
+        const btn = document.querySelector("#createForm button[type='submit']");
+        
+        btn.disabled = true;
+        status.style.display = "block";
+        status.textContent = "Creating listing...";
+        status.style.color = "#0f766e";
+
+        try {
+          // Upload photos
+          const photosInput = document.getElementById("listingPhotos");
+          const images = [];
+          
+          if (photosInput.files.length > 0) {
+            for (const file of photosInput.files) {
+              const url = await uploadMedia(file, "marketplace");
+              if (url) images.push(url);
+            }
+          }
+
+          const result = await createMarketplaceItem({
+            userId: state.user.id,
+            sellerName: state.user.user_metadata?.display_name || state.user.email,
+            title: document.getElementById("listingTitle").value,
+            description: document.getElementById("listingDescription").value,
+            category: document.getElementById("listingCategory").value,
+            price: parseFloat(document.getElementById("listingPrice").value),
+            condition: document.getElementById("listingCondition").value,
+            location: document.getElementById("listingLocation").value,
+            images
+          });
+
+          if (result.error) {
+            status.textContent = `Error: ${result.error.message}`;
+            status.style.color = "#ef4444";
+          } else {
+            status.textContent = "✓ Listing created!";
+            status.style.color = "#10b981";
+            document.getElementById("createForm").reset();
+            setTimeout(() => {
+              document.getElementById("createSection").style.display = "none";
+              state.offset = 0;
+              loadListings();
+            }, 1500);
+          }
+        } catch (error) {
+          status.textContent = `Error: ${error.message}`;
+          status.style.color = "#ef4444";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      document.getElementById("cancelCreate").addEventListener("click", () => {
+        document.getElementById("createSection").style.display = "none";
+      });
+
+      document.getElementById("createBtnHeader").addEventListener("click", () => {
+        document.getElementById("createSection").style.display = "block";
+        document.getElementById("listingTitle").focus();
+      });
+
+      // Load more
+      document.getElementById("loadMoreBtn").addEventListener("click", () => {
+        state.offset += state.limit;
+        loadListings();
+      });
+
+      // Init
+      setupAuth();
+      loadListings();
+    </script>
+  </body>
+</html>
+
+
+

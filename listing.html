@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Listing - Timzee Tech Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+      <script defer src="assets/js/theme-init.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline">Marketplace</div>
+        </div>
+        <nav class="nav-pill">
+          <a href="index.html">Home</a>
+          <a href="marketplace.html">Marketplace</a>
+        </nav>
+        <div class="header-actions" id="authActions"></div>
+      </div>
+    </header>
+
+    <main id="main-content" class="page-shell">
+      <div class="container">
+        <!-- Breadcrumb -->
+        <div style="margin-bottom: 20px;">
+          <a href="marketplace.html" style="color: #0f766e; text-decoration: none;">← Back to Marketplace</a>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="callout">
+          <span>Loading listing...</span>
+        </div>
+
+        <!-- Content -->
+        <div id="content" style="display: none;">
+          <!-- Header -->
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+            <div>
+              <h1 id="listingTitle" style="margin: 0 0 8px 0;"></h1>
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <span id="category" class="chip"></span>
+                <span id="condition" class="chip"></span>
+                <span id="status" class="status-badge"></span>
+              </div>
+            </div>
+            <div id="price" style="font-size: 28px; font-weight: 700; color: #0f766e;"></div>
+          </div>
+
+          <!-- Gallery & Sidebar -->
+          <div class="listing-hero">
+            <!-- Gallery -->
+            <div>
+              <div class="listing-gallery">
+                <img class="gallery-main" id="mainImage" alt="Product">
+              </div>
+              <div id="thumbnails" class="gallery-thumbs"></div>
+            </div>
+
+            <!-- Sidebar -->
+            <div>
+              <!-- Seller Info -->
+              <div class="seller-info">
+                <div class="seller-header">
+                  <div class="seller-avatar"></div>
+                  <div>
+                    <div class="seller-name" id="sellerName"></div>
+                    <div class="seller-rating">
+                      <span id="sellerRating">★★★★★</span>
+                      <span id="reviewCount" style="margin-left: 4px;"></span>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-full" id="contactBtn">Contact Seller</button>
+                <button class="btn ghost btn-full" id="reportBtn">Report Listing</button>
+              </div>
+
+              <!-- Quick Details -->
+              <div class="listing-details">
+                <div class="detail-row">
+                  <span class="detail-label">Location</span>
+                  <span class="detail-value" id="location"></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Posted</span>
+                  <span class="detail-value" id="postedDate"></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Views</span>
+                  <span class="detail-value" id="viewCount">0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="description-box">
+            <h3>Description</h3>
+            <p class="description-text" id="description"></p>
+          </div>
+
+          <!-- Inquiry Form -->
+          <div id="inquiryContainer" class="inquiry-section" style="display: none;">
+            <h3>Interested? Send an Inquiry</h3>
+            <form id="inquiryForm" class="inquiry-form">
+              <textarea id="inquiryMessage" placeholder="What would you like to know?" required style="min-height: 100px;"></textarea>
+              <button class="btn" type="submit">Send Inquiry</button>
+              <div id="inquiryStatus" style="display: none;"></div>
+            </form>
+          </div>
+
+          <!-- Reviews Section -->
+          <div id="reviewsSection" class="reviews-section" style="display: none;">
+            <h2 style="margin: 0 0 20px 0;">Reviews from Buyers</h2>
+            <div id="reviewsList"></div>
+          </div>
+
+          <!-- Similar Listings -->
+          <div class="similar-listings">
+            <h2>Similar Listings</h2>
+            <div id="similarListings" class="similar-grid"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-links">
+          <a href="marketplace.html">Back to Marketplace</a>
+          <a href="contact.html">Report Problem</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module">
+      import { supabase, getCurrentUser } from "./assets/js/supabase.js";
+      import { incrementMarketplaceView, createMarketplaceInquiry, getSellerRating } from "./assets/js/videos-marketplace.js";
+      import { createContentReport } from "./assets/js/data.js";
+      import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+
+      let state = {
+        user: null,
+        listing: null,
+        itemId: null
+      };
+
+      // Get listing ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      state.itemId = urlParams.get("id");
+
+      const canLoadListing = !!state.itemId;
+      if (!canLoadListing) {
+        document.getElementById("loadingState").textContent = "No listing ID provided";
+      }
+
+      async function loadListing() {
+        try {
+          state.user = await getCurrentUser();
+          
+          // Fetch listing
+          const { data, error } = await supabase
+            .from("marketplace_items")
+            .select("*")
+            .eq("id", state.itemId)
+            .single();
+
+          if (error || !data) {
+            document.getElementById("loadingState").textContent = "Listing not found";
+            return;
+          }
+
+          state.listing = data;
+
+          // Increment view count
+          await incrementMarketplaceView(state.itemId);
+          state.listing.view_count = (state.listing.view_count || 0) + 1;
+
+          renderListing();
+          setupEventListeners();
+        } catch (error) {
+          console.error("Load error:", error);
+          document.getElementById("loadingState").textContent = `Error: ${error.message}`;
+        }
+      }
+
+      function renderListing() {
+        const listing = state.listing;
+        
+        // Title and basics
+        document.getElementById("listingTitle").textContent = listing.title;
+        document.getElementById("price").textContent = `$${parseFloat(listing.price).toFixed(2)}`;
+        document.getElementById("category").textContent = listing.category;
+        document.getElementById("condition").textContent = listing.condition;
+        document.getElementById("location").textContent = listing.location || "Online";
+        document.getElementById("description").textContent = listing.description;
+        document.getElementById("viewCount").textContent = listing.view_count || 0;
+        document.getElementById("sellerName").textContent = listing.seller_name;
+
+        // Status
+        const statusEl = document.getElementById("status");
+        if (listing.is_available) {
+          statusEl.textContent = "Available";
+          statusEl.className = "status-badge available";
+        } else {
+          statusEl.textContent = "Sold";
+          statusEl.className = "status-badge sold";
+        }
+
+        // Date
+        const date = new Date(listing.created_at);
+        document.getElementById("postedDate").textContent = date.toLocaleDateString();
+
+        // Images
+        if (listing.images && listing.images.length > 0) {
+          const firstImg = isSafeUrl(listing.images[0]) ? listing.images[0] : '';
+          if (firstImg) document.getElementById("mainImage").src = firstImg;
+          
+          const thumbs = document.getElementById("thumbnails");
+          thumbs.innerHTML = listing.images.map((img, idx) => {
+            const safeImg = isSafeUrl(img) ? img : '';
+            return safeImg ? `
+              <img class="gallery-thumb ${idx === 0 ? 'active' : ''}" src="${safeImg}" alt="${escapeHTML('Photo ' + (idx + 1))}" data-idx="${idx}">
+            ` : '';
+          }).join("");
+
+          thumbs.querySelectorAll(".gallery-thumb").forEach(thumb => {
+            thumb.addEventListener("click", () => {
+              thumbs.querySelectorAll(".gallery-thumb").forEach(t => t.classList.remove("active"));
+              thumb.classList.add("active");
+              const idx = parseInt(thumb.dataset.idx);
+              const safe = isSafeUrl(listing.images[idx]) ? listing.images[idx] : '';
+              if (safe) document.getElementById("mainImage").src = safe;
+            });
+          });
+        }
+
+        // Seller info
+        getSellerRating(listing.seller_id).then(rating => {
+          if (rating) {
+            const stars = "★".repeat(Math.round(rating.average_rating || 5)) + "☆".repeat(5 - Math.round(rating.average_rating || 5));
+            document.getElementById("sellerRating").textContent = stars;
+            if (rating.total_reviews > 0) {
+              document.getElementById("reviewCount").textContent = `(${rating.total_reviews} reviews)`;
+            }
+          }
+        });
+
+        // Show inquiry form if available and user not seller
+        if (state.user && listing.is_available && state.user.id !== listing.seller_id) {
+          document.getElementById("inquiryContainer").style.display = "block";
+        }
+
+        // Load reviews
+        if (listing.review_count > 0) {
+          loadReviews();
+        }
+
+        // Load similar listings
+        loadSimilarListings();
+
+        document.getElementById("loadingState").style.display = "none";
+        document.getElementById("content").style.display = "block";
+      }
+
+      async function loadReviews() {
+        try {
+          const { data } = await supabase
+            .from("marketplace_reviews")
+            .select("*")
+            .eq("seller_id", state.listing.seller_id)
+            .order("created_at", { ascending: false })
+            .limit(10);
+
+          if (data && data.length > 0) {
+            document.getElementById("reviewsSection").style.display = "block";
+            document.getElementById("reviewsList").innerHTML = data.map(review => `
+              <div class="review-item">
+                <div class="review-header">
+                  <div class="review-rating">${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)}</div>
+                  <span class="review-date">${escapeHTML(new Date(review.created_at).toLocaleDateString())}</span>
+                </div>
+                <p style="margin: 8px 0 0 0;">${escapeHTML(review.comment || '')}</p>
+              </div>
+            `).join("");
+          }
+        } catch (error) {
+          console.error("Reviews error:", error);
+        }
+      }
+
+      async function loadSimilarListings() {
+        try {
+          const { data } = await supabase
+            .from("marketplace_items")
+            .select("*")
+            .eq("category", state.listing.category)
+            .neq("id", state.itemId)
+            .eq("is_available", true)
+            .limit(6);
+
+          if (data && data.length > 0) {
+            document.getElementById("similarListings").innerHTML = data.map(item => {
+              const img = item.images && item.images[0] && isSafeUrl(item.images[0]) ? item.images[0] : '';
+              return `
+              <a href="listing.html?id=${encodeURIComponent(item.id)}" class="similar-card-link">
+                <div class="similar-card">
+                  ${img ? `<img src="${img}" alt="${escapeHTML(item.title || '')}">` : `<div class="similar-card-placeholder">📦</div>`}
+                  <div class="similar-card-info">
+                    <div class="similar-card-title">${escapeHTML(item.title || '')}</div>
+                    <div class="similar-card-price">$${escapeHTML((parseFloat(item.price) || 0).toFixed(2))}</div>
+                  </div>
+                </div>
+              </a>
+            `}).join("");
+          }
+        } catch (error) {
+          console.error("Similar listings error:", error);
+        }
+      }
+
+      function setupEventListeners() {
+        document.getElementById("contactBtn").addEventListener("click", async () => {
+          if (!state.user) {
+            window.location.href = `login.html?next=listing.html?id=${state.itemId}`;
+            return;
+          }
+          // Could open a direct message or contact form here
+          alert("Opening contact with " + state.listing.seller_name);
+        });
+
+        document.getElementById("reportBtn").addEventListener("click", async () => {
+          if (!state.user) {
+            window.location.href = `login.html?next=listing.html?id=${state.itemId}`;
+            return;
+          }
+          const reason = prompt("Why are you reporting this listing?");
+          if (reason === null) return;
+          const result = await createContentReport({
+            reporterId: state.user.id,
+            contentType: "marketplace_item",
+            contentId: state.itemId,
+            reason: reason.trim()
+          });
+          if (result?.error) {
+            alert(result.error.message || "Failed to submit report.");
+          } else {
+            alert("Report submitted. Thank you.");
+          }
+        });
+
+        document.getElementById("inquiryForm").addEventListener("submit", async (e) => {
+          e.preventDefault();
+          
+          const message = document.getElementById("inquiryMessage").value;
+          const status = document.getElementById("inquiryStatus");
+
+          status.style.display = "block";
+          status.textContent = "Sending...";
+          status.style.color = "#0f766e";
+
+          try {
+            const result = await createMarketplaceInquiry({
+              itemId: state.itemId,
+              buyerId: state.user.id,
+              sellerId: state.listing.seller_id,
+              message
+            });
+
+            if (result.error) {
+              status.textContent = `Error: ${result.error.message}`;
+              status.style.color = "#ef4444";
+            } else {
+              status.textContent = "✓ Inquiry sent! The seller will respond soon.";
+              status.style.color = "#10b981";
+              document.getElementById("inquiryForm").reset();
+            }
+          } catch (error) {
+            status.textContent = `Error: ${error.message}`;
+            status.style.color = "#ef4444";
+          }
+        });
+      }
+
+      if (canLoadListing) {
+        loadListing();
+      }
+    </script>
+  </body>
+</html>
+
+
+

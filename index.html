@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Timzee Tech Hub</title>
+    <meta name="description" content="Timzee Tech Hub is a community-driven tech blog with news, build logs, reviews, and discussions for builders and readers.">
+    <meta name="keywords" content="Timzee Tech Hub, tech blog, tech news, build logs, startups, product reviews, developer community, discussions">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0f766e">
+    <link rel="canonical" href="https://timzee-tech-blog.netlify.app/">
+    <meta property="og:site_name" content="Timzee Tech Hub">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Timzee Tech Hub">
+    <meta property="og:description" content="News, build logs, reviews, and discussions for the tech community.">
+    <meta property="og:url" content="https://timzee-tech-blog.netlify.app/">
+    <meta name="google-site-verification" content="6PxVJcY2GXcd9ntOPvPr6qHwbTpF1UfkC1ZH_nEcmJ0" />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Timzee Tech Hub">
+    <meta name="twitter:description" content="News, build logs, reviews, and discussions for the tech community.">
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Timzee Tech Hub",
+        "url": "https://timzee-tech-blog.netlify.app/",
+        "description": "Community-driven tech blog with news, build logs, reviews, and discussions.",
+        "publisher": {
+          "@type": "Organization",
+          "name": "Timzee Tech Hub",
+          "url": "https://timzee-tech-blog.netlify.app/"
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+      <script defer src="assets/js/theme-init.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <div class="logo" id="siteName">Timzee <span>Tech</span> Hub</div>
+          <div class="tagline" id="siteTagline">Forum-inspired tech news, builds, and community experiments.</div>
+        </div>
+        <nav class="nav-pill" id="categoryNav"></nav>
+        <div class="header-actions">
+          <div class="search-box">
+            <input type="search" id="searchInput" placeholder="Search topics, tags, authors...">
+            <button id="searchBtn" aria-label="Search">Go</button>
+          </div>
+          <a class="btn ghost" href="novels.html">Novels</a>
+          <a class="btn ghost" href="videos.html">Videos</a>
+          <a class="btn ghost" href="marketplace.html">Marketplace</a>
+          <a class="btn ghost" href="discussion.html">Discussion</a>
+          <a class="btn ghost" href="announcements.html">Announcements</a>
+          <a class="btn ghost" href="ads.html">Advertise</a>
+          <div class="auth-actions" id="authActions"></div>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero">
+        <div class="container hero-grid">
+          <div class="hero-card" data-reveal style="--delay: 0s;">
+            <h1 id="heroTitle">Build. Discuss. Ship.</h1>
+            <p id="heroIntro">A forum-inspired tech board with modern storytelling, live reactions, and creator tools for Timzee Tech Hub.</p>
+            <div class="cta">
+              <a class="btn" href="#latest">Explore Latest</a>
+              <a class="btn ghost" href="#categories">Browse Categories</a>
+            </div>
+            <div class="callout" style="margin-top:16px;">
+              Tip: admins can post from the dashboard; the super admin controls ads, roles, and site settings.
+            </div>
+          </div>
+          <div class="hero-card" data-reveal style="--delay: 0.1s;">
+            <h2 class="section-title">Trending Now</h2>
+            <div id="trendingList" class="post-list"></div>
+          </div>
+          <div class="stats-card" id="statsCard" data-reveal style="--delay: 0.2s;">
+            <h2>Community Pulse</h2>
+            <div class="stats-list" id="statsList"></div>
+            <div class="callout" style="margin-top:14px; background: rgba(255,255,255,0.12); color: #e2e8f0;">
+              Real-time likes, views, and replies update as you post.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="container popular-section" id="popular">
+        <div class="popular-top" data-reveal>
+          <div class="popular-header">
+            <h2 class="section-title">Popular Posts</h2>
+            <p class="tagline">Top stories people are reading right now. Scroll to explore up to 5.</p>
+          </div>
+          <div class="popular-controls">
+            <button class="popular-btn" id="popularPrev" aria-label="Scroll popular posts left">‹</button>
+            <button class="popular-btn" id="popularNext" aria-label="Scroll popular posts right">›</button>
+          </div>
+        </div>
+        <div class="popular-track" id="popularTrack" data-reveal></div>
+      </section>
+
+      <section class="container popular-section" id="popularTopics">
+        <div class="popular-top" data-reveal>
+          <div class="popular-header">
+            <h2 class="section-title">Popular Discussions</h2>
+            <p class="tagline">Hot topics people are debating right now.</p>
+          </div>
+          <div class="popular-controls">
+            <button class="popular-btn" id="topicPrev" aria-label="Scroll popular topics left">‹</button>
+            <button class="popular-btn" id="topicNext" aria-label="Scroll popular topics right">›</button>
+          </div>
+        </div>
+        <div class="popular-track topic-track" id="popularTopicsTrack" data-reveal></div>
+      </section>
+
+      <section class="container feature-band" id="features">
+        <div class="feature-header" data-reveal>
+          <span class="chip">New capabilities</span>
+          <h2 class="section-title">Enterprise-ready community layer</h2>
+          <p class="tagline">The forum feel your audience loves, upgraded with a modern product newsroom vibe and smarter engagement tools.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card" data-reveal>
+            <div class="feature-icon">01</div>
+            <h3>Smart Digest</h3>
+            <p>Auto-curate weekly highlights so teams and subscribers never miss trending build logs.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <div class="feature-icon">02</div>
+            <h3>Media Comments</h3> 
+            <p>Screenshot-friendly threads, image replies, and visual reactions for product-led discussions.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <div class="feature-icon">03</div>
+            <h3>Creator Studio</h3>
+            <p>Multi-admin workflow, post pinning, and moderation controls that scale with your team.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="container" id="categories">
+        <h2 class="section-title">Forum Boards</h2>
+        <div class="board" data-reveal>
+          <div id="categoryGrid" class="category-grid"></div>
+        </div>
+      </section>
+
+      <section class="container" id="latest">
+        <div class="content-grid">
+          <div>
+            <h2 class="section-title">Latest Posts</h2>
+            <div class="filter-bar">
+              <div class="filter-group">
+                <label for="tagFilter">Filter by tag</label>
+                <select id="tagFilter">
+                  <option value="">All tags</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <button class="btn ghost" id="tagClearBtn" type="button">Clear filters</button>
+              </div>
+            </div>
+            <div id="latestPosts" class="post-list"></div>
+          </div>
+          <aside class="side-card" data-reveal>
+            <h3>Hot This Week</h3>
+            <div id="hotList" class="post-list"></div>
+            <h3 style="margin-top:16px;">Top Members</h3>
+            <div id="leaderboardList" class="leaderboard-list"></div>
+            <div class="ad-slot" id="homeTopAd">Ad slot: Home Top Banner</div>
+            <div class="ad-slot" id="homeSidebarAd">Ad slot: Sidebar Rectangle</div>
+            <div class="callout">Share posts to boost visibility and reactions.</div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div>Powered by Timzee-Tech for live posts, comments, and community data.</div>
+        <div style="margin-top:6px;">Admin tools are hidden unless you log in.</div>
+        <div class="footer-links">
+          <a href="support.html">Support</a>
+          <a href="contact.html">Contact Us</a>
+          <a href="newsletter.html">Newsletter</a>
+          <a href="ads.html">Advertise</a>
+          <a href="discussion.html">Discussion</a>
+          <a href="#siteName">Back To Top</a>
+        </div>
+        <div>Created by Timzee-Tech on <b>9th of September, 2026</b>.</div>
+      </div>
+    </footer>
+
+    <script type="module" src="assets/js/app.js"></script>
+  </body>
+</html>
+
+
+

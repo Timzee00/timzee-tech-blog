@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Novel - Timzee Tech Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+      <script defer src="assets/js/theme-init.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header">
+      <div class="container wrap">
+        <div class="brand">
+          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
+          <div class="tagline">Stories & Serialized Fiction</div>
+        </div>
+        <nav class="nav-pill">
+          <a href="index.html">Home</a>
+          <a href="novels.html">Novels</a>
+          <a href="videos.html">Videos</a>
+          <a href="marketplace.html">Marketplace</a>
+          <a href="discussion.html">Discussion</a>
+          <a href="chat.html">Chat</a>
+        </nav>
+        <div class="header-actions" id="authActions"></div>
+      </div>
+    </header>
+
+    <main id="main-content" class="page-shell">
+      <!-- Novel Header -->
+      <section class="novel-header">
+        <div class="container">
+          <div class="novel-cover-section">
+            <div class="novel-cover-img" id="coverImg">📖</div>
+            <div class="novel-details">
+              <h1 id="novelTitle">Loading...</h1>
+              <div id="authorInfo">By <span id="authorName">Loading</span></div>
+              <div class="novel-meta-info">
+                <div class="novel-stat">📕 <span id="chapterCount">0</span> chapters</div>
+                <div class="novel-stat">👁 <span id="viewCount">0</span> views</div>
+                <div class="novel-stat">❤️ <span id="likeCount">0</span> likes</div>
+              </div>
+              <div class="novel-status-badge">
+                <span id="statusBadge">ongoing</span>
+              </div>
+              <p id="synopsis" style="margin-top: 16px;">Loading...</p>
+              <div class="actions-bar">
+                <button class="btn-icon primary" id="likeBtn">❤️ Like</button>
+                <button class="btn-icon" id="subscribeBtn">🔔 Subscribe</button>
+                <button class="btn-icon" id="shareBtn">📤 Share</button>
+                <button class="btn-icon" id="reportNovelBtn">🚩 Report</button>
+                <button class="btn-icon edit-btn" id="editBtn" style="display: none;">✏️ Edit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chapter Form (Author Only) -->
+      <section class="container" id="chapterFormSection" style="display: none; margin-top: 30px;">
+        <div class="chapter-form">
+          <h3 style="margin-top: 0;">Add New Chapter</h3>
+          <form id="chapterForm">
+            <div class="form-group">
+              <label>Chapter Title *</label>
+              <input type="text" id="chapterTitle" placeholder="Chapter 1: The Beginning" required>
+            </div>
+            <div class="form-group">
+              <label>Chapter Content *</label>
+              <textarea id="chapterContent" placeholder="Write your chapter here..." required></textarea>
+              <div class="char-count"><span id="charCount">0</span> characters</div>
+            </div>
+            <button type="submit" class="btn-icon primary">Publish Chapter</button>
+            <button type="button" class="btn-icon" id="cancelChapter" style="background: white; border-color: #ddd;">Cancel</button>
+            <div id="chapterStatus" style="margin-top: 12px; display: none;"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Content View -->
+      <section class="container" id="contentSection">
+        <!-- Chapters List -->
+        <div id="chaptersView">
+          <div class="chapters-list">
+            <div class="chapter-header">Chapters</div>
+            <div id="chaptersList">
+              <div style="padding: 16px; text-align: center; color: #999;">No chapters yet</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapter Reader -->
+        <div id="readerView" style="display: none;">
+          <div class="nav-chapters">
+            <button class="nav-btn" id="prevBtn">← Previous</button>
+            <a href="#" class="btn-icon ghost" id="backToChapters" style="border: none; background: none; color: #0f766e;">Back to Chapters</a>
+            <button class="nav-btn" id="nextBtn">Next →</button>
+          </div>
+          <div class="reader-content" id="readerContent">Loading...</div>
+          <div class="nav-chapters">
+            <button class="nav-btn" id="prevBtn2">← Previous</button>
+            <button class="nav-btn" id="nextBtn2">Next →</button>
+          </div>
+
+          <!-- Comments Section -->
+          <div class="container" style="max-width: 800px; margin: 40px auto;">
+            <h3>Comments</h3>
+            <form class="comment-form" id="commentForm" style="display: none;">
+              <textarea id="commentBody" placeholder="Share your thoughts..."></textarea>
+              <button type="submit" class="btn-icon primary" style="margin-top: 12px;">Post Comment</button>
+              <div id="commentStatus" style="margin-top: 8px; display: none;"></div>
+            </form>
+            <div id="commentsList"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-links">
+          <a href="novels.html">Novels</a>
+          <a href="discussion.html">Discussion</a>
+          <a href="contact.html">Contact</a>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+      <div class="modal-content">
+        <span class="modal-close" id="closeModal">&times;</span>
+        <h2>Edit Novel</h2>
+        <form id="editForm">
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="editTitle">
+          </div>
+          <div class="form-group">
+            <label>Synopsis</label>
+            <textarea id="editSynopsis"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="editStatus">
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
+              <option value="paused">On Hiatus</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-icon primary">Save Changes</button>
+          <button type="button" class="btn-icon" id="closeEditBtn" style="background: white; border-color: #ddd;">Cancel</button>
+        </form>
+      </div>
+    </div>
+
+    <script type="module" src="assets/js/novel-page.js"></script>
+  </body>
+</html>
+
+
+
+
