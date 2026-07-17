@@ -293,6 +293,153 @@ remain anywhere in the project.
 
 ---
 
+## Pass 6 — the mobile menu (reported with a screenshot)
+
+You flagged that the mobile dropdown menu (search box, category pills,
+username/"God Mode"/theme toggle) looked inconsistent and messy on a real
+device. Root cause, confirmed in `base.css`: **three separate, uncoordinated
+attempts** at styling this exact panel were stacked on top of each other,
+never cleaned up — one block literally commented `"FIX: Mobile menu looks
+like giant pills / broken layout — Paste this at the VERY BOTTOM of
+style.css"`. Each attempt set different values for the open panel's
+background, padding, corner radius, and position (one used `position:
+fixed` with a backdrop overlay, another used static in-flow stacking with
+no backdrop, a third redefined the category pills as a stacked grid). Which
+one actually rendered depended on `!important` usage and source order
+per-property, so what you saw was a chaotic blend of all three — exactly
+matching the screenshot.
+
+Consolidated all three into one authoritative `assets/css/navbar.css`
+(the file was on the original requested module list — `variables.css,
+reset.css, layout.css, navbar.css, ...` — but never actually got built
+until now). It covers: the hamburger toggle button, the desktop inline nav
+(≥961px), and the mobile dropdown panel (≤960px) — fixed overlay with a
+backdrop, category pills rendered as a stacked full-width list instead of
+oval pills, and every button/input in the panel using the same design
+tokens as the rest of the site instead of ad-hoc hex values. Removed the
+three superseded blocks from `base.css` (~230 lines of dead/conflicting
+CSS) rather than leaving them to keep fighting the new file for the
+cascade. Left a few small, genuinely non-conflicting fragments alone
+(touch-target sizing, dark-mode toggle-button colors) since they don't
+compete with the panel's own layout.
+
+---
+
+## Pass 7 — the notification bell (near-guaranteed broken, not just flaky)
+
+The unread-notification badge in the header is created by `nav.js`
+(`setupNotificationBadge()` — inserts a bell icon + count badge into
+`#authActions`, wires it to `fetchUnreadNotificationCount()`, and
+subscribes to realtime `INSERT`/`UPDATE` events on `notifications`). That
+part was fine in isolation. The problem: **the exact same "render the auth
+area" function — including its own dead copy of a notification badge — was
+independently copy-pasted into four other files**: `app.js`, `post.js`,
+`chat.js`, and `discussion.js`. Each one's version does `authWrap.innerHTML
+= ""` to rebuild the header's auth area from scratch, then creates its own
+`#notificationLink`/`#notificationCount`, hardcoded to text `"0"` and
+`display: none`, with no logic anywhere to ever update it.
+
+Because `nav.js` only awaits one lightweight call (`getCurrentUser()`)
+before inserting its live badge, while each page's own boot sequence
+awaits several more calls first (on `index.html` specifically, a full
+`Promise.all` of 8 separate data fetches before `renderAuthActions()` even
+runs), nav.js's real, live-wired badge reliably gets inserted *first* — and
+then reliably gets wiped out and replaced with the dead placeholder
+afterward. This wasn't intermittent; on most pages it would lose almost
+every time, which matches "not functioning well" better than "sometimes
+broken."
+
+Fixed by removing the duplicate badge-creation code from all four files
+(`app.js`, `post.js`, `chat.js`, `discussion.js` — kept everything else
+in their respective `renderAuthActions()` unchanged) and making `nav.js`'s
+version self-healing: it now watches `.header-actions` with a
+`MutationObserver` and re-inserts/restores the badge (including the last
+known unread count) whenever any page's script rebuilds the container,
+instead of depending on winning a one-shot race at load time. There's now
+exactly one place that creates this element and exactly one place that
+updates it, regardless of which page or in what order the surrounding
+scripts run.
+
+Also removed two fully unused duplicate functions in `data.js` —
+`getUserNotifications()` and `getUnreadNotificationCount()` — which did the
+same job as `fetchNotifications()`/`fetchUnreadNotificationCount()` (the
+versions actually used by the UI) under different names and were never
+called from anywhere. Checked the notifications list page and "mark all
+read" button in `profile.js` while I was in there — both correctly wired,
+no changes needed.
+
+---
+
+## Pass 8 — missing menu on 7 pages, and a real discussion redesign
+
+### "Two novel files" — not a bug
+`novels.html` (browse/library grid) and `novel.html` (single novel reader,
+opened via `novel.html?id=...`) are a standard list→detail pair — the same
+pattern as `marketplace.html`→`listing.html`. Nothing to fix here.
+
+### 7 pages never loaded nav.js at all
+`marketplace.html`, `listing.html`, `videos.html`, `verify.html`,
+`ai-settings.html`, and `novels.html` each use their own inline `<script
+type="module">` block instead of a separate controller file, and none of
+them ever `import "./nav.js"` — so they had no mobile hamburger menu, no
+notification bell, none of it, on top of whatever CSS inconsistency was
+already there. Added `<script type="module" src="assets/js/nav.js">` to
+all six (verified each one's header markup — `.site-header`, `.nav-pill`,
+`#authActions` — matches what nav.js expects first). Left `404.html` alone
+since it's a deliberately bare error page with no nav-pill/header-actions
+to enhance.
+
+### Discussion page: click-to-enter threads + search
+Root layout was already a solid desktop master-detail grid (320px sidebar
++ main pane, side by side) — the actual problem was mobile-only: the grid
+collapses to a single column, so the topic list and the active thread sit
+stacked in the same scroll, meaning tapping a topic near the top of a long
+list required scrolling all the way down past it to reach the chat that
+just loaded. Fixed without touching any of the underlying data logic
+(topic/message fetching, moderation, reactions, follow, themes — all
+untouched):
+- `selectTopic()` now adds a `.thread-open` class to `#discussionShell`
+  when a topic is opened; new CSS in `discussion.css` uses that class to
+  show only the active thread full-width on mobile (desktop is unaffected
+  — both panes still show side by side there). A "← Topics" button
+  (visible only on mobile) reverses it via a new `leaveThread()` function.
+- Added a search input above the topic list. `renderTopics()` now filters
+  `state.topics` client-side against title + description text as you type
+  — the underlying fetched list (`state.topics`) is untouched, only what's
+  rendered changes, so nothing about topic loading/pagination changed.
+- Added a topic count chip next to "Topics" so the list communicates scale
+  at a glance.
+- The existing `?topic=<id>` deep-link support (already in `boot()`) now
+  also opens straight into the full-width thread view on mobile, so a
+  shared link to a specific discussion doesn't dump you into the list.
+
+### Curator bot — is it a database problem?
+Possibly, and I can't rule it out from here — I have no access to your live
+Supabase project, only the SQL files committed to the repo, which is how I
+inferred the schema for the Pass 5 fix. If the queue is still empty after
+you've actually deployed that fix, work through this in order:
+1. **Supabase Table Editor → `curator_posts`.** Are there rows at all? If
+   zero, the bot isn't inserting anything — that's a scout-news.js/Netlify
+   problem, not a frontend one.
+2. **Netlify → Functions → scout-news → logs.** Confirm the scheduled runs
+   are returning 200, not erroring (missing API key, RSS feed timeout,
+   etc.).
+3. **Supabase → Authentication → RLS policies on `curator_posts` and
+   `curator_sources`.** Confirm your admin/super role actually has SELECT
+   access — a correct query against the wrong policy still returns empty,
+   not an error, which looks identical to "no articles" from the UI.
+4. Confirm you're testing against a deploy that actually includes the Pass
+   5 fix (i.e., you pushed and Netlify rebuilt) — easy to lose track of
+   across this many rounds of changes.
+
+If it's still stuck after checking those, the most useful thing you can
+give me next is: whatever the Supabase Table Editor shows for
+`curator_posts` row count, and the scout-news function's most recent log
+output. I can't diagnose a live database blind — I'd just be guessing
+again the way Pass 5 had to.
+
+---
+
 # Refactor Pass 2 — Chat / Profile / Marketplace / Discussion
 
 Added on top of Pass 1, per your "continue" request. Also purely additive CSS

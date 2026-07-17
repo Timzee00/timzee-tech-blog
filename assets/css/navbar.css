@@ -1,0 +1,187 @@
+/* ==========================================================================
+   navbar.css — desktop nav, mobile menu toggle, and the mobile dropdown panel
+   nav.js (setupMobileMenu) wraps .nav-pill and .header-actions into a
+   #siteMenu container and toggles `body.nav-open` on click. This file is
+   now the single source of truth for how that panel looks — previously
+   there were three separate, uncoordinated attempts at this stacked in
+   base.css (visible in git history), which is why the open menu rendered
+   as an inconsistent blend of all three: mismatched background, padding,
+   corner radius, and positioning depending on which rule happened to win
+   the cascade for a given property.
+   ========================================================================== */
+
+/* ---------- Toggle button (hamburger) ---------- */
+.menu-toggle {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm, 12px);
+  border: 1px solid var(--color-border-strong, rgba(15, 118, 110, 0.2));
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #0c4a45);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--elevation-1);
+}
+
+.menu-toggle .menu-icon {
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  display: inline-block;
+  position: relative;
+}
+
+.menu-toggle .menu-icon::before,
+.menu-toggle .menu-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+}
+
+.menu-toggle .menu-icon::before { top: -6px; }
+.menu-toggle .menu-icon::after { top: 6px; }
+
+.menu-toggle.active {
+  background: var(--color-surface-muted, rgba(15, 118, 110, 0.12));
+}
+
+/* ---------- Desktop (>960px): inline nav, toggle hidden ---------- */
+@media (min-width: 961px) {
+  .site-header .wrap { align-items: center; }
+
+  .site-menu {
+    display: flex !important;
+    flex: 1;
+    align-items: center;
+    margin-left: 32px;
+    gap: 20px;
+  }
+
+  .site-menu .nav-pill { margin-right: auto; }
+  .header-actions { gap: 10px; }
+  .search-box input { min-width: 220px; }
+}
+
+/* ---------- Mobile (≤960px): collapsed dropdown panel ---------- */
+@media (max-width: 960px) {
+  .site-header .wrap {
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .brand { flex: 1 1 auto; }
+
+  .menu-toggle {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  /* Panel hidden by default */
+  .site-menu {
+    display: none;
+  }
+
+  /* Open state — one definition, one set of values */
+  body.nav-open .site-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+
+    position: fixed;
+    top: 72px;
+    left: 12px;
+    right: 12px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+
+    padding: var(--space-4, 16px);
+    border-radius: var(--radius-md, 16px);
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, rgba(15, 23, 42, 0.1));
+    box-shadow: var(--elevation-4);
+
+    z-index: var(--z-overlay, 9999);
+  }
+
+  /* Backdrop behind the open panel */
+  body.nav-open .site-header::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.55);
+    backdrop-filter: blur(3px);
+    z-index: calc(var(--z-overlay, 9999) - 1);
+  }
+
+  body.nav-open { overflow: hidden; }
+
+  /* Category pills become a stacked list of full-width links, not ovals */
+  body.nav-open .site-menu .nav-pill {
+    width: 100%;
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  body.nav-open .site-menu .nav-pill a {
+    display: block;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm, 12px);
+    background: var(--color-surface-muted, rgba(15, 118, 110, 0.08));
+    border: 1px solid var(--color-border, rgba(15, 118, 110, 0.15));
+    color: var(--color-text, var(--ink));
+    font-size: var(--text-sm, 14px);
+    font-weight: 600;
+  }
+
+  body.nav-open .site-menu .nav-pill a:hover {
+    background: var(--color-border, rgba(15, 118, 110, 0.14));
+  }
+
+  /* Search box, auth actions (username / God Mode / theme toggle), and nav
+     links all stack full-width and use normal button radii — not pills */
+  body.nav-open .site-menu .header-actions,
+  body.nav-open .site-menu .auth-actions {
+    width: 100%;
+    display: grid;
+    gap: 10px;
+  }
+
+  body.nav-open .site-menu .search-box {
+    width: 100%;
+  }
+
+  body.nav-open .site-menu .search-box input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.nav-open .site-menu .header-actions .btn,
+  body.nav-open .site-menu .auth-actions .btn,
+  body.nav-open .site-menu .header-actions a.btn,
+  body.nav-open .site-menu .auth-actions a.btn,
+  body.nav-open .site-menu .header-actions button {
+    width: 100%;
+    border-radius: var(--radius-sm, 12px);
+    justify-content: center;
+  }
+
+  /* theme-init.js appends the "Light mode"/"Dark mode" toggle straight to
+     <body> as a persistent floating button (not inside .site-menu), so it
+     was visually colliding with the open menu panel — hide it while the
+     menu is open rather than leave two floating UI layers stacked. */
+  body.nav-open .theme-toggle {
+    display: none;
+  }
+}

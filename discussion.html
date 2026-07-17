@@ -48,7 +48,13 @@
       <div class="container discussion-shell" id="discussionShell">
         <aside class="discussion-sidebar">
           <div class="discussion-card" data-reveal>
-            <h2>Topics</h2>
+            <div class="discussion-sidebar-head">
+              <h2>Topics</h2>
+              <span class="topic-count-chip" id="topicCount"></span>
+            </div>
+            <div class="search-box discussion-search">
+              <input type="search" id="topicSearch" placeholder="Search topics...">
+            </div>
             <div class="topic-list" id="topicList"></div>
           </div>
 
@@ -81,6 +87,7 @@
         <section class="discussion-chat">
           <div class="discussion-card" data-reveal>
             <div class="discussion-header-row">
+              <button class="btn ghost thread-back-btn" id="backToTopicsBtn" type="button" aria-label="Back to topics">← Topics</button>
               <div class="discussion-header" id="topicHeader">Select a topic to start chatting</div>
               <div class="inline-actions">
                 <button class="btn ghost" id="followTopicBtn" type="button" style="display:none;">Follow</button>

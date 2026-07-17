@@ -40,7 +40,8 @@ const state = {
   replyTo: null,
   topicMediaFile: null,
   topicMediaPreviewUrl: "",
-  isFollowingTopic: false
+  isFollowingTopic: false,
+  topicSearchQuery: ""
 };
 
 function isTopicOwner() {
@@ -59,15 +60,9 @@ function renderAuthActions() {
     profile.className = "btn ghost";
     profile.href = `profile.html?id=${encodeURIComponent(state.user.id)}`;
     profile.textContent = "Profile";
-    let notifications = document.getElementById("notificationLink");
-    if (!notifications) {
-      notifications = document.createElement("a");
-      notifications.className = "btn ghost";
-      notifications.href = "profile.html?tab=notifications";
-      notifications.id = "notificationLink";
-      notifications.innerHTML =
-        'Notifications <span class="notif-count" id="notificationCount" style="display:none;">0</span>';
-    }
+    // Notification bell/badge is owned exclusively by nav.js's
+    // setupNotificationBadge(), which self-heals after this function
+    // rebuilds #authActions — do not recreate it here.
     const chat = document.createElement("a");
     chat.className = "btn ghost";
     chat.href = "chat.html";
@@ -81,7 +76,6 @@ function renderAuthActions() {
     });
     actions.appendChild(label);
     actions.appendChild(profile);
-    actions.appendChild(notifications);
     actions.appendChild(chat);
     actions.appendChild(logout);
   } else {
@@ -104,11 +98,31 @@ async function loadTopics() {
 function renderTopics() {
   const list = document.getElementById("topicList");
   if (!list) return;
+
+  const countChip = document.getElementById("topicCount");
+  if (countChip) {
+    countChip.textContent = state.topics.length ? String(state.topics.length) : "";
+  }
+
   if (!state.topics.length) {
     list.innerHTML = "<div class=\"callout\">No topics yet — start the first one.</div>";
     return;
   }
-  list.innerHTML = state.topics
+
+  const query = (state.topicSearchQuery || "").trim().toLowerCase();
+  const visibleTopics = query
+    ? state.topics.filter((topic) => {
+        const haystack = `${topic.title || ""} ${stripHTML(topic.description || "")}`.toLowerCase();
+        return haystack.includes(query);
+      })
+    : state.topics;
+
+  if (!visibleTopics.length) {
+    list.innerHTML = `<div class="callout">No topics match "${escapeHTML(state.topicSearchQuery)}".</div>`;
+    return;
+  }
+
+  list.innerHTML = visibleTopics
     .map((topic) => {
       const isActive = topic.id === state.activeTopicId;
       const mediaTag = topic.media_url ? `<span class="chip">Media</span>` : "";
@@ -187,6 +201,12 @@ async function selectTopic(topicId) {
   renderTopics();
   updateTopicMeta();
   renderTopicMedia();
+
+  // Enter the full-width thread view on mobile instead of leaving the
+  // topic list and chat stacked (which meant scrolling down to reach a
+  // topic you just tapped, then back up to see what you clicked).
+  document.getElementById("discussionShell")?.classList.add("thread-open");
+
   if (state.user && state.activeTopicId) {
     state.isFollowingTopic = await fetchFollowStatus({
       targetType: "topic",
@@ -203,6 +223,10 @@ async function selectTopic(topicId) {
   updateTopicControls();
   updateMessageFormState();
   subscribeToMessages(topicId);
+}
+
+function leaveThread() {
+  document.getElementById("discussionShell")?.classList.remove("thread-open");
 }
 
 async function applyTopicTheme(themeId) {
@@ -953,6 +977,23 @@ function setupMessageForm() {
   });
 }
 
+function setupTopicSearch() {
+  const input = document.getElementById("topicSearch");
+  if (!input) return;
+  input.addEventListener("input", () => {
+    state.topicSearchQuery = input.value || "";
+    renderTopics();
+  });
+}
+
+function setupBackButton() {
+  const btn = document.getElementById("backToTopicsBtn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    leaveThread();
+  });
+}
+
 async function boot() {
   setupReveal();
   state.user = await getCurrentUserWithRole();
@@ -967,6 +1008,8 @@ async function boot() {
   state.themes = await fetchThemes();
   await loadTopics();
   renderTopics();
+  setupTopicSearch();
+  setupBackButton();
   bindEditorToolbar("topicToolbar", "topicDescription");
   const params = new URLSearchParams(window.location.search);
   const topicId = params.get("topic");

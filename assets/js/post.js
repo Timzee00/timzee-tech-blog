@@ -203,15 +203,9 @@ function renderAuthActions() {
     profile.className = "btn ghost";
     profile.href = `profile.html?id=${encodeURIComponent(state.user.id)}`;
     profile.textContent = "Profile";
-    let notifications = document.getElementById("notificationLink");
-    if (!notifications) {
-      notifications = document.createElement("a");
-      notifications.className = "btn ghost";
-      notifications.href = "profile.html?tab=notifications";
-      notifications.id = "notificationLink";
-      notifications.innerHTML =
-        'Notifications <span class="notif-count" id="notificationCount" style="display:none;">0</span>';
-    }
+    // Notification bell/badge is owned exclusively by nav.js's
+    // setupNotificationBadge(), which self-heals after this function
+    // rebuilds #authActions — do not recreate it here.
     const chat = document.createElement("a");
     chat.className = "btn ghost";
     chat.href = "chat.html";
@@ -225,7 +219,6 @@ function renderAuthActions() {
     });
     authWrap.appendChild(label);
     authWrap.appendChild(profile);
-    authWrap.appendChild(notifications);
     authWrap.appendChild(chat);
     authWrap.appendChild(logout);
   } else {

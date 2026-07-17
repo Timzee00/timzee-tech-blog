@@ -68,10 +68,6 @@ img, video, svg, canvas {
   h2 { font-size: var(--text-xl, 1.375rem); }
   .btn { width: 100%; justify-content: center; }
   .cta { flex-direction: column; align-items: stretch; }
-<<<<<<< HEAD
-=======
-  .header-actions .btn.ghost { display: none; } /* secondary nav links move to mobile menu */
->>>>>>> 983e34c775c21c9fa3f0f1688f3c62a44f449077
   .modal-panel { max-width: 100%; margin: 0 var(--space-3); }
 }
 

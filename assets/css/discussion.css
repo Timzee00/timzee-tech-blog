@@ -41,3 +41,76 @@
   .discussion-shell { grid-template-columns: 1fr !important; }
   .discussion-sidebar { order: 2; }
 }
+
+/* ---------- Search bar + topic count ---------- */
+.discussion-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+  margin-bottom: var(--space-3, 12px);
+}
+
+.discussion-sidebar-head h2 { margin: 0; }
+
+.topic-count-chip {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-muted, var(--muted));
+  background: var(--color-surface-muted, rgba(15,118,110,0.08));
+  padding: 2px 10px;
+  border-radius: var(--radius-full, 999px);
+}
+
+.discussion-search {
+  margin-bottom: var(--space-3, 12px);
+}
+
+.discussion-search input {
+  width: 100%;
+}
+
+.topic-item.is-hidden-by-search { display: none; }
+
+/* ---------- Click-to-enter thread navigation ----------
+   Desktop (>900px): master-detail, both panes always visible side by
+   side — no change needed, already works well.
+   Mobile (≤900px): only one pane visible at a time. Clicking a topic
+   (selectTopic() in discussion.js) adds .thread-open to #discussionShell,
+   which swaps from the topic list to the full-width thread view instead
+   of stacking both and requiring a scroll to reach the chat. The "←
+   Topics" button reverses it. This means with hundreds of topics, opening
+   one is a single tap with no scrolling required either direction. */
+.thread-back-btn {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .discussion-chat {
+    display: none;
+  }
+
+  .discussion-shell.thread-open .discussion-sidebar {
+    display: none;
+  }
+
+  .discussion-shell.thread-open .discussion-chat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .thread-back-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .discussion-header-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+  }
+
+  .discussion-header-row .discussion-header {
+    flex: 1;
+    min-width: 0;
+  }
+}

@@ -86,23 +86,24 @@ let notificationChannel = null;
 async function setupNotificationBadge() {
   const user = await getCurrentUser();
   if (!user) return;
-  
-  // Ensure badge element exists - create it if necessary
-  let badge = document.getElementById("notificationCount");
-  if (!badge) {
+
+  const ensureBadge = () => {
     const authActions = document.getElementById("authActions");
-    if (authActions) {
-      const notifLink = document.createElement("a");
+    if (!authActions) return null;
+
+    let notifLink = document.getElementById("notificationLink");
+    if (!notifLink) {
+      notifLink = document.createElement("a");
       notifLink.id = "notificationLink";
       notifLink.className = "btn ghost";
       notifLink.href = "profile.html?tab=notifications";
       notifLink.style.position = "relative";
-      
+
       const bellIcon = document.createElement("span");
       bellIcon.innerHTML = "🔔";
       bellIcon.style.fontSize = "1.2em";
-      
-      badge = document.createElement("span");
+
+      const badge = document.createElement("span");
       badge.id = "notificationCount";
       badge.className = "notif-count";
       badge.style.cssText = `
@@ -114,23 +115,35 @@ async function setupNotificationBadge() {
         border-radius: 50%;
         width: 20px;
         height: 20px;
-        display: inline-flex;
+        display: none;
         align-items: center;
         justify-content: center;
         font-size: 11px;
         font-weight: bold;
-        display: none;
       `;
-      
+
       notifLink.appendChild(bellIcon);
       notifLink.appendChild(badge);
       authActions.insertBefore(notifLink, authActions.firstChild);
     }
-  }
+    return document.getElementById("notificationCount");
+  };
 
+  // Every page has its own copy of renderAuthActions() that rebuilds
+  // #authActions from scratch after this function's initial (lightweight)
+  // getCurrentUser() call resolves — which reliably wins the race against
+  // the page's own boot() sequence, since that sequence usually awaits
+  // several more data fetches first. Rebuilding wipes whatever this
+  // function just inserted, which is why the notification count previously
+  // showed up blank/stuck. Watching #authActions and re-inserting the
+  // badge whenever it's removed makes this self-healing regardless of
+  // load-order timing, instead of depending on winning a one-shot race.
+  let lastCount = 0;
   const updateCount = async () => {
     try {
       const count = await fetchUnreadNotificationCount(user.id);
+      lastCount = count;
+      const badge = ensureBadge();
       if (badge) {
         badge.textContent = count > 0 ? (count > 99 ? "99+" : count) : "";
         badge.style.display = count > 0 ? "inline-flex" : "none";
@@ -139,6 +152,16 @@ async function setupNotificationBadge() {
       console.error("Failed to update notification count:", error);
     }
   };
+
+  const authActionsParent = document.querySelector(".header-actions") || document.body;
+  const observer = new MutationObserver(() => {
+    const badge = ensureBadge();
+    if (badge && !badge.textContent && lastCount > 0) {
+      badge.textContent = lastCount > 99 ? "99+" : lastCount;
+      badge.style.display = "inline-flex";
+    }
+  });
+  observer.observe(authActionsParent, { childList: true, subtree: true });
 
   await updateCount();
 
