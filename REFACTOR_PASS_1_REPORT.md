@@ -440,6 +440,51 @@ again the way Pass 5 had to.
 
 ---
 
+## Pass 9 — the homepage's actual message
+
+You asked directly why the homepage wasn't redesigned yet and whether the
+current one is standard. Honest answer: the page *structure* was fine —
+hero → trending/stats → popular posts carousel → popular discussions
+carousel → feature band → forum boards → latest posts + sidebar is a
+completely conventional content-hub layout, nothing wrong with the
+skeleton. The actual problem was the copy. The hero headline was "Build.
+Discuss. Ship." with a subhead about "modern storytelling, live reactions,
+and creator tools" — that could be the landing page for any generic SaaS
+product. It never told a first-time visitor that this is a tech blog *and*
+a live forum *and* a marketplace *and* a video hub *and* a novel platform
+*and* has an AI assistant built in — which is the actual, distinctive
+breadth of the site. The feature band below it made this worse, describing
+internal admin features ("Smart Digest," "Media Comments," "Creator
+Studio") instead of anything a visitor cares about.
+
+Fixed both:
+- **Hero headline + intro** rewritten to state plainly what the site is
+  (`assets/js/settings.js`'s `DEFAULT_SETTINGS`, which is what renders
+  unless a super admin has set a custom value in the site settings panel —
+  worth checking that panel if you don't see the new copy after deploy).
+  Also updated the static HTML fallback text, the page's meta description/
+  OG/Twitter tags, and the JSON-LD structured data to match — those are a
+  visitor's "first view" too, just via search results or a shared link
+  preview instead of the page itself.
+- **New hero pillar row** — six small pill links (Read tech news / Join
+  live discussion / Buy & sell tech / Watch videos / Read novels / Ask the
+  AI) directly under the intro, each linking straight to that part of the
+  site. This is the actual fix for "shouldn't need to read the description"
+  — the breadth is scannable in about a second, not something you have to
+  read a paragraph or explore the nav to discover. New `assets/css/
+  home.css` file for this component, following the same modular pattern as
+  the rest of the CSS refactor.
+- **Feature band rewritten** from three internal admin-feature names into
+  six visitor-facing cards, one per part of the site, matching the hero
+  pillars.
+
+None of the dynamic content — trending posts, community stats, popular
+posts/discussions carousels, forum boards, latest posts, hot this week,
+top members, ad slots — was touched. Those mount points and their
+`app.js` wiring are exactly as they were.
+
+---
+
 # Refactor Pass 2 — Chat / Profile / Marketplace / Discussion
 
 Added on top of Pass 1, per your "continue" request. Also purely additive CSS
