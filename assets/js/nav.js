@@ -45,6 +45,13 @@ function setupMobileMenu() {
     wrap.insertBefore(toggle, menu);
   }
 
+  let backdrop = document.querySelector(".drawer-backdrop-layer");
+  if (!backdrop) {
+    backdrop = document.createElement("div");
+    backdrop.className = "drawer-backdrop-layer";
+    document.body.appendChild(backdrop);
+  }
+
   const setOpen = (open) => {
     document.body.classList.toggle("nav-open", open);
     toggle.classList.toggle("active", open);
@@ -55,6 +62,8 @@ function setupMobileMenu() {
     const next = !document.body.classList.contains("nav-open");
     setOpen(next);
   });
+
+  backdrop.addEventListener("click", () => setOpen(false));
 
   menu.addEventListener("click", (event) => {
     if (event.target.closest("a")) {
@@ -77,8 +86,53 @@ function setupMobileMenu() {
   });
 }
 
+// Marks whichever nav link matches the current page with .active, so every
+// page shares the exact same header markup instead of each page hardcoding
+// which link is "current" (which is how pages drifted out of sync before).
+function setupActiveNavLink() {
+  const current = (window.location.pathname.split("/").pop() || "index.html").toLowerCase();
+  document.querySelectorAll(".nav-pill a, .nav-more-menu a").forEach((link) => {
+    const href = (link.getAttribute("href") || "").toLowerCase();
+    if (!href || href.startsWith("#")) return;
+    const hrefPage = href.split("?")[0].split("/").pop();
+    if (hrefPage === current || (current === "index.html" && hrefPage === "")) {
+      link.classList.add("active");
+      if (link.closest(".nav-more")) {
+        const toggle = link.closest(".nav-more").querySelector(".nav-more-toggle");
+        if (toggle) toggle.classList.add("active-parent");
+      }
+    }
+  });
+}
+
+// Desktop "More" dropdown: click to toggle, close on outside click/Escape.
+// On mobile this toggle is hidden by CSS and the menu renders inline instead.
+function setupMoreDropdown() {
+  document.querySelectorAll(".nav-more").forEach((wrap) => {
+    const toggle = wrap.querySelector(".nav-more-toggle");
+    if (!toggle) return;
+    toggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const isOpen = wrap.classList.contains("open");
+      document.querySelectorAll(".nav-more.open").forEach((el) => el.classList.remove("open"));
+      wrap.classList.toggle("open", !isOpen);
+      toggle.setAttribute("aria-expanded", (!isOpen).toString());
+    });
+  });
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".nav-more.open").forEach((el) => el.classList.remove("open"));
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      document.querySelectorAll(".nav-more.open").forEach((el) => el.classList.remove("open"));
+    }
+  });
+}
+
 setupGlobalErrorHandlers();
 setupMobileMenu();
+setupActiveNavLink();
+setupMoreDropdown();
 startPresence(window.location.pathname);
 
 let notificationChannel = null;
@@ -86,23 +140,24 @@ let notificationChannel = null;
 async function setupNotificationBadge() {
   const user = await getCurrentUser();
   if (!user) return;
-  
-  // Ensure badge element exists - create it if necessary
-  let badge = document.getElementById("notificationCount");
-  if (!badge) {
+
+  const ensureBadge = () => {
     const authActions = document.getElementById("authActions");
-    if (authActions) {
-      const notifLink = document.createElement("a");
+    if (!authActions) return null;
+
+    let notifLink = document.getElementById("notificationLink");
+    if (!notifLink) {
+      notifLink = document.createElement("a");
       notifLink.id = "notificationLink";
       notifLink.className = "btn ghost";
       notifLink.href = "profile.html?tab=notifications";
       notifLink.style.position = "relative";
-      
+
       const bellIcon = document.createElement("span");
       bellIcon.innerHTML = "🔔";
       bellIcon.style.fontSize = "1.2em";
-      
-      badge = document.createElement("span");
+
+      const badge = document.createElement("span");
       badge.id = "notificationCount";
       badge.className = "notif-count";
       badge.style.cssText = `
@@ -114,23 +169,35 @@ async function setupNotificationBadge() {
         border-radius: 50%;
         width: 20px;
         height: 20px;
-        display: inline-flex;
+        display: none;
         align-items: center;
         justify-content: center;
         font-size: 11px;
         font-weight: bold;
-        display: none;
       `;
-      
+
       notifLink.appendChild(bellIcon);
       notifLink.appendChild(badge);
       authActions.insertBefore(notifLink, authActions.firstChild);
     }
-  }
+    return document.getElementById("notificationCount");
+  };
 
+  // Every page has its own copy of renderAuthActions() that rebuilds
+  // #authActions from scratch after this function's initial (lightweight)
+  // getCurrentUser() call resolves — which reliably wins the race against
+  // the page's own boot() sequence, since that sequence usually awaits
+  // several more data fetches first. Rebuilding wipes whatever this
+  // function just inserted, which is why the notification count previously
+  // showed up blank/stuck. Watching #authActions and re-inserting the
+  // badge whenever it's removed makes this self-healing regardless of
+  // load-order timing, instead of depending on winning a one-shot race.
+  let lastCount = 0;
   const updateCount = async () => {
     try {
       const count = await fetchUnreadNotificationCount(user.id);
+      lastCount = count;
+      const badge = ensureBadge();
       if (badge) {
         badge.textContent = count > 0 ? (count > 99 ? "99+" : count) : "";
         badge.style.display = count > 0 ? "inline-flex" : "none";
@@ -139,6 +206,16 @@ async function setupNotificationBadge() {
       console.error("Failed to update notification count:", error);
     }
   };
+
+  const authActionsParent = document.querySelector(".header-actions") || document.body;
+  const observer = new MutationObserver(() => {
+    const badge = ensureBadge();
+    if (badge && !badge.textContent && lastCount > 0) {
+      badge.textContent = lastCount > 99 ? "99+" : lastCount;
+      badge.style.display = "inline-flex";
+    }
+  });
+  observer.observe(authActionsParent, { childList: true, subtree: true });
 
   await updateCount();
 

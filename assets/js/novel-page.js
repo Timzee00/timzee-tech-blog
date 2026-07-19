@@ -1,6 +1,7 @@
 import { supabase, getCurrentUser, getDisplayName, signOut } from "./supabase.js";
 import { createContentReport } from "./data.js";
 import { formatRichText, sanitizeHTML, escapeHTML, isSafeUrl } from "./utils.js";
+import "./nav.js";
 
 const params = new URLSearchParams(window.location.search);
 const novelId = params.get("id");

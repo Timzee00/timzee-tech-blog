@@ -400,10 +400,38 @@ export async function fetchMarketplaceItems({
       console.error("fetchMarketplaceItems error:", result.error);
       return [];
     }
-    return result.data || [];
+    const items = result.data || [];
+    await attachSellerVerification(items);
+    return items;
   } catch (err) {
     console.error("fetchMarketplaceItems exception:", err);
     return [];
+  }
+}
+
+// Batch-fetches profiles.is_verified for all sellers in a list of marketplace items
+// and attaches it as item.seller_verified — one query total, not one per item.
+async function attachSellerVerification(items) {
+  const sellerIds = [...new Set(items.map((item) => item.user_id).filter(Boolean))];
+  if (!sellerIds.length) return;
+  try {
+    const result = await supabase
+      .from("profiles")
+      .select("id, is_verified")
+      .in("id", sellerIds);
+    if (result.error) {
+      console.error("attachSellerVerification error:", result.error);
+      return;
+    }
+    const verifiedMap = {};
+    (result.data || []).forEach((profile) => {
+      verifiedMap[profile.id] = !!profile.is_verified;
+    });
+    items.forEach((item) => {
+      item.seller_verified = !!verifiedMap[item.user_id];
+    });
+  } catch (err) {
+    console.error("attachSellerVerification exception:", err);
   }
 }
 
@@ -443,7 +471,9 @@ export async function getMarketplaceItemById(itemId) {
       console.error("getMarketplaceItemById error:", result.error);
       return null;
     }
-    return result.data || null;
+    const item = result.data || null;
+    if (item) await attachSellerVerification([item]);
+    return item;
   } catch (err) {
     console.error("getMarketplaceItemById exception:", err);
     return null;

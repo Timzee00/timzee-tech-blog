@@ -29,16 +29,28 @@
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
-        <div class="brand">
-          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
-          <div class="tagline" id="siteTagline">Real-time conversations on tech and daily tools.</div>
-        </div>
+        <a class="brand" href="index.html">
+          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
+          <span class="tagline" id="siteTagline">Real-time conversations on tech and daily tools.</span>
+        </a>
+        <nav class="nav-pill">
+          <a href="discussion.html">Discussion</a>
+          <a href="marketplace.html">Marketplace</a>
+          <a href="videos.html">Videos</a>
+          <a href="novels.html">Novels</a>
+          <div class="nav-more">
+            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+            <div class="nav-more-menu">
+              <a href="announcements.html">Announcements</a>
+              <a href="ads.html">Advertise</a>
+              <a href="newsletter.html">Newsletter</a>
+              <a href="contact.html">Contact</a>
+              <a href="support.html">Support</a>
+            </div>
+          </div>
+        </nav>
         <div class="header-actions">
-          <a class="btn ghost" href="novels.html">Novels</a>
-          <a class="btn ghost" href="videos.html">Videos</a>
-          <a class="btn ghost" href="marketplace.html">Marketplace</a>
-          <a class="btn ghost" href="announcements.html">Announcements</a>
-          <a class="btn ghost" href="ads.html">Advertise</a>
+          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
         </div>
       </div>
@@ -48,14 +60,20 @@
       <div class="container discussion-shell" id="discussionShell">
         <aside class="discussion-sidebar">
           <div class="discussion-card" data-reveal>
-            <h2>Topics</h2>
+            <div class="discussion-sidebar-head">
+              <h2>Communities</h2>
+              <span class="topic-count-chip" id="topicCount"></span>
+            </div>
+            <div class="search-box discussion-search">
+              <input type="search" id="topicSearch" placeholder="Search communities...">
+            </div>
             <div class="topic-list" id="topicList"></div>
           </div>
 
           <div class="discussion-card" data-reveal>
-            <h3>Start a Topic</h3>
+            <h3>Start a Community</h3>
             <form id="topicForm" class="form-grid">
-              <input type="text" id="topicTitle" placeholder="Topic title" required>
+              <input type="text" id="topicTitle" placeholder="Community name" required>
               <div class="editor-toolbar" id="topicToolbar">
                 <button type="button" data-action="h2">H2</button>
                 <button type="button" data-action="h3">H3</button>
@@ -72,7 +90,7 @@
               </select>
               <input type="file" id="topicMediaFile" accept="image/*,video/*">
               <div id="topicMediaPreview" class="image-preview">Topic media preview (optional)</div>
-              <button class="btn" type="submit">Create Topic</button>
+              <button class="btn" type="submit">Create Community</button>
             </form>
             <div class="callout" id="topicStatus" style="margin-top:12px; display:none;"></div>
           </div>
@@ -81,8 +99,14 @@
         <section class="discussion-chat">
           <div class="discussion-card" data-reveal>
             <div class="discussion-header-row">
-              <div class="discussion-header" id="topicHeader">Select a topic to start chatting</div>
+              <button class="btn ghost thread-back-btn" id="backToTopicsBtn" type="button" aria-label="Back to topics">← Communities</button>
+              <div class="discussion-header" id="topicHeader">Select a community to start browsing</div>
               <div class="inline-actions">
+                <select id="discussionSort" class="sort-select">
+                  <option value="top">Top</option>
+                  <option value="new">New</option>
+                  <option value="oldest">Oldest</option>
+                </select>
                 <button class="btn ghost" id="followTopicBtn" type="button" style="display:none;">Follow</button>
               </div>
             </div>
@@ -92,7 +116,7 @@
             <div class="message-list" id="messageList"></div>
             <form id="messageForm" class="comment-form">
               <div class="reply-preview hidden" id="replyPreview"></div>
-              <textarea id="messageBody" placeholder="Write a message..." required></textarea>
+              <textarea id="messageBody" placeholder="Write a post..." required></textarea>
               <div class="message-tools">
                 <input type="file" id="messageMedia" accept="image/*,video/*">
                 <select id="messageMediaType">
@@ -102,7 +126,7 @@
                 </select>
               </div>
               <div id="messageMediaPreview" class="media-preview"></div>
-              <button type="submit" class="btn">Send Message</button>
+              <button type="submit" class="btn" id="messageSubmitBtn">Post</button>
             </form>
             <div class="callout" id="messageStatus" style="margin-top:12px; display:none;"></div>
           </div>

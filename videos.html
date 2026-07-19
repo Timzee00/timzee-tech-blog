@@ -15,20 +15,32 @@
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
-        <div class="brand">
-          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
-          <div class="tagline">Watch tech content</div>
-        </div>
+        <a class="brand" href="index.html">
+          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
+          <span class="tagline" id="siteTagline">Watch tech content</span>
+        </a>
         <nav class="nav-pill">
-          <a href="index.html">Home</a>
           <a href="discussion.html">Discussion</a>
           <a href="marketplace.html">Marketplace</a>
+          <a href="videos.html">Videos</a>
+          <a href="novels.html">Novels</a>
+          <div class="nav-more">
+            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+            <div class="nav-more-menu">
+              <a href="announcements.html">Announcements</a>
+              <a href="ads.html">Advertise</a>
+              <a href="newsletter.html">Newsletter</a>
+              <a href="contact.html">Contact</a>
+              <a href="support.html">Support</a>
+            </div>
+          </div>
         </nav>
         <div class="header-actions">
           <div class="search-box">
             <input type="search" id="videoSearch" placeholder="Search videos...">
           </div>
           <a class="btn" href="#upload" id="uploadBtnHeader" style="display: none;">Upload Video</a>
+          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
         </div>
       </div>
@@ -69,6 +81,11 @@
               <option value="other">Other</option>
             </select>
             <input type="text" id="videoTags" placeholder="Tags (comma separated)" style="margin-top: 8px;">
+            <label for="videoThumbnail" style="display:block; margin-top: 12px; font-size: 13px; color: var(--muted, #5b6573);">
+              Thumbnail (optional — we'll use a video frame if you skip this)
+            </label>
+            <input type="file" id="videoThumbnail" accept="image/*" style="margin-top: 4px;">
+            <img id="thumbnailPreview" style="display:none; margin-top: 8px; max-height: 120px; border-radius: 8px;" alt="Thumbnail preview">
             <div id="uploadStatus" style="margin-top: 12px; display: none;"></div>
             <button class="btn" type="submit" style="margin-top: 12px;">Upload</button>
           </form>
@@ -97,6 +114,7 @@
       </div>
     </footer>
 
+    <script type="module" src="assets/js/nav.js"></script>
     <script type="module">
       import { 
         fetchVideos, 
@@ -257,6 +275,18 @@
         void showUploadForm();
       });
 
+      const videoThumbnail = document.getElementById("videoThumbnail");
+      const thumbnailPreview = document.getElementById("thumbnailPreview");
+      videoThumbnail.addEventListener("change", () => {
+        const file = videoThumbnail.files[0];
+        if (file) {
+          thumbnailPreview.src = URL.createObjectURL(file);
+          thumbnailPreview.style.display = "block";
+        } else {
+          thumbnailPreview.style.display = "none";
+        }
+      });
+
       async function showUploadForm() {
         const file = videoFile.files[0];
         if (file) {
@@ -310,7 +340,7 @@
             state.user.id,
             state.user.user_metadata?.display_name || state.user.email,
             videoFile.files[0],
-            null,
+            videoThumbnail.files[0] || null,
             {
               title: document.getElementById("videoTitle").value,
               description: document.getElementById("videoDescription").value,
@@ -327,6 +357,7 @@
             status.textContent = "✓ Video uploaded successfully!";
             status.style.color = "#10b981";
             uploadForm.reset();
+            thumbnailPreview.style.display = "none";
             uploadArea.style.display = "block";
             uploadForm.style.display = "none";
             state.selectedVideoDuration = 0;

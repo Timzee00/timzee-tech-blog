@@ -4,21 +4,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Timzee Tech Hub</title>
-    <meta name="description" content="Timzee Tech Hub is a community-driven tech blog with news, build logs, reviews, and discussions for builders and readers.">
-    <meta name="keywords" content="Timzee Tech Hub, tech blog, tech news, build logs, startups, product reviews, developer community, discussions">
+    <meta name="description" content="Timzee Tech Hub: a tech blog, live discussion forum, marketplace, video hub, and novel platform in one community — with an AI assistant built in.">
+    <meta name="keywords" content="Timzee Tech Hub, tech blog, tech news, live discussion, tech forum, tech marketplace, tech videos, novels, AI assistant, developer community">
     <meta name="robots" content="index, follow">
     <meta name="theme-color" content="#0f766e">
     <link rel="canonical" href="https://timzee-tech-blog.netlify.app/">
     <meta property="og:site_name" content="Timzee Tech Hub">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Timzee Tech Hub">
-    <meta property="og:description" content="News, build logs, reviews, and discussions for the tech community.">
+    <meta property="og:title" content="Timzee Tech Hub — tech blog, forum, marketplace, videos & novels">
+    <meta property="og:description" content="A tech blog with a live discussion forum, marketplace, video hub, and novel platform — all in one community.">
     <meta property="og:url" content="https://timzee-tech-blog.netlify.app/">
     <meta name="google-site-verification" content="6PxVJcY2GXcd9ntOPvPr6qHwbTpF1UfkC1ZH_nEcmJ0" />
     <meta property="og:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Timzee Tech Hub">
-    <meta name="twitter:description" content="News, build logs, reviews, and discussions for the tech community.">
+    <meta name="twitter:title" content="Timzee Tech Hub — tech blog, forum, marketplace, videos & novels">
+    <meta name="twitter:description" content="A tech blog with a live discussion forum, marketplace, video hub, and novel platform — all in one community.">
     <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
     <script type="application/ld+json">
       {
@@ -26,7 +26,7 @@
         "@type": "WebSite",
         "name": "Timzee Tech Hub",
         "url": "https://timzee-tech-blog.netlify.app/",
-        "description": "Community-driven tech blog with news, build logs, reviews, and discussions.",
+        "description": "A tech blog with a live discussion forum, marketplace, video hub, and novel platform — all in one community.",
         "publisher": {
           "@type": "Organization",
           "name": "Timzee Tech Hub",
@@ -44,22 +44,32 @@
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
-        <div class="brand">
-          <div class="logo" id="siteName">Timzee <span>Tech</span> Hub</div>
-          <div class="tagline" id="siteTagline">Forum-inspired tech news, builds, and community experiments.</div>
-        </div>
-        <nav class="nav-pill" id="categoryNav"></nav>
+        <a class="brand" href="index.html">
+          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
+          <span class="tagline" id="siteTagline">Tech news, live discussion, marketplace, videos, and novels — all in one community.</span>
+        </a>
+        <nav class="nav-pill">
+          <a href="discussion.html">Discussion</a>
+          <a href="marketplace.html">Marketplace</a>
+          <a href="videos.html">Videos</a>
+          <a href="novels.html">Novels</a>
+          <div class="nav-more">
+            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+            <div class="nav-more-menu">
+              <a href="announcements.html">Announcements</a>
+              <a href="ads.html">Advertise</a>
+              <a href="newsletter.html">Newsletter</a>
+              <a href="contact.html">Contact</a>
+              <a href="support.html">Support</a>
+            </div>
+          </div>
+        </nav>
         <div class="header-actions">
           <div class="search-box">
             <input type="search" id="searchInput" placeholder="Search topics, tags, authors...">
             <button id="searchBtn" aria-label="Search">Go</button>
           </div>
-          <a class="btn ghost" href="novels.html">Novels</a>
-          <a class="btn ghost" href="videos.html">Videos</a>
-          <a class="btn ghost" href="marketplace.html">Marketplace</a>
-          <a class="btn ghost" href="discussion.html">Discussion</a>
-          <a class="btn ghost" href="announcements.html">Announcements</a>
-          <a class="btn ghost" href="ads.html">Advertise</a>
+          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
         </div>
       </div>
@@ -69,8 +79,34 @@
       <section class="hero">
         <div class="container hero-grid">
           <div class="hero-card" data-reveal style="--delay: 0s;">
-            <h1 id="heroTitle">Build. Discuss. Ship.</h1>
-            <p id="heroIntro">A forum-inspired tech board with modern storytelling, live reactions, and creator tools for Timzee Tech Hub.</p>
+            <h1 id="heroTitle">Where builders read, talk, trade, and watch tech.</h1>
+            <p id="heroIntro">Timzee Tech Hub is a tech blog with a live discussion forum, a marketplace, a video hub, and a novel platform built in — plus an AI assistant to help you find your way around.</p>
+            <div class="hero-pillars" id="heroPillars">
+              <a class="hero-pillar" href="#latest">
+                <span class="hero-pillar-icon">📰</span>
+                <span class="hero-pillar-label">Read tech news</span>
+              </a>
+              <a class="hero-pillar" href="discussion.html">
+                <span class="hero-pillar-icon">💬</span>
+                <span class="hero-pillar-label">Join live discussion</span>
+              </a>
+              <a class="hero-pillar" href="marketplace.html">
+                <span class="hero-pillar-icon">🛒</span>
+                <span class="hero-pillar-label">Buy &amp; sell tech</span>
+              </a>
+              <a class="hero-pillar" href="videos.html">
+                <span class="hero-pillar-icon">🎬</span>
+                <span class="hero-pillar-label">Watch videos</span>
+              </a>
+              <a class="hero-pillar" href="novels.html">
+                <span class="hero-pillar-icon">📚</span>
+                <span class="hero-pillar-label">Read novels</span>
+              </a>
+              <a class="hero-pillar" href="chat.html">
+                <span class="hero-pillar-icon">🤖</span>
+                <span class="hero-pillar-label">Ask the AI</span>
+              </a>
+            </div>
             <div class="cta">
               <a class="btn" href="#latest">Explore Latest</a>
               <a class="btn ghost" href="#categories">Browse Categories</a>
@@ -124,24 +160,39 @@
       <section class="container feature-band" id="features">
         <div class="feature-header" data-reveal>
           <span class="chip">New capabilities</span>
-          <h2 class="section-title">Enterprise-ready community layer</h2>
-          <p class="tagline">The forum feel your audience loves, upgraded with a modern product newsroom vibe and smarter engagement tools.</p>
+          <h2 class="section-title">One community, five ways in</h2>
+          <p class="tagline">Not just a blog — a place to read, argue, trade, and build with people who care about the same stuff you do.</p>
         </div>
         <div class="feature-grid">
           <article class="feature-card" data-reveal>
-            <div class="feature-icon">01</div>
-            <h3>Smart Digest</h3>
-            <p>Auto-curate weekly highlights so teams and subscribers never miss trending build logs.</p>
+            <div class="feature-icon">📰</div>
+            <h3>Tech blog</h3>
+            <p>News, build logs, and reviews from the community and from admins — filterable by tag, sorted by what's trending right now.</p>
           </article>
           <article class="feature-card" data-reveal>
-            <div class="feature-icon">02</div>
-            <h3>Media Comments</h3> 
-            <p>Screenshot-friendly threads, image replies, and visual reactions for product-led discussions.</p>
+            <div class="feature-icon">💬</div>
+            <h3>Live discussion</h3>
+            <p>Real forum threads with live replies, reactions, pinned messages, and topic themes — not a comment section, an actual conversation.</p>
           </article>
           <article class="feature-card" data-reveal>
-            <div class="feature-icon">03</div>
-            <h3>Creator Studio</h3>
-            <p>Multi-admin workflow, post pinning, and moderation controls that scale with your team.</p>
+            <div class="feature-icon">🛒</div>
+            <h3>Marketplace</h3>
+            <p>Buy and sell tech directly with other members — listings, seller profiles, and inquiries handled right on the site.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <div class="feature-icon">🎬</div>
+            <h3>Video hub</h3>
+            <p>Upload and watch tech videos from the community, organized and searchable alongside everything else.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <div class="feature-icon">📚</div>
+            <h3>Novels</h3>
+            <p>Serialized tech-inspired fiction, chapter by chapter, from writers in the community.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <div class="feature-icon">🤖</div>
+            <h3>AI assistant</h3>
+            <p>Built-in AI chat to help you find what you're looking for, or just talk through an idea.</p>
           </article>
         </div>
       </section>
@@ -157,6 +208,7 @@
         <div class="content-grid">
           <div>
             <h2 class="section-title">Latest Posts</h2>
+            <nav class="nav-pill category-filter-pill" id="categoryNav" aria-label="Filter by category"></nav>
             <div class="filter-bar">
               <div class="filter-group">
                 <label for="tagFilter">Filter by tag</label>

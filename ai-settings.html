@@ -15,11 +15,28 @@
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
-        <div class="brand">
-          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
-        </div>
+        <a class="brand" href="index.html">
+          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
+          <span class="tagline" id="siteTagline">AI assistant settings</span>
+        </a>
+        <nav class="nav-pill">
+          <a href="discussion.html">Discussion</a>
+          <a href="marketplace.html">Marketplace</a>
+          <a href="videos.html">Videos</a>
+          <a href="novels.html">Novels</a>
+          <div class="nav-more">
+            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+            <div class="nav-more-menu">
+              <a href="announcements.html">Announcements</a>
+              <a href="ads.html">Advertise</a>
+              <a href="newsletter.html">Newsletter</a>
+              <a href="contact.html">Contact</a>
+              <a href="support.html">Support</a>
+            </div>
+          </div>
+        </nav>
         <div class="header-actions">
-          <a class="btn ghost" href="profile.html">Profile</a>
+          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
         </div>
       </div>
@@ -173,6 +190,7 @@
       </div>
     </footer>
 
+    <script type="module" src="assets/js/nav.js"></script>
     <script type="module">
       import * as groq from "./assets/js/groq.js";
       import { getCurrentUser, signOut } from "./assets/js/supabase.js";

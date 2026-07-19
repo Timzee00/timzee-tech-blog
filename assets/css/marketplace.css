@@ -175,6 +175,15 @@
 .seller-avatar {
   width: var(--avatar-xs, 24px);
   height: var(--avatar-xs, 24px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--accent, #0f766e) 0%, var(--accent-cool, #0ea5e9) 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 11px;
+  text-decoration: none;
+  border-radius: var(--radius-full, 9999px);
 }
 
 /* ==========================================================================
@@ -275,7 +284,7 @@
   background: var(--color-surface, #fff);
 }
 
-.seller-header .seller-avatar { width: var(--avatar-lg, 56px); height: var(--avatar-lg, 56px); }
+.seller-header .seller-avatar { width: var(--avatar-lg, 56px); height: var(--avatar-lg, 56px); font-size: 22px; }
 
 .seller-info { display: grid; gap: 2px; }
 .seller-name { font-weight: 700; }

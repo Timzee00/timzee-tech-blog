@@ -40,8 +40,83 @@ const state = {
   replyTo: null,
   topicMediaFile: null,
   topicMediaPreviewUrl: "",
-  isFollowingTopic: false
+  isFollowingTopic: false,
+  topicSearchQuery: "",
+  voteScores: {},
+  userVotes: {},
+  sortMode: "top"
 };
+
+// Batched vote loading — one query for every message on screen, not one per message.
+async function loadVotes(messageIds) {
+  if (!messageIds.length) {
+    state.voteScores = {};
+    state.userVotes = {};
+    return;
+  }
+  const result = await supabase
+    .from("discussion_message_votes")
+    .select("message_id, user_id, value")
+    .in("message_id", messageIds);
+  const scores = {};
+  const mine = {};
+  (result.data || []).forEach((row) => {
+    scores[row.message_id] = (scores[row.message_id] || 0) + row.value;
+    if (state.user && row.user_id === state.user.id) {
+      mine[row.message_id] = row.value;
+    }
+  });
+  state.voteScores = scores;
+  state.userVotes = mine;
+}
+
+async function castVote(messageId, value) {
+  if (!state.user) {
+    alert("Please log in to vote.");
+    return;
+  }
+  const existing = state.userVotes[messageId];
+  const currentScore = state.voteScores[messageId] || 0;
+
+  if (existing === value) {
+    // Clicking the same arrow again removes the vote
+    await supabase
+      .from("discussion_message_votes")
+      .delete()
+      .eq("message_id", messageId)
+      .eq("user_id", state.user.id);
+    delete state.userVotes[messageId];
+    state.voteScores[messageId] = currentScore - value;
+  } else if (existing) {
+    // Switching from up to down or vice versa
+    await supabase
+      .from("discussion_message_votes")
+      .update({ value })
+      .eq("message_id", messageId)
+      .eq("user_id", state.user.id);
+    state.userVotes[messageId] = value;
+    state.voteScores[messageId] = currentScore - existing + value;
+  } else {
+    await supabase.from("discussion_message_votes").insert({
+      message_id: messageId,
+      user_id: state.user.id,
+      value
+    });
+    state.userVotes[messageId] = value;
+    state.voteScores[messageId] = currentScore + value;
+  }
+  updateVoteUI(messageId);
+}
+
+function updateVoteUI(messageId) {
+  const wrap = document.querySelector(`.vote-rail[data-vote-id="${messageId}"]`);
+  if (!wrap) return;
+  const score = state.voteScores[messageId] || 0;
+  const mine = state.userVotes[messageId];
+  wrap.querySelector(".vote-score").textContent = score;
+  wrap.querySelector('[data-vote="1"]').classList.toggle("active", mine === 1);
+  wrap.querySelector('[data-vote="-1"]').classList.toggle("active", mine === -1);
+}
 
 function isTopicOwner() {
   return !!(state.user && state.activeTopic && state.activeTopic.author_id === state.user.id);
@@ -59,15 +134,9 @@ function renderAuthActions() {
     profile.className = "btn ghost";
     profile.href = `profile.html?id=${encodeURIComponent(state.user.id)}`;
     profile.textContent = "Profile";
-    let notifications = document.getElementById("notificationLink");
-    if (!notifications) {
-      notifications = document.createElement("a");
-      notifications.className = "btn ghost";
-      notifications.href = "profile.html?tab=notifications";
-      notifications.id = "notificationLink";
-      notifications.innerHTML =
-        'Notifications <span class="notif-count" id="notificationCount" style="display:none;">0</span>';
-    }
+    // Notification bell/badge is owned exclusively by nav.js's
+    // setupNotificationBadge(), which self-heals after this function
+    // rebuilds #authActions — do not recreate it here.
     const chat = document.createElement("a");
     chat.className = "btn ghost";
     chat.href = "chat.html";
@@ -81,7 +150,6 @@ function renderAuthActions() {
     });
     actions.appendChild(label);
     actions.appendChild(profile);
-    actions.appendChild(notifications);
     actions.appendChild(chat);
     actions.appendChild(logout);
   } else {
@@ -93,33 +161,81 @@ function renderAuthActions() {
   }
 }
 
+function slugifyTopic(title) {
+  return (title || "community")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 20) || "community";
+}
+
 async function loadTopics() {
   const result = await supabase
     .from("discussion_topics")
     .select("*")
     .order("updated_at", { ascending: false });
   state.topics = result.data || [];
+
+  // One batched query for post counts per topic, instead of one query per topic (N+1)
+  if (state.topics.length) {
+    const topicIds = state.topics.map((t) => t.id);
+    const countsResult = await supabase
+      .from("discussion_messages")
+      .select("topic_id")
+      .in("topic_id", topicIds);
+    const counts = {};
+    (countsResult.data || []).forEach((row) => {
+      counts[row.topic_id] = (counts[row.topic_id] || 0) + 1;
+    });
+    state.topics.forEach((topic) => {
+      topic.post_count = counts[topic.id] || 0;
+      topic.slug = slugifyTopic(topic.title);
+    });
+  }
 }
 
 function renderTopics() {
   const list = document.getElementById("topicList");
   if (!list) return;
+
+  const countChip = document.getElementById("topicCount");
+  if (countChip) {
+    countChip.textContent = state.topics.length ? String(state.topics.length) : "";
+  }
+
   if (!state.topics.length) {
     list.innerHTML = "<div class=\"callout\">No topics yet — start the first one.</div>";
     return;
   }
-  list.innerHTML = state.topics
+
+  const query = (state.topicSearchQuery || "").trim().toLowerCase();
+  const visibleTopics = query
+    ? state.topics.filter((topic) => {
+        const haystack = `${topic.title || ""} ${stripHTML(topic.description || "")}`.toLowerCase();
+        return haystack.includes(query);
+      })
+    : state.topics;
+
+  if (!visibleTopics.length) {
+    list.innerHTML = `<div class="callout">No topics match "${escapeHTML(state.topicSearchQuery)}".</div>`;
+    return;
+  }
+
+  list.innerHTML = visibleTopics
     .map((topic) => {
       const isActive = topic.id === state.activeTopicId;
       const mediaTag = topic.media_url ? `<span class="chip">Media</span>` : "";
       const descriptionHtml = formatRichText(topic.description || "");
       return `
-        <div class="topic-item ${isActive ? "active" : ""}" data-id="${topic.id}">
-          <strong>${escapeHTML(topic.title)}</strong>
-          <div class="topic-meta">${escapeHTML(topic.author_name || "Member")} · ${timeAgo(
-            topic.created_at
-          )} ${mediaTag}</div>
-          <div class="topic-desc">${descriptionHtml}</div>
+        <div class="topic-item community-card ${isActive ? "active" : ""}" data-id="${topic.id}">
+          <div class="community-icon">${escapeHTML((topic.title || "?").trim().slice(0, 1).toUpperCase())}</div>
+          <div class="community-body">
+            <div class="community-slug">t/${escapeHTML(topic.slug || slugifyTopic(topic.title))}</div>
+            <strong>${escapeHTML(topic.title)}</strong>
+            <div class="topic-meta">${topic.post_count || 0} posts · started by ${escapeHTML(topic.author_name || "Member")} · ${timeAgo(
+              topic.created_at
+            )} ${mediaTag}</div>
+            <div class="topic-desc">${descriptionHtml}</div>
+          </div>
         </div>
       `;
     })
@@ -187,6 +303,12 @@ async function selectTopic(topicId) {
   renderTopics();
   updateTopicMeta();
   renderTopicMedia();
+
+  // Enter the full-width thread view on mobile instead of leaving the
+  // topic list and chat stacked (which meant scrolling down to reach a
+  // topic you just tapped, then back up to see what you clicked).
+  document.getElementById("discussionShell")?.classList.add("thread-open");
+
   if (state.user && state.activeTopicId) {
     state.isFollowingTopic = await fetchFollowStatus({
       targetType: "topic",
@@ -203,6 +325,10 @@ async function selectTopic(topicId) {
   updateTopicControls();
   updateMessageFormState();
   subscribeToMessages(topicId);
+}
+
+function leaveThread() {
+  document.getElementById("discussionShell")?.classList.remove("thread-open");
 }
 
 async function applyTopicTheme(themeId) {
@@ -268,6 +394,8 @@ function renderReplyPreview() {
   if (!state.replyTo) {
     preview.classList.add("hidden");
     preview.innerHTML = "";
+    const submitBtn = document.getElementById("messageSubmitBtn");
+    if (submitBtn) submitBtn.textContent = "Post";
     return;
   }
   const snippet = clampText(stripHTML(state.replyTo.body || ""), 90);
@@ -283,18 +411,12 @@ function renderReplyPreview() {
       renderReplyPreview();
     });
   }
+  const submitBtn = document.getElementById("messageSubmitBtn");
+  if (submitBtn) submitBtn.textContent = "Reply";
 }
 
-function buildMessageHtml(message) {
+function buildMessageHtml(message, depth = 0) {
   const isOwner = state.activeTopic && message.author_id === state.activeTopic.author_id;
-  const replyTarget = message.reply_to
-    ? state.messages.find((item) => item.id === message.reply_to)
-    : null;
-  const replySnippet = replyTarget
-    ? `<div class="callout">Replying to ${escapeHTML(
-        replyTarget.author_name || "Member"
-      )}: ${escapeHTML(clampText(stripHTML(replyTarget.body || ""), 90))}</div>`
-    : "";
   const bodyHtml = message.body ? linkifyReferences(message.body).replace(/\n/g, "<br>") : "";
   let mediaHtml = "";
   if (message.media_url && isSafeUrl(message.media_url)) {
@@ -314,39 +436,73 @@ function buildMessageHtml(message) {
     ? `<a href="profile.html?id=${encodeURIComponent(message.author_id)}">${authorName}</a>`
     : authorName;
 
+  const score = state.voteScores[message.id] || 0;
+  const myVote = state.userVotes[message.id];
+  const voteRail = `
+    <div class="vote-rail" data-vote-id="${message.id}">
+      <button class="vote-arrow up ${myVote === 1 ? "active" : ""}" data-vote="1" data-id="${message.id}" aria-label="Upvote">▲</button>
+      <span class="vote-score">${score}</span>
+      <button class="vote-arrow down ${myVote === -1 ? "active" : ""}" data-vote="-1" data-id="${message.id}" aria-label="Downvote">▼</button>
+    </div>
+  `;
+
+  const children = state.messages.filter((item) => item.reply_to === message.id);
+  const childrenHtml = children.length
+    ? `<div class="comment-children">${children
+        .slice()
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+        .map((child) => buildMessageHtml(child, depth + 1))
+        .join("")}</div>`
+    : "";
+
   return `
-    <div class="message-bubble ${message.pinned ? "pinned" : ""}" data-id="${
+    <div class="message-bubble ${message.pinned ? "pinned" : ""} ${depth > 0 ? "is-comment" : "is-post"}" data-id="${
     message.id
-  }">
-      <div class="message-meta">
-        <span>${authorLink}${ownerLabel}${pinLabel}</span>
-        <span>${timeAgo(message.created_at)}</span>
+  }" style="${depth > 0 ? `margin-left:${Math.min(depth, 6) * 18}px;` : ""}">
+      <div class="message-row">
+        ${voteRail}
+        <div class="message-content">
+          <div class="message-meta">
+            <span>${authorLink}${ownerLabel}${pinLabel}</span>
+            <span>${timeAgo(message.created_at)}</span>
+          </div>
+          ${bodyHtml ? `<div class="message-body">${bodyHtml}</div>` : ""}
+          ${mediaHtml}
+          <div class="message-actions">
+            <button data-action="reply" data-id="${message.id}">Reply</button>
+            <button data-action="report" data-id="${message.id}">Report</button>
+            ${
+              canModerate
+                ? `<button data-action="pin" data-id="${message.id}">${
+                    message.pinned ? "Unpin" : "Pin"
+                  }</button>`
+                : ""
+            }
+            ${
+              canBan
+                ? `<button class="danger" data-action="ban" data-id="${message.id}">Ban</button>`
+                : ""
+            }
+          </div>
+        </div>
       </div>
-      ${replySnippet}
-      ${bodyHtml ? `<div class="message-body">${bodyHtml}</div>` : ""}
-      ${mediaHtml}
-      <div class="message-actions">
-        <button data-action="reply" data-id="${message.id}">Reply</button>
-        <button data-action="report" data-id="${message.id}">Report</button>
-        ${
-          canModerate
-            ? `<button data-action="pin" data-id="${message.id}">${
-                message.pinned ? "Unpin" : "Pin"
-              }</button>`
-            : ""
-        }
-        ${
-          canBan
-            ? `<button class="danger" data-action="ban" data-id="${message.id}">Ban</button>`
-            : ""
-        }
-      </div>
+      ${childrenHtml}
     </div>
   `;
 }
 
+function bindVoteActions(container) {
+  if (!container) return;
+  container.querySelectorAll(".vote-arrow").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      castVote(btn.dataset.id, Number(btn.dataset.vote));
+    });
+  });
+}
+
 function bindMessageActions(container) {
   if (!container) return;
+  bindVoteActions(container);
   container.querySelectorAll("button[data-action]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const message = state.messages.find((item) => item.id === btn.dataset.id);
@@ -413,16 +569,49 @@ function renderPinnedMessages(messages) {
   bindMessageActions(list);
 }
 
+function sortTopLevelPosts(posts) {
+  const mode = state.sortMode || "top";
+  const sorted = posts.slice();
+  if (mode === "new") {
+    sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  } else if (mode === "oldest") {
+    sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  } else {
+    // "top" — highest score first, tie-broken by newest
+    sorted.sort((a, b) => {
+      const scoreDiff = (state.voteScores[b.id] || 0) - (state.voteScores[a.id] || 0);
+      if (scoreDiff !== 0) return scoreDiff;
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+  }
+  return sorted;
+}
+
 function renderMessageList(messages) {
   const list = document.getElementById("messageList");
   if (!list) return;
-  if (!messages.length) {
-    list.innerHTML = "<div class=\"callout\">No messages yet — say hi first.</div>";
+  // Only top-level posts render at the root — replies nest as comments inside buildMessageHtml
+  const topLevel = messages.filter((message) => !message.reply_to);
+  if (!topLevel.length) {
+    list.innerHTML = "<div class=\"callout\">No posts yet — start the first one.</div>";
     return;
   }
-  list.innerHTML = messages.map((message) => buildMessageHtml(message)).join("");
+  const ordered = sortTopLevelPosts(topLevel);
+  list.innerHTML = ordered.map((message) => buildMessageHtml(message)).join("");
   bindMessageActions(list);
-  list.scrollTop = list.scrollHeight;
+}
+
+function setupSortControl() {
+  const select = document.getElementById("discussionSort");
+  if (!select) return;
+  select.value = state.sortMode;
+  select.addEventListener("change", () => {
+    state.sortMode = select.value;
+    const pinned = state.messages.filter((message) => message.pinned);
+    const regular = state.messages.filter((message) => !message.pinned);
+    renderMessageList(regular);
+    renderPinnedMessages(pinned);
+  });
 }
 
 async function loadMessages(topicId) {
@@ -434,11 +623,13 @@ async function loadMessages(topicId) {
     .eq("topic_id", topicId)
     .order("created_at", { ascending: true });
   state.messages = result.data || [];
+  await loadVotes(state.messages.map((m) => m.id));
   const pinned = state.messages.filter((message) => message.pinned);
   const regular = state.messages.filter((message) => !message.pinned);
   renderPinnedMessages(pinned);
   renderMessageList(regular);
 }
+
 
 function subscribeToMessages(topicId) {
   if (state.channel) {
@@ -953,6 +1144,23 @@ function setupMessageForm() {
   });
 }
 
+function setupTopicSearch() {
+  const input = document.getElementById("topicSearch");
+  if (!input) return;
+  input.addEventListener("input", () => {
+    state.topicSearchQuery = input.value || "";
+    renderTopics();
+  });
+}
+
+function setupBackButton() {
+  const btn = document.getElementById("backToTopicsBtn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    leaveThread();
+  });
+}
+
 async function boot() {
   setupReveal();
   state.user = await getCurrentUserWithRole();
@@ -967,6 +1175,8 @@ async function boot() {
   state.themes = await fetchThemes();
   await loadTopics();
   renderTopics();
+  setupTopicSearch();
+  setupBackButton();
   bindEditorToolbar("topicToolbar", "topicDescription");
   const params = new URLSearchParams(window.location.search);
   const topicId = params.get("topic");
@@ -977,6 +1187,7 @@ async function boot() {
   setupMessageForm();
   setupTopicControls();
   setupFollowButton();
+  setupSortControl();
   updateMessageFormState();
 }
 

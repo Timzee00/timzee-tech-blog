@@ -203,15 +203,9 @@ function renderAuthActions() {
     profile.className = "btn ghost";
     profile.href = `profile.html?id=${encodeURIComponent(state.user.id)}`;
     profile.textContent = "Profile";
-    let notifications = document.getElementById("notificationLink");
-    if (!notifications) {
-      notifications = document.createElement("a");
-      notifications.className = "btn ghost";
-      notifications.href = "profile.html?tab=notifications";
-      notifications.id = "notificationLink";
-      notifications.innerHTML =
-        'Notifications <span class="notif-count" id="notificationCount" style="display:none;">0</span>';
-    }
+    // Notification bell/badge is owned exclusively by nav.js's
+    // setupNotificationBadge(), which self-heals after this function
+    // rebuilds #authActions — do not recreate it here.
     const chat = document.createElement("a");
     chat.className = "btn ghost";
     chat.href = "chat.html";
@@ -225,7 +219,6 @@ function renderAuthActions() {
     });
     authWrap.appendChild(label);
     authWrap.appendChild(profile);
-    authWrap.appendChild(notifications);
     authWrap.appendChild(chat);
     authWrap.appendChild(logout);
   } else {
@@ -357,7 +350,7 @@ function renderAuthorMini(post) {
     ? `<button class="btn ghost" id="followAuthorBtn">${state.isFollowingAuthor ? "Following" : "Follow"}</button>`
     : `<a class="btn ghost" href="${link}">View profile</a>`;
   wrap.innerHTML = `
-    <img src="${avatar}" alt="author avatar">
+    <a href="${link}" aria-label="View profile"><img src="${avatar}" alt="author avatar"></a>
     <div>
       <div class="author-name">${escapeHTML(name)}${badge}</div>
       <div class="author-role">${escapeHTML(role)}</div>
@@ -387,7 +380,7 @@ function renderAuthorCard(post) {
   const postsLabel = state.authorPostCount ? `${state.authorPostCount} posts` : "Featured author";
   card.innerHTML = `
     <div class="author-card">
-      <img src="${avatar}" alt="author avatar">
+      <a href="${link}" aria-label="View profile"><img src="${avatar}" alt="author avatar"></a>
       <div>
         <div class="author-name">${escapeHTML(name)}${badge}</div>
         <div class="author-role">${escapeHTML(role)}</div>

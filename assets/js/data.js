@@ -642,26 +642,11 @@ export async function createNotification({
   }).select().single();
 }
 
-export async function getUserNotifications(userId, limit = 50, offset = 0) {
-  const result = await supabase
-    .from("notifications")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
-  
-  return normalizeResponse(result);
-}
-
-export async function getUnreadNotificationCount(userId) {
-  const result = await supabase
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .is("read_at", null);
-  
-  return result.count || 0;
-}
+// NOTE: fetchNotifications() and fetchUnreadNotificationCount() above are
+// the versions actually used by nav.js/profile.js. This section previously
+// had duplicate getUserNotifications()/getUnreadNotificationCount()
+// functions doing the same job under different names — removed since
+// nothing called them.
 
 export async function markNotificationRead(notificationId) {
   return supabase

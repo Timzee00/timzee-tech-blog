@@ -10,7 +10,10 @@
    2. base.css        — the full original stylesheet, byte-for-byte
                          preserved, so all existing selectors/behaviour
                          keep working exactly as before
-   3. buttons.css      forms.css      — component polish layers
+   3. navbar.css      — desktop nav + mobile dropdown menu (consolidates
+                         three previously-conflicting attempts at this
+                         that were scattered across base.css)
+   4. buttons.css      forms.css      — component polish layers
    4. avatars.css     — global circular-avatar fix (see file header for
                          the root-cause explanation)
    5. chat.css / profile.css / marketplace.css / discussion.css —
@@ -23,6 +26,7 @@
 
 @import url("variables.css");
 @import url("base.css");
+@import url("navbar.css");
 @import url("buttons.css");
 @import url("forms.css");
 @import url("avatars.css");
@@ -32,6 +36,7 @@
 @import url("discussion.css");
 @import url("novels.css");
 @import url("content-pages.css");
+@import url("home.css");
 @import url("animations.css");
 @import url("utilities.css");
 @import url("responsive.css");
