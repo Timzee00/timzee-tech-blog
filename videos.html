@@ -319,6 +319,49 @@
         }
       }
 
+      // Captures a real frame from the video file itself, for when the user
+      // doesn't manually pick a thumbnail — used instead of always falling
+      // back to the placeholder icon.
+      function captureVideoFrame(file) {
+        return new Promise((resolve) => {
+          const videoEl = document.createElement("video");
+          videoEl.muted = true;
+          videoEl.playsInline = true;
+          videoEl.preload = "metadata";
+          const objectUrl = URL.createObjectURL(file);
+          videoEl.src = objectUrl;
+
+          const cleanup = () => URL.revokeObjectURL(objectUrl);
+          const fail = () => { cleanup(); resolve(null); };
+
+          videoEl.addEventListener("loadedmetadata", () => {
+            const seekTo = Math.min(1, Math.max(0.1, videoEl.duration * 0.1 || 0.1));
+            videoEl.currentTime = seekTo;
+          });
+
+          videoEl.addEventListener("seeked", () => {
+            try {
+              const canvas = document.createElement("canvas");
+              canvas.width = videoEl.videoWidth || 320;
+              canvas.height = videoEl.videoHeight || 180;
+              const ctx = canvas.getContext("2d");
+              ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+              canvas.toBlob((blob) => {
+                cleanup();
+                if (!blob) { resolve(null); return; }
+                resolve(new File([blob], "thumbnail.jpg", { type: "image/jpeg" }));
+              }, "image/jpeg", 0.8);
+            } catch (err) {
+              fail();
+            }
+          });
+
+          videoEl.addEventListener("error", fail);
+          // Safety timeout in case a video never fires seeked (corrupt file, etc.)
+          setTimeout(fail, 8000);
+        });
+      }
+
       uploadForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         
@@ -336,11 +379,18 @@
         status.style.color = "#0f766e";
 
         try {
+          let thumbnailFile = videoThumbnail.files[0] || null;
+          if (!thumbnailFile && videoFile.files[0]) {
+            status.textContent = "Capturing thumbnail...";
+            thumbnailFile = await captureVideoFrame(videoFile.files[0]);
+            status.textContent = "Uploading...";
+          }
+
           const result = await uploadVideo(
             state.user.id,
             state.user.user_metadata?.display_name || state.user.email,
             videoFile.files[0],
-            videoThumbnail.files[0] || null,
+            thumbnailFile,
             {
               title: document.getElementById("videoTitle").value,
               description: document.getElementById("videoDescription").value,

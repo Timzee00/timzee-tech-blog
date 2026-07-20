@@ -417,7 +417,133 @@
       toggle.setAttribute("aria-label", `Switch to ${nextMode} mode`);
       toggle.setAttribute("title", `Switch to ${nextMode} mode`);
       toggle.setAttribute("data-theme", mode);
-      toggle.textContent = mode === DARK ? "Light mode" : "Dark mode";
+      let label = toggle.querySelector(".theme-toggle-label");
+      if (!label) {
+        label = document.createElement("span");
+        label.className = "theme-toggle-label";
+        toggle.insertBefore(label, toggle.firstChild);
+      }
+      label.textContent = mode === DARK ? "Light mode" : "Dark mode";
+    }
+  };
+
+  const POSITION_KEY = "timzee-theme-toggle-pos";
+  const COLLAPSED_KEY = "timzee-theme-toggle-collapsed";
+
+  const readSavedPosition = () => {
+    try {
+      const raw = localStorage.getItem(POSITION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (typeof parsed?.right === "number" && typeof parsed?.bottom === "number") return parsed;
+      return null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const writeSavedPosition = (pos) => {
+    try {
+      localStorage.setItem(POSITION_KEY, JSON.stringify(pos));
+    } catch (error) {
+      // Ignore storage failures.
+    }
+  };
+
+  const clampPosition = (right, bottom, el) => {
+    const width = el.offsetWidth || 120;
+    const height = el.offsetHeight || 42;
+    const maxRight = Math.max(4, window.innerWidth - width - 4);
+    const maxBottom = Math.max(4, window.innerHeight - height - 4);
+    return {
+      right: Math.min(Math.max(4, right), maxRight),
+      bottom: Math.min(Math.max(4, bottom), maxBottom)
+    };
+  };
+
+  const applySavedPosition = (el) => {
+    const saved = readSavedPosition();
+    if (!saved) return;
+    const clamped = clampPosition(saved.right, saved.bottom, el);
+    el.style.right = `${clamped.right}px`;
+    el.style.bottom = `${clamped.bottom}px`;
+  };
+
+  const makeDraggable = (el) => {
+    let dragging = false;
+    let moved = false;
+    let startX = 0;
+    let startY = 0;
+    let startRight = 0;
+    let startBottom = 0;
+
+    const getCurrentOffsets = () => {
+      const rect = el.getBoundingClientRect();
+      return {
+        right: window.innerWidth - rect.right,
+        bottom: window.innerHeight - rect.bottom
+      };
+    };
+
+    const onPointerDown = (event) => {
+      dragging = true;
+      moved = false;
+      const point = event.touches ? event.touches[0] : event;
+      startX = point.clientX;
+      startY = point.clientY;
+      const current = getCurrentOffsets();
+      startRight = current.right;
+      startBottom = current.bottom;
+      el.style.transition = "none";
+    };
+
+    const onPointerMove = (event) => {
+      if (!dragging) return;
+      const point = event.touches ? event.touches[0] : event;
+      const dx = point.clientX - startX;
+      const dy = point.clientY - startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+      if (!moved) return;
+      event.preventDefault();
+      const next = clampPosition(startRight - dx, startBottom - dy, el);
+      el.style.right = `${next.right}px`;
+      el.style.bottom = `${next.bottom}px`;
+    };
+
+    const onPointerUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      el.style.transition = "";
+      if (moved) {
+        const current = getCurrentOffsets();
+        writeSavedPosition(current);
+        // Prevent the click handler (theme toggle) from firing right after a drag.
+        el.dataset.justDragged = "1";
+        setTimeout(() => { delete el.dataset.justDragged; }, 50);
+      }
+    };
+
+    el.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mouseup", onPointerUp);
+    el.addEventListener("touchstart", onPointerDown, { passive: true });
+    window.addEventListener("touchmove", onPointerMove, { passive: false });
+    window.addEventListener("touchend", onPointerUp);
+
+    window.addEventListener("resize", () => {
+      const current = getCurrentOffsets();
+      const clamped = clampPosition(current.right, current.bottom, el);
+      el.style.right = `${clamped.right}px`;
+      el.style.bottom = `${clamped.bottom}px`;
+    });
+  };
+
+  const setCollapsed = (el, collapsed) => {
+    el.classList.toggle("theme-toggle-collapsed", collapsed);
+    try {
+      localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0");
+    } catch (error) {
+      // Ignore storage failures.
     }
   };
 
@@ -427,14 +553,42 @@
     toggle.type = "button";
     toggle.id = "themeToggle";
     toggle.className = "theme-toggle";
-    toggle.addEventListener("click", () => {
+
+    const collapseBtn = document.createElement("span");
+    collapseBtn.className = "theme-toggle-collapse-handle";
+    collapseBtn.setAttribute("role", "button");
+    collapseBtn.setAttribute("aria-label", "Hide theme button");
+    collapseBtn.textContent = "×";
+    collapseBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setCollapsed(toggle, true);
+    });
+
+    toggle.addEventListener("click", (event) => {
+      if (toggle.dataset.justDragged) {
+        event.preventDefault();
+        return;
+      }
+      if (toggle.classList.contains("theme-toggle-collapsed")) {
+        setCollapsed(toggle, false);
+        return;
+      }
       const current = document.documentElement.getAttribute("data-theme") === DARK ? DARK : LIGHT;
       const next = current === DARK ? LIGHT : DARK;
       applyTheme(next);
       writeTheme(next);
     });
+
+    toggle.appendChild(collapseBtn);
     document.body.appendChild(toggle);
     applyTheme(document.documentElement.getAttribute("data-theme") || getInitialTheme());
+    applySavedPosition(toggle);
+    makeDraggable(toggle);
+    try {
+      if (localStorage.getItem(COLLAPSED_KEY) === "1") setCollapsed(toggle, true);
+    } catch (error) {
+      // Ignore storage failures.
+    }
   };
 
   const initial = getInitialTheme();

@@ -677,6 +677,46 @@ select:focus-visible {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 12px 24px rgba(2, 6, 23, 0.45);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  touch-action: none;
+  user-select: none;
+}
+
+.theme-toggle-label {
+  pointer-events: none;
+}
+
+.theme-toggle-collapse-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.theme-toggle-collapse-handle:hover {
+  opacity: 1;
+}
+
+.theme-toggle.theme-toggle-collapsed {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 999px;
+  opacity: 0.35;
+}
+
+.theme-toggle.theme-toggle-collapsed .theme-toggle-label,
+.theme-toggle.theme-toggle-collapsed .theme-toggle-collapse-handle {
+  display: none;
 }
 
 .theme-toggle:hover {

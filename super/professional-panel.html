@@ -487,6 +487,23 @@
           }
         };
 
+        const updateUserAction = async (userId, action) => {
+          try {
+            const res = await fetchWithAuth("/.netlify/functions/update-user", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId, action })
+            });
+            const parsed = await safeParseJson(res);
+            if (!res.ok) {
+              throw new Error(parsed.data?.error || "User update failed.");
+            }
+            return { data: parsed.data?.profile || null };
+          } catch (err) {
+            return { error: err.message || "User update failed." };
+          }
+        };
+
         const loadUsers = async () => {
           try {
             const res = await fetchWithAuth("/.netlify/functions/list-users");
@@ -496,13 +513,32 @@
               throw new Error(data.error || `Failed to load users. ${parsed.raw ? "Response was HTML (Netlify function not running)." : ""}`);
             }
             const cards = (data.users || []).map((user) => `
-              <div class="form-card" style="margin-bottom:12px;">
+              <div class="form-card" style="margin-bottom:12px;" data-user-id="${user.id}">
                 <strong>${user.display_name || user.email}</strong>
                 <div style="color:#666;font-size:12px;">${user.email} • ${user.role}</div>
-                <div style="color:#666;font-size:12px;">Status: ${user.account_status || "active"}</div>
+                <div style="color:#666;font-size:12px;">Status: ${user.account_status || "active"} ${user.is_verified ? "• Verified" : ""} ${user.is_staff_pick ? "• Staff Pick" : ""} ${user.is_featured ? "• Featured" : ""}</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                  <button class="btn ghost" data-user-action="${user.is_verified ? "unverify" : "verify"}" data-user-id="${user.id}">${user.is_verified ? "Unverify" : "Verify"}</button>
+                  <button class="btn ghost" data-user-action="${user.account_status === "suspended" ? "activate" : "suspend"}" data-user-id="${user.id}">${user.account_status === "suspended" ? "Activate" : "Suspend"}</button>
+                  <button class="btn ghost" data-user-action="${user.is_featured ? "unfeature" : "feature"}" data-user-id="${user.id}">${user.is_featured ? "Unfeature" : "Feature"}</button>
+                  <button class="btn ghost" data-user-action="${user.is_staff_pick ? "unstaff" : "staff"}" data-user-id="${user.id}">${user.is_staff_pick ? "Unstaff" : "Staff Pick"}</button>
+                </div>
               </div>
             `);
             renderList("allUsersContainer", cards, "No users found.");
+
+            document.querySelectorAll("#allUsersContainer [data-user-action]").forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                btn.disabled = true;
+                const result = await updateUserAction(btn.dataset.userId, btn.dataset.userAction);
+                if (result.error) {
+                  alert(result.error);
+                  btn.disabled = false;
+                  return;
+                }
+                loadUsers();
+              });
+            });
           } catch (err) {
             console.warn("Falling back to Supabase user list:", err);
             const { data, error } = await supabase

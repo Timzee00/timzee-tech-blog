@@ -181,7 +181,6 @@ footer {
 @media (max-width: 520px) {
   html, body { font-size: 15px; }
   .menu-toggle { display: inline-flex; }
-  .site-menu { display: none; }
 }
 
 /* Mobile safety: prevent overflow and ensure elements stay in viewport */
@@ -3561,6 +3560,54 @@ footer {
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  touch-action: none;
+  user-select: none;
+}
+
+.theme-toggle-label {
+  pointer-events: none;
+}
+
+.theme-toggle-collapse-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.theme-toggle-collapse-handle:hover {
+  opacity: 1;
+  background: rgba(15, 23, 42, 0.16);
+}
+
+/* Collapsed: shrinks to a small dot near the edge, tap to bring it back.
+   Lets users get it fully out of the way instead of it permanently
+   covering nearby buttons. */
+.theme-toggle.theme-toggle-collapsed {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 999px;
+  opacity: 0.35;
+}
+
+.theme-toggle.theme-toggle-collapsed .theme-toggle-label,
+.theme-toggle.theme-toggle-collapsed .theme-toggle-collapse-handle {
+  display: none;
+}
+
+.theme-toggle.theme-toggle-collapsed:hover {
+  opacity: 0.85;
 }
 
 .theme-toggle:hover {
