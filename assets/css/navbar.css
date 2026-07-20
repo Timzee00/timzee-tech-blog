@@ -1,14 +1,154 @@
 /* ==========================================================================
-   navbar.css — desktop nav, mobile menu toggle, and the mobile dropdown panel
-   nav.js (setupMobileMenu) wraps .nav-pill and .header-actions into a
-   #siteMenu container and toggles `body.nav-open` on click. This file is
-   now the single source of truth for how that panel looks — previously
-   there were three separate, uncoordinated attempts at this stacked in
-   base.css (visible in git history), which is why the open menu rendered
-   as an inconsistent blend of all three: mismatched background, padding,
-   corner radius, and positioning depending on which rule happened to win
-   the cascade for a given property.
+   navbar.css — unified site navigation
+   Redesigned so every page shares one nav system: a floating glass bar on
+   desktop, a full-height slide-in drawer on mobile. nav.js wraps .nav-pill
+   and .header-actions into #siteMenu and toggles body.nav-open; nav.js also
+   marks the current page's link with .active by comparing pathnames, so no
+   page needs to hardcode which link is "current."
    ========================================================================== */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header, 80);
+  background: rgba(246, 241, 234, 0.82);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border-bottom: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
+}
+
+:root[data-theme="dark"] .site-header,
+:root.dark-mode .site-header,
+:root.theme-dark .site-header {
+  background: rgba(15, 17, 21, 0.82);
+}
+
+.site-header .wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4, 16px);
+  padding-top: var(--space-3, 12px);
+  padding-bottom: var(--space-3, 12px);
+  min-height: 64px;
+}
+
+.site-header .brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-decoration: none;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.site-header .brand .tagline {
+  display: none;
+}
+
+/* ---------- Nav pill links (shared structure, desktop + drawer) ---------- */
+.nav-pill a {
+  position: relative;
+  white-space: nowrap;
+}
+
+.category-filter-pill {
+  margin-left: 0;
+  margin-bottom: var(--space-3, 12px);
+}
+
+
+.nav-pill a.active {
+  background: linear-gradient(135deg, var(--accent, #0f766e) 0%, var(--accent-cool, #0ea5e9) 100%);
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.28);
+}
+
+/* ---------- "More" dropdown (desktop) ---------- */
+.nav-more {
+  position: relative;
+}
+
+.nav-more-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 14px;
+  border-radius: var(--radius-full, 999px);
+  font-size: 12px;
+  font-weight: 600;
+  color: #0b3f3a;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.nav-more-toggle:hover {
+  background: rgba(15, 118, 110, 0.14);
+}
+
+.nav-more-caret {
+  font-size: 9px;
+  transition: transform var(--duration-base, 200ms) var(--ease-standard);
+}
+
+.nav-more.open .nav-more-caret {
+  transform: rotate(180deg);
+}
+
+.nav-more-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 190px;
+  padding: var(--space-2, 8px);
+  border-radius: var(--radius-md, 16px);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15, 23, 42, 0.1));
+  box-shadow: var(--elevation-4);
+  z-index: var(--z-dropdown, 60);
+}
+
+.nav-more.open .nav-more-menu {
+  display: grid;
+  gap: 2px;
+}
+
+.nav-more-menu a {
+  display: block;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm, 12px);
+  font-size: var(--text-sm, 14px);
+  font-weight: 600;
+  color: var(--color-text, var(--ink));
+}
+
+.nav-more-menu a:hover {
+  background: var(--color-surface-muted, rgba(15, 118, 110, 0.08));
+}
+
+/* ---------- Utility icon buttons (chat, search toggle) ---------- */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--color-surface, rgba(255,255,255,0.6));
+  border: 1px solid var(--color-border, rgba(15, 23, 42, 0.1));
+  font-size: 16px;
+  text-decoration: none;
+  color: var(--color-text, var(--ink));
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--color-surface-muted, rgba(15, 118, 110, 0.1));
+  transform: translateY(-1px);
+}
 
 /* ---------- Toggle button (hamburger) ---------- */
 .menu-toggle {
@@ -23,6 +163,7 @@
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--elevation-1);
+  flex-shrink: 0;
 }
 
 .menu-toggle .menu-icon {
@@ -31,6 +172,7 @@
   background: currentColor;
   display: inline-block;
   position: relative;
+  transition: background var(--duration-fast, 120ms);
 }
 
 .menu-toggle .menu-icon::before,
@@ -41,6 +183,7 @@
   width: 18px;
   height: 2px;
   background: currentColor;
+  transition: transform var(--duration-base, 200ms) var(--ease-standard), top var(--duration-base, 200ms) var(--ease-standard);
 }
 
 .menu-toggle .menu-icon::before { top: -6px; }
@@ -50,7 +193,21 @@
   background: var(--color-surface-muted, rgba(15, 118, 110, 0.12));
 }
 
-/* ---------- Desktop (>960px): inline nav, toggle hidden ---------- */
+.menu-toggle.active .menu-icon {
+  background: transparent;
+}
+
+.menu-toggle.active .menu-icon::before {
+  top: 0;
+  transform: rotate(45deg);
+}
+
+.menu-toggle.active .menu-icon::after {
+  top: 0;
+  transform: rotate(-45deg);
+}
+
+/* ---------- Desktop (>960px): inline glass bar ---------- */
 @media (min-width: 961px) {
   .site-header .wrap { align-items: center; }
 
@@ -58,19 +215,23 @@
     display: flex !important;
     flex: 1;
     align-items: center;
-    margin-left: 32px;
-    gap: 20px;
+    margin-left: var(--space-6, 24px);
+    gap: var(--space-5, 20px);
   }
 
-  .site-menu .nav-pill { margin-right: auto; }
-  .header-actions { gap: 10px; }
-  .search-box input { min-width: 220px; }
+  .site-menu .nav-pill {
+    margin-right: auto;
+    align-items: center;
+  }
+
+  .header-actions { gap: 10px; align-items: center; }
+  .search-box input { min-width: 200px; }
 }
 
-/* ---------- Mobile (≤960px): collapsed dropdown panel ---------- */
+/* ---------- Mobile (≤960px): full-height slide-in drawer ---------- */
 @media (max-width: 960px) {
   .site-header .wrap {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
   }
 
@@ -81,51 +242,99 @@
     margin-left: auto;
   }
 
-  /* Panel hidden by default */
+  /* Drawer stays in the DOM and off-canvas (not display:none) so it can
+     transition smoothly instead of snapping open/closed. */
   .site-menu {
-    display: none;
-  }
-
-  /* Open state — one definition, one set of values */
-  body.nav-open .site-menu {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: var(--space-2, 8px);
 
     position: fixed;
-    top: 72px;
-    left: 12px;
-    right: 12px;
-    max-height: calc(100vh - 90px);
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(86vw, 340px);
+    max-width: 340px;
+
+    padding: calc(var(--space-6, 24px) + env(safe-area-inset-top)) var(--space-5, 20px) calc(var(--space-6, 24px) + env(safe-area-inset-bottom));
     overflow-y: auto;
 
-    padding: var(--space-4, 16px);
-    border-radius: var(--radius-md, 16px);
     background: var(--color-surface, #fff);
-    border: 1px solid var(--color-border, rgba(15, 23, 42, 0.1));
+    border-left: 3px solid transparent;
+    border-image: linear-gradient(180deg, var(--accent, #0f766e) 0%, var(--accent-cool, #0ea5e9) 100%) 1;
     box-shadow: var(--elevation-4);
+
+    transform: translateX(100%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform var(--duration-slow, 320ms) var(--ease-standard),
+                opacity var(--duration-slow, 320ms) var(--ease-standard),
+                visibility 0s linear var(--duration-slow, 320ms);
 
     z-index: var(--z-overlay, 9999);
   }
 
-  /* Backdrop behind the open panel */
-  body.nav-open .site-header::before {
+  body.nav-open .site-menu {
+    transform: translateX(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform var(--duration-slow, 320ms) var(--ease-standard),
+                opacity var(--duration-slow, 320ms) var(--ease-standard),
+                visibility 0s linear 0s;
+  }
+
+  .site-menu::before {
+    content: "Menu";
+    display: block;
+    font-family: var(--font-display, "Fraunces", serif);
+    font-size: var(--text-xl, 22px);
+    font-weight: 700;
+    color: var(--color-text, var(--ink));
+    margin-bottom: var(--space-2, 8px);
+  }
+
+  /* Backdrop behind the open drawer */
+  .drawer-backdrop-layer {
     content: "";
     position: fixed;
     inset: 0;
-    background: rgba(2, 6, 23, 0.55);
+    background: rgba(2, 6, 23, 0.5);
     backdrop-filter: blur(3px);
     z-index: calc(var(--z-overlay, 9999) - 1);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-slow, 320ms) var(--ease-standard);
+  }
+
+  body.nav-open .drawer-backdrop-layer {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   body.nav-open { overflow: hidden; }
 
-  /* Category pills become a stacked list of full-width links, not ovals */
-  body.nav-open .site-menu .nav-pill {
+  /* Section label above grouped links inside the drawer */
+  .site-menu .nav-section-label {
+    font-size: var(--text-xs, 12px);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-subtle, #8a93a3);
+    margin: var(--space-4, 16px) 0 var(--space-1, 4px);
+  }
+
+  .site-menu .nav-section-label:first-of-type {
+    margin-top: 0;
+  }
+
+  /* Category pills / nav links become a stacked list of full-width rows */
+  .site-menu .nav-pill {
     width: 100%;
     display: grid;
-    gap: 8px;
+    gap: 6px;
     margin: 0;
     padding: 0;
     background: transparent;
@@ -133,45 +342,102 @@
     box-shadow: none;
   }
 
-  body.nav-open .site-menu .nav-pill a {
-    display: block;
+  .site-menu .nav-pill a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     width: 100%;
     padding: 12px 14px;
     border-radius: var(--radius-sm, 12px);
     background: var(--color-surface-muted, rgba(15, 118, 110, 0.08));
-    border: 1px solid var(--color-border, rgba(15, 118, 110, 0.15));
+    border: 1px solid var(--color-border, rgba(15, 118, 110, 0.12));
     color: var(--color-text, var(--ink));
     font-size: var(--text-sm, 14px);
     font-weight: 600;
   }
 
-  body.nav-open .site-menu .nav-pill a:hover {
+  .site-menu .nav-pill a:hover {
     background: var(--color-border, rgba(15, 118, 110, 0.14));
   }
 
-  /* Search box, auth actions (username / God Mode / theme toggle), and nav
-     links all stack full-width and use normal button radii — not pills */
-  body.nav-open .site-menu .header-actions,
-  body.nav-open .site-menu .auth-actions {
+  .site-menu .nav-pill a.active {
+    box-shadow: none;
+  }
+
+  /* The More dropdown just becomes a plain inline group on mobile —
+     no floating panel needed since everything already stacks. */
+  .site-menu .nav-more {
+    width: 100%;
+  }
+
+  .site-menu .nav-more-toggle {
+    display: none;
+  }
+
+  .site-menu .nav-more-menu {
+    display: grid !important;
+    position: static;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    gap: 6px;
+    background: transparent;
+  }
+
+  .site-menu .nav-more-menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm, 12px);
+    background: var(--color-surface-muted, rgba(15, 118, 110, 0.08));
+    border: 1px solid var(--color-border, rgba(15, 118, 110, 0.12));
+    font-size: var(--text-sm, 14px);
+  }
+
+  /* Search box, auth actions, icon buttons all stack full-width */
+  .site-menu .header-actions,
+  .site-menu .auth-actions {
     width: 100%;
     display: grid;
     gap: 10px;
   }
 
-  body.nav-open .site-menu .search-box {
+  .site-menu .header-actions {
+    margin-top: var(--space-4, 16px);
+    padding-top: var(--space-4, 16px);
+    border-top: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
+  }
+
+  .site-menu .search-box {
     width: 100%;
   }
 
-  body.nav-open .site-menu .search-box input {
+  .site-menu .search-box input {
     width: 100%;
     min-width: 0;
   }
 
-  body.nav-open .site-menu .header-actions .btn,
-  body.nav-open .site-menu .auth-actions .btn,
-  body.nav-open .site-menu .header-actions a.btn,
-  body.nav-open .site-menu .auth-actions a.btn,
-  body.nav-open .site-menu .header-actions button {
+  .site-menu .icon-btn {
+    width: 100%;
+    border-radius: var(--radius-sm, 12px);
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    height: auto;
+  }
+
+  .site-menu .icon-btn::after {
+    content: attr(data-label);
+    font-size: var(--text-sm, 14px);
+    font-weight: 600;
+  }
+
+  .site-menu .header-actions .btn,
+  .site-menu .auth-actions .btn,
+  .site-menu .header-actions a.btn,
+  .site-menu .auth-actions a.btn,
+  .site-menu .header-actions button {
     width: 100%;
     border-radius: var(--radius-sm, 12px);
     justify-content: center;
@@ -183,5 +449,12 @@
      menu is open rather than leave two floating UI layers stacked. */
   body.nav-open .theme-toggle {
     display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .site-menu {
+    width: 100vw;
+    max-width: 100vw;
   }
 }

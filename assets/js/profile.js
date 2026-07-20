@@ -1051,7 +1051,26 @@ async function boot() {
   renderAuthActions();
 
   const paramId = getQueryParam("id");
-  state.viewingId = paramId || state.user?.id || null;
+  const paramUsername = getQueryParam("username");
+  if (paramId) {
+    state.viewingId = paramId;
+  } else if (paramUsername) {
+    const usernameResult = await supabase
+      .from("profiles")
+      .select("id")
+      .ilike("username", paramUsername)
+      .maybeSingle();
+    state.viewingId = usernameResult.data?.id || null;
+    if (!state.viewingId) {
+      const shell = document.getElementById("main-content");
+      if (shell) {
+        shell.innerHTML = `<div class="container"><div class="callout">No user found with username "@${escapeHTML(paramUsername)}".</div></div>`;
+      }
+      return;
+    }
+  } else {
+    state.viewingId = state.user?.id || null;
+  }
   if (!state.viewingId) {
     window.location.href = "login.html?next=profile.html";
     return;

@@ -44,22 +44,32 @@
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
-        <div class="brand">
-          <div class="logo" id="siteName">Timzee <span>Tech</span> Hub</div>
-          <div class="tagline" id="siteTagline">Tech news, live discussion, marketplace, videos, and novels — all in one community.</div>
-        </div>
-        <nav class="nav-pill" id="categoryNav"></nav>
+        <a class="brand" href="index.html">
+          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
+          <span class="tagline" id="siteTagline">Tech news, live discussion, marketplace, videos, and novels — all in one community.</span>
+        </a>
+        <nav class="nav-pill">
+          <a href="discussion.html">Discussion</a>
+          <a href="marketplace.html">Marketplace</a>
+          <a href="videos.html">Videos</a>
+          <a href="novels.html">Novels</a>
+          <div class="nav-more">
+            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+            <div class="nav-more-menu">
+              <a href="announcements.html">Announcements</a>
+              <a href="ads.html">Advertise</a>
+              <a href="newsletter.html">Newsletter</a>
+              <a href="contact.html">Contact</a>
+              <a href="support.html">Support</a>
+            </div>
+          </div>
+        </nav>
         <div class="header-actions">
           <div class="search-box">
             <input type="search" id="searchInput" placeholder="Search topics, tags, authors...">
             <button id="searchBtn" aria-label="Search">Go</button>
           </div>
-          <a class="btn ghost" href="novels.html">Novels</a>
-          <a class="btn ghost" href="videos.html">Videos</a>
-          <a class="btn ghost" href="marketplace.html">Marketplace</a>
-          <a class="btn ghost" href="discussion.html">Discussion</a>
-          <a class="btn ghost" href="announcements.html">Announcements</a>
-          <a class="btn ghost" href="ads.html">Advertise</a>
+          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
         </div>
       </div>
@@ -198,6 +208,7 @@
         <div class="content-grid">
           <div>
             <h2 class="section-title">Latest Posts</h2>
+            <nav class="nav-pill category-filter-pill" id="categoryNav" aria-label="Filter by category"></nav>
             <div class="filter-bar">
               <div class="filter-group">
                 <label for="tagFilter">Filter by tag</label>

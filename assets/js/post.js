@@ -350,7 +350,7 @@ function renderAuthorMini(post) {
     ? `<button class="btn ghost" id="followAuthorBtn">${state.isFollowingAuthor ? "Following" : "Follow"}</button>`
     : `<a class="btn ghost" href="${link}">View profile</a>`;
   wrap.innerHTML = `
-    <img src="${avatar}" alt="author avatar">
+    <a href="${link}" aria-label="View profile"><img src="${avatar}" alt="author avatar"></a>
     <div>
       <div class="author-name">${escapeHTML(name)}${badge}</div>
       <div class="author-role">${escapeHTML(role)}</div>
@@ -380,7 +380,7 @@ function renderAuthorCard(post) {
   const postsLabel = state.authorPostCount ? `${state.authorPostCount} posts` : "Featured author";
   card.innerHTML = `
     <div class="author-card">
-      <img src="${avatar}" alt="author avatar">
+      <a href="${link}" aria-label="View profile"><img src="${avatar}" alt="author avatar"></a>
       <div>
         <div class="author-name">${escapeHTML(name)}${badge}</div>
         <div class="author-role">${escapeHTML(role)}</div>

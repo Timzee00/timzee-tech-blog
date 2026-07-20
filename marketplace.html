@@ -15,20 +15,32 @@
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
-        <div class="brand">
-          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
-          <div class="tagline">Buy & sell tech</div>
-        </div>
+        <a class="brand" href="index.html">
+          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
+          <span class="tagline" id="siteTagline">Buy & sell tech</span>
+        </a>
         <nav class="nav-pill">
-          <a href="index.html">Home</a>
           <a href="discussion.html">Discussion</a>
+          <a href="marketplace.html">Marketplace</a>
           <a href="videos.html">Videos</a>
+          <a href="novels.html">Novels</a>
+          <div class="nav-more">
+            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+            <div class="nav-more-menu">
+              <a href="announcements.html">Announcements</a>
+              <a href="ads.html">Advertise</a>
+              <a href="newsletter.html">Newsletter</a>
+              <a href="contact.html">Contact</a>
+              <a href="support.html">Support</a>
+            </div>
+          </div>
         </nav>
         <div class="header-actions">
           <div class="search-box">
             <input type="search" id="marketplaceSearch" placeholder="Search listings...">
           </div>
           <a class="btn" href="#create" id="createBtnHeader" style="display: none;">Sell Item</a>
+          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
         </div>
       </div>
@@ -218,8 +230,9 @@
                 <span>📍 ${escapeHTML(item.location || 'Online')}</span>
               </div>
               <div class="listing-seller">
-                <div class="seller-avatar"></div>
+                <a class="seller-avatar" href="profile.html?id=${encodeURIComponent(item.user_id || '')}" aria-label="View seller profile">${escapeHTML((item.seller_name || '?').trim().slice(0,1).toUpperCase())}</a>
                 <span>${escapeHTML(item.seller_name || '')}</span>
+                ${item.seller_verified ? '<span class="badge-chip verified" title="Verified Seller">✔ Verified Seller</span>' : ''}
               </div>
             </div>
           </div>

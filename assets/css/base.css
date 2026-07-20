@@ -572,6 +572,11 @@ footer {
   color: #166534;
 }
 
+.badge-chip.verified {
+  background: rgba(37, 99, 235, 0.16);
+  color: #1d4ed8;
+}
+
 .bookmark-btn.active {
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-cool) 100%);
   color: #fff;

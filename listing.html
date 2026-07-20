@@ -14,15 +14,30 @@
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
-        <div class="brand">
-          <a class="logo" href="index.html" id="siteName">Timzee <span>Tech</span> Hub</a>
-          <div class="tagline">Marketplace</div>
-        </div>
+        <a class="brand" href="index.html">
+          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
+          <span class="tagline" id="siteTagline">Marketplace listing</span>
+        </a>
         <nav class="nav-pill">
-          <a href="index.html">Home</a>
+          <a href="discussion.html">Discussion</a>
           <a href="marketplace.html">Marketplace</a>
+          <a href="videos.html">Videos</a>
+          <a href="novels.html">Novels</a>
+          <div class="nav-more">
+            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+            <div class="nav-more-menu">
+              <a href="announcements.html">Announcements</a>
+              <a href="ads.html">Advertise</a>
+              <a href="newsletter.html">Newsletter</a>
+              <a href="contact.html">Contact</a>
+              <a href="support.html">Support</a>
+            </div>
+          </div>
         </nav>
-        <div class="header-actions" id="authActions"></div>
+        <div class="header-actions">
+          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
+          <div class="auth-actions" id="authActions"></div>
+        </div>
       </div>
     </header>
 
@@ -68,9 +83,10 @@
               <!-- Seller Info -->
               <div class="seller-info">
                 <div class="seller-header">
-                  <div class="seller-avatar"></div>
+                  <a class="seller-avatar" id="sellerAvatar" href="#" aria-label="View seller profile"></a>
                   <div>
                     <div class="seller-name" id="sellerName"></div>
+                    <span id="sellerVerifiedBadge"></span>
                     <div class="seller-rating">
                       <span id="sellerRating">★★★★★</span>
                       <span id="reviewCount" style="margin-left: 4px;"></span>
@@ -203,6 +219,14 @@
         document.getElementById("description").textContent = listing.description;
         document.getElementById("viewCount").textContent = listing.view_count || 0;
         document.getElementById("sellerName").textContent = listing.seller_name;
+        const sellerAvatarEl = document.getElementById("sellerAvatar");
+        if (sellerAvatarEl) {
+          sellerAvatarEl.href = `profile.html?id=${encodeURIComponent(listing.user_id || "")}`;
+          sellerAvatarEl.textContent = (listing.seller_name || "?").trim().slice(0, 1).toUpperCase();
+        }
+        document.getElementById("sellerVerifiedBadge").innerHTML = listing.seller_verified
+          ? '<span class="badge-chip verified" title="Verified Seller">✔ Verified Seller</span>'
+          : '';
 
         // Status
         const statusEl = document.getElementById("status");

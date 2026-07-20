@@ -289,13 +289,17 @@ async function loadGroups() {
       .from("chat_members")
       .select("thread_id, chat_threads(id, name, is_group, created_by, created_at)")
       .eq("user_id", state.user?.id);
+    if (result.error) {
+      console.error("loadGroups query failed:", result.error);
+      reportAppError(result.error, "Failed to load groups");
+    }
     const rows = result.data || [];
     const groups = rows
       .map((row) => row.chat_threads)
       .filter((thread) => thread && thread.is_group);
     state.groups = groups;
   } catch (err) {
-    console.warn("Failed to load groups", err);
+    console.error("Failed to load groups", err);
     state.groups = [];
   }
 }
@@ -365,7 +369,9 @@ function renderFriendList() {
       const time = last ? timeAgo(last.created_at) : "";
       return `
         <div class="chat-item ${isActive ? "active" : ""}" data-id="${friendId}">
-          <img class="chat-item-avatar" src="${profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="friend avatar">
+          <a class="chat-item-avatar-link" href="profile.html?id=${encodeURIComponent(friendId)}" onclick="event.stopPropagation()" aria-label="View profile">
+            <img class="chat-item-avatar" src="${profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="friend avatar">
+          </a>
           <div class="chat-item-body">
             <div class="chat-item-top">
               <span>${escapeHTML(profile?.display_name || "Member")}</span>
@@ -448,7 +454,9 @@ function renderRequests() {
         const profile = state.requestProfiles[req.requester_id];
         return `
           <div class="chat-item" data-id="${req.id}">
-            <img class="chat-item-avatar" src="${profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="request avatar">
+            <a href="profile.html?id=${encodeURIComponent(req.requester_id || '')}" aria-label="View profile">
+              <img class="chat-item-avatar" src="${profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="request avatar">
+            </a>
             <div class="chat-item-body">
               <div class="chat-item-top">
                 <span>${escapeHTML(profile?.display_name || req.requester_name || "New friend")}</span>
@@ -496,7 +504,9 @@ function renderRequests() {
           const profile = state.requestProfiles[req.addressee_id];
           return `
             <div class="chat-item" data-id="${req.id}">
-              <img class="chat-item-avatar" src="${profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="request avatar">
+              <a href="profile.html?id=${encodeURIComponent(req.addressee_id || '')}" aria-label="View profile">
+                <img class="chat-item-avatar" src="${profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="request avatar">
+              </a>
               <div class="chat-item-body">
                 <div class="chat-item-top">
                   <span>${escapeHTML(profile?.display_name || "Member")}</span>
@@ -540,7 +550,9 @@ function renderBlockedList() {
       const profile = state.blockedProfiles[userId];
       return `
         <div class="chat-item" data-id="${userId}">
-          <img class="chat-item-avatar" src="${profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="blocked avatar">
+          <a href="profile.html?id=${encodeURIComponent(userId)}" aria-label="View profile">
+            <img class="chat-item-avatar" src="${profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="blocked avatar">
+          </a>
           <div class="chat-item-body">
             <div class="chat-item-top">
               <span>${escapeHTML(profile?.display_name || "Member")}</span>
@@ -622,7 +634,9 @@ function renderPeopleResults() {
       const action = isFriend ? "message" : "connect";
       return `
         <div class="chat-item" data-id="${profile.id}">
-          <img class="chat-item-avatar" src="${profile.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="avatar">
+          <a href="profile.html?id=${encodeURIComponent(profile.id)}" aria-label="View profile">
+            <img class="chat-item-avatar" src="${profile.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="avatar">
+          </a>
           <div class="chat-item-body">
             <div class="chat-item-top">
               <span>${escapeHTML(profile.display_name || profile.username || "Member")}</span>
@@ -875,6 +889,8 @@ async function selectFriend(friendId) {
   if (name) name.textContent = profile?.display_name || "Friend";
   if (statusText) statusText.textContent = profile?.headline || "Available";
   if (profileBtn) profileBtn.href = `profile.html?id=${encodeURIComponent(friendId)}`;
+  const avatarLink = document.getElementById("chatAvatarLink");
+  if (avatarLink) avatarLink.href = `profile.html?id=${encodeURIComponent(friendId)}`;
   if (removeBtn) {
     removeBtn.onclick = async () => {
       if (!confirm("Remove this friend?")) return;
@@ -944,6 +960,8 @@ async function selectGroup(groupId) {
     avatar.src =
       "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=120&q=80";
   }
+  const groupAvatarLink = document.getElementById("chatAvatarLink");
+  if (groupAvatarLink) groupAvatarLink.removeAttribute("href");
   if (name) name.textContent = group?.name || "Group";
   if (statusText) statusText.textContent = "Group chat";
   await loadGroupMembers(groupId);

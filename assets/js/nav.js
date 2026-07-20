@@ -45,6 +45,13 @@ function setupMobileMenu() {
     wrap.insertBefore(toggle, menu);
   }
 
+  let backdrop = document.querySelector(".drawer-backdrop-layer");
+  if (!backdrop) {
+    backdrop = document.createElement("div");
+    backdrop.className = "drawer-backdrop-layer";
+    document.body.appendChild(backdrop);
+  }
+
   const setOpen = (open) => {
     document.body.classList.toggle("nav-open", open);
     toggle.classList.toggle("active", open);
@@ -55,6 +62,8 @@ function setupMobileMenu() {
     const next = !document.body.classList.contains("nav-open");
     setOpen(next);
   });
+
+  backdrop.addEventListener("click", () => setOpen(false));
 
   menu.addEventListener("click", (event) => {
     if (event.target.closest("a")) {
@@ -77,8 +86,53 @@ function setupMobileMenu() {
   });
 }
 
+// Marks whichever nav link matches the current page with .active, so every
+// page shares the exact same header markup instead of each page hardcoding
+// which link is "current" (which is how pages drifted out of sync before).
+function setupActiveNavLink() {
+  const current = (window.location.pathname.split("/").pop() || "index.html").toLowerCase();
+  document.querySelectorAll(".nav-pill a, .nav-more-menu a").forEach((link) => {
+    const href = (link.getAttribute("href") || "").toLowerCase();
+    if (!href || href.startsWith("#")) return;
+    const hrefPage = href.split("?")[0].split("/").pop();
+    if (hrefPage === current || (current === "index.html" && hrefPage === "")) {
+      link.classList.add("active");
+      if (link.closest(".nav-more")) {
+        const toggle = link.closest(".nav-more").querySelector(".nav-more-toggle");
+        if (toggle) toggle.classList.add("active-parent");
+      }
+    }
+  });
+}
+
+// Desktop "More" dropdown: click to toggle, close on outside click/Escape.
+// On mobile this toggle is hidden by CSS and the menu renders inline instead.
+function setupMoreDropdown() {
+  document.querySelectorAll(".nav-more").forEach((wrap) => {
+    const toggle = wrap.querySelector(".nav-more-toggle");
+    if (!toggle) return;
+    toggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const isOpen = wrap.classList.contains("open");
+      document.querySelectorAll(".nav-more.open").forEach((el) => el.classList.remove("open"));
+      wrap.classList.toggle("open", !isOpen);
+      toggle.setAttribute("aria-expanded", (!isOpen).toString());
+    });
+  });
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".nav-more.open").forEach((el) => el.classList.remove("open"));
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      document.querySelectorAll(".nav-more.open").forEach((el) => el.classList.remove("open"));
+    }
+  });
+}
+
 setupGlobalErrorHandlers();
 setupMobileMenu();
+setupActiveNavLink();
+setupMoreDropdown();
 startPresence(window.location.pathname);
 
 let notificationChannel = null;

@@ -114,3 +114,103 @@
     min-width: 0;
   }
 }
+
+/* ---------- Reddit-style: community cards in sidebar ---------- */
+.community-card {
+  display: flex;
+  gap: var(--space-3, 12px);
+  align-items: flex-start;
+}
+
+.community-icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full, 999px);
+  background: linear-gradient(135deg, var(--accent, #0f766e) 0%, var(--accent-cool, #0ea5e9) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.community-body { min-width: 0; flex: 1; }
+
+.community-slug {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-secondary, #0ea5e9);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+}
+
+/* ---------- Reddit-style: sort control ---------- */
+.sort-select {
+  border-radius: var(--radius-full, 999px);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.14));
+  background: var(--color-surface, #fff);
+  padding: 6px 12px;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  color: var(--color-text, var(--ink));
+}
+
+/* ---------- Reddit-style: vote rail + posts/comments ---------- */
+.message-row {
+  display: flex;
+  gap: var(--space-3, 12px);
+  align-items: flex-start;
+}
+
+.vote-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.vote-arrow {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px;
+  color: var(--color-text-subtle, #8a93a3);
+  border-radius: var(--radius-xs, 8px);
+  transition: color 0.15s ease, transform 0.1s ease;
+}
+
+.vote-arrow:hover { color: var(--color-text, var(--ink)); }
+.vote-arrow:active { transform: scale(0.85); }
+
+.vote-arrow.up.active { color: var(--color-primary, #0f766e); }
+.vote-arrow.down.active { color: var(--color-danger, #dc2626); }
+
+.vote-score {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 700;
+  color: var(--color-text, var(--ink));
+}
+
+.message-content { flex: 1; min-width: 0; }
+
+.message-bubble.is-post {
+  border-bottom: 1px solid var(--color-border, rgba(15,23,42,0.1));
+  padding-bottom: var(--space-3, 12px);
+}
+
+.message-bubble.is-comment {
+  border-left: 2px solid var(--color-border, rgba(15,23,42,0.12));
+  padding-left: var(--space-3, 12px);
+  margin-top: var(--space-2, 8px);
+}
+
+.comment-children {
+  margin-top: var(--space-2, 8px);
+}
+

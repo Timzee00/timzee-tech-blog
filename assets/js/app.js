@@ -823,7 +823,7 @@ function renderLeaderboard() {
       const verified = profile.is_verified ? `<span class="verified-badge small">✓</span>` : "";
       return `
         <div class="leaderboard-item">
-          <img src="${avatar}" alt="member avatar">
+          <a href="profile.html?id=${encodeURIComponent(profile.id || '')}" aria-label="View profile"><img src="${avatar}" alt="member avatar"></a>
           <div>
             <div><strong>${escapeHTML(name)}</strong>${verified}</div>
             <div class="leaderboard-meta">

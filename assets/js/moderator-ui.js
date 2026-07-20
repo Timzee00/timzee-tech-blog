@@ -289,7 +289,7 @@ class ModeratorManager {
     list.innerHTML = this.moderators.map(mod => `
       <div class="user-card">
         <div class="user-info">
-          <div class="user-avatar">${(mod.full_name || mod.username || "M").charAt(0).toUpperCase()}</div>
+          <a class="user-avatar" href="profile.html?id=${encodeURIComponent(mod.user_id || '')}" aria-label="View profile">${(mod.full_name || mod.username || "M").charAt(0).toUpperCase()}</a>
           <div class="user-details">
             <h4>${mod.full_name || mod.username}</h4>
             <p>${mod.email}</p>
@@ -323,7 +323,7 @@ class ModeratorManager {
     list.innerHTML = this.authors.map(author => `
       <div class="user-card">
         <div class="user-info">
-          <div class="user-avatar">${(author.full_name || author.username || "A").charAt(0).toUpperCase()}</div>
+          <a class="user-avatar" href="profile.html?id=${encodeURIComponent(author.user_id || '')}" aria-label="View profile">${(author.full_name || author.username || "A").charAt(0).toUpperCase()}</a>
           <div class="user-details">
             <h4>${author.full_name || author.username}</h4>
             <p>${author.email}</p>
