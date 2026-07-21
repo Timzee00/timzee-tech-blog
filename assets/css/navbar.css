@@ -222,6 +222,10 @@
     align-items: center;
   }
 
+  .site-menu-header {
+    display: none;
+  }
+
   .header-actions { gap: 10px; align-items: center; }
   .search-box input { min-width: 200px; }
 }
@@ -285,22 +289,51 @@
   }
 
   .site-menu::before {
-    content: "Menu";
-    display: block;
+    content: "";
+    display: none;
+  }
+
+  .site-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3, 12px);
+  }
+
+  .site-menu-header .site-menu-title {
     font-family: var(--font-display, "Fraunces", serif);
     font-size: var(--text-xl, 22px);
     font-weight: 700;
     color: var(--color-text, var(--ink));
-    margin-bottom: var(--space-2, 8px);
   }
 
-  /* Backdrop behind the open drawer */
+  .site-menu-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full, 999px);
+    border: 1px solid var(--color-border, rgba(15, 23, 42, 0.12));
+    background: var(--color-surface-muted, rgba(15, 118, 110, 0.08));
+    color: var(--color-text, var(--ink));
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .site-menu-close:hover {
+    background: var(--color-border, rgba(15, 118, 110, 0.14));
+  }
+
+  /* Backdrop behind the open drawer — solid enough that the header
+     underneath doesn't confusingly show through blurred; the goal is a
+     clean "background dimmed, panel focused" look, not a glass effect. */
   .drawer-backdrop-layer {
     content: "";
     position: fixed;
     inset: 0;
-    background: rgba(2, 6, 23, 0.5);
-    backdrop-filter: blur(3px);
+    background: rgba(5, 8, 15, 0.82);
     z-index: 99998;
     opacity: 0;
     pointer-events: none;

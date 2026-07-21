@@ -1,6 +1,3 @@
-import { startPresence } from "./presence.js";
-import { supabase, getCurrentUser } from "./supabase.js";
-import { fetchUnreadNotificationCount } from "./data.js";
 import { extractErrorMessage, reportAppError } from "./utils.js";
 
 function setupGlobalErrorHandlers() {
@@ -30,6 +27,14 @@ function setupMobileMenu() {
     menu.className = "site-menu";
     menu.id = "siteMenu";
     wrap.appendChild(menu);
+
+    const menuHeader = document.createElement("div");
+    menuHeader.className = "site-menu-header";
+    menuHeader.innerHTML =
+      '<span class="site-menu-title">Menu</span>' +
+      '<button type="button" class="site-menu-close" aria-label="Close menu">&times;</button>';
+    menu.appendChild(menuHeader);
+
     if (nav) menu.appendChild(nav);
     if (actions) menu.appendChild(actions);
   }
@@ -64,6 +69,11 @@ function setupMobileMenu() {
   });
 
   backdrop.addEventListener("click", () => setOpen(false));
+
+  const closeBtn = menu.querySelector(".site-menu-close");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => setOpen(false));
+  }
 
   menu.addEventListener("click", (event) => {
     if (event.target.closest("a")) {
@@ -133,11 +143,32 @@ setupGlobalErrorHandlers();
 setupMobileMenu();
 setupActiveNavLink();
 setupMoreDropdown();
-startPresence(window.location.pathname);
+
+// Everything below this line depends on the Supabase client, which is
+// loaded from an external CDN inside supabase.js. That single external
+// network dependency previously sat at the TOP of this file as a static
+// import — and a static import failure (CDN blocked, slow, or down)
+// silently fails this entire module's execution, taking the menu code
+// above down with it even though the menu itself needs no network access
+// at all. Loading it dynamically here instead means a failure here is just
+// a caught promise rejection: the menu (and everything else already run
+// above) is completely unaffected either way.
+(async () => {
+  try {
+    const [{ startPresence }, { supabase, getCurrentUser }, { fetchUnreadNotificationCount }] =
+      await Promise.all([import("./presence.js"), import("./supabase.js"), import("./data.js")]);
+
+    startPresence(window.location.pathname);
+    await setupNotificationBadge(supabase, getCurrentUser, fetchUnreadNotificationCount);
+    await setupWelcomePrompt(getCurrentUser);
+  } catch (error) {
+    console.error("Supabase-dependent nav features failed to load (menu is unaffected):", error);
+  }
+})();
 
 let notificationChannel = null;
 
-async function setupNotificationBadge() {
+async function setupNotificationBadge(supabase, getCurrentUser, fetchUnreadNotificationCount) {
   const user = await getCurrentUser();
   if (!user) return;
 
@@ -247,7 +278,7 @@ async function setupNotificationBadge() {
 }
 
 
-async function setupWelcomePrompt() {
+async function setupWelcomePrompt(getCurrentUser) {
   const path = window.location.pathname || "";
   if (
     path.includes("login") ||
@@ -298,6 +329,3 @@ async function setupWelcomePrompt() {
     if (event.target === overlay) dismiss();
   });
 }
-
-setupWelcomePrompt();
-setupNotificationBadge();
