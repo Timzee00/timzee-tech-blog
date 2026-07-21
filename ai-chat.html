@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ask the AI - Timzee Tech Hub</title>
+    <meta name="description" content="Chat with the Timzee AI assistant">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script defer src="assets/js/theme-init.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container wrap">
+        <a class="brand" href="index.html">
+          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
+          <span class="tagline" id="siteTagline">Chat with the Timzee AI assistant</span>
+        </a>
+        <nav class="nav-pill">
+          <a href="discussion.html">Discussion</a>
+          <a href="marketplace.html">Marketplace</a>
+          <a href="videos.html">Videos</a>
+          <a href="novels.html">Novels</a>
+          <div class="nav-more">
+            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+            <div class="nav-more-menu">
+              <a href="announcements.html">Announcements</a>
+              <a href="ads.html">Advertise</a>
+              <a href="newsletter.html">Newsletter</a>
+              <a href="contact.html">Contact</a>
+              <a href="support.html">Support</a>
+            </div>
+          </div>
+        </nav>
+        <div class="header-actions">
+          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
+          <div class="auth-actions" id="authActions"></div>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <div class="container chat-layout" id="aiChatLayout" data-view="list">
+        <aside class="chat-sidebar" data-reveal>
+          <div class="chat-sidebar-header">
+            <h2>AI Chat</h2>
+            <button class="btn" id="newConversationBtn" type="button">+ New Chat</button>
+          </div>
+          <h4>Conversations</h4>
+          <div id="conversationList"><div class="callout">Loading...</div></div>
+        </aside>
+
+        <section class="chat-pane" data-reveal>
+          <div class="chat-pane-header" id="aiChatHeader">
+            <button class="btn ghost thread-back-btn" id="backToConversationsBtn" type="button">&larr; Conversations</button>
+            <div>
+              <strong id="aiChatTitle">Select or start a conversation</strong>
+              <div class="chat-meta" id="aiChatSubtitle" style="font-size:12px; color:var(--muted);"></div>
+            </div>
+          </div>
+          <div class="chat-messages message-list" id="aiChatMessages">
+            <div class="callout">Start a new chat to ask the AI anything — tech questions, writing help, code, ideas.</div>
+          </div>
+          <div class="chat-typing" id="aiTypingIndicator" style="display:none; margin: 0 16px 8px;">
+            <span></span><span></span><span></span>
+          </div>
+          <form id="aiChatForm" class="chat-input">
+            <textarea id="aiChatInput" placeholder="Ask the AI anything..." rows="1" required></textarea>
+            <button type="submit" class="btn">Send</button>
+          </form>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-links">
+          <a href="support.html">Support</a>
+          <a href="contact.html">Contact Us</a>
+          <a href="newsletter.html">Newsletter</a>
+          <a href="ads.html">Advertise</a>
+          <a href="discussion.html">Discussion</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module">
+      import { getCurrentUser } from "./assets/js/supabase.js";
+      import { createConversation, getConversationHistory, chat as aiChat, SYSTEM_PROMPTS } from "./assets/js/groq.js";
+      import { escapeHTML } from "./assets/js/utils.js";
+      import { supabase } from "./assets/js/supabase.js";
+      import "./assets/js/nav.js";
+
+      const state = {
+        user: null,
+        conversations: [],
+        activeConversationId: null,
+        sending: false
+      };
+
+      const layout = document.getElementById("aiChatLayout");
+      const listEl = document.getElementById("conversationList");
+      const messagesEl = document.getElementById("aiChatMessages");
+      const form = document.getElementById("aiChatForm");
+      const input = document.getElementById("aiChatInput");
+      const typing = document.getElementById("aiTypingIndicator");
+      const titleEl = document.getElementById("aiChatTitle");
+      const subtitleEl = document.getElementById("aiChatSubtitle");
+
+      function timeAgo(dateStr) {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return "just now";
+        if (mins < 60) return `${mins}m ago`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return `${Math.floor(hours / 24)}d ago`;
+      }
+
+      async function loadConversations() {
+        const result = await supabase
+          .from("ai_conversations")
+          .select("*")
+          .eq("user_id", state.user.id)
+          .order("created_at", { ascending: false });
+        state.conversations = result.data || [];
+        renderConversationList();
+      }
+
+      function renderConversationList() {
+        if (!state.conversations.length) {
+          listEl.innerHTML = `<div class="callout">No conversations yet — start one.</div>`;
+          return;
+        }
+        listEl.innerHTML = state.conversations
+          .map(
+            (c) => `
+            <div class="chat-item ${c.id === state.activeConversationId ? "active" : ""}" data-id="${c.id}">
+              <div class="chat-item-body">
+                <div class="chat-item-top">
+                  <span>${escapeHTML(c.title || "New Chat")}</span>
+                  <span class="chat-item-time">${timeAgo(c.created_at)}</span>
+                </div>
+              </div>
+            </div>
+          `
+          )
+          .join("");
+        listEl.querySelectorAll(".chat-item").forEach((item) => {
+          item.addEventListener("click", () => openConversation(item.dataset.id));
+        });
+      }
+
+      function renderMessage(role, content) {
+        const bubbleWrap = document.createElement("div");
+        bubbleWrap.className = `message-row ${role === "user" ? "self-row" : ""}`;
+        bubbleWrap.style.display = "flex";
+        bubbleWrap.style.justifyContent = role === "user" ? "flex-end" : "flex-start";
+        bubbleWrap.style.marginBottom = "10px";
+        const bubble = document.createElement("div");
+        bubble.className = `chat-bubble ${role === "user" ? "self" : ""}`;
+        bubble.style.whiteSpace = "pre-wrap";
+        bubble.textContent = content;
+        bubbleWrap.appendChild(bubble);
+        messagesEl.appendChild(bubbleWrap);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      async function openConversation(id) {
+        state.activeConversationId = id;
+        layout.dataset.view = "thread";
+        renderConversationList();
+        const conversation = state.conversations.find((c) => c.id === id);
+        titleEl.textContent = conversation?.title || "Chat";
+        subtitleEl.textContent = "Timzee AI Assistant";
+        messagesEl.innerHTML = `<div class="callout">Loading...</div>`;
+        const history = await getConversationHistory(id);
+        messagesEl.innerHTML = "";
+        if (!history.length) {
+          messagesEl.innerHTML = `<div class="callout">Say hello to start the conversation.</div>`;
+          return;
+        }
+        history.forEach((msg) => renderMessage(msg.role, msg.content));
+      }
+
+      async function startNewConversation() {
+        const result = await createConversation(state.user.id, "New Chat");
+        if (result.error) {
+          alert("Couldn't start a new chat: " + result.error.message);
+          return;
+        }
+        state.conversations.unshift(result.data);
+        await openConversation(result.data.id);
+      }
+
+      document.getElementById("newConversationBtn").addEventListener("click", startNewConversation);
+      document.getElementById("backToConversationsBtn").addEventListener("click", () => {
+        layout.dataset.view = "list";
+      });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const message = input.value.trim();
+        if (!message || state.sending) return;
+        if (!state.activeConversationId) {
+          await startNewConversation();
+        }
+        input.value = "";
+        input.style.height = "auto";
+        renderMessage("user", message);
+        typing.style.display = "inline-flex";
+        state.sending = true;
+        try {
+          const reply = await aiChat({
+            conversationId: state.activeConversationId,
+            userId: state.user.id,
+            message,
+            systemPrompt: SYSTEM_PROMPTS.general
+          });
+          renderMessage("assistant", reply || "Sorry, I couldn't generate a response.");
+          // First message becomes the conversation title
+          const conv = state.conversations.find((c) => c.id === state.activeConversationId);
+          if (conv && conv.title === "New Chat") {
+            const newTitle = message.slice(0, 40) + (message.length > 40 ? "..." : "");
+            await supabase.from("ai_conversations").update({ title: newTitle }).eq("id", conv.id);
+            conv.title = newTitle;
+            titleEl.textContent = newTitle;
+            renderConversationList();
+          }
+        } catch (err) {
+          renderMessage("assistant", "Something went wrong reaching the AI: " + (err.message || "unknown error"));
+        } finally {
+          typing.style.display = "none";
+          state.sending = false;
+        }
+      });
+
+      input.addEventListener("input", () => {
+        input.style.height = "auto";
+        input.style.height = Math.min(input.scrollHeight, 120) + "px";
+      });
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          form.requestSubmit();
+        }
+      });
+
+      async function boot() {
+        state.user = await getCurrentUser();
+        if (!state.user) {
+          window.location.href = `login.html?next=${encodeURIComponent(window.location.href)}`;
+          return;
+        }
+        await loadConversations();
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

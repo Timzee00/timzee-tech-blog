@@ -4,6 +4,7 @@ import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import { uploadMedia } from "./media.js";
 import { timeAgo, escapeHTML, isSafeUrl, extractErrorMessage, reportAppError } from "./utils.js";
 import { setupReveal } from "./reveal.js";
+import { notifyFriendRequest, notifyFriendRequestAccepted, notifyNewMessage } from "./data.js";
 import "./nav.js";
 
 const state = {
@@ -483,6 +484,7 @@ function renderRequests() {
           .from("friendships")
           .update({ status: "accepted", updated_at: new Date().toISOString() })
           .eq("id", request.id);
+        notifyFriendRequestAccepted(request.requester_id, getDisplayName(state.user)).catch(() => {});
       }
       if (btn.dataset.action === "decline") {
         await supabase.from("friendships").delete().eq("id", request.id);
@@ -600,6 +602,7 @@ async function sendFriendRequest(userId) {
     status: "pending",
     created_at: new Date().toISOString()
   });
+  notifyFriendRequest(userId, getDisplayName(state.user), state.user.id).catch(() => {});
   await loadFriendships();
   await loadThreadPreviews();
   renderFriendList();
@@ -1132,6 +1135,10 @@ function setupChatForm() {
       // Immediately add message to state and display it
       state.messages.push(payload);
       renderMessages();
+
+      if (payload.recipient_id) {
+        notifyNewMessage(payload.recipient_id, getDisplayName(state.user), state.user.id).catch(() => {});
+      }
 
       form.reset();
       mediaFile = null;

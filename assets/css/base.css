@@ -144,15 +144,13 @@ main,
   display: none !important;
 }
 
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  backdrop-filter: blur(16px);
-  background: rgba(246, 241, 234, 0.88);
-  border-bottom: 1px solid rgba(15, 118, 110, 0.12);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
-}
+/* .site-header now lives exclusively in navbar.css — this file previously
+   had its own duplicate copy (including backdrop-filter, which was the
+   actual cause of the mobile drawer collapsing to the header's own height:
+   backdrop-filter creates a new containing block for position:fixed
+   descendants in Chrome). Removing backdrop-filter from navbar.css's copy
+   alone didn't fix it because this untouched duplicate kept it active —
+   CSS cascades per-property, not per-rule. */
 
 main,
 footer {

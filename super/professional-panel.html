@@ -163,14 +163,16 @@
         <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
           <h3 style="margin: 0 0 12px 0; color: #ef4444;">🗑️ Reset Database</h3>
           <p style="margin: 0 0 12px 0; color: #666;">Delete ALL content, posts, comments, and discussions. Users remain.</p>
-          <button class="btn" style="background: #ef4444; color: white; border-color: #ef4444;" onclick="if(confirm('DELETE ALL POSTS AND COMMENTS? This cannot be undone!')) alert('Contact support to perform this action.')">Delete All Content</button>
+          <button class="btn" id="deleteAllContentBtn" style="background: #ef4444; color: white; border-color: #ef4444;">Delete All Content</button>
+          <div id="deleteAllContentStatus" style="margin-top:10px; font-size:13px;"></div>
         </div>
 
         <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px;">
           <h3 style="margin: 0 0 12px 0; color: #ef4444;">👤 Delete User</h3>
           <p style="margin: 0 0 12px 0; color: #666;">Permanently delete a user account and all their data.</p>
           <input type="text" id="deleteUserId" placeholder="User ID or Email" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px;">
-          <button class="btn" style="background: #ef4444; color: white; border-color: #ef4444;" onclick="if(confirm('PERMANENTLY DELETE THIS USER? This cannot be undone!')) alert('Contact support to perform this action.')">Delete User</button>
+          <button class="btn" id="deleteUserBtn" style="background: #ef4444; color: white; border-color: #ef4444;">Delete User</button>
+          <div id="deleteUserStatus" style="margin-top:10px; font-size:13px;"></div>
         </div>
       </section>
     </main>
@@ -449,6 +451,23 @@
           return result?.data ?? null;
         };
 
+        const changeAdminRole = async (userId, action) => {
+          try {
+            const res = await fetchWithAuth("/.netlify/functions/update-admin-role", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId, action })
+            });
+            const parsed = await safeParseJson(res);
+            if (!res.ok) {
+              throw new Error(parsed.data?.error || "Role change failed.");
+            }
+            return { data: parsed.data?.profile || null };
+          } catch (err) {
+            return { error: err.message || "Role change failed." };
+          }
+        };
+
         const loadAdmins = async () => {
           try {
             const res = await fetchWithAuth("/.netlify/functions/list-admins");
@@ -458,13 +477,34 @@
               throw new Error(data.error || `Failed to load admins. ${parsed.raw ? "Response was HTML (Netlify function not running)." : ""}`);
             }
             const cards = (data.admins || []).map((admin) => `
-              <div class="form-card" style="margin-bottom:12px;">
+              <div class="form-card" style="margin-bottom:12px;" data-admin-id="${admin.id}">
                 <strong>${admin.display_name || admin.email}</strong>
                 <div style="color:#666;font-size:12px;">${admin.email} • ${admin.role}</div>
                 <div style="color:#666;font-size:12px;">Posts: ${admin.post_count || 0}</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                  ${admin.role !== "super" ? `<button class="btn ghost" data-admin-action="promote_to_super" data-admin-id="${admin.id}">Promote to Super</button>` : ""}
+                  ${admin.role === "super" ? `<button class="btn ghost" data-admin-action="demote_to_admin" data-admin-id="${admin.id}">Demote to Admin</button>` : ""}
+                  <button class="btn ghost" style="color:#ef4444;" data-admin-action="remove_admin" data-admin-id="${admin.id}">Remove Admin Access</button>
+                </div>
               </div>
             `);
             renderList("adminList", cards, "No admins found.");
+
+            document.querySelectorAll("#adminList [data-admin-action]").forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const action = btn.dataset.adminAction;
+                const label = action === "remove_admin" ? "remove admin access from" : "change the role of";
+                if (!confirm(`Are you sure you want to ${label} this user?`)) return;
+                btn.disabled = true;
+                const result = await changeAdminRole(btn.dataset.adminId, action);
+                if (result.error) {
+                  alert(result.error);
+                  btn.disabled = false;
+                  return;
+                }
+                loadAdmins();
+              });
+            });
           } catch (err) {
             console.warn("Falling back to Supabase admin list:", err);
             const { data, error } = await supabase
@@ -477,13 +517,33 @@
               return;
             }
             const cards = (data || []).map((admin) => `
-              <div class="form-card" style="margin-bottom:12px;">
+              <div class="form-card" style="margin-bottom:12px;" data-admin-id="${admin.id}">
                 <strong>${admin.display_name || admin.username || "Admin"}</strong>
                 <div style="color:#666;font-size:12px;">${admin.email || admin.username || "—"} • ${admin.role || "admin"}</div>
                 <div style="color:#666;font-size:12px;">Joined: ${admin.created_at ? new Date(admin.created_at).toLocaleDateString() : "—"}</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                  ${admin.role !== "super" ? `<button class="btn ghost" data-admin-action="promote_to_super" data-admin-id="${admin.id}">Promote to Super</button>` : ""}
+                  ${admin.role === "super" ? `<button class="btn ghost" data-admin-action="demote_to_admin" data-admin-id="${admin.id}">Demote to Admin</button>` : ""}
+                  <button class="btn ghost" style="color:#ef4444;" data-admin-action="remove_admin" data-admin-id="${admin.id}">Remove Admin Access</button>
+                </div>
               </div>
             `);
             renderList("adminList", cards, "No admins found.");
+            document.querySelectorAll("#adminList [data-admin-action]").forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const action = btn.dataset.adminAction;
+                const label = action === "remove_admin" ? "remove admin access from" : "change the role of";
+                if (!confirm(`Are you sure you want to ${label} this user?`)) return;
+                btn.disabled = true;
+                const result = await changeAdminRole(btn.dataset.adminId, action);
+                if (result.error) {
+                  alert(result.error);
+                  btn.disabled = false;
+                  return;
+                }
+                loadAdmins();
+              });
+            });
           }
         };
 
@@ -581,12 +641,44 @@
           container.innerHTML = data
             .map(
               (post) => `
-                <div class="form-card" style="margin-bottom:12px;">
+                <div class="form-card" style="margin-bottom:12px;" data-post-id="${post.id}">
                   <strong>${post.title || "Untitled"}</strong>
                   <div style="color:#666;font-size:12px;">${post.author_name || "Unknown"} • ${post.status || "draft"}</div>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                    <button class="btn ghost" data-post-action="${post.status === "published" ? "unpublish" : "publish"}" data-post-id="${post.id}">${post.status === "published" ? "Unpublish" : "Publish"}</button>
+                    <button class="btn ghost" style="color:#ef4444;" data-post-action="delete" data-post-id="${post.id}">Delete</button>
+                  </div>
                 </div>`
             )
             .join("");
+
+          container.querySelectorAll("[data-post-action]").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const postId = btn.dataset.postId;
+              const action = btn.dataset.postAction;
+              if (action === "delete") {
+                if (!confirm("Delete this post permanently? This cannot be undone.")) return;
+                btn.disabled = true;
+                const { error: delError } = await supabase.from("posts").delete().eq("id", postId);
+                if (delError) {
+                  alert(delError.message);
+                  btn.disabled = false;
+                  return;
+                }
+                loadPosts();
+                return;
+              }
+              const newStatus = action === "publish" ? "published" : "draft";
+              btn.disabled = true;
+              const { error: updError } = await supabase.from("posts").update({ status: newStatus }).eq("id", postId);
+              if (updError) {
+                alert(updError.message);
+                btn.disabled = false;
+                return;
+              }
+              loadPosts();
+            });
+          });
         };
 
         const loadAnalysis = async () => {
@@ -738,6 +830,83 @@
         await loadUsers();
         await loadPosts();
         await loadAnalysis();
+
+        // Danger Zone — real destructive actions, guarded carefully.
+        const deleteUserBtn = document.getElementById("deleteUserBtn");
+        const deleteUserStatus = document.getElementById("deleteUserStatus");
+        if (deleteUserBtn) {
+          deleteUserBtn.addEventListener("click", async () => {
+            const raw = (document.getElementById("deleteUserId").value || "").trim();
+            deleteUserStatus.textContent = "";
+            if (!raw) {
+              deleteUserStatus.textContent = "Enter a user ID or email first.";
+              return;
+            }
+            let targetId = raw;
+            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidPattern.test(raw)) {
+              const { data: byEmail } = await supabase
+                .from("profiles")
+                .select("id, display_name, email")
+                .eq("email", raw)
+                .maybeSingle();
+              if (!byEmail?.id) {
+                deleteUserStatus.textContent = "No user found with that ID or email.";
+                return;
+              }
+              targetId = byEmail.id;
+            }
+            if (targetId === user?.id) {
+              deleteUserStatus.textContent = "You cannot delete your own account this way.";
+              return;
+            }
+            const typed = prompt('Type DELETE to permanently remove this user and all their data. This cannot be undone.');
+            if (typed !== "DELETE") {
+              deleteUserStatus.textContent = "Cancelled — confirmation text didn't match.";
+              return;
+            }
+            deleteUserBtn.disabled = true;
+            deleteUserStatus.textContent = "Deleting...";
+            try {
+              const res = await fetchWithAuth("/.netlify/functions/update-admin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "delete", userId: targetId })
+              });
+              const parsed = await safeParseJson(res);
+              if (!res.ok) throw new Error(parsed.data?.error || "Delete failed.");
+              deleteUserStatus.textContent = "User deleted.";
+              document.getElementById("deleteUserId").value = "";
+            } catch (err) {
+              deleteUserStatus.textContent = err.message || "Delete failed.";
+            } finally {
+              deleteUserBtn.disabled = false;
+            }
+          });
+        }
+
+        const deleteAllContentBtn = document.getElementById("deleteAllContentBtn");
+        const deleteAllContentStatus = document.getElementById("deleteAllContentStatus");
+        if (deleteAllContentBtn) {
+          deleteAllContentBtn.addEventListener("click", async () => {
+            const typed = prompt('This deletes ALL posts, comments, and discussion content site-wide. Users are not affected. Type "DELETE ALL" (exactly) to confirm.');
+            if (typed !== "DELETE ALL") {
+              deleteAllContentStatus.textContent = "Cancelled — confirmation text didn't match.";
+              return;
+            }
+            deleteAllContentBtn.disabled = true;
+            deleteAllContentStatus.textContent = "Deleting content...";
+            const tables = ["comments", "post_shares", "post_likes", "posts", "discussion_messages", "discussion_topics"];
+            const results = [];
+            for (const table of tables) {
+              const { error } = await supabase.from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000");
+              results.push(`${table}: ${error ? "failed (" + error.message + ")" : "cleared"}`);
+            }
+            deleteAllContentStatus.innerHTML = results.join("<br>");
+            deleteAllContentBtn.disabled = false;
+            loadPosts();
+          });
+        }
       }
 
       init().catch((err) => {

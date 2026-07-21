@@ -770,6 +770,28 @@ export async function notifyNewMessage(userId, senderName, senderId) {
   });
 }
 
+export async function notifyVideoLike(userId, likerName, videoId) {
+  return createNotification({
+    userId,
+    type: "video_like",
+    title: "New like on your video",
+    body: `${likerName} liked your video`,
+    linkUrl: `/video.html?id=${videoId}`,
+    data: { video_id: videoId }
+  });
+}
+
+export async function notifyVideoComment(userId, commenterName, videoId) {
+  return createNotification({
+    userId,
+    type: "video_comment",
+    title: "New comment on your video",
+    body: `${commenterName} commented on your video`,
+    linkUrl: `/video.html?id=${videoId}`,
+    data: { video_id: videoId }
+  });
+}
+
 // ============================================================================
 // VERIFICATION FUNCTIONS
 // ============================================================================

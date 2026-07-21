@@ -372,6 +372,32 @@
         padding: 30px 10px;
         font-size: 13.5px;
       }
+      .comment-reply-btn {
+        background: none;
+        border: none;
+        color: #7dd3fc;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 0;
+        cursor: pointer;
+      }
+      .comment-reply-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 16px;
+        font-size: 12.5px;
+        color: rgba(255,255,255,0.7);
+        background: rgba(255,255,255,0.06);
+      }
+      .comment-reply-indicator button {
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 16px;
+        cursor: pointer;
+        opacity: 0.7;
+      }
       .comment-drawer-form {
         display: flex;
         gap: 8px;
@@ -453,6 +479,7 @@
       } from "./assets/js/videos-marketplace.js";
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+      import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
 
       const root = document.getElementById("reelRoot");
       const params = new URLSearchParams(window.location.search);
@@ -510,7 +537,7 @@
           <div class="reel-item" data-index="${index}" data-id="${escapeHTML(video.id)}">
             <div class="reel-progress"><div class="reel-progress-fill" id="progress-${index}"></div></div>
             <video class="reel-video" id="video-${index}" ${poster ? `poster="${poster}"` : ""} src="${src}"
-              playsinline loop muted preload="metadata"></video>
+              playsinline loop preload="metadata"></video>
             <div class="reel-vignette"></div>
             <div class="reel-tapzone" data-tap="${index}"></div>
             <div class="reel-pause-flash" id="pauseflash-${index}">▶</div>
@@ -518,7 +545,7 @@
             <div class="reel-topbar">
               <a class="reel-back" href="videos.html" aria-label="Back to videos">←</a>
               <div class="reel-wordmark">Timzee <span>Reels</span></div>
-              <button class="reel-mute" id="mute-${index}" aria-label="Toggle sound">🔇</button>
+              <button class="reel-mute" id="mute-${index}" aria-label="Toggle sound">🔊</button>
             </div>
 
             <div class="reel-bottom">
@@ -544,6 +571,10 @@
                   <div class="reel-chip-icon">↗</div>
                   <span class="reel-chip-count">Share</span>
                 </button>
+                <button class="reel-chip" data-action="download" data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(video.video_url || '')}" data-title="${escapeHTML(video.title || 'video')}">
+                  <div class="reel-chip-icon">⬇</div>
+                  <span class="reel-chip-count">Save</span>
+                </button>
                 <div class="reel-chip">
                   <div class="reel-chip-icon" style="font-size:15px;">👁</div>
                   <span class="reel-chip-count">${video.view_count ?? 0}</span>
@@ -565,6 +596,22 @@
         wireItems();
       }
 
+      // Browsers block unmuted autoplay unless the user already interacted with
+      // the page. We try unmuted first (since that's the better experience),
+      // and only fall back to muted playback if the browser actually rejects it —
+      // rather than defaulting every video to muted regardless.
+      function playWithSoundFallback(vid, idx) {
+        const attempt = vid.play();
+        if (attempt && typeof attempt.catch === "function") {
+          attempt.catch(() => {
+            vid.muted = true;
+            const btn = document.getElementById(`mute-${idx}`);
+            if (btn) btn.textContent = "🔇";
+            vid.play().catch(() => {});
+          });
+        }
+      }
+
       let observer;
       function wireItems() {
         const scroller = document.getElementById("scroller");
@@ -578,7 +625,7 @@
             const flash = document.getElementById(`pauseflash-${idx}`);
             if (!vid) return;
             if (vid.paused) {
-              vid.play().catch(() => {});
+              playWithSoundFallback(vid, idx);
               flash.textContent = "▶";
             } else {
               vid.pause();
@@ -625,6 +672,13 @@
             const current = parseInt(countEl.textContent, 10) || 0;
             countEl.textContent = result.liked ? current + 1 : Math.max(0, current - 1);
             if (!result.liked) btn.classList.remove("active");
+            if (result.liked) {
+              const video = state.videos.find((v) => v.id === videoId);
+              if (video && video.user_id && video.user_id !== state.user.id) {
+                const likerName = state.user.user_metadata?.display_name || state.user.email;
+                notifyVideoLike(video.user_id, likerName, videoId).catch(() => {});
+              }
+            }
           });
         });
 
@@ -654,6 +708,37 @@
           });
         });
 
+        scroller.querySelectorAll('[data-action="download"]').forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            const url = btn.dataset.url;
+            if (!url) return;
+            const label = btn.querySelector(".reel-chip-count");
+            const originalLabel = label.textContent;
+            label.textContent = "Saving...";
+            try {
+              const response = await fetch(url);
+              const blob = await response.blob();
+              const blobUrl = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = blobUrl;
+              const safeTitle = (btn.dataset.title || "video").replace(/[^a-z0-9_\-]+/gi, "_").slice(0, 60);
+              link.download = `${safeTitle || "video"}.mp4`;
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+              URL.revokeObjectURL(blobUrl);
+              label.textContent = "Saved!";
+            } catch (err) {
+              // Cross-origin storage without CORS headers can block the fetch —
+              // fall back to opening it directly so the user can still save manually.
+              window.open(url, "_blank");
+              label.textContent = "Opened";
+            }
+            setTimeout(() => { label.textContent = originalLabel; }, 1800);
+          });
+        });
+
         // Progress bar + view increment
         scroller.querySelectorAll(".reel-video").forEach((vid) => {
           const idx = vid.id.split("-")[1];
@@ -675,7 +760,7 @@
               if (!vid) return;
               if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
                 state.activeIndex = Number(idx);
-                vid.play().catch(() => {});
+                playWithSoundFallback(vid, idx);
                 incrementVideoView(entry.target.dataset.id).catch(() => {});
                 maybeLoadMore(Number(idx));
               } else {
@@ -724,9 +809,51 @@
       const drawerList = document.getElementById("commentDrawerList");
       const drawerForm = document.getElementById("commentDrawerForm");
       const drawerInput = document.getElementById("commentDrawerInput");
+      let replyingTo = null;
+
+      function renderCommentTree(comments, parentId = null, depth = 0) {
+        const children = comments.filter((c) => (c.reply_to || null) === parentId);
+        if (!children.length) return "";
+        return children
+          .map((c) => {
+            const nested = renderCommentTree(comments, c.id, depth + 1);
+            return `
+              <div class="comment-row" style="margin-left:${Math.min(depth, 4) * 16}px;" data-comment-id="${c.id}">
+                <strong>${escapeHTML(c.author_name || "Anonymous")}</strong>
+                <p>${escapeHTML(c.body || "")}</p>
+                <button class="comment-reply-btn" data-reply-id="${c.id}" data-reply-name="${escapeHTML(c.author_name || "Anonymous")}">Reply</button>
+                ${nested}
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function updateReplyIndicator() {
+        let bar = document.getElementById("commentReplyBar");
+        if (!replyingTo) {
+          if (bar) bar.remove();
+          drawerInput.placeholder = "Add a comment...";
+          return;
+        }
+        if (!bar) {
+          bar = document.createElement("div");
+          bar.id = "commentReplyBar";
+          bar.className = "comment-reply-indicator";
+          drawerForm.insertBefore(bar, drawerForm.firstChild);
+        }
+        bar.innerHTML = `Replying to <strong>${escapeHTML(replyingTo.name)}</strong> <button type="button" id="cancelCommentReply">&times;</button>`;
+        drawerInput.placeholder = `Reply to ${replyingTo.name}...`;
+        document.getElementById("cancelCommentReply").addEventListener("click", () => {
+          replyingTo = null;
+          updateReplyIndicator();
+        });
+      }
 
       async function openComments(videoId) {
         state.commentsOpenFor = videoId;
+        replyingTo = null;
+        updateReplyIndicator();
         drawer.classList.add("open");
         backdrop.classList.add("open");
         drawer.setAttribute("aria-hidden", "false");
@@ -736,16 +863,14 @@
           drawerList.innerHTML = `<div class="comment-empty">No comments yet — say something first.</div>`;
           return;
         }
-        drawerList.innerHTML = comments
-          .map(
-            (c) => `
-            <div class="comment-row">
-              <strong>${escapeHTML(c.author_name || "Anonymous")}</strong>
-              <p>${escapeHTML(c.body || "")}</p>
-            </div>
-          `
-          )
-          .join("");
+        drawerList.innerHTML = renderCommentTree(comments);
+        drawerList.querySelectorAll(".comment-reply-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            replyingTo = { id: btn.dataset.replyId, name: btn.dataset.replyName };
+            updateReplyIndicator();
+            drawerInput.focus();
+          });
+        });
       }
 
       function closeComments() {
@@ -753,6 +878,7 @@
         backdrop.classList.remove("open");
         drawer.setAttribute("aria-hidden", "true");
         state.commentsOpenFor = null;
+        replyingTo = null;
       }
 
       document.getElementById("commentDrawerClose").addEventListener("click", closeComments);
@@ -767,9 +893,14 @@
           return;
         }
         const authorName = state.user.user_metadata?.display_name || state.user.email;
-        const result = await commentOnVideo(state.commentsOpenFor, state.user.id, authorName, body);
+        const result = await commentOnVideo(state.commentsOpenFor, state.user.id, authorName, body, replyingTo?.id || null);
         if (!result.error) {
           drawerInput.value = "";
+          const video = state.videos.find((v) => v.id === state.commentsOpenFor);
+          if (video && video.user_id && video.user_id !== state.user.id) {
+            notifyVideoComment(video.user_id, authorName, state.commentsOpenFor).catch(() => {});
+          }
+          replyingTo = null;
           openComments(state.commentsOpenFor);
         }
       });

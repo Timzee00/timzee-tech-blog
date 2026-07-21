@@ -11,16 +11,14 @@
   position: sticky;
   top: 0;
   z-index: var(--z-header, 80);
-  background: rgba(246, 241, 234, 0.82);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  background: rgba(246, 241, 234, 0.97);
   border-bottom: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
 }
 
 :root[data-theme="dark"] .site-header,
 :root.dark-mode .site-header,
 :root.theme-dark .site-header {
-  background: rgba(15, 17, 21, 0.82);
+  background: rgba(15, 17, 21, 0.97);
 }
 
 .site-header .wrap {
@@ -273,7 +271,7 @@
                 opacity var(--duration-slow, 320ms) var(--ease-standard),
                 visibility 0s linear var(--duration-slow, 320ms);
 
-    z-index: var(--z-overlay, 9999);
+    z-index: 99999;
   }
 
   body.nav-open .site-menu {
@@ -303,7 +301,7 @@
     inset: 0;
     background: rgba(2, 6, 23, 0.5);
     backdrop-filter: blur(3px);
-    z-index: calc(var(--z-overlay, 9999) - 1);
+    z-index: 99998;
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--duration-slow, 320ms) var(--ease-standard);
