@@ -57,7 +57,31 @@ function setupMobileMenu() {
     document.body.appendChild(backdrop);
   }
 
+  const menuHomeParent = wrap;
+  const menuHomeNextSibling = menu.nextSibling;
+
   const setOpen = (open) => {
+    // On mobile, move the drawer to be a direct child of <body> while open.
+    // Why: .site-header has its own z-index to stay above scrolling page
+    // content, which makes it create its own separate stacking context.
+    // Since the drawer lived inside that header, its (much higher) z-index
+    // was only ever being compared against OTHER things inside the header —
+    // not against the body-level backdrop — so the header's low z-index
+    // capped it, and the backdrop always won the stacking fight even though
+    // the drawer's own number was bigger. Moving it out to body puts it in
+    // the same stacking context as the backdrop, where the numbers actually
+    // get compared directly and the drawer correctly wins.
+    if (open && window.innerWidth <= 960) {
+      document.body.appendChild(menu);
+    } else if (!open && menu.parentElement === document.body) {
+      // Restore it to its original spot once closed, so desktop's inline
+      // flex layout (which expects it inside .wrap) is unaffected.
+      if (menuHomeNextSibling) {
+        menuHomeParent.insertBefore(menu, menuHomeNextSibling);
+      } else {
+        menuHomeParent.appendChild(menu);
+      }
+    }
     document.body.classList.toggle("nav-open", open);
     toggle.classList.toggle("active", open);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
