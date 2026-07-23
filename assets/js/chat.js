@@ -52,6 +52,14 @@ function renderLoggedOutState() {
     avatar.src =
       "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
   }
+  const infoName = document.getElementById("infoName");
+  const infoStatus = document.getElementById("infoStatus");
+  const infoAvatar = document.getElementById("infoAvatar");
+  if (infoName) infoName.textContent = "Chat requires login";
+  if (infoStatus) infoStatus.textContent = "Sign in to view conversations.";
+  if (infoAvatar) {
+    infoAvatar.src = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+  }
 
   const messages = document.getElementById("chatMessages");
   if (messages) {
@@ -443,7 +451,16 @@ function renderGroupList() {
   });
 }
 
+function updateRequestsBadge() {
+  const badge = document.getElementById("requestsBadge");
+  if (!badge) return;
+  const count = state.requests.length;
+  badge.textContent = String(count);
+  badge.hidden = count === 0;
+}
+
 function renderRequests() {
+  updateRequestsBadge();
   const list = document.getElementById("friendRequests");
   const sentList = document.getElementById("friendRequestsSent");
   if (!list) return;
@@ -766,6 +783,8 @@ function renderMessages() {
     })
     .join("");
   list.scrollTop = list.scrollHeight;
+  renderInfoMedia();
+  renderInfoGroupMembers();
 }
 
 function updateChatFormState() {
@@ -894,6 +913,12 @@ async function selectFriend(friendId) {
   if (profileBtn) profileBtn.href = `profile.html?id=${encodeURIComponent(friendId)}`;
   const avatarLink = document.getElementById("chatAvatarLink");
   if (avatarLink) avatarLink.href = `profile.html?id=${encodeURIComponent(friendId)}`;
+  const infoAvatar = document.getElementById("infoAvatar");
+  const infoName = document.getElementById("infoName");
+  const infoStatus = document.getElementById("infoStatus");
+  if (infoAvatar) infoAvatar.src = profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+  if (infoName) infoName.textContent = profile?.display_name || "Friend";
+  if (infoStatus) infoStatus.textContent = profile?.headline || "Available";
   if (removeBtn) {
     removeBtn.onclick = async () => {
       if (!confirm("Remove this friend?")) return;
@@ -967,6 +992,14 @@ async function selectGroup(groupId) {
   if (groupAvatarLink) groupAvatarLink.removeAttribute("href");
   if (name) name.textContent = group?.name || "Group";
   if (statusText) statusText.textContent = "Group chat";
+  const infoAvatar = document.getElementById("infoAvatar");
+  const infoName = document.getElementById("infoName");
+  const infoStatus = document.getElementById("infoStatus");
+  if (infoAvatar) {
+    infoAvatar.src = "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=120&q=80";
+  }
+  if (infoName) infoName.textContent = group?.name || "Group";
+  if (infoStatus) infoStatus.textContent = "Group chat";
   await loadGroupMembers(groupId);
   await loadMessages(groupId);
   subscribeToMessages(groupId);
@@ -1190,6 +1223,148 @@ function setupChatNavigation() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Sidebar tabs (All / Groups / Requests / Blocked) + Find-people toggle.
+// Purely a visual/organizational layer over the existing list containers —
+// none of their ids or the functions that render into them change.
+// ---------------------------------------------------------------------------
+function setupChatTabs() {
+  const tabs = document.querySelectorAll(".chat-tab");
+  const panels = document.querySelectorAll(".chat-tab-panel");
+  const peoplePanel = document.getElementById("peopleSearchPanel");
+  const peopleToggle = document.getElementById("peopleSearchToggle");
+  if (!tabs.length) return;
+
+  function showTab(name) {
+    if (peoplePanel) peoplePanel.hidden = true;
+    tabs.forEach((tab) => {
+      const active = tab.dataset.tab === name;
+      tab.classList.toggle("active", active);
+      tab.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    panels.forEach((panel) => {
+      panel.hidden = panel.dataset.panel !== name;
+    });
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => showTab(tab.dataset.tab));
+  });
+
+  if (peopleToggle && peoplePanel) {
+    peopleToggle.addEventListener("click", () => {
+      const opening = peoplePanel.hidden;
+      panels.forEach((panel) => {
+        panel.hidden = true;
+      });
+      tabs.forEach((tab) => {
+        tab.classList.remove("active");
+        tab.setAttribute("aria-selected", "false");
+      });
+      peoplePanel.hidden = !opening;
+      if (opening) {
+        const input = document.getElementById("peopleSearch");
+        if (input) input.focus();
+      } else {
+        showTab("all");
+      }
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Chat info drawer (contact/group details + shared media). Slides in from
+// the right on every breakpoint. The action buttons inside it
+// (chatProfileBtn/chatRemoveBtn/chatBlockBtn) are the same elements
+// selectFriend()/updateChatFormState() already wire up — only their
+// location in the DOM moved, not their ids.
+// ---------------------------------------------------------------------------
+function setupChatInfoPanel() {
+  const panel = document.getElementById("chatInfoPanel");
+  const backdrop = document.getElementById("chatInfoBackdrop");
+  const toggle = document.getElementById("chatInfoToggle");
+  const closeBtn = document.getElementById("chatInfoClose");
+  if (!panel || !toggle) return;
+
+  function open() {
+    panel.classList.add("open");
+    panel.setAttribute("aria-hidden", "false");
+    if (backdrop) backdrop.hidden = false;
+    setChatView("info");
+  }
+  function close() {
+    panel.classList.remove("open");
+    panel.setAttribute("aria-hidden", "true");
+    if (backdrop) backdrop.hidden = true;
+    const layout = document.getElementById("chatLayout");
+    if (layout && layout.dataset.view === "info") {
+      setChatView("chat");
+    }
+  }
+
+  toggle.addEventListener("click", () => {
+    panel.classList.contains("open") ? close() : open();
+  });
+  if (closeBtn) closeBtn.addEventListener("click", close);
+  if (backdrop) backdrop.addEventListener("click", close);
+}
+
+function renderInfoMedia() {
+  const grid = document.getElementById("infoMediaGrid");
+  if (!grid) return;
+  const mediaMessages = state.messages.filter((message) => {
+    const url = message.media_url;
+    if (!url || !isSafeUrl(url)) return false;
+    const type = resolveAttachmentType({ mediaType: message.media_type, mediaUrl: url });
+    return type === "image" || type === "video";
+  });
+  if (!mediaMessages.length) {
+    grid.innerHTML = `<div class="callout">No media shared yet.</div>`;
+    return;
+  }
+  grid.innerHTML = mediaMessages
+    .slice(-12)
+    .reverse()
+    .map((message) => {
+      const type = resolveAttachmentType({ mediaType: message.media_type, mediaUrl: message.media_url });
+      const url = escapeHTML(message.media_url);
+      if (type === "video") {
+        return `<a class="chat-info-media-item" href="${url}" target="_blank" rel="noopener noreferrer"><video src="${url}" muted></video></a>`;
+      }
+      return `<a class="chat-info-media-item" href="${url}" target="_blank" rel="noopener noreferrer"><img src="${url}" alt="shared media" loading="lazy"></a>`;
+    })
+    .join("");
+}
+
+function renderInfoGroupMembers() {
+  const section = document.getElementById("infoGroupMembersSection");
+  const list = document.getElementById("infoGroupMembers");
+  if (!section || !list) return;
+  if (!state.activeGroupId) {
+    section.hidden = true;
+    return;
+  }
+  const ids = state.groupMembers[state.activeGroupId] || [];
+  section.hidden = false;
+  if (!ids.length) {
+    list.innerHTML = `<div class="callout">No members found.</div>`;
+    return;
+  }
+  list.innerHTML = ids
+    .map((id) => {
+      const profile = state.profileCache[id];
+      return `
+        <a class="chat-item" href="profile.html?id=${encodeURIComponent(id)}">
+          <img class="chat-item-avatar" src="${profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="member avatar">
+          <div class="chat-item-body">
+            <div class="chat-item-top"><span>${escapeHTML(profile?.display_name || "Member")}</span></div>
+          </div>
+        </a>
+      `;
+    })
+    .join("");
+}
+
 function setupGroupCreation() {
   const btn = document.getElementById("newGroupBtn");
   if (!btn) return;
@@ -1383,6 +1558,8 @@ async function boot() {
   setupPeopleSearch();
   setupGroupCreation();
   setupChatNavigation();
+  setupChatTabs();
+  setupChatInfoPanel();
   renderMessages();
 
   const params = new URLSearchParams(window.location.search);

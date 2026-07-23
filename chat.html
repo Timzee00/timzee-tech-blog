@@ -62,36 +62,45 @@
           <div class="chat-sidebar-header">
             <h3>Chats</h3>
             <div class="inline-actions">
+              <button class="btn ghost icon-only" id="peopleSearchToggle" type="button" aria-label="Find people" title="Find people">&#128269;</button>
               <button class="btn ghost" id="newGroupBtn" type="button">New Group</button>
-              <a class="btn ghost" href="profile.html">My Profile</a>
             </div>
           </div>
           <div class="chat-search">
             <input type="search" id="chatSearch" placeholder="Search chats...">
           </div>
-          <div>
-            <h4>Groups</h4>
-            <div class="chat-list" id="groupList"></div>
+
+          <div class="chat-tabs" role="tablist">
+            <button class="chat-tab active" type="button" data-tab="all" role="tab" aria-selected="true">All</button>
+            <button class="chat-tab" type="button" data-tab="groups" role="tab" aria-selected="false">Groups</button>
+            <button class="chat-tab" type="button" data-tab="requests" role="tab" aria-selected="false">
+              Requests <span class="chat-tab-badge" id="requestsBadge" hidden>0</span>
+            </button>
+            <button class="chat-tab" type="button" data-tab="blocked" role="tab" aria-selected="false">Blocked</button>
           </div>
-          <div>
-            <h4>Friends</h4>
+
+          <div class="chat-tab-panel" data-panel="all">
             <div class="chat-list" id="friendList"></div>
           </div>
-          <div>
+          <div class="chat-tab-panel" data-panel="groups" hidden>
+            <div class="chat-list" id="groupList"></div>
+          </div>
+          <div class="chat-tab-panel" data-panel="requests" hidden>
+            <h4>Received</h4>
+            <div class="chat-list" id="friendRequests"></div>
+            <h4>Sent</h4>
+            <div class="chat-list" id="friendRequestsSent"></div>
+          </div>
+          <div class="chat-tab-panel" data-panel="blocked" hidden>
+            <div class="chat-list" id="blockedList"></div>
+          </div>
+
+          <div class="chat-people-search" id="peopleSearchPanel" hidden>
             <h4>Find people</h4>
             <div class="chat-search">
               <input type="search" id="peopleSearch" placeholder="Search by email or username">
             </div>
             <div class="chat-list" id="peopleResults"></div>
-          </div>
-          <div>
-            <h4>Requests</h4>
-            <div class="chat-list" id="friendRequests"></div>
-            <div class="chat-list" id="friendRequestsSent" style="margin-top:8px;"></div>
-          </div>
-          <div>
-            <h4>Blocked</h4>
-            <div class="chat-list" id="blockedList"></div>
           </div>
         </aside>
 
@@ -131,23 +140,52 @@
               </div>
             </div>
             <div class="chat-actions">
-              <a class="btn ghost" id="chatProfileBtn" href="#">Profile</a>
-              <button class="btn ghost" type="button" id="chatRemoveBtn">Remove</button>
-              <button class="btn ghost" type="button" id="chatBlockBtn">Block</button>
+              <button class="btn ghost icon-only" type="button" id="chatInfoToggle" aria-label="Chat info" title="Chat info">&#9432;</button>
             </div>
           </div>
           <div class="chat-messages message-list" id="chatMessages"></div>
           <form id="chatForm" class="chat-input">
-            <textarea id="chatBody" placeholder="Write a message..."></textarea>
-            <div class="chat-attachments">
-              <input type="file" id="chatMedia" accept="*/*">
-              <button type="button" class="btn ghost" id="recordVoiceBtn">Record voice</button>
-            </div>
             <div id="chatMediaPreview" class="media-preview"></div>
-            <button type="submit" class="btn">Send Message</button>
+            <div class="chat-input-row">
+              <label class="chat-input-icon-btn" for="chatMedia" title="Attach file" aria-label="Attach file">&#128206;</label>
+              <input type="file" id="chatMedia" accept="*/*" hidden>
+              <textarea id="chatBody" placeholder="Write a message..." rows="1"></textarea>
+              <button type="button" class="chat-input-icon-btn" id="recordVoiceBtn" title="Record voice" aria-label="Record voice">&#127908;</button>
+              <button type="submit" class="chat-input-icon-btn chat-send-btn" title="Send" aria-label="Send message">&#10148;</button>
+            </div>
             <div class="callout" id="chatStatus" style="margin-top:12px; display:none;"></div>
           </form>
         </section>
+
+        <aside class="chat-info-panel" id="chatInfoPanel" aria-hidden="true">
+          <div class="chat-info-header">
+            <h3>Details</h3>
+            <button class="btn ghost icon-only" id="chatInfoClose" type="button" aria-label="Close details">&times;</button>
+          </div>
+          <div class="chat-info-body">
+            <div class="chat-info-profile">
+              <img id="infoAvatar" class="chat-info-avatar" alt="">
+              <div id="infoName" class="chat-info-name">—</div>
+              <div id="infoStatus" class="chat-info-status">—</div>
+            </div>
+            <div class="chat-info-actions">
+              <a class="btn ghost" id="chatProfileBtn" href="#">View Profile</a>
+              <button class="btn ghost" type="button" id="chatRemoveBtn">Remove</button>
+              <button class="btn ghost" type="button" id="chatBlockBtn">Block</button>
+            </div>
+            <div class="chat-info-section" id="infoGroupMembersSection" hidden>
+              <h4>Members</h4>
+              <div class="chat-list" id="infoGroupMembers"></div>
+            </div>
+            <div class="chat-info-section">
+              <h4>Shared Media</h4>
+              <div class="chat-info-media-grid" id="infoMediaGrid">
+                <div class="callout">No media shared yet.</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+        <div class="chat-info-backdrop" id="chatInfoBackdrop" hidden></div>
       </div>
     </main>
 

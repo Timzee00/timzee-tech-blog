@@ -44,18 +44,28 @@ export async function signIn(email, password) {
 
 export async function signUp(email, password, displayName = "") {
   const fallbackUsername = email ? email.split("@")[0] : "";
-  return supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        display_name: displayName,
-        username: displayName ? displayName.toLowerCase().replace(/\s+/g, "") : fallbackUsername,
-        role: "user"
-      },
-      emailRedirectTo: SITE_URL ? `${SITE_URL}/login.html` : undefined
-    }
-  });
+  try {
+    return await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          display_name: displayName,
+          username: displayName ? displayName.toLowerCase().replace(/\s+/g, "") : fallbackUsername,
+          role: "user"
+        },
+        emailRedirectTo: SITE_URL ? `${SITE_URL}/login.html` : undefined
+      }
+    });
+  } catch (error) {
+    console.error("SignUp network error:", error);
+    return {
+      error: {
+        message: `Network error: ${error.message}. Check your internet connection and Supabase URL.`,
+        status: error.status
+      }
+    };
+  }
 }
 
 export async function signOut() {

@@ -51,7 +51,7 @@
 
         <section class="chat-pane" data-reveal>
           <div class="chat-pane-header" id="aiChatHeader">
-            <button class="btn ghost thread-back-btn" id="backToConversationsBtn" type="button">&larr; Conversations</button>
+            <button class="btn ghost chat-back" id="backToConversationsBtn" type="button">&larr; Conversations</button>
             <div>
               <strong id="aiChatTitle">Select or start a conversation</strong>
               <div class="chat-meta" id="aiChatSubtitle" style="font-size:12px; color:var(--muted);"></div>
@@ -64,8 +64,10 @@
             <span></span><span></span><span></span>
           </div>
           <form id="aiChatForm" class="chat-input">
-            <textarea id="aiChatInput" placeholder="Ask the AI anything..." rows="1" required></textarea>
-            <button type="submit" class="btn">Send</button>
+            <div class="chat-input-row">
+              <textarea id="aiChatInput" placeholder="Ask the AI anything..." rows="1" required></textarea>
+              <button type="submit" class="chat-input-icon-btn chat-send-btn" title="Send" aria-label="Send message">&#10148;</button>
+            </div>
           </form>
         </section>
       </div>
@@ -167,7 +169,7 @@
 
       async function openConversation(id) {
         state.activeConversationId = id;
-        layout.dataset.view = "thread";
+        layout.dataset.view = "chat";
         renderConversationList();
         const conversation = state.conversations.find((c) => c.id === id);
         titleEl.textContent = conversation?.title || "Chat";

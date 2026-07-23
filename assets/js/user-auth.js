@@ -61,7 +61,7 @@ function setupPasswordToggles() {
 }
 
 function normalizeAuthError(error, context = "generic") {
-  const raw = String(error?.message || error || "").trim();
+  const raw = extractErrorMessage(error, "").trim();
   const lower = raw.toLowerCase();
 
   if (context === "login") {

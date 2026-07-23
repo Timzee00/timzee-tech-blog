@@ -144,3 +144,263 @@
 @media (max-width: 900px) {
   .chat-layout { gap: var(--space-3, 12px); }
 }
+
+/* ==========================================================================
+   Sidebar tabs (All / Groups / Requests / Blocked) + Find-people toggle
+   ========================================================================== */
+.icon-only {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.chat-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-surface-muted, rgba(15,118,110,0.06));
+  border-radius: 999px;
+  overflow-x: auto;
+}
+
+.chat-tab {
+  flex: 1 1 0;
+  white-space: nowrap;
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: var(--text-xs, 0.8rem);
+  font-weight: 600;
+  color: var(--color-text-muted, var(--muted));
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chat-tab.active {
+  background: var(--color-surface, #fff);
+  color: var(--color-primary, #0f766e);
+  box-shadow: var(--elevation-1);
+}
+
+.chat-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #e11d48;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.chat-tab-panel,
+.chat-people-search {
+  display: grid;
+  gap: 8px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.chat-people-search h4 {
+  font-size: var(--text-xs, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-subtle, #8a93a3);
+  margin: 0;
+}
+
+/* ==========================================================================
+   Chat info drawer — slides in from the right over the chat pane on every
+   breakpoint (mobile + desktop), instead of permanently occupying grid
+   space. Holds the profile/group details, actions, members, shared media.
+   ========================================================================== */
+.chat-info-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 998;
+}
+
+.chat-info-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(360px, 92vw);
+  background: var(--color-surface, #fff);
+  border-left: 1px solid var(--color-border, rgba(15,23,42,0.1));
+  box-shadow: var(--elevation-3);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-info-panel.open {
+  transform: translateX(0);
+}
+
+.chat-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--color-border, rgba(15,23,42,0.1));
+}
+
+.chat-info-header h3 {
+  margin: 0;
+}
+
+.chat-info-body {
+  padding: 16px;
+  overflow-y: auto;
+  display: grid;
+  gap: 20px;
+}
+
+.chat-info-profile {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: 8px 0 4px;
+}
+
+.chat-info-avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--color-border, rgba(15,23,42,0.12));
+}
+
+.chat-info-name {
+  font-weight: 700;
+  font-size: var(--text-lg, 1.05rem);
+}
+
+.chat-info-status {
+  color: var(--color-text-muted, var(--muted));
+  font-size: var(--text-sm, 0.85rem);
+}
+
+.chat-info-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.chat-info-section h4 {
+  font-size: var(--text-xs, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-subtle, #8a93a3);
+  margin: 0 0 10px;
+}
+
+.chat-info-media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.chat-info-media-item {
+  display: block;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-xs, 8px);
+  overflow: hidden;
+  border: 1px solid var(--color-border, rgba(15,23,42,0.1));
+}
+
+.chat-info-media-item img,
+.chat-info-media-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ==========================================================================
+   Rounded pill message input bar with icon buttons, replacing the old
+   stacked textarea + text-label buttons.
+   ========================================================================== */
+.chat-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: var(--color-surface-muted, rgba(15,118,110,0.06));
+  border-radius: 999px;
+  padding: 6px 6px 6px 14px;
+}
+
+.chat-input-row textarea {
+  flex: 1 1 auto;
+  border: none;
+  background: transparent;
+  resize: none;
+  max-height: 120px;
+  padding: 8px 4px;
+  border-radius: 0;
+}
+
+.chat-input-row textarea:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.chat-input-icon-btn {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-surface, #fff);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--color-text-muted, var(--muted));
+}
+
+.chat-send-btn {
+  background: linear-gradient(135deg, var(--color-primary, #0f766e), var(--color-secondary, #0ea5e9));
+  color: #fff;
+}
+
+@media (max-width: 700px) {
+  .chat-info-panel { width: 100vw; }
+  .chat-info-media-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* base.css forces `button, .btn { padding: 12px 18px !important; min-height:
+   44px; }` at <=480px for touch targets — override back to circular icon
+   buttons here (higher specificity + !important, loaded after base.css). */
+@media (max-width: 480px) {
+  .chat-input-icon-btn.chat-input-icon-btn,
+  .icon-only.icon-only {
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    font-size: 16px !important;
+  }
+}
