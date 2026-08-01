@@ -501,7 +501,7 @@ function renderRequests() {
           .from("friendships")
           .update({ status: "accepted", updated_at: new Date().toISOString() })
           .eq("id", request.id);
-        notifyFriendRequestAccepted(request.requester_id, getDisplayName(state.user)).catch(() => {});
+        notifyFriendRequestAccepted(request.requester_id, getDisplayName(state.user)).catch((error) => console.warn("Friend-request-accepted notification failed:", error));
       }
       if (btn.dataset.action === "decline") {
         await supabase.from("friendships").delete().eq("id", request.id);
@@ -619,7 +619,7 @@ async function sendFriendRequest(userId) {
     status: "pending",
     created_at: new Date().toISOString()
   });
-  notifyFriendRequest(userId, getDisplayName(state.user), state.user.id).catch(() => {});
+  notifyFriendRequest(userId, getDisplayName(state.user), state.user.id).catch((error) => console.warn("Friend-request notification failed:", error));
   await loadFriendships();
   await loadThreadPreviews();
   renderFriendList();
@@ -1170,7 +1170,7 @@ function setupChatForm() {
       renderMessages();
 
       if (payload.recipient_id) {
-        notifyNewMessage(payload.recipient_id, getDisplayName(state.user), state.user.id).catch(() => {});
+        notifyNewMessage(payload.recipient_id, getDisplayName(state.user), state.user.id).catch((error) => console.warn("New-message notification failed:", error));
       }
 
       form.reset();

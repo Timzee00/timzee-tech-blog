@@ -3,6 +3,7 @@ import { uploadMedia } from "./media.js";
 import {
   fetchBookmarks,
   fetchNotifications,
+  deleteNotification,
   markNotificationRead,
   markAllNotificationsRead,
   createAdminRequest
@@ -484,6 +485,40 @@ function renderBookmarks() {
     .join("");
 }
 
+const NOTIFICATION_CATEGORIES = {
+  messages: ["direct_message"],
+  social: [
+    "friend_request",
+    "friend_request_accepted",
+    "post_like",
+    "video_like",
+    "video_comment",
+    "mention",
+    "comment_reply",
+    "discussion_reply",
+    "reply"
+  ],
+  activity: ["admin_promotion", "verification_status"]
+};
+
+let activeNotificationTab = "all";
+
+function setupNotificationTabs() {
+  const tabs = document.querySelectorAll("#notificationTabs .chat-tab");
+  if (!tabs.length) return;
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      activeNotificationTab = tab.dataset.notifTab;
+      tabs.forEach((t) => {
+        const active = t === tab;
+        t.classList.toggle("active", active);
+        t.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      renderNotifications();
+    });
+  });
+}
+
 function renderNotifications() {
   const list = document.getElementById("profileNotifications");
   if (!list) return;
@@ -491,11 +526,17 @@ function renderNotifications() {
     list.innerHTML = "<div class=\"callout\">Notifications are private.</div>";
     return;
   }
-  if (!state.notifications.length) {
-    list.innerHTML = "<div class=\"callout\">No notifications yet.</div>";
+  const filtered =
+    activeNotificationTab === "all"
+      ? state.notifications
+      : state.notifications.filter((note) =>
+          (NOTIFICATION_CATEGORIES[activeNotificationTab] || []).includes(note.type)
+        );
+  if (!filtered.length) {
+    list.innerHTML = "<div class=\"callout\">No notifications here yet.</div>";
     return;
   }
-  list.innerHTML = state.notifications
+  list.innerHTML = filtered
     .map((note) => {
       const unread = !note.read_at;
       const title = escapeHTML(note.title || "Notification");
@@ -510,6 +551,7 @@ function renderNotifications() {
           <div class="leaderboard-meta">
             <span>${timeLabel}</span>
             ${link}
+            <button type="button" class="notification-delete-btn" data-delete-id="${note.id}" aria-label="Delete notification">&times;</button>
           </div>
         </div>
       `;
@@ -517,11 +559,27 @@ function renderNotifications() {
     .join("");
 
   list.querySelectorAll(".notification-item").forEach((item) => {
-    item.addEventListener("click", async () => {
+    item.addEventListener("click", async (event) => {
+      if (event.target.closest(".notification-delete-btn")) return;
       const id = item.dataset.id;
       if (!id) return;
       await markNotificationRead(id);
       item.classList.remove("unread");
+    });
+  });
+
+  list.querySelectorAll(".notification-delete-btn").forEach((btn) => {
+    btn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const id = btn.dataset.deleteId;
+      if (!id) return;
+      const result = await deleteNotification(id);
+      if (result.error) {
+        console.warn("Delete notification failed:", result.error);
+        return;
+      }
+      state.notifications = state.notifications.filter((n) => n.id !== id);
+      renderNotifications();
     });
   });
 }
@@ -1102,6 +1160,7 @@ async function boot() {
   renderBookmarks();
   renderNotifications();
   setupProfileTabs();
+  setupNotificationTabs();
   renderProfileActions();
   setupProfileEditor();
   setupPrivacyForm();

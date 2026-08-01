@@ -1096,7 +1096,7 @@ function setupMessageForm() {
       if (mentionHandles.length) {
         const mentioned = await fetchProfilesByUsernames(mentionHandles);
         const link = `discussion.html?topic=${state.activeTopicId}`;
-        await Promise.all(
+        const mentionResults = await Promise.all(
           mentioned
             .filter((profile) => profile.id && profile.id !== state.user.id && profile.notify_mentions !== false)
             .map((profile) =>
@@ -1109,15 +1109,21 @@ function setupMessageForm() {
               })
             )
         );
+        mentionResults.forEach((result) => {
+          if (result?.error) console.warn("Mention notification failed:", result.error);
+        });
       }
     if (state.replyTo?.author_id && state.replyTo.author_id !== state.user.id) {
-      await createNotification({
+      const replyNotifyResult = await createNotification({
         userId: state.replyTo.author_id,
         type: "reply",
         title: "New reply",
         body: `${getDisplayName(state.user)} replied to your message.`,
         linkUrl: `discussion.html?topic=${state.activeTopicId}`
       });
+      if (replyNotifyResult?.error) {
+        console.warn("Discussion reply notification failed:", replyNotifyResult.error);
+      }
     }
     await supabase
       .from("discussion_topics")

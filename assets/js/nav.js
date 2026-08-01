@@ -13,6 +13,37 @@ function setupGlobalErrorHandlers() {
   });
 }
 
+const NAV_ICON_MAP = {
+  "index.html": "&#127968;",
+  "discussion.html": "&#128172;",
+  "marketplace.html": "&#128722;",
+  "videos.html": "&#127916;",
+  "novels.html": "&#128214;",
+  "announcements.html": "&#128226;",
+  "ads.html": "&#128200;",
+  "newsletter.html": "&#128231;",
+  "contact.html": "&#9993;",
+  "support.html": "&#128172;",
+  "chat.html": "&#128172;",
+  "stories.html": "&#128247;",
+  "ai-chat.html": "&#129302;",
+  "profile.html": "&#128100;"
+};
+
+function applyNavIcons(menu) {
+  menu.querySelectorAll(".nav-pill > a, .nav-more-menu a").forEach((link) => {
+    if (link.querySelector(".nav-link-icon")) return;
+    const href = (link.getAttribute("href") || "").split(/[?#]/)[0];
+    const icon = NAV_ICON_MAP[href];
+    if (!icon) return;
+    const iconSpan = document.createElement("span");
+    iconSpan.className = "nav-link-icon";
+    iconSpan.innerHTML = icon;
+    iconSpan.setAttribute("aria-hidden", "true");
+    link.insertBefore(iconSpan, link.firstChild);
+  });
+}
+
 function setupMobileMenu() {
   const wrap = document.querySelector(".site-header .wrap");
   if (!wrap) return;
@@ -31,12 +62,37 @@ function setupMobileMenu() {
     const menuHeader = document.createElement("div");
     menuHeader.className = "site-menu-header";
     menuHeader.innerHTML =
-      '<span class="site-menu-title">Menu</span>' +
+      '<span class="site-menu-title"><span class="signal-bar" aria-hidden="true" style="display:inline-flex; height:14px; margin-right:8px; vertical-align:middle;"><span></span><span></span><span></span></span>Menu</span>' +
       '<button type="button" class="site-menu-close" aria-label="Close menu">&times;</button>';
     menu.appendChild(menuHeader);
 
     if (nav) menu.appendChild(nav);
     if (actions) menu.appendChild(actions);
+
+    applyNavIcons(menu);
+
+    const footer = document.createElement("div");
+    footer.className = "site-menu-footer";
+    footer.id = "siteMenuFooter";
+    footer.innerHTML = `
+      <div class="site-menu-user" id="siteMenuUser" hidden>
+        <img id="siteMenuUserAvatar" alt="">
+        <div>
+          <div class="site-menu-user-name" id="siteMenuUserName">—</div>
+          <div class="site-menu-user-handle" id="siteMenuUserHandle"></div>
+        </div>
+      </div>
+      <div class="site-menu-footer-actions">
+        <button type="button" class="chip" id="siteMenuThemeChip">&#127768; Theme</button>
+        <a class="chip" href="login.html" id="siteMenuAuthChip">&#128274; Log In</a>
+      </div>
+    `;
+    menu.appendChild(footer);
+
+    const themeChip = footer.querySelector("#siteMenuThemeChip");
+    themeChip.addEventListener("click", () => {
+      document.getElementById("themeToggle")?.click();
+    });
   }
 
   let toggle = wrap.querySelector(".menu-toggle");
@@ -179,16 +235,139 @@ setupMoreDropdown();
 // above) is completely unaffected either way.
 (async () => {
   try {
-    const [{ startPresence }, { supabase, getCurrentUser }, { fetchUnreadNotificationCount }] =
-      await Promise.all([import("./presence.js"), import("./supabase.js"), import("./data.js")]);
+    const [{ startPresence }, { supabase, getCurrentUser, signOut }, { fetchUnreadNotificationCount }, { fetchSettings }] =
+      await Promise.all([
+        import("./presence.js"),
+        import("./supabase.js"),
+        import("./data.js"),
+        import("./settings.js")
+      ]);
 
     startPresence(window.location.pathname);
     await setupNotificationBadge(supabase, getCurrentUser, fetchUnreadNotificationCount);
     await setupWelcomePrompt(getCurrentUser);
+    const settings = await fetchSettings();
+    applySiteBranding(settings);
+    const user = await getCurrentUser();
+    setupBottomTabBar(!!user);
+    populateDrawerFooter(user, signOut);
   } catch (error) {
     console.error("Supabase-dependent nav features failed to load (menu is unaffected):", error);
   }
 })();
+
+function populateDrawerFooter(user, signOut) {
+  const userCard = document.getElementById("siteMenuUser");
+  const authChip = document.getElementById("siteMenuAuthChip");
+  if (!userCard || !authChip) return;
+
+  if (!user) {
+    userCard.hidden = true;
+    authChip.textContent = "";
+    authChip.innerHTML = "&#128274; Log In";
+    authChip.setAttribute("href", "login.html");
+    return;
+  }
+
+  userCard.hidden = false;
+  const name = user.user_metadata?.display_name || user.email || "Member";
+  const avatarUrl =
+    user.user_metadata?.avatar_url ||
+    "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+  document.getElementById("siteMenuUserAvatar").src = avatarUrl;
+  document.getElementById("siteMenuUserName").textContent = name;
+  document.getElementById("siteMenuUserHandle").textContent = user.email || "";
+
+  authChip.textContent = "";
+  authChip.innerHTML = "&#128682; Sign Out";
+  authChip.setAttribute("href", "#");
+  authChip.addEventListener("click", async (event) => {
+    event.preventDefault();
+    await signOut();
+    window.location.href = "index.html";
+  });
+}
+
+// Persistent mobile bottom tab bar (Home / Search / Create / Chat /
+// Profile) — the structural piece from the reference design. Desktop is
+// unaffected (hidden via CSS above 960px); the existing hamburger drawer
+// stays exactly as-is alongside this, it isn't replaced.
+function setupBottomTabBar(isLoggedIn) {
+  if (document.getElementById("bottomTabBar")) return;
+  const path = window.location.pathname.split("/").pop() || "index.html";
+
+  const tabs = [
+    { href: "index.html", icon: "&#127968;", label: "Home", match: ["index.html", ""] },
+    { href: "discussion.html", icon: "&#128269;", label: "Search", match: ["discussion.html"] },
+    { href: "discussion.html", icon: "&#10133;", label: "Post", match: [], isCreate: true },
+    { href: "chat.html", icon: "&#128172;", label: "Chat", match: ["chat.html"] },
+    {
+      href: isLoggedIn ? "profile.html" : "login.html",
+      icon: "&#128100;",
+      label: isLoggedIn ? "Profile" : "Log In",
+      match: ["profile.html"]
+    }
+  ];
+
+  const bar = document.createElement("nav");
+  bar.id = "bottomTabBar";
+  bar.className = "bottom-tab-bar";
+  bar.setAttribute("aria-label", "Primary");
+  bar.innerHTML = tabs
+    .map((tab) => {
+      const active = tab.match.includes(path);
+      const classes = ["bottom-tab"];
+      if (active) classes.push("active");
+      if (tab.isCreate) classes.push("bottom-tab-create");
+      return `<a class="${classes.join(" ")}" href="${tab.href}" aria-label="${tab.label}">
+        <span class="bottom-tab-icon">${tab.icon}</span>
+        <span class="bottom-tab-label">${tab.label}</span>
+      </a>`;
+    })
+    .join("");
+
+  document.body.appendChild(bar);
+}
+
+// Applies the admin-configurable site name/tagline everywhere the OLD
+// hardcoded "Timzee Tech Hub" text used to live, so renaming the site (e.g.
+// before buying a new domain) is a single settings-panel edit instead of a
+// code change across 19+ pages. Falls back to leaving the original static
+// text alone if settings somehow fail to load.
+function applySiteBranding(settings) {
+  if (!settings || !settings.siteName) return;
+
+  const logoEl = document.getElementById("siteName");
+  if (logoEl) {
+    // Preserve the "<first word> <span>rest</span>" split styling only when
+    // the name still has 2+ words; otherwise just show the plain name.
+    const parts = settings.siteName.trim().split(/\s+/);
+    if (parts.length > 1) {
+      const first = parts[0];
+      const rest = parts.slice(1).join(" ");
+      logoEl.innerHTML = `${escapeForBranding(first)} <span>${escapeForBranding(rest)}</span>`;
+    } else {
+      logoEl.textContent = settings.siteName;
+    }
+  }
+
+  const taglineEl = document.getElementById("siteTagline");
+  if (taglineEl && settings.tagline) {
+    taglineEl.textContent = settings.tagline;
+  }
+
+  if (document.title.includes("Timzee Tech Hub")) {
+    document.title = document.title.replace(/Timzee Tech Hub/g, settings.siteName);
+  }
+  const ogSiteName = document.querySelector('meta[property="og:site_name"]');
+  if (ogSiteName) ogSiteName.setAttribute("content", settings.siteName);
+}
+
+function escapeForBranding(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
 
 let notificationChannel = null;
 

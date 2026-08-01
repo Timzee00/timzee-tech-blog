@@ -52,6 +52,32 @@
   flex-wrap: wrap;
 }
 
+/* Override the generic .stats-item (a label/value list row meant for the
+   dark homepage stats card) with a stacked "big number, small label"
+   block, matching the reference design's profile header stats. */
+.profile-stats .stats-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border-bottom: none;
+  min-width: 64px;
+}
+
+.profile-stats .stats-item span {
+  order: 2;
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-subtle, #8a93a3);
+}
+
+.profile-stats .stats-item strong {
+  order: 1;
+  font-family: var(--font-display);
+  font-size: var(--text-xl, 1.3rem);
+  font-weight: 700;
+}
+
 .profile-bio {
   font-size: var(--text-sm, 0.95rem);
   line-height: var(--leading-relaxed, 1.7);

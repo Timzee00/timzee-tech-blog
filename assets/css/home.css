@@ -1,48 +1,502 @@
 /* ==========================================================================
-   home.css — index.html hero pillars + feature band
-   The hero pillar row exists so a first-time visitor can see the full
-   breadth of the site (blog, forum, marketplace, videos, novels, AI) in
-   one glance, without reading the intro paragraph or exploring the nav.
+   home.css — Signal reboot. Homepage layout + the shared "content atom"
+   classes app.js injects everywhere (post-card, category-card, tag, chip,
+   callout, leaderboard-item, ad-card, verified-badge). Same brand colors
+   only (--color-primary teal / --color-secondary sky); everything else —
+   shape, type, motion, the pulse-bar signature motif — is new.
    ========================================================================== */
 
-.hero-pillars {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2, 8px);
-  margin: var(--space-4, 16px) 0;
-  position: relative;
-  z-index: 1;
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
-.hero-pillar {
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+
+.tagline {
+  color: var(--color-text-muted, #5b6573);
+  margin: 0 0 20px;
+  font-size: var(--text-sm, 0.9rem);
+}
+
+.callout {
+  background: var(--color-surface-muted, rgba(15,118,110,0.06));
+  border-radius: var(--radius-sm, 12px);
+  padding: 12px 16px;
+  font-size: var(--text-sm, 0.85rem);
+  color: var(--color-text-muted, #5b6573);
+}
+
+.chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--color-surface, rgba(255, 255, 255, 0.7));
-  border: 1px solid var(--color-border, rgba(15, 118, 110, 0.15));
-  color: var(--color-text, var(--ink));
-  font-size: var(--text-sm, 0.85rem);
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--color-surface-muted, rgba(15,118,110,0.08));
+  color: var(--color-primary, #0f766e);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  font-size: var(--text-xs, 0.72rem);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--color-surface-muted, rgba(15,118,110,0.08));
+  color: var(--color-text-muted, #5b6573);
+}
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-secondary, #0ea5e9);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 700;
+}
+.verified-badge::before { content: "\2713"; }
+
+/* ==========================================================================
+   Signal signature motif: a segmented "pulse bar" used anywhere something
+   is live/active — hero background accent, section dividers, loading rows.
+   ========================================================================== */
+.signal-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 20px;
+}
+
+.signal-bar span {
+  flex: 1 1 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--signal-gradient);
+  animation: signalPulse var(--signal-pulse-duration) ease-in-out infinite;
+}
+
+.signal-bar span:nth-child(2) { animation-delay: 0.15s; }
+.signal-bar span:nth-child(3) { animation-delay: 0.3s; }
+.signal-bar span:nth-child(4) { animation-delay: 0.45s; }
+.signal-bar span:nth-child(5) { animation-delay: 0.6s; }
+
+@keyframes signalPulse {
+  0%, 100% { height: 30%; opacity: 0.6; }
+  50% { height: 100%; opacity: 1; }
+}
+
+/* ==========================================================================
+   Hero
+   ========================================================================== */
+.hero {
+  padding: 48px 0 40px;
+  background: linear-gradient(180deg, rgba(15,118,110,0.06), transparent 60%);
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 20px;
+}
+
+.hero-card {
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.08));
+  border-radius: var(--radius-md, 20px);
+  padding: 32px;
+  box-shadow: var(--elevation-2);
+}
+
+.hero-grid .hero-card:first-child {
+  grid-row: 1 / 3;
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 4vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px;
+}
+
+.hero-grid p#heroIntro {
+  color: var(--color-text-muted, #5b6573);
+  font-size: var(--text-base, 1rem);
+  line-height: var(--leading-relaxed, 1.6);
+  margin: 0 0 24px;
+  max-width: 56ch;
+}
+
+.hero-pillars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.hero-pillar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: 16px 8px;
+  border-radius: var(--radius-sm, 12px);
+  background: var(--color-surface-muted, rgba(15,118,110,0.06));
+  font-size: var(--text-xs, 0.78rem);
   font-weight: 600;
-  text-decoration: none;
+  transition: transform var(--duration-fast, 120ms) var(--ease-out),
+    background var(--duration-fast, 120ms) var(--ease-out);
 }
 
 .hero-pillar:hover {
-  background: var(--color-primary, var(--accent));
-  border-color: var(--color-primary, var(--accent));
+  transform: translateY(-3px);
+  background: var(--color-surface, #fff);
+  box-shadow: var(--elevation-2);
+}
+
+.hero-pillar-icon { font-size: 22px; }
+
+.cta { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.hero-grid .hero-card:nth-child(2) #trendingList,
+.post-list { display: grid; gap: 10px; }
+
+.stats-card {
+  background: var(--color-text, #131417);
+  color: #f1f3f6;
+  border-radius: var(--radius-md, 20px);
+  padding: 28px;
+}
+
+.stats-card h2 { font-family: var(--font-display); margin: 0 0 16px; font-size: var(--text-xl, 1.3rem); }
+
+.stats-list { display: grid; gap: 12px; }
+
+.stats-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  font-size: var(--text-sm, 0.9rem);
+}
+
+/* ==========================================================================
+   Post cards (used in trending/latest/hot lists)
+   ========================================================================== */
+.post-card {
+  display: block;
+  padding: 14px;
+  border-radius: var(--radius-sm, 12px);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.08));
+  transition: transform var(--duration-fast, 120ms) var(--ease-out), box-shadow var(--duration-fast, 120ms) var(--ease-out);
+}
+
+.post-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elevation-2);
+}
+
+.post-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-subtle, #8a93a3);
+  margin-top: 6px;
+}
+
+.post-actions,
+.post-action-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* ---------- New post-card header (avatar + byline), reference-matched ---------- */
+.post-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.post-card-avatar {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--signal-gradient);
   color: #fff;
-  transform: translateY(-1px);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
 }
 
-.hero-pillar-icon {
-  font-size: 1.05em;
-  line-height: 1;
+.post-card-byline { display: flex; flex-direction: column; min-width: 0; }
+
+.post-card-author {
+  font-weight: 700;
+  font-size: var(--text-sm, 0.85rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-@media (max-width: 480px) {
-  .hero-pillar {
-    padding: 7px 12px;
-    font-size: var(--text-xs, 0.78rem);
-  }
+.post-card-subline {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-subtle, #8a93a3);
 }
+
+.post-card-excerpt {
+  color: var(--color-text-muted, #5b6573);
+  font-size: var(--text-sm, 0.88rem);
+  margin: 4px 0 8px;
+}
+
+/* ---------- Icon + count action row (like/comment/share/views) ---------- */
+.post-icon-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border, rgba(15, 23, 42, 0.06));
+}
+
+.post-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: var(--text-xs, 0.78rem);
+  color: var(--color-text-subtle, #8a93a3);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.post-icon { font-size: 15px; line-height: 1; }
+
+.post-icon-btn.active {
+  color: var(--color-primary, #0f766e);
+}
+
+.post-icon-btn:hover { color: var(--color-primary, #0f766e); }
+
+.post-icon-views { cursor: default; }
+.post-icon-views:hover { color: var(--color-text-subtle, #8a93a3); }
+
+/* ==========================================================================
+   Popular sections (horizontal scroll tracks)
+   ========================================================================== */
+.popular-section { padding: 36px 0; }
+
+.popular-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.popular-controls { display: flex; gap: 8px; }
+
+.popular-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-strong, rgba(15,23,42,0.16));
+  background: var(--color-surface, #fff);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.popular-track {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 6px;
+}
+
+.popular-card {
+  flex: 0 0 260px;
+  scroll-snap-align: start;
+  border-radius: var(--radius-md, 16px);
+  overflow: hidden;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.08));
+}
+
+.popular-media {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  background: var(--color-surface-muted, #eef0f3);
+}
+
+.popular-body { padding: 14px; }
+.popular-summary { font-size: var(--text-sm, 0.85rem); color: var(--color-text-muted, #5b6573); margin: 6px 0; }
+.popular-meta { font-size: var(--text-xs, 0.75rem); color: var(--color-text-subtle, #8a93a3); }
+.popular-actions { display: flex; gap: 8px; margin-top: 8px; }
+.popular-card.topic-card { background: var(--color-surface-muted, rgba(15,118,110,0.04)); }
+
+/* ==========================================================================
+   Feature band ("One community, N ways in")
+   ========================================================================== */
+.feature-band { padding: 40px 0; }
+.feature-header { text-align: center; max-width: 640px; margin: 0 auto 32px; }
+.feature-header .chip { margin-bottom: 12px; }
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.feature-card {
+  padding: 24px;
+  border-radius: var(--radius-md, 16px);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.08));
+  transition: transform var(--duration-fast, 120ms) var(--ease-out);
+}
+
+.feature-card:hover { transform: translateY(-4px); }
+.feature-icon { font-size: 28px; margin-bottom: 12px; }
+.feature-card h3 { font-family: var(--font-display); margin: 0 0 8px; }
+.feature-card p { color: var(--color-text-muted, #5b6573); font-size: var(--text-sm, 0.9rem); margin: 0; }
+
+/* ==========================================================================
+   Category grid / boards
+   ========================================================================== */
+.board { margin-top: 8px; }
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.category-card {
+  padding: 16px;
+  border-radius: var(--radius-sm, 12px);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.08));
+}
+
+.category-meta { font-size: var(--text-xs, 0.75rem); color: var(--color-text-subtle, #8a93a3); }
+
+/* ==========================================================================
+   Latest posts + sidebar
+   ========================================================================== */
+.content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.filter-bar { display: flex; gap: 16px; align-items: flex-end; margin: 12px 0 16px; flex-wrap: wrap; }
+.filter-group { display: flex; flex-direction: column; gap: 4px; font-size: var(--text-xs, 0.78rem); }
+
+.side-card {
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15,23,42,0.08));
+  border-radius: var(--radius-md, 16px);
+  padding: 20px;
+}
+
+.leaderboard-list { display: grid; gap: 10px; }
+.leaderboard-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border, rgba(15,23,42,0.06));
+}
+.leaderboard-meta { font-size: var(--text-xs, 0.75rem); color: var(--color-text-subtle, #8a93a3); }
+
+.ad-slot,
+.ad-card {
+  border: 1px dashed var(--color-border-strong, rgba(15,23,42,0.16));
+  border-radius: var(--radius-sm, 12px);
+  padding: 14px;
+  text-align: center;
+  font-size: var(--text-xs, 0.78rem);
+  color: var(--color-text-subtle, #8a93a3);
+  margin-top: 12px;
+}
+.ad-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; }
+  .hero-grid .hero-card:first-child { grid-row: auto; }
+  .hero-pillars { grid-template-columns: repeat(2, 1fr); }
+  .content-grid { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================
+   Suggested people / "Add Friend" rail
+   ========================================================================== */
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+
+.people-rail {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.people-card {
+  flex: 0 0 140px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border-radius: var(--radius-md, 16px);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
+  text-align: center;
+}
+
+.people-card img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.people-card-name {
+  font-size: var(--text-sm, 0.85rem);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 116px;
+}
+
+.people-card .add-friend-btn { width: 100%; }

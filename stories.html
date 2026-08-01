@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stories - Timzee Tech Hub</title>
+    <meta name="description" content="Share a public or friends-only story that disappears after 24 hours.">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0f766e">
+    <link rel="canonical" href="https://timzee-tech-blog.netlify.app/stories.html">
+    <meta property="og:site_name" content="Timzee Tech Hub">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Stories - Timzee Tech Hub">
+    <meta property="og:description" content="Share a public or friends-only story that disappears after 24 hours.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script defer src="assets/js/theme-init.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header">
+      <div class="container wrap">
+        <a class="brand" href="index.html">
+          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
+          <span class="tagline" id="siteTagline">Stories that disappear in 24 hours.</span>
+        </a>
+        <nav class="nav-pill">
+          <a href="discussion.html">Discussion</a>
+          <a href="marketplace.html">Marketplace</a>
+          <a href="videos.html">Videos</a>
+          <a href="novels.html">Novels</a>
+          <div class="nav-more">
+            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+            <div class="nav-more-menu">
+              <a href="announcements.html">Announcements</a>
+              <a href="ads.html">Advertise</a>
+              <a href="newsletter.html">Newsletter</a>
+              <a href="contact.html">Contact</a>
+              <a href="support.html">Support</a>
+            </div>
+          </div>
+        </nav>
+        <div class="header-actions">
+          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
+          <div class="auth-actions" id="authActions"></div>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" class="page-shell">
+      <div class="container">
+        <div class="stories-rail" id="storiesRail">
+          <div class="story-avatar story-avatar-add" id="addStoryBtn" role="button" tabindex="0">
+            <div class="story-ring story-ring-add">
+              <img id="ownStoryAvatar" alt="Your avatar">
+              <span class="story-add-badge">+</span>
+            </div>
+            <span class="story-avatar-label">Your Story</span>
+          </div>
+          <div class="callout" id="storiesEmpty">No active stories yet — be the first!</div>
+        </div>
+
+        <div class="callout" id="storiesLoginNotice" style="display:none;">
+          <a href="login.html?next=stories.html">Log in</a> to post or view stories.
+        </div>
+      </div>
+    </main>
+
+    <!-- Full-screen story viewer -->
+    <div class="story-viewer" id="storyViewer" hidden aria-hidden="true">
+      <div class="story-progress-row" id="storyProgressRow"></div>
+      <div class="story-viewer-header">
+        <img class="story-viewer-avatar" id="viewerAvatar" alt="">
+        <div>
+          <div class="story-viewer-name" id="viewerName">—</div>
+          <div class="story-viewer-time" id="viewerTime">—</div>
+        </div>
+        <button class="btn ghost icon-only story-viewer-own-delete" id="viewerDeleteBtn" type="button" title="Delete this story" hidden>&#128465;</button>
+        <button class="btn ghost icon-only" id="viewerCloseBtn" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="story-viewer-media" id="storyViewerMedia"></div>
+      <div class="story-viewer-caption" id="viewerCaption"></div>
+      <button class="story-tap-zone story-tap-prev" id="storyPrevZone" type="button" aria-label="Previous story"></button>
+      <button class="story-tap-zone story-tap-next" id="storyNextZone" type="button" aria-label="Next story"></button>
+    </div>
+
+    <!-- Composer -->
+    <div class="story-composer-backdrop" id="composerBackdrop" hidden></div>
+    <div class="story-composer" id="storyComposer" hidden aria-hidden="true">
+      <div class="story-composer-header">
+        <h3>New Story</h3>
+        <button class="btn ghost icon-only" id="composerCloseBtn" type="button" aria-label="Close">&times;</button>
+      </div>
+      <form id="storyForm">
+        <label class="story-file-drop" for="storyFile">
+          <span id="storyFilePreviewLabel">Choose a photo or video</span>
+          <div class="story-file-preview" id="storyFilePreview"></div>
+        </label>
+        <input type="file" id="storyFile" accept="image/*,video/*" hidden required>
+        <textarea id="storyCaption" placeholder="Add a caption (optional)" rows="2" maxlength="200"></textarea>
+        <div class="story-visibility-toggle">
+          <label>
+            <input type="radio" name="storyVisibility" value="public" checked>
+            Public — anyone can see it
+          </label>
+          <label>
+            <input type="radio" name="storyVisibility" value="private">
+            Friends only
+          </label>
+        </div>
+        <div class="callout" id="storyComposerStatus" style="display:none;"></div>
+        <button type="submit" class="btn" id="storySubmitBtn">Post Story</button>
+      </form>
+    </div>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-links">
+          <a href="support.html">Support</a>
+          <a href="contact.html">Contact Us</a>
+          <a href="newsletter.html">Newsletter</a>
+          <a href="ads.html">Advertise</a>
+          <a href="discussion.html">Discussion</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module">
+      import { getCurrentUser, getDisplayName } from "./assets/js/supabase.js";
+      import { fetchStoriesFeed, fetchUserStories, createStory, deleteStory } from "./assets/js/stories.js";
+      import { escapeHTML, isSafeUrl, timeAgo } from "./assets/js/utils.js";
+      import "./assets/js/nav.js";
+
+      const DEFAULT_AVATAR =
+        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+
+      const state = {
+        user: null,
+        groups: [], // [{ userId, profile, stories: [] }]
+        activeGroupIndex: -1,
+        activeStoryIndex: 0,
+        timerId: null
+      };
+
+      async function init() {
+        state.user = await getCurrentUser();
+        const loginNotice = document.getElementById("storiesLoginNotice");
+        const addBtn = document.getElementById("addStoryBtn");
+        if (!state.user) {
+          if (loginNotice) loginNotice.style.display = "block";
+          if (addBtn) addBtn.style.display = "none";
+        } else {
+          const ownAvatar = document.getElementById("ownStoryAvatar");
+          if (ownAvatar) ownAvatar.src = DEFAULT_AVATAR;
+          addBtn.addEventListener("click", () => openComposer());
+          addBtn.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") openComposer();
+          });
+        }
+
+        state.groups = await fetchStoriesFeed();
+        renderRail();
+
+        const params = new URLSearchParams(window.location.search);
+        const targetUser = params.get("user");
+        if (targetUser) {
+          const index = state.groups.findIndex((group) => group.userId === targetUser);
+          if (index >= 0) openViewer(index);
+        }
+
+        setupComposer();
+        setupViewerControls();
+      }
+
+      function renderRail() {
+        const rail = document.getElementById("storiesRail");
+        const empty = document.getElementById("storiesEmpty");
+        const addBtn = document.getElementById("addStoryBtn");
+        empty.hidden = state.groups.length > 0;
+
+        rail.querySelectorAll(".story-avatar:not(.story-avatar-add)").forEach((el) => el.remove());
+
+        state.groups.forEach((group, index) => {
+          const profile = group.profile;
+          const isOwn = state.user && group.userId === state.user.id;
+          const el = document.createElement("div");
+          el.className = "story-avatar";
+          el.setAttribute("role", "button");
+          el.setAttribute("tabindex", "0");
+          el.innerHTML = `
+            <div class="story-ring">
+              <img src="${isSafeUrl(profile?.avatar_url) ? profile.avatar_url : DEFAULT_AVATAR}" alt="">
+            </div>
+            <span class="story-avatar-label">${escapeHTML(isOwn ? "You" : profile?.display_name || "Member")}</span>
+          `;
+          el.addEventListener("click", () => openViewer(index));
+          el.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") openViewer(index);
+          });
+          addBtn.insertAdjacentElement("afterend", el);
+        });
+      }
+
+      // ------------------------------------------------------------------
+      // Viewer
+      // ------------------------------------------------------------------
+      function openViewer(groupIndex) {
+        state.activeGroupIndex = groupIndex;
+        state.activeStoryIndex = 0;
+        const viewer = document.getElementById("storyViewer");
+        viewer.hidden = false;
+        viewer.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+        renderProgressBars();
+        renderActiveStory();
+      }
+
+      function closeViewer() {
+        clearTimer();
+        const viewer = document.getElementById("storyViewer");
+        viewer.hidden = true;
+        viewer.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+        document.getElementById("storyViewerMedia").innerHTML = "";
+      }
+
+      function clearTimer() {
+        if (state.timerId) {
+          clearTimeout(state.timerId);
+          state.timerId = null;
+        }
+      }
+
+      function renderProgressBars() {
+        const group = state.groups[state.activeGroupIndex];
+        const row = document.getElementById("storyProgressRow");
+        row.innerHTML = group.stories
+          .map(() => `<div class="story-progress-track"><div class="story-progress-fill"></div></div>`)
+          .join("");
+      }
+
+      function renderActiveStory() {
+        clearTimer();
+        const group = state.groups[state.activeGroupIndex];
+        if (!group) return closeViewer();
+        const story = group.stories[state.activeStoryIndex];
+        if (!story) return closeViewer();
+
+        const profile = group.profile;
+        document.getElementById("viewerAvatar").src = isSafeUrl(profile?.avatar_url)
+          ? profile.avatar_url
+          : DEFAULT_AVATAR;
+        document.getElementById("viewerName").textContent = profile?.display_name || "Member";
+        document.getElementById("viewerTime").textContent = timeAgo(story.created_at);
+        document.getElementById("viewerCaption").textContent = story.caption || "";
+
+        const isOwn = state.user && story.user_id === state.user.id;
+        const deleteBtn = document.getElementById("viewerDeleteBtn");
+        deleteBtn.hidden = !isOwn;
+        deleteBtn.onclick = () => handleDelete(story.id);
+
+        const media = document.getElementById("storyViewerMedia");
+        media.innerHTML = "";
+        const url = isSafeUrl(story.media_url) ? story.media_url : "";
+        let durationMs = 5000;
+        if (story.media_type === "video") {
+          const video = document.createElement("video");
+          video.src = url;
+          video.autoplay = true;
+          video.playsInline = true;
+          video.controls = false;
+          media.appendChild(video);
+          video.addEventListener("loadedmetadata", () => {
+            durationMs = Math.min(Math.max(video.duration * 1000, 2000), 30000);
+            startProgress(durationMs);
+          });
+          video.addEventListener("ended", () => advance(1));
+        } else {
+          const img = document.createElement("img");
+          img.src = url;
+          media.appendChild(img);
+          startProgress(durationMs);
+        }
+
+        // Update progress bar fill states (completed / active / upcoming)
+        const tracks = document.querySelectorAll("#storyProgressRow .story-progress-track");
+        tracks.forEach((track, i) => {
+          const fill = track.querySelector(".story-progress-fill");
+          fill.style.transition = "none";
+          fill.style.width = i < state.activeStoryIndex ? "100%" : "0%";
+        });
+      }
+
+      function startProgress(durationMs) {
+        const tracks = document.querySelectorAll("#storyProgressRow .story-progress-track");
+        const fill = tracks[state.activeStoryIndex]?.querySelector(".story-progress-fill");
+        if (fill) {
+          requestAnimationFrame(() => {
+            fill.style.transition = `width ${durationMs}ms linear`;
+            fill.style.width = "100%";
+          });
+        }
+        state.timerId = setTimeout(() => advance(1), durationMs);
+      }
+
+      function advance(direction) {
+        const group = state.groups[state.activeGroupIndex];
+        if (!group) return;
+        const nextIndex = state.activeStoryIndex + direction;
+        if (nextIndex < 0) {
+          // At the first story of this user: go to previous user's stories.
+          if (state.activeGroupIndex > 0) {
+            openViewer(state.activeGroupIndex - 1);
+          }
+          return;
+        }
+        if (nextIndex >= group.stories.length) {
+          // Finished this user: go to next user, or close if none left.
+          if (state.activeGroupIndex < state.groups.length - 1) {
+            openViewer(state.activeGroupIndex + 1);
+          } else {
+            closeViewer();
+          }
+          return;
+        }
+        state.activeStoryIndex = nextIndex;
+        renderActiveStory();
+      }
+
+      async function handleDelete(storyId) {
+        if (!confirm("Delete this story?")) return;
+        const result = await deleteStory(storyId);
+        if (result.error) {
+          alert(result.error.message || "Could not delete story.");
+          return;
+        }
+        const group = state.groups[state.activeGroupIndex];
+        group.stories.splice(state.activeStoryIndex, 1);
+        if (!group.stories.length) {
+          state.groups.splice(state.activeGroupIndex, 1);
+          renderRail();
+          closeViewer();
+        } else {
+          if (state.activeStoryIndex >= group.stories.length) {
+            state.activeStoryIndex = group.stories.length - 1;
+          }
+          renderProgressBars();
+          renderActiveStory();
+        }
+      }
+
+      function setupViewerControls() {
+        document.getElementById("storyPrevZone").addEventListener("click", () => advance(-1));
+        document.getElementById("storyNextZone").addEventListener("click", () => advance(1));
+        document.getElementById("viewerCloseBtn").addEventListener("click", closeViewer);
+        document.addEventListener("keydown", (event) => {
+          const viewer = document.getElementById("storyViewer");
+          if (viewer.hidden) return;
+          if (event.key === "Escape") closeViewer();
+          if (event.key === "ArrowLeft") advance(-1);
+          if (event.key === "ArrowRight") advance(1);
+        });
+      }
+
+      // ------------------------------------------------------------------
+      // Composer
+      // ------------------------------------------------------------------
+      function openComposer() {
+        document.getElementById("composerBackdrop").hidden = false;
+        const composer = document.getElementById("storyComposer");
+        composer.hidden = false;
+        composer.setAttribute("aria-hidden", "false");
+      }
+
+      function closeComposer() {
+        document.getElementById("composerBackdrop").hidden = true;
+        const composer = document.getElementById("storyComposer");
+        composer.hidden = true;
+        composer.setAttribute("aria-hidden", "true");
+        document.getElementById("storyForm").reset();
+        document.getElementById("storyFilePreview").innerHTML = "";
+        document.getElementById("storyFilePreviewLabel").textContent = "Choose a photo or video";
+      }
+
+      function setupComposer() {
+        document.getElementById("composerCloseBtn").addEventListener("click", closeComposer);
+        document.getElementById("composerBackdrop").addEventListener("click", closeComposer);
+
+        const fileInput = document.getElementById("storyFile");
+        fileInput.addEventListener("change", () => {
+          const file = fileInput.files?.[0];
+          const preview = document.getElementById("storyFilePreview");
+          const label = document.getElementById("storyFilePreviewLabel");
+          preview.innerHTML = "";
+          if (!file) return;
+          label.textContent = file.name;
+          const url = URL.createObjectURL(file);
+          if (file.type.startsWith("video")) {
+            const video = document.createElement("video");
+            video.src = url;
+            video.muted = true;
+            video.autoplay = true;
+            video.loop = true;
+            preview.appendChild(video);
+          } else {
+            const img = document.createElement("img");
+            img.src = url;
+            preview.appendChild(img);
+          }
+        });
+
+        document.getElementById("storyForm").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          if (!state.user) return;
+          const submitBtn = document.getElementById("storySubmitBtn");
+          const status = document.getElementById("storyComposerStatus");
+          const file = fileInput.files?.[0];
+          const caption = document.getElementById("storyCaption").value.trim();
+          const visibility = document.querySelector('input[name="storyVisibility"]:checked')?.value || "public";
+
+          if (!file) {
+            status.textContent = "Choose a photo or video first.";
+            status.style.display = "block";
+            return;
+          }
+
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Posting...";
+          const result = await createStory({ userId: state.user.id, file, caption, visibility });
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Post Story";
+
+          if (result.error) {
+            status.textContent = result.error.message || "Could not post story.";
+            status.style.display = "block";
+            return;
+          }
+
+          closeComposer();
+          state.groups = await fetchStoriesFeed();
+          renderRail();
+        });
+      }
+
+      init();
+    </script>
+  </body>
+</html>

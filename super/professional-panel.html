@@ -180,6 +180,7 @@
 
     <script type="module">
       import { getCurrentUserWithRole, signOut, supabase, getUserRole } from "../assets/js/supabase.js";
+      import { notifyAdminPromotion, notifyVerificationStatusChange } from "../assets/js/data.js";
       import ModeratorManager from "../assets/js/moderator-ui.js";
       import CuratorManager from "../assets/js/curator-ui.js";
       const SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
@@ -502,6 +503,15 @@
                   btn.disabled = false;
                   return;
                 }
+                if (action === "promote_to_super") {
+                  notifyAdminPromotion(btn.dataset.adminId, "super admin").catch((error) =>
+                    console.warn("Admin-promotion notification failed:", error)
+                  );
+                } else if (action === "demote_to_admin") {
+                  notifyAdminPromotion(btn.dataset.adminId, "admin").catch((error) =>
+                    console.warn("Admin-role-change notification failed:", error)
+                  );
+                }
                 loadAdmins();
               });
             });
@@ -540,6 +550,15 @@
                   alert(result.error);
                   btn.disabled = false;
                   return;
+                }
+                if (action === "promote_to_super") {
+                  notifyAdminPromotion(btn.dataset.adminId, "super admin").catch((error) =>
+                    console.warn("Admin-promotion notification failed:", error)
+                  );
+                } else if (action === "demote_to_admin") {
+                  notifyAdminPromotion(btn.dataset.adminId, "admin").catch((error) =>
+                    console.warn("Admin-role-change notification failed:", error)
+                  );
                 }
                 loadAdmins();
               });
@@ -590,11 +609,25 @@
             document.querySelectorAll("#allUsersContainer [data-user-action]").forEach((btn) => {
               btn.addEventListener("click", async () => {
                 btn.disabled = true;
-                const result = await updateUserAction(btn.dataset.userId, btn.dataset.userAction);
+                const action = btn.dataset.userAction;
+                const result = await updateUserAction(btn.dataset.userId, action);
                 if (result.error) {
                   alert(result.error);
                   btn.disabled = false;
                   return;
+                }
+                if (action === "verify") {
+                  notifyVerificationStatusChange(
+                    btn.dataset.userId,
+                    "approved",
+                    "Your account is now verified."
+                  ).catch((error) => console.warn("Verification notification failed:", error));
+                } else if (action === "unverify") {
+                  notifyVerificationStatusChange(
+                    btn.dataset.userId,
+                    "removed",
+                    "Your verified badge has been removed."
+                  ).catch((error) => console.warn("Verification notification failed:", error));
                 }
                 loadUsers();
               });

@@ -49,9 +49,10 @@
   --space-12: 48px;
   --space-16: 64px;
 
-  /* --- Typography scale --- */
-  --font-display: "Fraunces", "Times New Roman", serif;
-  --font-body: "Sora", "Segoe UI", system-ui, -apple-system, sans-serif;
+  /* --- Typography scale (Signal reboot: Space Grotesk + Inter + mono) --- */
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
 
   --text-xs: 0.75rem;    /* 12px */
   --text-sm: 0.875rem;   /* 14px */
@@ -88,6 +89,10 @@
   --z-overlay: 90;
   --z-modal: 100;
   --z-toast: 110;
+
+  /* --- Signal motif (reboot signature element: activity/pulse bars) --- */
+  --signal-gradient: linear-gradient(135deg, var(--color-primary, #0f766e), var(--color-secondary, #0ea5e9));
+  --signal-pulse-duration: 1.6s;
 }
 
 /* --- Dark mode tokens ---

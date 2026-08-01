@@ -11,7 +11,9 @@ import {
   fetchTopProfiles,
   createContentRequest,
   togglePostLike,
-  createPostShare
+  createPostShare,
+  fetchSuggestedPeople,
+  sendFriendRequestTo
 } from "./data.js";
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
@@ -47,7 +49,8 @@ const state = {
   discussionTopics: [],
   discussionMessages: [],
   activeTags: [],
-  leaderboard: []
+  leaderboard: [],
+  suggestedPeople: []
 };
 
 function formatBrandName(name) {
@@ -261,7 +264,6 @@ function buildPostCard(post, compact = false) {
   const commentCount = state.commentCounts[post.id] || 0;
   const likeCount = state.likeCounts[post.id] || 0;
   const liked = state.userLikes.has(post.id);
-  const likeLabel = liked ? "Liked" : "Like";
   const tags = normalizeTags(post.tags)
     .slice(0, 3)
     .map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`)
@@ -269,34 +271,38 @@ function buildPostCard(post, compact = false) {
   const publishedAt = post.publish_at || post.created_at;
   const title = compact ? clampText(post.title || "", 60) : post.title || "";
   const excerptText = clampText(stripHTML(post.content || ""), 140);
-  const excerpt = compact ? "" : `<div>${escapeHTML(excerptText)}</div>`;
+  const excerpt = compact ? "" : `<div class="post-card-excerpt">${escapeHTML(excerptText)}</div>`;
   const pin = post.pinned ? `<span class="chip">Popular</span>` : "";
+  const authorName = post.author_name || "Timzee Tech Hub";
+  const initial = authorName.trim().charAt(0).toUpperCase() || "T";
 
   return `
     <article class="post-card" data-reveal>
-      <div class="post-meta">
-        <span>${escapeHTML(categoryName)}</span>
-        <span>${timeAgo(publishedAt)}</span>
-        <span>${readingTime(post.content || "")}</span>
+      <div class="post-card-header">
+        <span class="post-card-avatar" aria-hidden="true">${escapeHTML(initial)}</span>
+        <div class="post-card-byline">
+          <span class="post-card-author">${escapeHTML(authorName)}</span>
+          <span class="post-card-subline">${escapeHTML(categoryName)} · ${timeAgo(publishedAt)}</span>
+        </div>
         ${pin}
       </div>
       <a href="post.html?id=${post.id}"><h3>${escapeHTML(title)}</h3></a>
       ${excerpt}
       <div class="tag-list">${tags}</div>
-      <div class="post-actions">
-        <span>${commentCount} replies</span>
-        <span data-like-count="${post.id}">${likeCount} likes</span>
-        <span>${post.views || 0} views</span>
-      </div>
-      <div class="post-action-buttons">
-        <button class="post-action-btn${liked ? " active" : ""}" data-action="like" data-id="${post.id}" data-like-button="${post.id}">
-          <span data-like-label="${post.id}">${likeLabel}</span>
-          <strong data-like-count-inline="${post.id}">${likeCount}</strong>
+      <div class="post-icon-row">
+        <button class="post-icon-btn${liked ? " active" : ""}" data-action="like" data-id="${post.id}" data-like-button="${post.id}" aria-label="Like">
+          <span class="post-icon">${liked ? "&#10084;" : "&#9825;"}</span>
+          <span data-like-count-inline="${post.id}">${likeCount}</span>
         </button>
-        <a class="post-action-btn" data-action="comment" href="post.html?id=${post.id}#comments">
-          Comment <strong>${commentCount}</strong>
+        <a class="post-icon-btn" data-action="comment" href="post.html?id=${post.id}#comments" aria-label="Comments">
+          <span class="post-icon">&#128172;</span>${commentCount}
         </a>
-        <button class="post-action-btn" data-action="share" data-id="${post.id}">Share</button>
+        <button class="post-icon-btn" data-action="share" data-id="${post.id}" aria-label="Share">
+          <span class="post-icon">&#8663;</span>Share
+        </button>
+        <span class="post-icon-btn post-icon-views" aria-label="Views">
+          <span class="post-icon">&#128065;</span>${post.views || 0}
+        </span>
       </div>
     </article>
   `;
@@ -348,7 +354,6 @@ function renderPopular() {
       const likes = state.likeCounts[post.id] || 0;
       const comments = state.commentCounts[post.id] || 0;
       const liked = state.userLikes.has(post.id);
-      const likeLabel = liked ? "Liked" : "Like";
       return `
         <article class="popular-card" data-reveal>
           <a class="popular-media" href="post.html?id=${post.id}">
@@ -364,15 +369,17 @@ function renderPopular() {
               <h3>${escapeHTML(post.title || "")}</h3>
             </a>
             <div class="popular-summary">${escapeHTML(summary)}</div>
-            <div class="popular-actions">
-              <button class="post-action-btn${liked ? " active" : ""}" data-action="like" data-id="${post.id}" data-like-button="${post.id}">
-                <span data-like-label="${post.id}">${likeLabel}</span>
-                <strong data-like-count-inline="${post.id}">${likes}</strong>
+            <div class="post-icon-row">
+              <button class="post-icon-btn${liked ? " active" : ""}" data-action="like" data-id="${post.id}" data-like-button="${post.id}" aria-label="Like">
+                <span class="post-icon">${liked ? "&#10084;" : "&#9825;"}</span>
+                <span data-like-count-inline="${post.id}">${likes}</span>
               </button>
-              <a class="post-action-btn" data-action="comment" href="post.html?id=${post.id}#comments">
-                Comment <strong>${comments}</strong>
+              <a class="post-icon-btn" data-action="comment" href="post.html?id=${post.id}#comments" aria-label="Comments">
+                <span class="post-icon">&#128172;</span>${comments}
               </a>
-              <button class="post-action-btn" data-action="share" data-id="${post.id}">Share</button>
+              <button class="post-icon-btn" data-action="share" data-id="${post.id}" aria-label="Share">
+                <span class="post-icon">&#8663;</span>Share
+              </button>
             </div>
           </div>
         </article>
@@ -521,6 +528,8 @@ function updateLikeDisplays(postId) {
   });
   document.querySelectorAll(`[data-like-button="${postId}"]`).forEach((btn) => {
     btn.classList.toggle("active", liked);
+    const icon = btn.querySelector(".post-icon");
+    if (icon) icon.innerHTML = liked ? "&#10084;" : "&#9825;";
   });
   document.querySelectorAll(`[data-like-label="${postId}"]`).forEach((el) => {
     el.textContent = liked ? "Liked" : "Like";
@@ -556,7 +565,7 @@ async function recordShare(postId, channel) {
 function setupPostActionButtons() {
   if (setupPostActionButtons.ready) return;
   document.addEventListener("click", async (event) => {
-    const button = event.target.closest(".post-action-btn");
+    const button = event.target.closest(".post-action-btn, .post-icon-btn");
     if (!button) return;
     const action = button.dataset.action;
     const postId = button.dataset.id;
@@ -806,6 +815,54 @@ async function handleContentRequest() {
   alert("Request sent to the admins. Thanks!");
 }
 
+function renderSuggestedPeople() {
+  const section = document.getElementById("suggestedPeopleSection");
+  const rail = document.getElementById("suggestedPeopleRail");
+  if (!section || !rail) return;
+
+  if (!state.user || !state.suggestedPeople.length) {
+    section.style.display = "none";
+    return;
+  }
+  section.style.display = "block";
+
+  const defaultAvatar = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+  rail.innerHTML = state.suggestedPeople
+    .map((profile) => {
+      const name = profile.display_name || profile.username || "Member";
+      const avatar = isSafeUrl(profile.avatar_url) ? profile.avatar_url : defaultAvatar;
+      const verified = profile.is_verified ? `<span class="verified-badge small">✓</span>` : "";
+      return `
+        <div class="people-card" data-user-id="${escapeHTML(profile.id || "")}">
+          <a href="profile.html?id=${encodeURIComponent(profile.id || "")}">
+            <img src="${avatar}" alt="${escapeHTML(name)} avatar">
+          </a>
+          <div class="people-card-name">${escapeHTML(name)}${verified}</div>
+          <button type="button" class="btn sm add-friend-btn" data-user-id="${escapeHTML(profile.id || "")}">Add Friend</button>
+        </div>
+      `;
+    })
+    .join("");
+
+  rail.querySelectorAll(".add-friend-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const targetId = btn.dataset.userId;
+      if (!targetId || !state.user) return;
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+      const result = await sendFriendRequestTo(state.user, targetId);
+      if (result.error) {
+        btn.disabled = false;
+        btn.textContent = "Add Friend";
+        reportAppError(result.error, "Friend request failed");
+        return;
+      }
+      btn.textContent = "Requested";
+      btn.classList.add("outline");
+    });
+  });
+}
+
 function renderLeaderboard() {
   const list = document.getElementById("leaderboardList");
   if (!list) return;
@@ -936,16 +993,18 @@ async function boot() {
     if (theme) applyThemeVariables(theme);
   }
 
-  const [categories, posts, comments, likes, ads, discussionTopics, discussionMessages, leaderboard] = await Promise.all([
-    fetchCategories(),
-    fetchPosts({ status: "published" }),
-    fetchComments({ status: "approved" }),
-    fetchPostLikes(),
-    fetchAds({ status: "active" }),
-    fetchDiscussionTopics(),
-    fetchDiscussionMessages(),
-    fetchTopProfiles(5)
-  ]);
+  const [categories, posts, comments, likes, ads, discussionTopics, discussionMessages, leaderboard, suggestedPeople] =
+    await Promise.all([
+      fetchCategories(),
+      fetchPosts({ status: "published" }),
+      fetchComments({ status: "approved" }),
+      fetchPostLikes(),
+      fetchAds({ status: "active" }),
+      fetchDiscussionTopics(),
+      fetchDiscussionMessages(),
+      fetchTopProfiles(5),
+      fetchSuggestedPeople(state.user?.id || null, 8)
+    ]);
 
   state.categories = categories;
   state.posts = posts;
@@ -955,6 +1014,7 @@ async function boot() {
   state.discussionTopics = discussionTopics;
   state.discussionMessages = discussionMessages;
   state.leaderboard = leaderboard;
+  state.suggestedPeople = suggestedPeople;
   hydrateCounts();
 
   renderAuthActions();
@@ -969,6 +1029,7 @@ async function boot() {
   renderTagFilters();
   setupTagFilters();
   renderLeaderboard();
+  renderSuggestedPeople();
   renderAds(state.settings);
   setupSearch();
   setupPostActionButtons();

@@ -1,33 +1,46 @@
 /* ==========================================================================
-   navbar.css — unified site navigation
-   Redesigned so every page shares one nav system: a floating glass bar on
-   desktop, a full-height slide-in drawer on mobile. nav.js wraps .nav-pill
-   and .header-actions into #siteMenu and toggles body.nav-open; nav.js also
-   marks the current page's link with .active by comparing pathnames, so no
-   page needs to hardcode which link is "current."
+   navbar.css — Signal reboot, mobile-first pass.
+   IMPORTANT: nav.js reparents .site-menu to document.body while open (see
+   the comment inside setupMobileMenu()'s setOpen() for why — .site-header
+   creates its own stacking context, so the drawer has to leave it to be
+   compared against the body-level backdrop correctly). That mechanic, the
+   class names it depends on (.site-menu, .menu-toggle, .drawer-backdrop-layer,
+   body.nav-open), and the z-index values (99999 / 99998) are NOT touched
+   here — only colors/spacing/type/motion are new. Do not add
+   backdrop-filter to .site-header itself; it broke the drawer's stacking
+   before. (.drawer-backdrop-layer is safe to blur — it's a body-level
+   sibling of the reparented drawer, not an ancestor, so it can't create a
+   containing-block problem for it.)
    ========================================================================== */
 
 .site-header {
   position: sticky;
   top: 0;
   z-index: var(--z-header, 80);
-  background: rgba(246, 241, 234, 0.97);
+  background: rgba(246, 241, 234, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
 }
+
+/* The blur above is fine on .site-header specifically because the drawer no
+   longer lives inside it at the moment it matters (open state = reparented
+   to body). If you ever change that reparenting logic, re-test the drawer
+   on a real phone before shipping. */
 
 :root[data-theme="dark"] .site-header,
 :root.dark-mode .site-header,
 :root.theme-dark .site-header {
-  background: rgba(15, 17, 21, 0.97);
+  background: rgba(15, 17, 21, 0.92);
 }
 
 .site-header .wrap {
   display: flex;
   align-items: center;
   gap: var(--space-4, 16px);
-  padding-top: var(--space-3, 12px);
-  padding-bottom: var(--space-3, 12px);
-  min-height: 64px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  min-height: 62px;
 }
 
 .site-header .brand {
@@ -39,32 +52,38 @@
   flex-shrink: 0;
 }
 
-.site-header .brand .tagline {
-  display: none;
+.site-header .brand .logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
+
+.site-header .brand .logo span {
+  background: var(--signal-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.site-header .brand .tagline { display: none; }
 
 /* ---------- Nav pill links (shared structure, desktop + drawer) ---------- */
 .nav-pill a {
   position: relative;
   white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm, 14px);
 }
-
-.category-filter-pill {
-  margin-left: 0;
-  margin-bottom: var(--space-3, 12px);
-}
-
 
 .nav-pill a.active {
-  background: linear-gradient(135deg, var(--accent, #0f766e) 0%, var(--accent-cool, #0ea5e9) 100%);
+  background: var(--signal-gradient);
   color: #fff !important;
   box-shadow: 0 4px 12px rgba(14, 165, 233, 0.28);
 }
 
 /* ---------- "More" dropdown (desktop) ---------- */
-.nav-more {
-  position: relative;
-}
+.nav-more { position: relative; }
 
 .nav-more-toggle {
   display: flex;
@@ -73,26 +92,22 @@
   padding: 8px 14px;
   border-radius: var(--radius-full, 999px);
   font-size: 12px;
-  font-weight: 600;
-  color: #0b3f3a;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: var(--color-primary, #0f766e);
   background: none;
   border: none;
   cursor: pointer;
-  font-family: inherit;
 }
 
-.nav-more-toggle:hover {
-  background: rgba(15, 118, 110, 0.14);
-}
+.nav-more-toggle:hover { background: var(--color-surface-muted, rgba(15, 118, 110, 0.1)); }
 
 .nav-more-caret {
   font-size: 9px;
   transition: transform var(--duration-base, 200ms) var(--ease-standard);
 }
 
-.nav-more.open .nav-more-caret {
-  transform: rotate(180deg);
-}
+.nav-more.open .nav-more-caret { transform: rotate(180deg); }
 
 .nav-more-menu {
   display: none;
@@ -108,10 +123,7 @@
   z-index: var(--z-dropdown, 60);
 }
 
-.nav-more.open .nav-more-menu {
-  display: grid;
-  gap: 2px;
-}
+.nav-more.open .nav-more-menu { display: grid; gap: 2px; }
 
 .nav-more-menu a {
   display: block;
@@ -122,25 +134,24 @@
   color: var(--color-text, var(--ink));
 }
 
-.nav-more-menu a:hover {
-  background: var(--color-surface-muted, rgba(15, 118, 110, 0.08));
-}
+.nav-more-menu a:hover { background: var(--color-surface-muted, rgba(15, 118, 110, 0.08)); }
 
-/* ---------- Utility icon buttons (chat, search toggle) ---------- */
+/* ---------- Utility icon buttons (chat, stories, search toggle) ---------- */
 .icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-full, 999px);
-  background: var(--color-surface, rgba(255,255,255,0.6));
+  background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, rgba(15, 23, 42, 0.1));
   font-size: 16px;
   text-decoration: none;
   color: var(--color-text, var(--ink));
   flex-shrink: 0;
   cursor: pointer;
+  transition: transform var(--duration-fast, 120ms) var(--ease-out);
 }
 
 .icon-btn:hover {
@@ -148,20 +159,27 @@
   transform: translateY(-1px);
 }
 
-/* ---------- Toggle button (hamburger) ---------- */
+/* ---------- Toggle button (hamburger) — bigger, clearer touch target ---------- */
 .menu-toggle {
   display: none;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm, 12px);
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: var(--radius-full, 999px);
   border: 1px solid var(--color-border-strong, rgba(15, 118, 110, 0.2));
   background: var(--color-surface, #fff);
-  color: var(--color-text, #0c4a45);
-  font-weight: 700;
+  color: var(--color-primary, #0f766e);
   cursor: pointer;
   box-shadow: var(--elevation-1);
   flex-shrink: 0;
+}
+
+.menu-toggle span:not(.menu-icon) {
+  /* the "Menu" text label next to the icon — keep it out of the compact
+     circular button so it doesn't wrap or overflow on small screens */
+  display: none;
 }
 
 .menu-toggle .menu-icon {
@@ -170,6 +188,7 @@
   background: currentColor;
   display: inline-block;
   position: relative;
+  border-radius: 2px;
   transition: background var(--duration-fast, 120ms);
 }
 
@@ -180,6 +199,7 @@
   left: 0;
   width: 18px;
   height: 2px;
+  border-radius: 2px;
   background: currentColor;
   transition: transform var(--duration-base, 200ms) var(--ease-standard), top var(--duration-base, 200ms) var(--ease-standard);
 }
@@ -187,25 +207,12 @@
 .menu-toggle .menu-icon::before { top: -6px; }
 .menu-toggle .menu-icon::after { top: 6px; }
 
-.menu-toggle.active {
-  background: var(--color-surface-muted, rgba(15, 118, 110, 0.12));
-}
+.menu-toggle.active { background: var(--color-surface-muted, rgba(15, 118, 110, 0.12)); }
+.menu-toggle.active .menu-icon { background: transparent; }
+.menu-toggle.active .menu-icon::before { top: 0; transform: rotate(45deg); }
+.menu-toggle.active .menu-icon::after { top: 0; transform: rotate(-45deg); }
 
-.menu-toggle.active .menu-icon {
-  background: transparent;
-}
-
-.menu-toggle.active .menu-icon::before {
-  top: 0;
-  transform: rotate(45deg);
-}
-
-.menu-toggle.active .menu-icon::after {
-  top: 0;
-  transform: rotate(-45deg);
-}
-
-/* ---------- Desktop (>960px): inline glass bar ---------- */
+/* ---------- Desktop (>960px): inline floating pill bar ---------- */
 @media (min-width: 961px) {
   .site-header .wrap { align-items: center; }
 
@@ -220,17 +227,37 @@
   .site-menu .nav-pill {
     margin-right: auto;
     align-items: center;
+    background: var(--color-surface-muted, rgba(15, 118, 110, 0.06));
+    padding: 6px;
+    border-radius: var(--radius-full, 999px);
+    gap: 2px;
   }
 
-  .site-menu-header {
-    display: none;
+  .nav-pill a {
+    padding: 8px 16px;
+    border-radius: var(--radius-full, 999px);
   }
+
+  .site-menu-header { display: none; }
 
   .header-actions { gap: 10px; align-items: center; }
   .search-box input { min-width: 200px; }
+
+  .site-menu-footer { display: none; }
 }
 
-/* ---------- Mobile (≤960px): full-height slide-in drawer ---------- */
+.nav-link-icon {
+  display: inline-block;
+  margin-right: 4px;
+  font-size: 15px;
+}
+
+/* ==========================================================================
+   Mobile (≤960px): full-height slide-in drawer — this is the priority
+   surface for this pass. Positioning/transform/z-index/timing values are
+   preserved exactly from the working version; only the visual language
+   (color, type, spacing, iconography, the pulse motif in the header) is new.
+   ========================================================================== */
 @media (max-width: 960px) {
   .site-header .wrap {
     flex-wrap: nowrap;
@@ -244,8 +271,6 @@
     margin-left: auto;
   }
 
-  /* Drawer stays in the DOM and off-canvas (not display:none) so it can
-     transition smoothly instead of snapping open/closed. */
   .site-menu {
     display: flex !important;
     flex-direction: column;
@@ -256,15 +281,13 @@
     top: 0;
     right: 0;
     bottom: 0;
-    width: min(86vw, 340px);
-    max-width: 340px;
+    width: min(88vw, 360px);
+    max-width: 360px;
 
-    padding: calc(var(--space-6, 24px) + env(safe-area-inset-top)) var(--space-5, 20px) calc(var(--space-6, 24px) + env(safe-area-inset-bottom));
+    padding: calc(20px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));
     overflow-y: auto;
 
     background: var(--color-surface, #fff);
-    border-left: 3px solid transparent;
-    border-image: linear-gradient(180deg, var(--accent, #0f766e) 0%, var(--accent-cool, #0ea5e9) 100%) 1;
     box-shadow: var(--elevation-4);
 
     transform: translateX(100%);
@@ -288,20 +311,30 @@
                 visibility 0s linear 0s;
   }
 
+  /* Signal-bar accent strip down the left edge of the drawer instead of a
+     plain gradient border — ties the drawer back to the site's signature
+     motif instead of being purely decorative. */
   .site-menu::before {
     content: "";
-    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--signal-gradient);
   }
 
   .site-menu-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--space-3, 12px);
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
   }
 
   .site-menu-header .site-menu-title {
-    font-family: var(--font-display, "Fraunces", serif);
+    font-family: var(--font-display);
     font-size: var(--text-xl, 22px);
     font-weight: 700;
     color: var(--color-text, var(--ink));
@@ -311,10 +344,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: var(--radius-full, 999px);
-    border: 1px solid var(--color-border, rgba(15, 23, 42, 0.12));
+    border: none;
     background: var(--color-surface-muted, rgba(15, 118, 110, 0.08));
     color: var(--color-text, var(--ink));
     font-size: 18px;
@@ -322,18 +355,14 @@
     cursor: pointer;
   }
 
-  .site-menu-close:hover {
-    background: var(--color-border, rgba(15, 118, 110, 0.14));
-  }
+  .site-menu-close:hover { background: var(--color-border, rgba(15, 118, 110, 0.14)); }
 
-  /* Backdrop behind the open drawer — solid enough that the header
-     underneath doesn't confusingly show through blurred; the goal is a
-     clean "background dimmed, panel focused" look, not a glass effect. */
   .drawer-backdrop-layer {
-    content: "";
     position: fixed;
     inset: 0;
-    background: rgba(5, 8, 15, 0.82);
+    background: rgba(8, 10, 16, 0.6);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
     z-index: 99998;
     opacity: 0;
     pointer-events: none;
@@ -347,25 +376,24 @@
 
   body.nav-open { overflow: hidden; }
 
-  /* Section label above grouped links inside the drawer */
   .site-menu .nav-section-label {
-    font-size: var(--text-xs, 12px);
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--color-text-subtle, #8a93a3);
-    margin: var(--space-4, 16px) 0 var(--space-1, 4px);
+    margin: 20px 0 6px;
   }
 
-  .site-menu .nav-section-label:first-of-type {
-    margin-top: 0;
-  }
+  .site-menu .nav-section-label:first-of-type { margin-top: 0; }
 
-  /* Category pills / nav links become a stacked list of full-width rows */
+  /* Category pills / nav links become a stacked list of full-width rows,
+     each a distinct tappable card — bigger touch targets, clearer active
+     state, this is the main visual upgrade for mobile. */
   .site-menu .nav-pill {
     width: 100%;
     display: grid;
-    gap: 6px;
+    gap: 8px;
     margin: 0;
     padding: 0;
     background: transparent;
@@ -378,32 +406,22 @@
     align-items: center;
     gap: 10px;
     width: 100%;
-    padding: 12px 14px;
+    min-height: 48px;
+    padding: 13px 16px;
     border-radius: var(--radius-sm, 12px);
-    background: var(--color-surface-muted, rgba(15, 118, 110, 0.08));
-    border: 1px solid var(--color-border, rgba(15, 118, 110, 0.12));
+    background: var(--color-surface-muted, rgba(15, 118, 110, 0.06));
+    border: 1px solid transparent;
     color: var(--color-text, var(--ink));
-    font-size: var(--text-sm, 14px);
+    font-size: var(--text-sm, 15px);
     font-weight: 600;
   }
 
-  .site-menu .nav-pill a:hover {
-    background: var(--color-border, rgba(15, 118, 110, 0.14));
-  }
+  .site-menu .nav-pill a:active { background: var(--color-border, rgba(15, 118, 110, 0.14)); }
 
-  .site-menu .nav-pill a.active {
-    box-shadow: none;
-  }
+  .site-menu .nav-pill a.active { box-shadow: none; }
 
-  /* The More dropdown just becomes a plain inline group on mobile —
-     no floating panel needed since everything already stacks. */
-  .site-menu .nav-more {
-    width: 100%;
-  }
-
-  .site-menu .nav-more-toggle {
-    display: none;
-  }
+  .site-menu .nav-more { width: 100%; }
+  .site-menu .nav-more-toggle { display: none; }
 
   .site-menu .nav-more-menu {
     display: grid !important;
@@ -411,7 +429,7 @@
     box-shadow: none;
     border: none;
     padding: 0;
-    gap: 6px;
+    gap: 8px;
     background: transparent;
   }
 
@@ -419,14 +437,14 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 14px;
+    min-height: 48px;
+    padding: 13px 16px;
     border-radius: var(--radius-sm, 12px);
-    background: var(--color-surface-muted, rgba(15, 118, 110, 0.08));
-    border: 1px solid var(--color-border, rgba(15, 118, 110, 0.12));
-    font-size: var(--text-sm, 14px);
+    background: var(--color-surface-muted, rgba(15, 118, 110, 0.06));
+    font-size: var(--text-sm, 15px);
+    font-weight: 600;
   }
 
-  /* Search box, auth actions, icon buttons all stack full-width */
   .site-menu .header-actions,
   .site-menu .auth-actions {
     width: 100%;
@@ -435,32 +453,27 @@
   }
 
   .site-menu .header-actions {
-    margin-top: var(--space-4, 16px);
-    padding-top: var(--space-4, 16px);
+    margin-top: 20px;
+    padding-top: 20px;
     border-top: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
   }
 
-  .site-menu .search-box {
-    width: 100%;
-  }
-
-  .site-menu .search-box input {
-    width: 100%;
-    min-width: 0;
-  }
+  .site-menu .search-box { width: 100%; }
+  .site-menu .search-box input { width: 100%; min-width: 0; }
 
   .site-menu .icon-btn {
     width: 100%;
+    min-height: 48px;
     border-radius: var(--radius-sm, 12px);
     justify-content: flex-start;
     gap: 10px;
-    padding: 12px 14px;
+    padding: 13px 16px;
     height: auto;
   }
 
   .site-menu .icon-btn::after {
     content: attr(data-label);
-    font-size: var(--text-sm, 14px);
+    font-size: var(--text-sm, 15px);
     font-weight: 600;
   }
 
@@ -470,22 +483,137 @@
   .site-menu .auth-actions a.btn,
   .site-menu .header-actions button {
     width: 100%;
+    min-height: 48px;
     border-radius: var(--radius-sm, 12px);
     justify-content: center;
   }
 
-  /* theme-init.js appends the "Light mode"/"Dark mode" toggle straight to
-     <body> as a persistent floating button (not inside .site-menu), so it
-     was visually colliding with the open menu panel — hide it while the
-     menu is open rather than leave two floating UI layers stacked. */
-  body.nav-open .theme-toggle {
-    display: none;
+  body.nav-open .theme-toggle { display: none; }
+
+  /* ---------- Drawer footer: user card + theme/sign-out chips ---------- */
+  .site-menu-footer {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
+    display: grid;
+    gap: 14px;
+  }
+
+  .site-menu-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .site-menu-user img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .site-menu-user-name {
+    font-weight: 700;
+    font-size: var(--text-sm, 15px);
+  }
+
+  .site-menu-user-handle {
+    font-size: var(--text-xs, 12px);
+    color: var(--color-text-subtle, #8a93a3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+  }
+
+  .site-menu-footer-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .site-menu-footer-actions .chip {
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    font-size: var(--text-xs, 12px);
+    padding: 8px 14px;
+  }
+
+  #siteMenuAuthChip {
+    background: rgba(220, 38, 38, 0.1);
+    color: var(--color-danger, #dc2626);
   }
 }
 
 @media (max-width: 420px) {
-  .site-menu {
-    width: 100vw;
-    max-width: 100vw;
+  .site-menu { width: 100vw; max-width: 100vw; }
+}
+
+/* ==========================================================================
+   Bottom tab bar (Home / Search / Create / Chat / Profile) — the structural
+   piece requested to match the reference design closely. Mobile-only,
+   sits alongside the existing hamburger drawer (doesn't replace it).
+   Injected by nav.js's setupBottomTabBar().
+   ========================================================================== */
+.bottom-tab-bar { display: none; }
+
+@media (max-width: 960px) {
+  body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+
+  .bottom-tab-bar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 500;
+    background: var(--color-surface, #fff);
+    border-top: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.06);
   }
+
+  .bottom-tab {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 2px;
+    text-decoration: none;
+    color: var(--color-text-subtle, #8a93a3);
+    border-radius: var(--radius-sm, 12px);
+  }
+
+  .bottom-tab-icon { font-size: 20px; line-height: 1; }
+  .bottom-tab-label { font-size: 10px; font-weight: 600; }
+
+  .bottom-tab.active {
+    color: var(--color-primary, #0f766e);
+  }
+
+  .bottom-tab.active .bottom-tab-icon {
+    background: var(--signal-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .bottom-tab-create .bottom-tab-icon {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--signal-gradient);
+    color: #fff;
+    font-size: 18px;
+    margin-top: -14px;
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.35);
+  }
+
+  .bottom-tab-create .bottom-tab-label { visibility: hidden; height: 0; }
 }

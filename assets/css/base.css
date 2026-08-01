@@ -30,7 +30,7 @@ html {
 
 body {
   margin: 0;
-  font-family: "Sora", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body), "Segoe UI", system-ui, -apple-system, sans-serif;
   color: var(--ink);
   background-image: var(--wallpaper-overlay), var(--wallpaper-image);
   background-size: auto, cover;
@@ -50,7 +50,7 @@ body::after {
   width: 38vw;
   height: 38vw;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, rgba(249, 115, 22, 0.35), transparent 60%);
+  background: radial-gradient(circle at 30% 30%, rgba(15, 118, 110, 0.35), transparent 60%);
   opacity: 0.6;
   z-index: 0;
   animation: floatOrb 18s ease-in-out infinite;
@@ -64,6 +64,20 @@ body::after {
   bottom: -18vw;
   background: radial-gradient(circle at 40% 40%, rgba(14, 165, 233, 0.28), transparent 65%);
   animation-delay: -6s;
+}
+
+:root[data-theme="dark"] body::before,
+:root.dark-mode body::before,
+:root.theme-dark body::before {
+  background: radial-gradient(circle at 30% 30%, rgba(15, 118, 110, 0.45), transparent 60%);
+  opacity: 0.5;
+}
+
+:root[data-theme="dark"] body::after,
+:root.dark-mode body::after,
+:root.theme-dark body::after {
+  background: radial-gradient(circle at 40% 40%, rgba(14, 165, 233, 0.38), transparent 65%);
+  opacity: 0.45;
 }
 
 @keyframes floatOrb {
@@ -598,6 +612,29 @@ footer {
 .notification-item.unread {
   border-color: rgba(14, 165, 233, 0.35);
   box-shadow: 0 10px 22px rgba(14, 165, 233, 0.12);
+}
+
+.notification-item .leaderboard-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notification-delete-btn {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--color-text-subtle, #8a93a3);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.notification-delete-btn:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--color-danger, #dc2626);
 }
 
 .hero {

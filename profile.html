@@ -50,6 +50,7 @@
           </div>
         </nav>
         <div class="header-actions">
+          <a class="icon-btn" href="stories.html" data-label="Stories" aria-label="Stories" title="Stories">&#128247;</a>
           <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
         </div>
@@ -146,6 +147,12 @@
           </div>
           <div class="inline-actions" style="margin-bottom:12px;">
             <button class="btn ghost" id="markAllReadBtn" type="button">Mark all read</button>
+          </div>
+          <div class="chat-tabs" id="notificationTabs" role="tablist" style="margin-bottom:14px;">
+            <button class="chat-tab active" type="button" data-notif-tab="all" role="tab" aria-selected="true">All</button>
+            <button class="chat-tab" type="button" data-notif-tab="social" role="tab" aria-selected="false">Social</button>
+            <button class="chat-tab" type="button" data-notif-tab="messages" role="tab" aria-selected="false">Messages</button>
+            <button class="chat-tab" type="button" data-notif-tab="activity" role="tab" aria-selected="false">Activity</button>
           </div>
           <div id="profileNotifications" class="notification-list"></div>
         </section>

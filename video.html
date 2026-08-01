@@ -75,7 +75,21 @@
         top: 0; left: 0; right: 0;
         height: 3px;
         background: rgba(255,255,255,0.18);
-        z-index: 5;
+        z-index: 22;
+        cursor: pointer;
+      }
+      /* Invisible larger hit-area so the 3px bar is actually draggable on a
+         touch screen (the visible bar stays thin, the tappable area doesn't). */
+      .reel-progress::before {
+        content: "";
+        position: absolute;
+        top: -6px;
+        left: 0;
+        right: 0;
+        bottom: -10px;
+      }
+      .reel-progress.dragging {
+        height: 6px;
       }
       .reel-progress-fill {
         height: 100%;
@@ -89,7 +103,7 @@
         top: max(14px, env(safe-area-inset-top));
         left: 14px;
         right: 14px;
-        z-index: 6;
+        z-index: 21;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -159,6 +173,65 @@
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
       }
+
+      .reel-heart-burst {
+        position: absolute;
+        transform: translate(-50%, -50%) scale(0.4);
+        font-size: 90px;
+        color: #ff3b5c;
+        text-shadow: 0 4px 18px rgba(0,0,0,0.35);
+        z-index: 4;
+        pointer-events: none;
+        animation: reelHeartBurst 0.7s ease forwards;
+      }
+
+      @keyframes reelHeartBurst {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+        25% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+        40% { transform: translate(-50%, -50%) scale(0.95); }
+        75% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(1) translateY(-20px); }
+      }
+
+      .reel-buffer-spinner {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 42px;
+        height: 42px;
+        margin: -21px 0 0 -21px;
+        border-radius: 50%;
+        border: 3px solid rgba(255,255,255,0.25);
+        border-top-color: #fff;
+        z-index: 4;
+        opacity: 0;
+        pointer-events: none;
+        animation: reelSpin 0.8s linear infinite;
+        transition: opacity 0.15s ease;
+      }
+      .reel-buffer-spinner.show { opacity: 1; }
+
+      @keyframes reelSpin {
+        to { transform: rotate(360deg); }
+      }
+
+      .reel-scrub-time {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.6);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 999px;
+        z-index: 22;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s ease;
+      }
+      .reel-scrub-time.show { opacity: 1; }
 
       .reel-bottom {
         position: relative;
@@ -535,7 +608,9 @@
 
         return `
           <div class="reel-item" data-index="${index}" data-id="${escapeHTML(video.id)}">
-            <div class="reel-progress"><div class="reel-progress-fill" id="progress-${index}"></div></div>
+            <div class="reel-progress" id="progresstrack-${index}"><div class="reel-progress-fill" id="progress-${index}"></div></div>
+            <div class="reel-scrub-time" id="scrubtime-${index}">0:00</div>
+            <div class="reel-buffer-spinner" id="spinner-${index}"></div>
             <video class="reel-video" id="video-${index}" ${poster ? `poster="${poster}"` : ""} src="${src}"
               playsinline loop preload="metadata"></video>
             <div class="reel-vignette"></div>
@@ -617,22 +692,39 @@
         const scroller = document.getElementById("scroller");
         if (!scroller) return;
 
-        // Tap to play/pause
+        // Tap to play/pause, double-tap to like (Instagram/TikTok style)
+        const tapState = {};
         scroller.querySelectorAll("[data-tap]").forEach((zone) => {
-          zone.addEventListener("click", () => {
+          zone.addEventListener("click", (e) => {
             const idx = zone.dataset.tap;
-            const vid = document.getElementById(`video-${idx}`);
-            const flash = document.getElementById(`pauseflash-${idx}`);
-            if (!vid) return;
-            if (vid.paused) {
-              playWithSoundFallback(vid, idx);
-              flash.textContent = "▶";
-            } else {
-              vid.pause();
-              flash.textContent = "⏸";
+            const now = Date.now();
+            const last = tapState[idx] || 0;
+            tapState[idx] = now;
+
+            if (now - last < 320) {
+              // Double tap: like (Instagram-style — always likes, never
+              // unlikes on double-tap) + heart burst animation. Cancel the
+              // pending single-tap play/pause action.
+              clearTimeout(zone._tapTimer);
+              tapState[idx] = 0;
+              triggerLikeBurst(idx, e);
+              return;
             }
-            flash.classList.add("show");
-            setTimeout(() => flash.classList.remove("show"), 400);
+
+            zone._tapTimer = setTimeout(() => {
+              const vid = document.getElementById(`video-${idx}`);
+              const flash = document.getElementById(`pauseflash-${idx}`);
+              if (!vid) return;
+              if (vid.paused) {
+                playWithSoundFallback(vid, idx);
+                flash.textContent = "▶";
+              } else {
+                vid.pause();
+                flash.textContent = "⏸";
+              }
+              flash.classList.add("show");
+              setTimeout(() => flash.classList.remove("show"), 400);
+            }, 260);
           });
         });
 
@@ -656,29 +748,63 @@
           });
         });
 
-        // Like
-        scroller.querySelectorAll('[data-action="like"]').forEach((btn) => {
-          btn.addEventListener("click", async (e) => {
-            e.stopPropagation();
-            if (!state.user) {
-              window.location.href = `login.html?next=${encodeURIComponent(window.location.href)}`;
-              return;
-            }
-            const videoId = btn.dataset.id;
-            const idx = btn.dataset.index;
-            btn.classList.toggle("active");
-            const result = await likeVideo(videoId, state.user.id);
-            const countEl = document.getElementById(`likecount-${idx}`);
+        // Like — single shared implementation used by both the like button
+        // and double-tap-to-like, so there's exactly one code path that
+        // talks to the backend.
+        async function performLike(videoId, idx, { forceLikeOnly = false } = {}) {
+          if (!state.user) {
+            window.location.href = `login.html?next=${encodeURIComponent(window.location.href)}`;
+            return;
+          }
+          const btn = scroller.querySelector(`[data-action="like"][data-id="${videoId}"]`);
+          const countEl = document.getElementById(`likecount-${idx}`);
+          if (forceLikeOnly && btn && btn.classList.contains("active")) {
+            // Already liked — double-tap just replays the heart burst, no API call.
+            return;
+          }
+          const result = await likeVideo(videoId, state.user.id);
+          if (countEl) {
             const current = parseInt(countEl.textContent, 10) || 0;
             countEl.textContent = result.liked ? current + 1 : Math.max(0, current - 1);
-            if (!result.liked) btn.classList.remove("active");
-            if (result.liked) {
-              const video = state.videos.find((v) => v.id === videoId);
-              if (video && video.user_id && video.user_id !== state.user.id) {
-                const likerName = state.user.user_metadata?.display_name || state.user.email;
-                notifyVideoLike(video.user_id, likerName, videoId).catch(() => {});
-              }
+          }
+          if (btn) btn.classList.toggle("active", result.liked);
+          if (result.liked) {
+            const video = state.videos.find((v) => v.id === videoId);
+            if (video && video.user_id && video.user_id !== state.user.id) {
+              const likerName = state.user.user_metadata?.display_name || state.user.email;
+              notifyVideoLike(video.user_id, likerName, videoId).catch((error) => console.warn("Video-like notification failed:", error));
             }
+          }
+        }
+
+        function triggerLikeBurst(idx, event) {
+          const zone = event.currentTarget;
+          const item = zone.closest(".reel-item");
+          const videoId = item?.dataset.id;
+          if (!videoId) return;
+
+          const rect = zone.getBoundingClientRect();
+          const x = (event.clientX || rect.left + rect.width / 2) - rect.left;
+          const y = (event.clientY || rect.top + rect.height / 2) - rect.top;
+          const heart = document.createElement("div");
+          heart.className = "reel-heart-burst";
+          heart.style.left = `${x}px`;
+          heart.style.top = `${y}px`;
+          heart.textContent = "❤";
+          zone.parentElement.appendChild(heart);
+          heart.addEventListener("animationend", () => heart.remove());
+
+          performLike(videoId, idx, { forceLikeOnly: true }).catch((error) =>
+            console.warn("Double-tap like failed:", error)
+          );
+        }
+
+        scroller.querySelectorAll('[data-action="like"]').forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            performLike(btn.dataset.id, btn.dataset.index).catch((error) =>
+              console.warn("Like failed:", error)
+            );
           });
         });
 
@@ -739,15 +865,77 @@
           });
         });
 
-        // Progress bar + view increment
+        // Progress bar: passive update + drag-to-seek + buffering spinner
         scroller.querySelectorAll(".reel-video").forEach((vid) => {
           const idx = vid.id.split("-")[1];
+          const track = document.getElementById(`progresstrack-${idx}`);
+          const fill = document.getElementById(`progress-${idx}`);
+          const spinner = document.getElementById(`spinner-${idx}`);
+          const scrubTime = document.getElementById(`scrubtime-${idx}`);
+          let dragging = false;
+          let wasPlayingBeforeDrag = false;
+
           vid.addEventListener("timeupdate", () => {
-            const fill = document.getElementById(`progress-${idx}`);
+            if (dragging) return; // don't fight the drag preview
             if (fill && vid.duration) {
               fill.style.width = `${(vid.currentTime / vid.duration) * 100}%`;
             }
           });
+
+          // Real buffering indicator — shows while the browser is actually
+          // waiting on data, not on a fixed timer.
+          vid.addEventListener("waiting", () => spinner?.classList.add("show"));
+          vid.addEventListener("playing", () => spinner?.classList.remove("show"));
+          vid.addEventListener("canplay", () => spinner?.classList.remove("show"));
+
+          if (!track) return;
+
+          function formatTime(seconds) {
+            if (!isFinite(seconds) || seconds < 0) return "0:00";
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60)
+              .toString()
+              .padStart(2, "0");
+            return `${m}:${s}`;
+          }
+
+          function seekFromEvent(clientX) {
+            const rect = track.getBoundingClientRect();
+            const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+            const time = ratio * (vid.duration || 0);
+            if (fill) fill.style.width = `${ratio * 100}%`;
+            if (scrubTime) scrubTime.textContent = formatTime(time);
+            return time;
+          }
+
+          track.addEventListener("pointerdown", (e) => {
+            e.stopPropagation();
+            dragging = true;
+            wasPlayingBeforeDrag = !vid.paused;
+            vid.pause();
+            track.classList.add("dragging");
+            scrubTime?.classList.add("show");
+            track.setPointerCapture(e.pointerId);
+            const time = seekFromEvent(e.clientX);
+            vid.currentTime = time;
+          });
+
+          track.addEventListener("pointermove", (e) => {
+            if (!dragging) return;
+            const time = seekFromEvent(e.clientX);
+            vid.currentTime = time;
+          });
+
+          function endDrag(e) {
+            if (!dragging) return;
+            dragging = false;
+            track.classList.remove("dragging");
+            scrubTime?.classList.remove("show");
+            if (wasPlayingBeforeDrag) playWithSoundFallback(vid, idx);
+          }
+
+          track.addEventListener("pointerup", endDrag);
+          track.addEventListener("pointercancel", endDrag);
         });
 
         // Autoplay active video, pause others
@@ -898,7 +1086,7 @@
           drawerInput.value = "";
           const video = state.videos.find((v) => v.id === state.commentsOpenFor);
           if (video && video.user_id && video.user_id !== state.user.id) {
-            notifyVideoComment(video.user_id, authorName, state.commentsOpenFor).catch(() => {});
+            notifyVideoComment(video.user_id, authorName, state.commentsOpenFor).catch((error) => console.warn("Video-comment notification failed:", error));
           }
           replyingTo = null;
           openComments(state.commentsOpenFor);

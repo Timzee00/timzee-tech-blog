@@ -36,7 +36,7 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -69,6 +69,7 @@
             <input type="search" id="searchInput" placeholder="Search topics, tags, authors...">
             <button id="searchBtn" aria-label="Search">Go</button>
           </div>
+          <a class="icon-btn" href="stories.html" data-label="Stories" aria-label="Stories" title="Stories">&#128247;</a>
           <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
         </div>
@@ -79,6 +80,10 @@
       <section class="hero">
         <div class="container hero-grid">
           <div class="hero-card" data-reveal style="--delay: 0s;">
+            <div class="chip" style="margin-bottom: 14px;">
+              <span class="signal-bar" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span>
+              Live community
+            </div>
             <h1 id="heroTitle">Where builders read, talk, trade, and watch tech.</h1>
             <p id="heroIntro">Timzee Tech Hub is a tech blog with a live discussion forum, a marketplace, a video hub, and a novel platform built in — plus an AI assistant to help you find your way around.</p>
             <div class="hero-pillars" id="heroPillars">
@@ -106,6 +111,14 @@
                 <span class="hero-pillar-icon">🤖</span>
                 <span class="hero-pillar-label">Ask the AI</span>
               </a>
+              <a class="hero-pillar" href="stories.html">
+                <span class="hero-pillar-icon">📸</span>
+                <span class="hero-pillar-label">Post a story</span>
+              </a>
+              <a class="hero-pillar" href="chat.html">
+                <span class="hero-pillar-icon">💬</span>
+                <span class="hero-pillar-label">Direct message</span>
+              </a>
             </div>
             <div class="cta">
               <a class="btn" href="#latest">Explore Latest</a>
@@ -127,6 +140,16 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <section class="container" id="suggestedPeopleSection" style="display:none;">
+        <div class="section-header-row">
+          <div>
+            <h2 class="section-title">New to the community</h2>
+            <p class="tagline" style="margin:0;">Say hi and add a few people to get your feed going.</p>
+          </div>
+        </div>
+        <div class="people-rail" id="suggestedPeopleRail"></div>
       </section>
 
       <section class="container popular-section" id="popular">
@@ -160,7 +183,7 @@
       <section class="container feature-band" id="features">
         <div class="feature-header" data-reveal>
           <span class="chip">New capabilities</span>
-          <h2 class="section-title">One community, five ways in</h2>
+          <h2 class="section-title">One community, eight ways in</h2>
           <p class="tagline">Not just a blog — a place to read, argue, trade, and build with people who care about the same stuff you do.</p>
         </div>
         <div class="feature-grid">
@@ -193,6 +216,16 @@
             <div class="feature-icon">🤖</div>
             <h3>AI assistant</h3>
             <p>Built-in AI chat to help you find what you're looking for, or just talk through an idea.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <div class="feature-icon">📸</div>
+            <h3>Stories</h3>
+            <p>Post a public or friends-only story that disappears after 24 hours — like a quick pulse from the community.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <div class="feature-icon">💬</div>
+            <h3>Direct messages</h3>
+            <p>Private one-on-one and group chats, separate from the public discussion boards.</p>
           </article>
         </div>
       </section>

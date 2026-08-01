@@ -1,4 +1,4 @@
-import { supabase } from "./supabase.js";
+import { supabase, getDisplayName } from "./supabase.js";
 import { reportAppError } from "./utils.js";
 
 function normalizeResponse(result) {
@@ -316,6 +316,50 @@ export async function fetchTopProfiles(limit = 5) {
   return normalizeResponse(result);
 }
 
+// Newest members, for a "Add friends / who's new" homepage section. Excludes
+// the current viewer (if logged in) and anyone already friends/pending with
+// them, so the section only ever surfaces genuinely new connections.
+export async function fetchSuggestedPeople(currentUserId, limit = 8) {
+  const result = await supabase
+    .from("profiles")
+    .select("id, display_name, username, avatar_url, is_verified, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit + (currentUserId ? 1 : 0));
+  const profiles = normalizeResponse(result).filter((profile) => profile.id !== currentUserId);
+
+  if (!currentUserId || !profiles.length) return profiles.slice(0, limit);
+
+  const existing = await supabase
+    .from("friendships")
+    .select("requester_id, addressee_id, status")
+    .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
+  const excluded = new Set(
+    (existing.data || []).map((row) => (row.requester_id === currentUserId ? row.addressee_id : row.requester_id))
+  );
+
+  return profiles.filter((profile) => !excluded.has(profile.id)).slice(0, limit);
+}
+
+export async function sendFriendRequestTo(currentUser, targetUserId) {
+  if (!currentUser?.id || !targetUserId) {
+    return { error: { message: "Missing user." } };
+  }
+  const result = await supabase.from("friendships").insert({
+    id: crypto.randomUUID(),
+    requester_id: currentUser.id,
+    requester_name: getDisplayName(currentUser),
+    addressee_id: targetUserId,
+    status: "pending",
+    created_at: new Date().toISOString()
+  });
+  if (!result.error) {
+    notifyFriendRequest(targetUserId, getDisplayName(currentUser), currentUser.id).catch((error) =>
+      console.warn("Friend-request notification failed:", error)
+    );
+  }
+  return result;
+}
+
 export async function createContentRequest(payload) {
   return supabase.from("content_requests").insert(payload).select().single();
 }
@@ -493,23 +537,6 @@ export async function fetchProfilesByUsernames(usernames = []) {
   return normalizeResponse(result);
 }
 
-export async function fetchCuratorSettings() {
-  const result = await supabase.from("curator_settings").select("*").maybeSingle();
-  return result.data || null;
-}
-
-export async function upsertCuratorSettings(payload) {
-  return supabase.from("curator_settings").upsert(payload).select().single();
-}
-
-export async function fetchCuratorSources() {
-  const result = await supabase
-    .from("curator_sources")
-    .select("*")
-    .order("created_at", { ascending: false });
-  return normalizeResponse(result);
-}
-
 export async function createCuratorSource(payload) {
   return supabase.from("curator_sources").insert(payload).select().single();
 }
@@ -520,79 +547,6 @@ export async function updateCuratorSource(id, updates) {
 
 export async function deleteCuratorSource(id) {
   return supabase.from("curator_sources").delete().eq("id", id);
-}
-
-export async function fetchCuratorDrafts(status = "draft") {
-  const result = await supabase
-    .from("curator_posts")
-    .select("*")
-    .eq("status", status)
-    .order("created_at", { ascending: false });
-  return normalizeResponse(result);
-}
-
-export async function updateCuratorDraftStatus(id, status) {
-  return supabase
-    .from("curator_posts")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .select()
-    .single();
-}
-
-export async function fetchMarketplaceListings({ status = "active" } = {}) {
-  let query = supabase.from("marketplace_items").select("*").order("created_at", {
-    ascending: false
-  });
-  if (status) {
-    const normalized = String(status).toLowerCase();
-    if (normalized === "active" || normalized === "available") {
-      query = query.eq("is_available", true);
-    } else if (normalized === "inactive" || normalized === "sold") {
-      query = query.eq("is_available", false);
-    }
-  }
-  const result = await query;
-  return normalizeResponse(result);
-}
-
-export async function createMarketplaceListing(payload) {
-  return supabase.from("marketplace_items").insert(payload).select().single();
-}
-
-export async function updateMarketplaceListing(id, updates) {
-  return supabase
-    .from("marketplace_items")
-    .update(updates)
-    .eq("id", id)
-    .select()
-    .single();
-}
-
-export async function fetchShortVideos({ status = "published" } = {}) {
-  let query = supabase.from("videos").select("*").eq("category", "shorts").order("created_at", {
-    ascending: false
-  });
-  if (status) {
-    const normalized = String(status).toLowerCase();
-    if (normalized === "published") {
-      query = query.eq("is_public", true);
-    } else if (normalized === "draft" || normalized === "private") {
-      query = query.eq("is_public", false);
-    }
-  }
-  const result = await query;
-  return normalizeResponse(result);
-}
-
-export async function createShortVideo(payload) {
-  const normalized = { ...(payload || {}) };
-  if (!normalized.category) normalized.category = "shorts";
-  if (Object.prototype.hasOwnProperty.call(normalized, "status")) {
-    normalized.is_public = String(normalized.status).toLowerCase() === "published";
-    delete normalized.status;
-  }
-  return supabase.from("videos").insert(normalized).select().single();
 }
 
 export async function fetchProfilesByIds(ids = []) {
@@ -728,12 +682,12 @@ export async function notifyMention(userId, mentionerName, postId, commentId) {
   });
 }
 
-export async function notifyCommentReply(userId, replierName, postId, commentId) {
+export async function notifyCommentReply(userId, commenterName, postId, commentId) {
   return createNotification({
     userId,
     type: "comment_reply",
-    title: "New reply to your comment",
-    body: `${replierName} replied to your comment`,
+    title: "New comment on your post",
+    body: `${commenterName} commented on your post`,
     linkUrl: `/post.html?id=${postId}#comment-${commentId}`,
     data: { post_id: postId, comment_id: commentId }
   });
@@ -767,6 +721,17 @@ export async function notifyNewMessage(userId, senderName, senderId) {
     body: `${senderName} sent you a message`,
     linkUrl: `/chat.html`,
     data: { sender_id: senderId }
+  });
+}
+
+export async function notifyPostLike(userId, likerName, postId) {
+  return createNotification({
+    userId,
+    type: "post_like",
+    title: "New like on your post",
+    body: `${likerName} liked your post`,
+    linkUrl: `/post.html?id=${postId}`,
+    data: { post_id: postId }
   });
 }
 
@@ -817,46 +782,6 @@ export async function createVerificationApplication({
   }).select().single();
 }
 
-export async function getVerificationApplications(status = "pending") {
-  const result = await supabase
-    .from("verification_applications")
-    .select("*")
-    .eq("status", status)
-    .order("created_at", { ascending: false });
-  
-  return normalizeResponse(result);
-}
-
-export async function updateVerificationApplication(applicationId, updates) {
-  return supabase
-    .from("verification_applications")
-    .update(updates)
-    .eq("id", applicationId)
-    .select()
-    .single();
-}
-
-export async function createVerificationBadge({
-  userId,
-  verificationLevel,
-  verifiedBy,
-  reason = ""
-} = {}) {
-  const expiresAt = new Date();
-  expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-
-  return supabase.from("verification_badges").insert({
-    id: crypto.randomUUID(),
-    user_id: userId,
-    verification_level: verificationLevel,
-    verified_by: verifiedBy,
-    verified_at: new Date().toISOString(),
-    expires_at: expiresAt.toISOString(),
-    reason,
-    created_at: new Date().toISOString()
-  }).select().single();
-}
-
 export async function getUserVerificationBadge(userId) {
   const result = await supabase
     .from("verification_badges")
@@ -874,84 +799,4 @@ export async function getUserVerificationBadge(userId) {
   }
   
   return badge;
-}
-
-export async function updateProfileVerification({
-  userId,
-  verificationLevel,
-  verificationColor = null,
-  profileDesign = "standard"
-} = {}) {
-  return supabase
-    .from("profiles")
-    .update({
-      verification_level: verificationLevel,
-      verification_color: verificationColor,
-      profile_design: profileDesign,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", userId)
-    .select()
-    .single();
-}
-
-export async function updateProfilePrivacy(userId, isPrivate) {
-  return supabase
-    .from("profiles")
-    .update({
-      is_private: isPrivate,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", userId)
-    .select()
-    .single();
-}
-
-// ============================================================================
-// PAGINATION HELPERS
-// ============================================================================
-
-export async function fetchPostsWithPagination({
-  status = "published",
-  categoryId = null,
-  limit = 10,
-  offset = 0
-} = {}) {
-  let query = supabase.from("posts").select("*");
-
-  if (status === "published") {
-    query = query.or("status.is.null,status.eq.published");
-  } else {
-    query = query.eq("status", status);
-  }
-
-  if (categoryId) {
-    query = query.eq("category_id", categoryId);
-  }
-
-  query = query.order("created_at", { ascending: false });
-  query = query.range(offset, offset + limit - 1);
-
-  const result = await query;
-  return normalizeResponse(result);
-}
-
-export async function fetchCommentsWithPagination({
-  postId,
-  limit = 20,
-  offset = 0,
-  status = "published"
-} = {}) {
-  let query = supabase
-    .from("comments")
-    .select("*")
-    .eq("post_id", postId);
-
-  if (status) query = query.eq("status", status);
-
-  query = query.order("created_at", { ascending: true });
-  query = query.range(offset, offset + limit - 1);
-
-  const result = await query;
-  return normalizeResponse(result);
 }

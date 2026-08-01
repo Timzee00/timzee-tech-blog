@@ -40,6 +40,7 @@
             <input type="search" id="videoSearch" placeholder="Search videos...">
           </div>
           <a class="btn" href="#upload" id="uploadBtnHeader" style="display: none;">Upload Video</a>
+          <a class="icon-btn" href="stories.html" data-label="Stories" aria-label="Stories" title="Stories">&#128247;</a>
           <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
         </div>
@@ -71,6 +72,50 @@
           </div>
           
           <form id="uploadForm" style="display: none;">
+            <div id="trimEditor" style="display:none; margin-bottom: 16px; padding: 14px; border: 1px solid var(--color-border, rgba(15,23,42,0.12)); border-radius: var(--radius-sm, 12px);">
+              <p style="margin: 0 0 8px; font-weight: 600;">Trim &amp; edit your video (optional)</p>
+              <div id="editorStage" style="position: relative; width: 100%; max-height: 260px; border-radius: 8px; overflow: hidden; background: #000; touch-action: none;">
+                <video id="trimPreview" muted playsinline style="width: 100%; max-height: 260px; display:block;"></video>
+                <canvas id="drawCanvas" style="position:absolute; inset:0; width:100%; height:100%;"></canvas>
+                <div id="textOverlayLayer" style="position:absolute; inset:0; pointer-events:none;"></div>
+              </div>
+
+              <div class="inline-actions" style="margin-top: 10px; flex-wrap: wrap; gap: 6px;">
+                <button type="button" class="btn ghost sm" data-filter="none">Normal</button>
+                <button type="button" class="btn ghost sm" data-filter="grayscale(1)">B&amp;W</button>
+                <button type="button" class="btn ghost sm" data-filter="sepia(0.5) contrast(1.1) saturate(1.4)">Vintage</button>
+                <button type="button" class="btn ghost sm" data-filter="saturate(1.6) contrast(1.1)">Vivid</button>
+                <button type="button" class="btn ghost sm" data-filter="hue-rotate(180deg) saturate(1.2)">Cool</button>
+                <button type="button" class="btn ghost sm" data-filter="sepia(0.3) saturate(1.3) brightness(1.05)">Warm</button>
+              </div>
+
+              <div class="inline-actions" style="margin-top: 8px; flex-wrap: wrap; gap: 6px; align-items: center;">
+                <button type="button" class="btn ghost sm" id="drawToolBtn">&#9998; Pen</button>
+                <input type="color" id="drawColor" value="#ff3b5c" style="width:34px; height:34px; padding:2px; border-radius:8px;">
+                <button type="button" class="btn ghost sm" id="clearDrawBtn">Clear drawing</button>
+                <button type="button" class="btn ghost sm" id="addTextBtn">+ Text</button>
+              </div>
+
+              <div style="display:flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+                <label style="flex:1; min-width: 120px; font-size: 12px; color: var(--muted, #5b6573);">
+                  Start (s)
+                  <input type="number" id="trimStart" min="0" step="0.1" value="0" style="width:100%;">
+                </label>
+                <label style="flex:1; min-width: 120px; font-size: 12px; color: var(--muted, #5b6573);">
+                  End (s)
+                  <input type="number" id="trimEnd" min="0" step="0.1" value="0" style="width:100%;">
+                </label>
+              </div>
+              <div style="display:flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                <button type="button" class="btn ghost" id="trimPreviewBtn">Preview selection</button>
+                <button type="button" class="btn ghost" id="trimApplyBtn">Apply Trim &amp; Edits</button>
+                <button type="button" class="btn ghost" id="trimResetBtn" style="display:none;">Use Original (undo everything)</button>
+              </div>
+              <div id="trimStatus" style="margin-top: 8px; font-size: 12px; display:none;"></div>
+              <p style="margin: 8px 0 0; font-size: 11px; color: var(--muted, #5b6573);">
+                Trimming/filters/drawings/text re-encode to WebM and require a browser that supports it (Chrome/Edge/Firefox). If unsupported, skip editing and the original file uploads as-is.
+              </p>
+            </div>
             <input type="text" id="videoTitle" placeholder="Video title" required>
             <textarea id="videoDescription" placeholder="Video description" style="margin-top: 8px;"></textarea>
             <select id="videoCategory" style="margin-top: 8px;">
@@ -293,6 +338,7 @@
           uploadArea.style.display = "none";
           uploadForm.style.display = "block";
           state.selectedVideoDuration = 0;
+          state.trimmedFile = null;
           const status = document.getElementById("uploadStatus");
           if (status) {
             status.style.display = "block";
@@ -316,13 +362,324 @@
               status.style.color = "#f59e0b";
             }
           }
+          setupTrimEditor(file);
         }
+      }
+
+      // ------------------------------------------------------------------
+      // Trim + edit: lets the uploader cut a start/end range, apply a
+      // filter, draw on the clip with a pen, and drop text anywhere —
+      // baked into the final upload via canvas compositing +
+      // captureStream()/MediaRecorder (no server/ffmpeg needed). Falls
+      // back gracefully (whole editor hidden) if the browser can't do it.
+      // ------------------------------------------------------------------
+      function setupTrimEditor(file) {
+        const trimEditor = document.getElementById("trimEditor");
+        const trimPreview = document.getElementById("trimPreview");
+        const trimStart = document.getElementById("trimStart");
+        const trimEnd = document.getElementById("trimEnd");
+        const trimStatus = document.getElementById("trimStatus");
+        const resetBtn = document.getElementById("trimResetBtn");
+        const drawCanvas = document.getElementById("drawCanvas");
+        const textLayer = document.getElementById("textOverlayLayer");
+        const drawColor = document.getElementById("drawColor");
+
+        const supportsCapture =
+          typeof trimPreview.captureStream === "function" && typeof window.MediaRecorder !== "undefined";
+        if (!supportsCapture) {
+          trimEditor.style.display = "none";
+          return;
+        }
+
+        trimEditor.style.display = "block";
+        resetBtn.style.display = "none";
+        trimStatus.style.display = "none";
+        state.trimmedFile = null;
+        state.selectedFilterCSS = "none";
+        state.textOverlays = []; // [{ text, xPct, yPct, color }]
+        textLayer.innerHTML = "";
+        const drawCtx = drawCanvas.getContext("2d");
+        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        let drawingEnabled = false;
+
+        const objectUrl = URL.createObjectURL(file);
+        trimPreview.src = objectUrl;
+        trimPreview.style.filter = "none";
+        trimPreview.addEventListener(
+          "loadedmetadata",
+          () => {
+            trimStart.value = 0;
+            trimStart.max = trimPreview.duration.toFixed(1);
+            trimEnd.value = trimPreview.duration.toFixed(1);
+            trimEnd.max = trimPreview.duration.toFixed(1);
+            // Size the draw canvas's backing store to the video's real
+            // resolution so strokes/text stay crisp when composited later,
+            // while it's displayed stretched to fit via CSS.
+            drawCanvas.width = trimPreview.videoWidth || 720;
+            drawCanvas.height = trimPreview.videoHeight || 1280;
+          },
+          { once: true }
+        );
+
+        // ---------------- Filters ----------------
+        document.querySelectorAll("#trimEditor [data-filter]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const value = btn.dataset.filter;
+            state.selectedFilterCSS = value;
+            trimPreview.style.filter = value === "none" ? "none" : value;
+            document
+              .querySelectorAll("#trimEditor [data-filter]")
+              .forEach((b) => b.classList.toggle("active", b === btn));
+          });
+        });
+
+        // ---------------- Pen / draw ----------------
+        const drawToolBtn = document.getElementById("drawToolBtn");
+        drawToolBtn.addEventListener("click", () => {
+          drawingEnabled = !drawingEnabled;
+          drawToolBtn.classList.toggle("active", drawingEnabled);
+          drawCanvas.style.pointerEvents = drawingEnabled ? "auto" : "none";
+        });
+        drawCanvas.style.pointerEvents = "none";
+
+        let isDrawing = false;
+        function canvasPointFromEvent(event) {
+          const rect = drawCanvas.getBoundingClientRect();
+          const scaleX = drawCanvas.width / rect.width;
+          const scaleY = drawCanvas.height / rect.height;
+          return {
+            x: (event.clientX - rect.left) * scaleX,
+            y: (event.clientY - rect.top) * scaleY
+          };
+        }
+        drawCanvas.addEventListener("pointerdown", (e) => {
+          if (!drawingEnabled) return;
+          isDrawing = true;
+          const p = canvasPointFromEvent(e);
+          drawCtx.strokeStyle = drawColor.value;
+          drawCtx.lineWidth = Math.max(3, drawCanvas.width * 0.006);
+          drawCtx.lineCap = "round";
+          drawCtx.lineJoin = "round";
+          drawCtx.beginPath();
+          drawCtx.moveTo(p.x, p.y);
+          drawCanvas.setPointerCapture(e.pointerId);
+        });
+        drawCanvas.addEventListener("pointermove", (e) => {
+          if (!drawingEnabled || !isDrawing) return;
+          const p = canvasPointFromEvent(e);
+          drawCtx.lineTo(p.x, p.y);
+          drawCtx.stroke();
+        });
+        ["pointerup", "pointercancel", "pointerleave"].forEach((evt) =>
+          drawCanvas.addEventListener(evt, () => {
+            isDrawing = false;
+          })
+        );
+
+        document.getElementById("clearDrawBtn").addEventListener("click", () => {
+          drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        });
+
+        // ---------------- Text tool ----------------
+        document.getElementById("addTextBtn").addEventListener("click", () => {
+          const text = prompt("Text to add:");
+          if (!text || !text.trim()) return;
+          const overlay = { text: text.trim(), xPct: 50, yPct: 50, color: drawColor.value };
+          state.textOverlays.push(overlay);
+          renderTextOverlayEl(overlay);
+        });
+
+        function renderTextOverlayEl(overlay) {
+          const el = document.createElement("div");
+          el.textContent = overlay.text;
+          el.style.cssText = `
+            position:absolute; left:${overlay.xPct}%; top:${overlay.yPct}%;
+            transform: translate(-50%, -50%); color:${overlay.color};
+            font-weight:700; font-size:20px; text-shadow:0 1px 4px rgba(0,0,0,0.6);
+            pointer-events:auto; cursor:grab; padding:4px 8px; user-select:none;
+            touch-action:none; white-space:nowrap;
+          `;
+          textLayer.appendChild(el);
+
+          let dragging = false;
+          el.addEventListener("pointerdown", (e) => {
+            dragging = true;
+            el.style.cursor = "grabbing";
+            el.setPointerCapture(e.pointerId);
+          });
+          el.addEventListener("pointermove", (e) => {
+            if (!dragging) return;
+            const stageRect = document.getElementById("editorStage").getBoundingClientRect();
+            const xPct = Math.min(96, Math.max(4, ((e.clientX - stageRect.left) / stageRect.width) * 100));
+            const yPct = Math.min(96, Math.max(4, ((e.clientY - stageRect.top) / stageRect.height) * 100));
+            overlay.xPct = xPct;
+            overlay.yPct = yPct;
+            el.style.left = `${xPct}%`;
+            el.style.top = `${yPct}%`;
+          });
+          el.addEventListener("pointerup", () => {
+            dragging = false;
+            el.style.cursor = "grab";
+          });
+          el.addEventListener("dblclick", () => {
+            state.textOverlays = state.textOverlays.filter((o) => o !== overlay);
+            el.remove();
+          });
+        }
+
+        // ---------------- Preview playback ----------------
+        document.getElementById("trimPreviewBtn").onclick = () => {
+          const start = parseFloat(trimStart.value) || 0;
+          const end = parseFloat(trimEnd.value) || trimPreview.duration;
+          if (end <= start) {
+            trimStatus.style.display = "block";
+            trimStatus.textContent = "End time must be after start time.";
+            trimStatus.style.color = "#ef4444";
+            return;
+          }
+          trimPreview.currentTime = start;
+          trimPreview.play();
+          const stopAt = () => {
+            if (trimPreview.currentTime >= end) {
+              trimPreview.pause();
+              trimPreview.removeEventListener("timeupdate", stopAt);
+            }
+          };
+          trimPreview.addEventListener("timeupdate", stopAt);
+        };
+
+        // ---------------- Apply (render final clip) ----------------
+        document.getElementById("trimApplyBtn").onclick = async () => {
+          const start = parseFloat(trimStart.value) || 0;
+          const end = parseFloat(trimEnd.value) || trimPreview.duration;
+          if (end <= start) {
+            trimStatus.style.display = "block";
+            trimStatus.textContent = "End time must be after start time.";
+            trimStatus.style.color = "#ef4444";
+            return;
+          }
+          trimStatus.style.display = "block";
+          trimStatus.textContent = "Rendering...";
+          trimStatus.style.color = "#0f766e";
+          try {
+            const blob = await renderEditedVideo(trimPreview, drawCanvas, state.textOverlays, state.selectedFilterCSS, start, end);
+            state.trimmedFile = new File([blob], "edited-clip.webm", { type: blob.type || "video/webm" });
+            state.selectedVideoDuration = Math.round(end - start);
+            trimStatus.textContent = `Ready — ${state.selectedVideoDuration}s clip with your edits will be uploaded.`;
+            trimStatus.style.color = "#10b981";
+            resetBtn.style.display = "inline-flex";
+          } catch (trimError) {
+            console.warn("Render failed:", trimError);
+            trimStatus.textContent = "Could not render edits in this browser. Original file will upload instead.";
+            trimStatus.style.color = "#f59e0b";
+          }
+        };
+
+        resetBtn.onclick = () => {
+          state.trimmedFile = null;
+          resetBtn.style.display = "none";
+          trimStatus.style.display = "block";
+          trimStatus.textContent = "Edits discarded — original file will upload.";
+          trimStatus.style.color = "#5b6573";
+        };
+      }
+
+      // Composites the trimmed range of `videoEl` with `filterCSS` applied,
+      // the pen-drawing canvas overlaid, and each text overlay drawn on top —
+      // frame by frame onto an output canvas — then records that canvas's
+      // stream (video) combined with the source video's own audio track.
+      function renderEditedVideo(videoEl, drawCanvas, textOverlays, filterCSS, start, end) {
+        return new Promise((resolve, reject) => {
+          const outCanvas = document.createElement("canvas");
+          outCanvas.width = videoEl.videoWidth || drawCanvas.width || 720;
+          outCanvas.height = videoEl.videoHeight || drawCanvas.height || 1280;
+          const ctx = outCanvas.getContext("2d");
+
+          let videoStream;
+          try {
+            videoStream = outCanvas.captureStream(30);
+          } catch (error) {
+            reject(error);
+            return;
+          }
+
+          let audioTracks = [];
+          try {
+            const sourceStream = videoEl.captureStream ? videoEl.captureStream() : videoEl.mozCaptureStream();
+            audioTracks = sourceStream ? sourceStream.getAudioTracks() : [];
+          } catch (error) {
+            audioTracks = [];
+          }
+          const combined = new MediaStream([...videoStream.getVideoTracks(), ...audioTracks]);
+
+          const mimeCandidates = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+          const mimeType = mimeCandidates.find((type) => window.MediaRecorder.isTypeSupported(type)) || "";
+          let recorder;
+          try {
+            recorder = mimeType ? new MediaRecorder(combined, { mimeType }) : new MediaRecorder(combined);
+          } catch (error) {
+            reject(error);
+            return;
+          }
+
+          const chunks = [];
+          recorder.ondataavailable = (e) => {
+            if (e.data && e.data.size) chunks.push(e.data);
+          };
+          recorder.onerror = (e) => reject(e.error || new Error("Recording failed"));
+          recorder.onstop = () => {
+            videoEl.removeEventListener("timeupdate", onTimeUpdate);
+            cancelAnimationFrame(rafId);
+            resolve(new Blob(chunks, { type: mimeType || "video/webm" }));
+          };
+
+          function drawFrame() {
+            ctx.save();
+            ctx.filter = filterCSS && filterCSS !== "none" ? filterCSS : "none";
+            ctx.drawImage(videoEl, 0, 0, outCanvas.width, outCanvas.height);
+            ctx.restore();
+            // Drawing layer (pen strokes) — already pixels, filter doesn't apply to it.
+            ctx.drawImage(drawCanvas, 0, 0, outCanvas.width, outCanvas.height);
+            // Text overlays, positioned by the same % coordinates used in the editor.
+            textOverlays.forEach((overlay) => {
+              ctx.font = `bold ${Math.round(outCanvas.width * 0.045)}px sans-serif`;
+              ctx.fillStyle = overlay.color;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.shadowColor = "rgba(0,0,0,0.6)";
+              ctx.shadowBlur = 6;
+              ctx.fillText(overlay.text, (overlay.xPct / 100) * outCanvas.width, (overlay.yPct / 100) * outCanvas.height);
+            });
+            rafId = requestAnimationFrame(drawFrame);
+          }
+
+          function onTimeUpdate() {
+            if (videoEl.currentTime >= end) {
+              videoEl.pause();
+              if (recorder.state !== "inactive") recorder.stop();
+            }
+          }
+
+          let rafId;
+          videoEl.currentTime = start;
+          videoEl.addEventListener("timeupdate", onTimeUpdate);
+          recorder.start();
+          rafId = requestAnimationFrame(drawFrame);
+          videoEl.play().catch((error) => {
+            recorder.stop();
+            reject(error);
+          });
+
+          setTimeout(() => {
+            if (recorder.state !== "inactive") recorder.stop();
+          }, (end - start) * 1000 + 4000);
+        });
       }
 
       // Captures a real frame from the video file itself, for when the user
       // doesn't manually pick a thumbnail — used instead of always falling
       // back to the placeholder icon.
-      function captureVideoFrame(file) {
+      function captureVideoFrame(file, seekTime = null) {
         return new Promise((resolve) => {
           const videoEl = document.createElement("video");
           videoEl.muted = true;
@@ -335,7 +692,10 @@
           const fail = () => { cleanup(); resolve(null); };
 
           videoEl.addEventListener("loadedmetadata", () => {
-            const seekTo = Math.min(1, Math.max(0.1, videoEl.duration * 0.1 || 0.1));
+            const seekTo =
+              seekTime !== null
+                ? Math.min(Math.max(seekTime, 0), Math.max(videoEl.duration - 0.1, 0))
+                : Math.min(1, Math.max(0.1, videoEl.duration * 0.1 || 0.1));
             videoEl.currentTime = seekTo;
           });
 
@@ -379,17 +739,18 @@
         status.style.color = "#0f766e";
 
         try {
+          const fileToUpload = state.trimmedFile || videoFile.files[0];
           let thumbnailFile = videoThumbnail.files[0] || null;
-          if (!thumbnailFile && videoFile.files[0]) {
+          if (!thumbnailFile && fileToUpload) {
             status.textContent = "Capturing thumbnail...";
-            thumbnailFile = await captureVideoFrame(videoFile.files[0]);
+            thumbnailFile = await captureVideoFrame(fileToUpload);
             status.textContent = "Uploading...";
           }
 
           const result = await uploadVideo(
             state.user.id,
             state.user.user_metadata?.display_name || state.user.email,
-            videoFile.files[0],
+            fileToUpload,
             thumbnailFile,
             {
               title: document.getElementById("videoTitle").value,
@@ -411,6 +772,8 @@
             uploadArea.style.display = "block";
             uploadForm.style.display = "none";
             state.selectedVideoDuration = 0;
+            state.trimmedFile = null;
+            document.getElementById("trimEditor").style.display = "none";
             setTimeout(() => {
               state.offset = 0;
               loadVideos();

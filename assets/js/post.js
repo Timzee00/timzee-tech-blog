@@ -17,7 +17,9 @@ import {
   fetchProfilesByUsernames,
   fetchProfilesByIds,
   incrementPostViews,
-  createContentReport
+  createContentReport,
+  notifyPostLike,
+  notifyCommentReply
 } from "./data.js";
 import { setupMentionInput, extractMentions, getMentionedUserIds } from "./mentions.js";
 import { uploadMedia } from "./media.js";
@@ -635,6 +637,11 @@ function setupLike(post) {
     state.hasLiked = result.liked;
     if (result.liked) {
       state.likeCount += 1;
+      if (post.author_id && post.author_id !== state.user.id) {
+        notifyPostLike(post.author_id, getDisplayName(state.user), post.id).catch((error) => {
+          console.warn("Post-like notification failed:", error);
+        });
+      }
     } else {
       state.likeCount = Math.max(0, state.likeCount - 1);
     }
@@ -895,6 +902,24 @@ function setupCommentForm(post, comments) {
             body: `${getDisplayName(state.user)} replied to your comment.`,
             linkUrl: `post.html?id=${post.id}#comment-${result.data?.id || newComment.id}`
           });
+        }
+
+        // Also notify the POST author whenever their post gets a new
+        // comment — previously this only ever fired for nested
+        // comment-replies above, so a post author commented on directly
+        // (not replying to another comment) never got notified at all.
+        // Skip if we already just notified this same person above.
+        if (
+          post.author_id &&
+          post.author_id !== state.user.id &&
+          post.author_id !== commentReplyTo?.author_id
+        ) {
+          await notifyCommentReply(
+            post.author_id,
+            getDisplayName(state.user),
+            post.id,
+            result.data?.id || newComment.id
+          );
         }
 
         // Notify mentioned users

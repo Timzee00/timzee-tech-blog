@@ -397,7 +397,7 @@
     }
   };
 
-  const getInitialTheme = () => readSavedTheme() || (prefersDark() ? DARK : LIGHT);
+  const getInitialTheme = () => readSavedTheme() || DARK;
 
   const writeTheme = (theme) => {
     try {
@@ -606,7 +606,7 @@
   if (window.matchMedia) {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const listener = () => {
-      if (!readSavedTheme()) applyTheme(prefersDark() ? DARK : LIGHT);
+      if (!readSavedTheme()) applyTheme(DARK);
     };
     if (mq.addEventListener) {
       mq.addEventListener("change", listener);
@@ -617,6 +617,6 @@
 
   window.addEventListener("storage", (event) => {
     if (event.key !== STORAGE_KEY) return;
-    applyTheme(readSavedTheme() || (prefersDark() ? DARK : LIGHT));
+    applyTheme(readSavedTheme() || DARK);
   });
 })();
