@@ -1,23 +1,11 @@
 const { createClient } = require("@supabase/supabase-js");
+const { requireRole } = require("./_lib/auth-role.js");
 
 const jsonResponse = (statusCode, payload) => ({
   statusCode,
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(payload)
 });
-
-function resolveRole(user) {
-  return user?.app_metadata?.role || "user";
-}
-
-async function requireSuper(supabase, token) {
-  if (!token) return { error: "Missing auth token." };
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data?.user) return { error: "Invalid auth token." };
-  const role = resolveRole(data.user);
-  if (role !== "super") return { error: "Only super admins can access this." };
-  return { user: data.user, role };
-}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return jsonResponse(405, { error: "Method not allowed." });
@@ -27,11 +15,8 @@ exports.handler = async (event) => {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
 
   let payload = {};
-  try {
-    payload = JSON.parse(event.body || "{}");
-  } catch (error) {
-    return jsonResponse(400, { error: "Invalid JSON body." });
-  }
+  try { payload = JSON.parse(event.body || "{}"); }
+  catch { return jsonResponse(400, { error: "Invalid JSON body." }); }
 
   const { action, userId, password } = payload;
   if (!action || !userId) return jsonResponse(400, { error: "Missing action or userId." });
@@ -39,7 +24,7 @@ exports.handler = async (event) => {
   const authHeader = event.headers.authorization || event.headers.Authorization || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const guard = await requireSuper(supabase, token);
+  const guard = await requireRole(supabase, token, ["super"], "Only super admins can access this.");
   if (guard.error) return jsonResponse(403, { error: guard.error });
 
   if (action === "reset_password") {
