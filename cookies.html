@@ -1,10 +1,17 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cookie Policy - Timzee Tech Hub</title><meta name="description" content="How Timzee Tech Hub uses cookies and local browser storage."><meta name="robots" content="index, follow"><link rel="stylesheet" href="assets/css/styles.css"><script defer src="assets/js/theme-init.js"></script></head><body>
-<a class="skip-link" href="#main-content">Skip to main content</a><header class="site-header"><div class="container wrap"><a class="brand" href="index.html"><span class="logo">Timzee <span>Tech</span> Hub</span><span class="tagline">Cookies and browser storage</span></a><nav class="nav-pill"><a href="index.html">Home</a><a href="privacy.html">Privacy</a><a href="support.html">Support</a></nav></div></header>
+<a class="skip-link" href="#main-content">Skip to main content</a><header class="site-header"><div class="container wrap"><a class="brand" href="index.html"><span class="logo">Timzee <span>Tech</span> Hub</span><span class="tagline">Cookies and browser storage</span></a><nav class="nav-pill"><a href="index.html">Home</a><a href="privacy.html">Privacy</a><a href="support.html">Support</a></nav><div class="header-actions"><button class="btn ghost" type="button" id="manageCookieBtn">Cookie settings</button></div></div></header>
 <main id="main-content" class="page-shell"><div class="container"><article class="post-shell"><span class="chip">Cookies</span><h1>Cookie Policy</h1><p class="tagline">Last updated: 17 September 2026</p>
-<h2>What we use</h2><p>The site may use browser cookies or local storage for essential session behavior, security, interface preferences, consent choices, and feature state.</p>
-<h2>Optional measurement</h2><p>Optional analytics or measurement tools should only be enabled where the site provides the applicable choice. The current site does not intentionally load a marketing tracking pixel or third-party analytics tag without an enabled feature.</p>
-<h2>Your choice</h2><p>On supported pages, the privacy banner lets you accept or decline optional cookies. You can also clear site data from your browser settings. Essential storage may still be required for login and requested features.</p>
-<h2>Third-party content</h2><p>Some content may come from third-party services such as image, video, or AI providers. Their own technologies and policies can apply when their content or service is used.</p>
-<p>See the <a href="privacy.html">Privacy Policy</a> for more detail about personal information.</p>
-</article></div></main><footer class="footer"><div class="container"></div></footer><script type="module" src="assets/js/supabase.js"></script></body></html>
+<h2>What we use</h2><p>The site uses a small set of first-party cookies and browser storage for essential session behavior, security, interface preferences and your cookie choices. Optional measurement cookies are not enabled until you accept optional cookies.</p>
+<h2>Cookie categories</h2><p><strong>Essential:</strong> required for core account/session and security behavior.</p><p><strong>Preference:</strong> remembers choices such as consent and selected product preferences where supported.</p><p><strong>Measurement:</strong> reserved for optional usage measurement features. The current site only records an opt-in flag when you accept optional cookies; it does not silently load a third-party marketing pixel.</p>
+<h2>Your choice</h2><p>You can accept or reject optional cookies from the privacy banner. You can reopen the control at any time below. Rejecting optional cookies does not remove essential storage required for requested features.</p>
+<div class="settings-inline-actions" style="margin-top:16px;"><button class="btn" id="manageCookieBtn2" type="button">Manage cookie choices</button><a class="btn ghost" href="privacy.html">Privacy Policy</a></div>
+<h2>Third-party content</h2><p>Some pages may load content or services from third parties, such as image, video, or AI providers. Those services can have their own technologies and privacy policies when their content is used.</p>
+</article></div></main><footer class="footer"><div class="container"></div></footer>
+<script type="module">
+  import "./assets/js/supabase.js";
+  const open = () => window.openCookieSettings?.();
+  document.getElementById("manageCookieBtn")?.addEventListener("click", open);
+  document.getElementById("manageCookieBtn2")?.addEventListener("click", open);
+</script>
+</body></html>
