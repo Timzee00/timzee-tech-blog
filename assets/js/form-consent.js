@@ -13,12 +13,28 @@ function formType(form) {
 }
 
 export function mountFormConsent() {
-  document.querySelectorAll("form[data-requires-consent]").forEach((form) => {
+  ["contactForm", "supportForm", "newsletterForm", "adsForm"].forEach((id) => {
+    const form = document.getElementById(id);
+    if (!form) return;
+    form.dataset.requiresConsent = "true";
     if (form.querySelector("[data-form-consent]")) return;
     const wrapper = document.createElement("label");
     wrapper.dataset.formConsent = "true";
     wrapper.className = "form-consent-row";
-    wrapper.innerHTML = `<input type="checkbox" name="consent" value="yes" required><span>${CONSENT_TEXT[formType(form)]} <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span>`;
+    const text = document.createElement("span");
+    text.append(document.createTextNode(`${CONSENT_TEXT[formType(form)]} `));
+    const link = document.createElement("a");
+    link.href = "privacy.html";
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "Privacy Policy";
+    text.append(link, document.createTextNode("."));
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.name = "consent";
+    checkbox.value = "yes";
+    checkbox.required = true;
+    wrapper.append(checkbox, text);
     const submit = form.querySelector("button[type=submit]");
     if (submit) form.insertBefore(wrapper, submit);
     else form.appendChild(wrapper);
