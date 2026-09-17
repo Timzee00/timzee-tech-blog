@@ -8,26 +8,15 @@ const jsonResponse = (statusCode, payload) => ({
   body: JSON.stringify(payload)
 });
 
-async function resolveRole(supabase, user) {
-  let role = user?.user_metadata?.role || user?.app_metadata?.role;
-  if (!role && user?.id) {
-    const profileResult = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (profileResult.data?.role) {
-      role = profileResult.data.role;
-    }
-  }
-  return role || "user";
+function resolveRole(user) {
+  return user?.app_metadata?.role || "user";
 }
 
 async function requireAdmin(supabase, token) {
   if (!token) return { error: "Missing auth token." };
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) return { error: "Invalid auth token." };
-  const role = await resolveRole(supabase, data.user);
+  const role = resolveRole(data.user);
   if (role !== "admin" && role !== "super") {
     return { error: "Only admins can access this." };
   }
@@ -102,9 +91,7 @@ exports.handler = async (event) => {
   if (userIds.length) {
     const profileResult = await supabase
       .from("profiles")
-      .select(
-        "id, display_name, username, avatar_url, is_verified, verification_tier, account_status, verified_at, is_featured, is_staff_pick, points, level"
-      )
+      .select("id, display_name, username, avatar_url, is_verified, verification_tier, account_status, verified_at, is_featured, is_staff_pick, points, level")
       .in("id", userIds);
     if (!profileResult.error && profileResult.data) {
       profilesById = profileResult.data.reduce((acc, profile) => {
@@ -119,7 +106,7 @@ exports.handler = async (event) => {
     return {
       id: user.id,
       email: user.email,
-      role: profile.role || user.user_metadata?.role || user.app_metadata?.role || "user",
+      role: resolveRole(user),
       display_name:
         profile.display_name ||
         user.user_metadata?.display_name ||
