@@ -3,6 +3,7 @@ import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import { setupReveal } from "./reveal.js";
 import { extractErrorMessage, reportAppError } from "./utils.js";
+import { mountFormConsent } from "./form-consent.js";
 import "./nav.js";
 
 async function applySiteTheme(settings) {
@@ -12,9 +13,7 @@ async function applySiteTheme(settings) {
   }
 }
 
-function normalizePhone(raw = "") {
-  return raw.replace(/[^\d]/g, "");
-}
+function normalizePhone(raw = "") { return raw.replace(/[^\d]/g, ""); }
 
 function applySupportTools(settings) {
   const whatsappBtn = document.getElementById("whatsappSupportBtn");
@@ -24,9 +23,7 @@ function applySupportTools(settings) {
       const message = encodeURIComponent(settings?.support?.whatsappMessage || "Hi there");
       whatsappBtn.href = `https://wa.me/${number}?text=${message}`;
       whatsappBtn.style.display = "inline-flex";
-    } else {
-      whatsappBtn.style.display = "none";
-    }
+    } else whatsappBtn.style.display = "none";
   }
 
   const donationBtn = document.getElementById("donationBtn");
@@ -36,41 +33,17 @@ function applySupportTools(settings) {
   const donationLink = document.getElementById("donationLink");
   const donationClose = document.getElementById("donationClose");
   const donationEnabled = settings?.donation?.enabled;
-  if (donationBtn) {
-    donationBtn.style.display = donationEnabled ? "inline-flex" : "none";
-  }
-  if (donationTitle) {
-    donationTitle.textContent = settings?.donation?.title || "Support Timzee Tech Hub";
-  }
-  if (donationDetails) {
-    donationDetails.textContent = settings?.donation?.details || "Thanks for supporting our community.";
-  }
+  if (donationBtn) donationBtn.style.display = donationEnabled ? "inline-flex" : "none";
+  if (donationTitle) donationTitle.textContent = settings?.donation?.title || "Support Timzee Tech Hub";
+  if (donationDetails) donationDetails.textContent = settings?.donation?.details || "Thanks for supporting our community.";
   if (donationLink) {
     const url = settings?.donation?.url || "";
-    if (url) {
-      donationLink.href = url;
-      donationLink.style.display = "inline-flex";
-    } else {
-      donationLink.style.display = "none";
-    }
+    donationLink.style.display = url ? "inline-flex" : "none";
+    if (url) donationLink.href = url;
   }
-  if (donationBtn && donationModal) {
-    donationBtn.addEventListener("click", () => {
-      donationModal.classList.add("show");
-    });
-  }
-  if (donationClose && donationModal) {
-    donationClose.addEventListener("click", () => {
-      donationModal.classList.remove("show");
-    });
-  }
-  if (donationModal) {
-    donationModal.addEventListener("click", (event) => {
-      if (event.target === donationModal) {
-        donationModal.classList.remove("show");
-      }
-    });
-  }
+  if (donationBtn && donationModal) donationBtn.addEventListener("click", () => donationModal.classList.add("show"));
+  if (donationClose && donationModal) donationClose.addEventListener("click", () => donationModal.classList.remove("show"));
+  donationModal?.addEventListener("click", (event) => { if (event.target === donationModal) donationModal.classList.remove("show"); });
 }
 
 function bindForm({ formId, statusId, table, map }) {
@@ -80,100 +53,57 @@ function bindForm({ formId, statusId, table, map }) {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (form.matches(":invalid")) {
+      form.reportValidity();
+      return;
+    }
     const data = Object.fromEntries(new FormData(form).entries());
+    if (form.dataset.requiresConsent === "true" && data.consent !== "yes") {
+      if (status) { status.textContent = "Please review the privacy notice and give consent before submitting."; status.style.display = "block"; }
+      return;
+    }
     const payload = map(data);
+    if (form.dataset.requiresConsent === "true") payload.consent_at = new Date().toISOString();
     const result = await supabase.from(table).insert(payload);
     if (result.error) {
-      if (status) {
-        status.textContent = result.error.message || "Submission failed.";
-        status.style.display = "block";
-      }
+      if (status) { status.textContent = result.error.message || "Submission failed."; status.style.display = "block"; }
       return;
     }
     form.reset();
-    if (status) {
-      status.textContent = "Thanks! We received your message.";
-      status.style.display = "block";
-    }
+    if (status) { status.textContent = "Thanks! We received your submission."; status.style.display = "block"; }
   });
 }
 
 async function boot() {
   setupReveal();
+  mountFormConsent();
   const settings = await fetchSettings();
   await applySiteTheme(settings);
   applySupportTools(settings);
 
   bindForm({
-    formId: "contactForm",
-    statusId: "contactStatus",
-    table: "contact_requests",
-    map: (data) => ({
-      id: crypto.randomUUID(),
-      name: data.name || "",
-      email: data.email || "",
-      subject: data.subject || "",
-      message: data.message || "",
-      created_at: new Date().toISOString(),
-      status: "open"
-    })
+    formId: "contactForm", statusId: "contactStatus", table: "contact_requests",
+    map: (data) => ({ id: crypto.randomUUID(), name: data.name || "", email: data.email || "", subject: data.subject || "", message: data.message || "", created_at: new Date().toISOString(), status: "open" })
   });
-
   bindForm({
-    formId: "supportForm",
-    statusId: "supportStatus",
-    table: "support_requests",
-    map: (data) => ({
-      id: crypto.randomUUID(),
-      name: data.name || "",
-      email: data.email || "",
-      issue: data.issue || "",
-      message: data.message || "",
-      created_at: new Date().toISOString(),
-      status: "open"
-    })
+    formId: "supportForm", statusId: "supportStatus", table: "support_requests",
+    map: (data) => ({ id: crypto.randomUUID(), name: data.name || "", email: data.email || "", issue: data.issue || "", message: data.message || "", created_at: new Date().toISOString(), status: "open" })
   });
-
   bindForm({
-    formId: "newsletterForm",
-    statusId: "newsletterStatus",
-    table: "newsletter_signups",
-    map: (data) => ({
-      id: crypto.randomUUID(),
-      name: data.name || "",
-      email: data.email || "",
-      interest: data.interest || "",
-      created_at: new Date().toISOString(),
-      status: "open"
-    })
+    formId: "newsletterForm", statusId: "newsletterStatus", table: "newsletter_signups",
+    map: (data) => ({ id: crypto.randomUUID(), name: data.name || "", email: data.email || "", interest: data.interest || "", created_at: new Date().toISOString(), status: "open" })
   });
-
   bindForm({
-    formId: "adsForm",
-    statusId: "adsStatus",
-    table: "ad_applications",
-    map: (data) => ({
-      id: crypto.randomUUID(),
-      name: data.name || "",
-      email: data.email || "",
-      company: data.company || "",
-      budget: data.budget || "",
-      message: data.message || "",
-      created_at: new Date().toISOString(),
-      status: "open"
-    })
+    formId: "adsForm", statusId: "adsStatus", table: "ad_applications",
+    map: (data) => ({ id: crypto.randomUUID(), name: data.name || "", email: data.email || "", company: data.company || "", budget: data.budget || "", message: data.message || "", created_at: new Date().toISOString(), status: "open" })
   });
 }
 
 boot().catch((error) => {
   reportAppError(error, "Form page load failed");
   const message = extractErrorMessage(error, "Unable to initialize this page.");
-  const statuses = ["contactStatus", "supportStatus", "newsletterStatus", "adsStatus"];
-  statuses.forEach((id) => {
+  ["contactStatus", "supportStatus", "newsletterStatus", "adsStatus"].forEach((id) => {
     const target = document.getElementById(id);
-    if (target) {
-      target.textContent = message;
-      target.style.display = "block";
-    }
+    if (target) { target.textContent = message; target.style.display = "block"; }
   });
 });
