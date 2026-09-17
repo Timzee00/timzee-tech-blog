@@ -2,8 +2,14 @@
   "name": "timzee-tech-hub",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "scripts": {
+    "check": "node scripts/validate-production-config.mjs"
+  },
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.0",
-    "rss-parser": "^3.13.0"
+    "@supabase/supabase-js": "2.116.0",
+    "rss-parser": "3.13.0"
   }
 }
