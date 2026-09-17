@@ -3,6 +3,7 @@ import {
   SITE_URL,
   getCurrentUser,
   signIn,
+  signInWithProvider,
   signUp,
   signOut,
   resetPassword,
@@ -77,6 +78,18 @@ function normalizeAuthError(error, context = "generic") {
     }
     if (lower.includes("too many requests")) {
       return "Too many login attempts. Please wait briefly and try again.";
+    }
+  }
+
+  if (context === "oauth") {
+    if (lower.includes("provider is not enabled")) {
+      return "This sign-in provider is not enabled in Supabase yet. Enable it under Authentication → Providers.";
+    }
+    if (lower.includes("redirect")) {
+      return "The sign-in redirect URL is not configured correctly in Supabase. Check Authentication → URL Configuration.";
+    }
+    if (lower.includes("access_denied") || lower.includes("cancel")) {
+      return "Sign-in was cancelled. You can try again whenever you're ready.";
     }
   }
 
@@ -157,7 +170,7 @@ async function ensureProfileRecord(user) {
     user.user_metadata?.username ||
     (email ? email.split("@")[0] : displayName.toLowerCase().replace(/\s+/g, ""));
   const safeUsername = await ensureUniqueUsername(username, user.id);
-  await supabase
+  const result = await supabase
     .from("profiles")
     .upsert({
       id: user.id,
@@ -168,6 +181,7 @@ async function ensureProfileRecord(user) {
       updated_at: new Date().toISOString()
     })
     .select();
+  if (result.error) console.warn("Profile sync failed:", result.error);
 }
 
 async function fetchProfileStatus() {
@@ -191,6 +205,39 @@ async function fetchProfileStatus() {
   return { blocked: false };
 }
 
+function isOAuthCallback() {
+  const hashParams = getHashParams();
+  return Boolean(
+    hashParams.get("access_token") ||
+    hashParams.get("refresh_token") ||
+    hashParams.get("error") ||
+    hashParams.get("error_description") ||
+    new URLSearchParams(window.location.search).get("code")
+  );
+}
+
+async function handleOAuthSignIn(provider, button, loginMessage, nextUrl) {
+  if (!button) return;
+  const originalText = button.querySelector("span")?.textContent || provider;
+  button.disabled = true;
+  if (button.querySelector("span")) button.querySelector("span").textContent = "Connecting…";
+
+  const redirectTo = `${SITE_URL}/login.html${window.location.search}`;
+  const result = await signInWithProvider(provider, redirectTo);
+  if (result.error) {
+    setMessage(loginMessage, normalizeAuthError(result.error, "oauth"));
+    button.disabled = false;
+    if (button.querySelector("span")) button.querySelector("span").textContent = originalText;
+    return;
+  }
+
+  // signInWithOAuth redirects the browser when successful.
+  // This fallback is only reached if the provider did not redirect.
+  button.disabled = false;
+  if (button.querySelector("span")) button.querySelector("span").textContent = originalText;
+  if (nextUrl) setMessage(loginMessage, "Opening secure sign-in…");
+}
+
 async function boot() {
   setupReveal();
   setupPasswordToggles();
@@ -212,6 +259,8 @@ async function boot() {
   const signupMessage = document.getElementById("signupMessage");
   const resetForm = document.getElementById("resetForm");
   const resetMessage = document.getElementById("resetMessage");
+  const googleSignIn = document.getElementById("googleSignIn");
+  const appleSignIn = document.getElementById("appleSignIn");
   const redirectTo = SITE_URL ? `${SITE_URL}/login.html` : undefined;
 
   const setView = (view) => {
@@ -230,6 +279,7 @@ async function boot() {
   const accessToken = hashParams.get("access_token");
   const refreshToken = hashParams.get("refresh_token");
   const isRecovery = recoveryType === "recovery" || recoveryType === "password_recovery";
+  const oauthCallback = isOAuthCallback() && !isRecovery;
 
   let initialView = switcher?.dataset.view || "login";
   if (isRecovery) {
@@ -239,24 +289,46 @@ async function boot() {
         access_token: accessToken,
         refresh_token: refreshToken
       });
-      if (error) {
-        setMessage(resetMessage, error.message || "Recovery session failed.");
-      }
+      if (error) setMessage(resetMessage, error.message || "Recovery session failed.");
     } else {
       setMessage(resetMessage, "Recovery link invalid or expired. Request a new one.");
     }
     clearHash();
   }
 
+  if (hashParams.get("error") || hashParams.get("error_description")) {
+    const oauthError = hashParams.get("error_description") || hashParams.get("error");
+    setMessage(loginMessage, normalizeAuthError({ message: oauthError }, "oauth"));
+    clearHash();
+  }
+
   const user = await getCurrentUser();
   if (user && !isRecovery) {
-    setMessage(loginMessage, "You are already logged in. Continue to the site.");
-    const continueBtn = document.createElement("a");
-    continueBtn.className = "btn";
-    continueBtn.href = nextUrl;
-    continueBtn.textContent = "Continue";
-    loginMessage.appendChild(document.createElement("div"));
-    loginMessage.appendChild(continueBtn);
+    await ensureProfileRecord(user);
+    const profileCheck = await fetchProfileStatus();
+    if (profileCheck?.blocked) {
+      await signOut();
+      setMessage(loginMessage, profileCheck.message || "Account access is restricted.");
+    } else if (oauthCallback) {
+      clearHash();
+      window.location.replace(nextUrl);
+      return;
+    } else {
+      setMessage(loginMessage, "You are already logged in. Continue to the site.");
+      const continueBtn = document.createElement("a");
+      continueBtn.className = "btn";
+      continueBtn.href = nextUrl;
+      continueBtn.textContent = "Continue";
+      loginMessage.appendChild(document.createElement("div"));
+      loginMessage.appendChild(continueBtn);
+    }
+  }
+
+  if (googleSignIn) {
+    googleSignIn.addEventListener("click", () => handleOAuthSignIn("google", googleSignIn, loginMessage, nextUrl));
+  }
+  if (appleSignIn) {
+    appleSignIn.addEventListener("click", () => handleOAuthSignIn("apple", appleSignIn, loginMessage, nextUrl));
   }
 
   if (loginForm) {
@@ -282,9 +354,7 @@ async function boot() {
   }
 
   if (forgotToggle && forgotForm) {
-    forgotToggle.addEventListener("click", () => {
-      forgotForm.classList.toggle("hidden");
-    });
+    forgotToggle.addEventListener("click", () => forgotForm.classList.toggle("hidden"));
   }
 
   if (forgotForm) {
@@ -297,10 +367,7 @@ async function boot() {
         setMessage(loginMessage, normalizeAuthError(result.error, "forgot"));
         return;
       }
-      setMessage(
-        loginMessage,
-        "Password reset link sent. Check your inbox/spam, then open the link to set a new password."
-      );
+      setMessage(loginMessage, "Password reset link sent. Check your inbox/spam, then open the link to set a new password.");
       forgotForm.classList.add("hidden");
       forgotForm.reset();
     });
@@ -319,10 +386,7 @@ async function boot() {
       }
       const requiresConfirmation = !result.data?.session;
       if (requiresConfirmation) {
-        setMessage(
-          signupMessage,
-          "Account created. Confirm your email from your inbox/spam before signing in."
-        );
+        setMessage(signupMessage, "Account created. Confirm your email from your inbox/spam before signing in.");
       } else {
         setMessage(signupMessage, "Account created successfully. You can sign in now.");
       }
@@ -357,16 +421,11 @@ async function boot() {
 
   if (switchButtons.length) {
     switchButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const target = button.dataset.switch || "login";
-        setView(target);
-      });
+      button.addEventListener("click", () => setView(button.dataset.switch || "login"));
     });
   }
 
-  if (switcher) {
-    setView(initialView);
-  }
+  if (switcher) setView(initialView);
 }
 
 boot().catch((error) => {
