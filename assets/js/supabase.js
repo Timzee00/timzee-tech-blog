@@ -159,7 +159,21 @@ async function resolveTrustedRole(user) {
   }
 
   if (role) {
+    // Authorization continues to use app_metadata / DB-backed role state.
+    // This non-enumerable property exists only in memory for a few legacy UI
+    // components that still read user_metadata.role; it is never persisted.
     user.app_metadata = { ...(user.app_metadata || {}), role };
+    try {
+      if (!user.user_metadata) user.user_metadata = {};
+      Object.defineProperty(user.user_metadata, "role", {
+        value: role,
+        writable: true,
+        configurable: true,
+        enumerable: false
+      });
+    } catch (err) {
+      console.warn("Could not expose trusted role to legacy UI in memory:", err);
+    }
   }
 
   return role;
