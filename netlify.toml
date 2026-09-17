@@ -16,3 +16,9 @@
   to = "/.netlify/functions/sitemap"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/health"
+  status = 200
+  force = true
