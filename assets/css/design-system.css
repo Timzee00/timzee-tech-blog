@@ -44,6 +44,9 @@ textarea {
   border-radius: var(--radius-md, 14px);
 }
 
+/* "Popular" is computed by the automated ranking engine. Pinned remains an editorial control, not a popularity claim. */
+.post-card-header .chip { display: none !important; }
+
 .chip,
 .badge,
 .status-badge,
