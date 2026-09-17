@@ -46,13 +46,24 @@ export function ensureSiteFooter() {
   const oldText = Array.from(container.querySelectorAll("div, p, span"));
   oldText.forEach((node) => {
     if (node === brand || node.closest("[data-site-legal]")) return;
-    if ((node.textContent || "").includes("Powered by Timzee-Tech")) {
-      node.textContent = BRAND_TEXT;
-    }
+    if ((node.textContent || "").includes("Powered by Timzee-Tech")) node.textContent = BRAND_TEXT;
   });
 
   if (/\/(privacy|terms|refund-policy|cookies|accessibility)\.html$/.test(path)) {
     brand.setAttribute("aria-current", "page");
+  }
+}
+
+function loadPageStyles() {
+  const path = currentSitePath().toLowerCase();
+  if (path.endsWith("/chat.html") || path === "/chat.html") {
+    if (!document.querySelector('link[data-page-style="chat-v2"]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "assets/css/chat-v2.css";
+      link.dataset.pageStyle = "chat-v2";
+      document.head.appendChild(link);
+    }
   }
 }
 
@@ -69,6 +80,7 @@ async function loadHomepageEnhancements() {
 
 if (typeof window !== "undefined") {
   const start = () => {
+    loadPageStyles();
     ensureSiteFooter();
     void loadHomepageEnhancements();
   };
