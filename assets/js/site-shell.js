@@ -1,3 +1,5 @@
+import "./boot-loader.js";
+
 const BRAND_TEXT="Powered by Timzee Corp";
 const LEGAL_LINKS=[["Privacy","privacy.html"],["Terms","terms.html"],["Refund Policy","refund-policy.html"],["Cookies","cookies.html"],["Accessibility","accessibility.html"]];
 function currentSitePath(){return window.location.pathname||"";}
