@@ -9,7 +9,7 @@ const jsonResponse = (statusCode, payload) => ({
 });
 
 async function resolveRole(supabase, user) {
-  let role = user?.user_metadata?.role || user?.app_metadata?.role;
+  let role = user?.app_metadata?.role || null;
   if (!role && user?.id) {
     const profileResult = await supabase
       .from("profiles")
@@ -48,7 +48,7 @@ exports.handler = async (event) => {
   }
 
   const authHeader = event.headers.authorization || event.headers.Authorization || "";
-  const token = authHeader.replace("Bearer ", "");
+  const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const guard = await requireAdmin(supabase, token);
   if (guard.error) {
@@ -68,9 +68,7 @@ exports.handler = async (event) => {
     return jsonResponse(400, { error: "Missing userId or action." });
   }
 
-  const { data: authUserData, error: authUserError } = await supabase.auth.admin.getUserById(
-    userId
-  );
+  const { data: authUserData, error: authUserError } = await supabase.auth.admin.getUserById(userId);
   if (authUserError || !authUserData?.user) {
     return jsonResponse(404, { error: "User not found." });
   }
@@ -158,11 +156,12 @@ exports.handler = async (event) => {
     authUserData.user.user_metadata?.display_name ||
     authUserData.user.email?.split("@")[0] ||
     "Member";
+  const trustedRole = authUserData.user.app_metadata?.role || "user";
 
   const insertPayload = {
     id: userId,
     display_name: displayName,
-    role: authUserData.user.user_metadata?.role || authUserData.user.app_metadata?.role || "user",
+    role: trustedRole,
     created_at: now,
     ...updates
   };
