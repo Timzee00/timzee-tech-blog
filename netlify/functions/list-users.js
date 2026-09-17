@@ -1,38 +1,18 @@
 const { createClient } = require("@supabase/supabase-js");
+const { requireRole, roleFromUser } = require("./_lib/auth-role.js");
 
 const jsonResponse = (statusCode, payload) => ({
   statusCode,
-  headers: {
-    "Content-Type": "application/json"
-  },
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify(payload)
 });
 
-function resolveRole(user) {
-  return user?.app_metadata?.role || "user";
-}
-
-async function requireAdmin(supabase, token) {
-  if (!token) return { error: "Missing auth token." };
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data?.user) return { error: "Invalid auth token." };
-  const role = resolveRole(data.user);
-  if (role !== "admin" && role !== "super") {
-    return { error: "Only admins can access this." };
-  }
-  return { user: data.user, role };
-}
-
 exports.handler = async (event) => {
-  if (event.httpMethod !== "GET") {
-    return jsonResponse(405, { error: "Method not allowed." });
-  }
+  if (event.httpMethod !== "GET") return jsonResponse(405, { error: "Method not allowed." });
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    return jsonResponse(500, { error: "Server misconfigured." });
-  }
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
 
   const params = event.queryStringParameters || {};
   const rawSearch = params.search ? String(params.search) : "";
@@ -42,12 +22,10 @@ exports.handler = async (event) => {
   const requestedPage = Number.parseInt(params.page || "0", 10);
 
   const authHeader = event.headers.authorization || event.headers.Authorization || "";
-  const token = authHeader.replace("Bearer ", "");
+  const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const guard = await requireAdmin(supabase, token);
-  if (guard.error) {
-    return jsonResponse(403, { error: guard.error });
-  }
+  const guard = await requireRole(supabase, token, ["admin", "super"], "Only admins can access this.");
+  if (guard.error) return jsonResponse(403, { error: guard.error });
 
   let users = [];
   let hasMore = false;
@@ -56,18 +34,13 @@ exports.handler = async (event) => {
   if (requestedPage > 0 && !search) {
     page = requestedPage;
     const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-    if (error) {
-      return jsonResponse(400, { error: error.message });
-    }
+    if (error) return jsonResponse(400, { error: error.message });
     users = data?.users || [];
     hasMore = users.length >= perPage;
   } else {
-    page = 1;
     while (page <= maxPages) {
       const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-      if (error) {
-        return jsonResponse(400, { error: error.message });
-      }
+      if (error) return jsonResponse(400, { error: error.message });
       const batch = data?.users || [];
       users = users.concat(batch);
       if (batch.length < perPage) break;
@@ -91,7 +64,7 @@ exports.handler = async (event) => {
   if (userIds.length) {
     const profileResult = await supabase
       .from("profiles")
-      .select("id, display_name, username, avatar_url, is_verified, verification_tier, account_status, verified_at, is_featured, is_staff_pick, points, level")
+      .select("id, display_name, username, avatar_url, is_verified, verification_tier, account_status, verified_at, is_featured, is_staff_pick, points, level, role")
       .in("id", userIds);
     if (!profileResult.error && profileResult.data) {
       profilesById = profileResult.data.reduce((acc, profile) => {
@@ -106,12 +79,8 @@ exports.handler = async (event) => {
     return {
       id: user.id,
       email: user.email,
-      role: resolveRole(user),
-      display_name:
-        profile.display_name ||
-        user.user_metadata?.display_name ||
-        user.email?.split("@")[0] ||
-        "Member",
+      role: profile.role || roleFromUser(user),
+      display_name: profile.display_name || user.user_metadata?.display_name || user.email?.split("@")[0] || "Member",
       username: profile.username || user.user_metadata?.username || "",
       avatar_url: profile.avatar_url || "",
       created_at: user.created_at,
