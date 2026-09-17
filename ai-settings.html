@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AI Settings - Timzee Tech Hub</title>
     <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Configure the Timzee AI assistant provider and model.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
-      <script defer src="assets/js/theme-init.js"></script>
+    <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -46,333 +47,296 @@
     <main id="main-content" class="page-shell">
       <div class="container ai-settings">
         <h1>AI Settings</h1>
-        <p class="tagline">Configure your AI assistants and preferences</p>
+        <p class="tagline">Choose the AI provider and model used by the Timzee assistant.</p>
 
-        <!-- AI Provider Configuration -->
-        <div class="setting-group">
-          <h3><span class="status-indicator disconnected" id="aiStatusIndicator"></span><span id="aiProviderLabel">Groq</span> API</h3>
-          <p id="aiProviderHint">Use your provider's LLMs for content generation, writing improvement, and more.</p>
-          
+        <section class="setting-group" aria-labelledby="providerHeading">
+          <h3 id="providerHeading"><span class="status-indicator disconnected" id="aiStatusIndicator" aria-hidden="true"></span><span id="aiProviderLabel">Groq</span> AI</h3>
+          <p id="aiProviderHint">Provider credentials are managed securely on the server.</p>
+
           <div class="warning">
-            <strong>⚠️ Security Notice:</strong> Your API key is stored locally and sent only to the secure serverless proxy for the selected provider.
+            <strong>Security:</strong> Provider API keys are never stored in browser storage or exposed in page source. The serverless proxy uses server-side environment variables.
           </div>
 
-          <label>API Key</label>
-          <input 
-            type="password" 
-            id="groqApiKey" 
-            placeholder="gsk_..." 
-            class="api-key-input"
-            style="width: 100%; padding: 8px; margin: 8px 0;"
-          >
-          
-          <div class="action-row" style="margin-top: 12px;">
-            <button class="btn" id="saveGroqBtn" type="button">Save API Key</button>
-            <button class="btn ghost" id="testGroqBtn" type="button">Test Connection</button>
-            <button class="btn ghost" id="clearGroqBtn" type="button">Clear</button>
-          </div>
-
-          <div id="aiStatusMessage" class="status-message"></div>
-        </div>
-
-        <!-- Model Selection -->
-        <div class="setting-group">
-          <h3>AI Model</h3>
-          <select id="aiModel" style="width: 100%; padding: 8px; margin: 8px 0;">
-            <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Recommended)</option>
-            <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fastest)</option>
-            <option value="openai/gpt-oss-120b">GPT-OSS 120B</option>
+          <label for="aiProvider">Provider</label>
+          <select id="aiProvider" class="field" autocomplete="off">
+            <option value="groq">Groq</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
           </select>
-          <p style="font-size: 12px; color: #666; margin-top: 8px;">
-            Llama 3.3 70B is most capable. Llama 3.1 8B is fastest. GPT-OSS 120B is largest.
-          </p>
-        </div>
 
-        <!-- System Prompts -->
-        <div class="setting-group">
-          <h3>Prompt Templates</h3>
-          <p>Quick templates for common tasks:</p>
-          
-          <div class="prompt-template" data-prompt-type="general">
-            <strong>General Assistant</strong>
-            <p style="margin: 4px 0; font-size: 12px; color: #666;">Help with questions and tasks</p>
+          <label for="aiModel">Model</label>
+          <select id="aiModel" class="field" autocomplete="off"></select>
+
+          <div class="action-row" style="margin-top: 12px;">
+            <button class="btn" id="saveAiSettingsBtn" type="button">Save Settings</button>
+            <button class="btn ghost" id="testAiBtn" type="button">Test Connection</button>
           </div>
+          <div id="aiStatusMessage" class="status-message" role="status" aria-live="polite"></div>
+        </section>
 
-          <div class="prompt-template" data-prompt-type="contentIdeas">
-            <strong>Content Ideas</strong>
-            <p style="margin: 4px 0; font-size: 12px; color: #666;">Generate blog post and video ideas</p>
-          </div>
+        <section class="setting-group" aria-labelledby="promptHeading">
+          <h3 id="promptHeading">Prompt Templates</h3>
+          <p>Preview the assistant's system prompts used for common tasks.</p>
+          <div id="promptTemplates"></div>
+        </section>
 
-          <div class="prompt-template" data-prompt-type="codeHelper">
-            <strong>Code Helper</strong>
-            <p style="margin: 4px 0; font-size: 12px; color: #666;">Programming questions and debugging</p>
-          </div>
-
-          <div class="prompt-template" data-prompt-type="seo">
-            <strong>SEO Expert</strong>
-            <p style="margin: 4px 0; font-size: 12px; color: #666;">Optimize titles and descriptions</p>
-          </div>
-
-          <div class="prompt-template" data-prompt-type="writing">
-            <strong>Writing Coach</strong>
-            <p style="margin: 4px 0; font-size: 12px; color: #666;">Improve clarity and engagement</p>
-          </div>
-        </div>
-
-        <!-- Preferences -->
-        <div class="setting-group">
-          <h3>Preferences</h3>
-          
-          <label>
-            <input type="checkbox" id="aiNotifications" checked>
-            Notify me when AI completes tasks
-          </label>
-
-          <label style="display: block; margin-top: 12px;">
-            <input type="checkbox" id="aiAutoSave" checked>
-            Auto-save generated content to drafts
-          </label>
-
-          <label style="display: block; margin-top: 12px;">
-            <input type="checkbox" id="aiUsageTracking" checked>
-            Show token usage and costs
-          </label>
-        </div>
-
-        <!-- Usage Stats -->
-        <div class="setting-group">
-          <h3>Usage This Month</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px;">
-            <div>
-              <span style="color: #666; font-size: 12px;">Tokens Used</span>
-              <div style="font-size: 24px; font-weight: bold; margin-top: 4px;" id="tokensUsed">0</div>
-            </div>
-            <div>
-              <span style="color: #666; font-size: 12px;">API Calls</span>
-              <div style="font-size: 24px; font-weight: bold; margin-top: 4px;" id="apiCalls">0</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Chat Interface -->
-        <div class="setting-group">
-          <h3>Quick Chat</h3>
-          <p>Test your AI setup:</p>
-          
-          <div id="chatPreview" style="
-            background: #f9fafb;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            height: 300px;
-            overflow-y: auto;
-            padding: 12px;
-            margin-bottom: 12px;
-            font-size: 12px;
-          "></div>
-
-          <form id="quickChatForm" style="display: flex; gap: 8px;">
-            <input 
-              type="text" 
-              id="quickChatInput" 
-              placeholder="Ask me anything..." 
-              style="flex: 1; padding: 8px;"
-            >
+        <section class="setting-group" aria-labelledby="chatHeading">
+          <h3 id="chatHeading">Quick Chat</h3>
+          <p>Send a test message without creating a saved conversation.</p>
+          <div id="chatPreview" class="ai-quick-chat" aria-live="polite"></div>
+          <form id="quickChatForm" class="ai-quick-chat-form">
+            <label class="sr-only" for="quickChatInput">Message</label>
+            <textarea id="quickChatInput" rows="2" maxlength="4000" placeholder="Ask the AI anything..." required></textarea>
             <button class="btn" type="submit" id="quickChatBtn">Send</button>
           </form>
-        </div>
+        </section>
       </div>
     </main>
 
     <footer class="footer">
       <div class="container">
-        <p style="text-align: center; font-size: 12px; color: #666;">
-          AI Settings • <a href="index.html">Home</a> • <a href="profile.html">Profile</a>
-        </p>
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="ai-chat.html">AI Chat</a>
+          <a href="profile.html">Profile</a>
+          <a href="support.html">Support</a>
+        </div>
       </div>
     </footer>
 
-    <script type="module" src="assets/js/nav.js"></script>
     <script type="module">
-      import * as groq from "./assets/js/groq.js";
       import { getCurrentUser, signOut } from "./assets/js/supabase.js";
+      import {
+        PROVIDERS,
+        PROVIDER_MODELS,
+        SYSTEM_PROMPTS,
+        getProvider,
+        setProvider,
+        getModelsForProvider,
+        generateContent,
+        chat as aiChat
+      } from "./assets/js/groq.js";
+      import { escapeHTML } from "./assets/js/utils.js";
+      import "./assets/js/nav.js";
 
-      const { SYSTEM_PROMPTS, detectProviderFromKey, getModelsForProvider, getProvider } = groq;
-      let state = {
+      const state = {
         user: null,
-        chatHistory: []
+        provider: getProvider(),
+        model: "",
+        sending: false
       };
 
-      // Setup auth
+      const $ = (id) => document.getElementById(id);
+      const providerSelect = $("aiProvider");
+      const modelSelect = $("aiModel");
+      const statusIndicator = $("aiStatusIndicator");
+      const statusMessage = $("aiStatusMessage");
+      const preview = $("chatPreview");
+      const quickForm = $("quickChatForm");
+      const quickInput = $("quickChatInput");
+      const quickButton = $("quickChatBtn");
+
+      function setStatus(message, ok = null) {
+        statusMessage.textContent = message || "";
+        statusMessage.style.display = message ? "block" : "none";
+        statusIndicator.classList.toggle("connected", ok === true);
+        statusIndicator.classList.toggle("disconnected", ok !== true);
+      }
+
+      function populateModels(provider, preferredModel = "") {
+        const models = getModelsForProvider(provider);
+        modelSelect.replaceChildren();
+        models.forEach((model) => {
+          const option = document.createElement("option");
+          option.value = model;
+          option.textContent = model;
+          modelSelect.appendChild(option);
+        });
+        state.model = models.includes(preferredModel) ? preferredModel : models[0] || "";
+        modelSelect.value = state.model;
+        $("aiProviderLabel").textContent = PROVIDERS[provider] || provider;
+        $("aiProviderHint").textContent = `${PROVIDERS[provider] || provider} credentials are managed securely on the server.`;
+      }
+
+      function loadSettings() {
+        state.provider = getProvider();
+        providerSelect.value = state.provider;
+        const savedModel = localStorage.getItem("ai_model") || "";
+        populateModels(state.provider, savedModel);
+        setStatus("Ready. Use Test Connection to verify the server configuration.", null);
+      }
+
+      function renderPrompts() {
+        const container = $("promptTemplates");
+        const entries = [
+          ["general", "General Assistant", "Questions and everyday tasks"],
+          ["contentIdeas", "Content Ideas", "Blog, video, and social content"],
+          ["codeHelper", "Code Helper", "Programming and debugging"],
+          ["community", "Community Manager", "Engagement and moderation"],
+          ["seo", "SEO Expert", "Titles, descriptions, and keywords"],
+          ["writing", "Writing Coach", "Clarity, grammar, and engagement"]
+        ];
+        container.replaceChildren();
+        entries.forEach(([key, title, description]) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "prompt-template";
+          const strong = document.createElement("strong");
+          strong.textContent = title;
+          const text = document.createElement("p");
+          text.textContent = description;
+          text.className = "prompt-template-description";
+          button.append(strong, text);
+          button.addEventListener("click", () => {
+            const existing = container.querySelector(`[data-preview="${key}"]`);
+            if (existing) {
+              existing.remove();
+              return;
+            }
+            const panel = document.createElement("div");
+            panel.className = "callout";
+            panel.dataset.preview = key;
+            panel.textContent = SYSTEM_PROMPTS[key] || SYSTEM_PROMPTS.general;
+            button.insertAdjacentElement("afterend", panel);
+          });
+          container.appendChild(button);
+        });
+      }
+
+      function appendChat(role, content) {
+        const row = document.createElement("div");
+        row.className = `ai-chat-message ${role}`;
+        const label = document.createElement("strong");
+        label.textContent = role === "user" ? "You" : "AI";
+        const body = document.createElement("div");
+        body.textContent = content;
+        row.append(label, body);
+        preview.appendChild(row);
+        preview.scrollTop = preview.scrollHeight;
+      }
+
+      async function testConnection() {
+        const button = $("testAiBtn");
+        button.disabled = true;
+        button.textContent = "Testing...";
+        setStatus("Checking provider configuration...", null);
+        try {
+          const result = await generateContent({
+            prompt: "Reply with exactly: Timzee AI connection OK",
+            systemPrompt: SYSTEM_PROMPTS.general,
+            model: modelSelect.value,
+            provider: providerSelect.value,
+            maxTokens: 32
+          });
+          setStatus(`Connected. Model responded successfully: ${result.model || modelSelect.value}`, true);
+        } catch (error) {
+          setStatus(error?.message || "AI connection failed.", false);
+        } finally {
+          button.disabled = false;
+          button.textContent = "Test Connection";
+        }
+      }
+
       async function setupAuth() {
         state.user = await getCurrentUser();
         if (!state.user) {
-          window.location.href = "login.html?next=ai-settings.html";
-          return;
+          window.location.href = `login.html?next=${encodeURIComponent("ai-settings.html")}`;
+          return false;
         }
-
-        const authActions = document.getElementById("authActions");
-        if (authActions) {
-          authActions.innerHTML = `
-            <span class="auth-meta">${state.user.email}</span>
-            <button class="btn ghost" id="logoutBtn">Log Out</button>
-          `;
-          document.getElementById("logoutBtn").addEventListener("click", async () => {
-            await signOut();
-            window.location.reload();
-          });
-        }
-      }
-
-      function setProviderUI(provider) {
-        const label = document.getElementById("aiProviderLabel");
-        const hint = document.getElementById("aiProviderHint");
-        if (label) label.textContent = provider.charAt(0).toUpperCase() + provider.slice(1);
-        if (hint) hint.textContent = `Use ${provider} models for content generation, writing improvement, and more.`;
-
-        const models = getModelsForProvider(provider);
-        const select = document.getElementById("aiModel");
-        select.innerHTML = models.map((m) => `<option value="${m}">${m}</option>`).join("");
-        const saved = localStorage.getItem("ai_model");
-        select.value = saved && models.includes(saved) ? saved : models[0];
-      }
-
-      // Load current settings
-      function loadSettings() {
-        const key = groq.getGroqApiKey();
-        const provider = getProvider();
-        setProviderUI(provider);
-        if (key) {
-          document.getElementById("groqApiKey").value = key;
-          document.getElementById("aiStatusIndicator").classList.remove("disconnected");
-          document.getElementById("aiStatusIndicator").classList.add("connected");
-        }
-      }
-
-      // Save Groq API key
-      document.getElementById("saveGroqBtn").addEventListener("click", () => {
-        const key = document.getElementById("groqApiKey").value.trim();
-        if (!key) {
-          alert("Please enter an API key");
-          return;
-        }
-        groq.setGroqApiKey(key);
-        setProviderUI(detectProviderFromKey(key));
-        alert("API key saved!");
-        loadSettings();
-      });
-
-      // Test connection
-      document.getElementById("testGroqBtn").addEventListener("click", async () => {
-        const btn = document.getElementById("testGroqBtn");
-        btn.disabled = true;
-        btn.textContent = "Testing...";
-
-        try {
-          const response = await groq.generateContent({
-            prompt: "Say 'Hello from AI!' in exactly 4 words.",
-            model: document.getElementById("aiModel").value
-          });
-          
-          const statusEl = document.getElementById("aiStatusMessage");
-          statusEl.style.display = "block";
-          statusEl.innerHTML = `<strong>✓ Connected!</strong><br>Response: ${String(response).slice(0, 120)}...`;
-          
-          document.getElementById("aiStatusIndicator").classList.remove("disconnected");
-          document.getElementById("aiStatusIndicator").classList.add("connected");
-        } catch (error) {
-          const statusEl = document.getElementById("aiStatusMessage");
-          statusEl.style.display = "block";
-          statusEl.innerHTML = `<strong>✗ Failed</strong><br>${error.message}`;
-          document.getElementById("aiStatusIndicator").classList.remove("connected");
-          document.getElementById("aiStatusIndicator").classList.add("disconnected");
-        } finally {
-          btn.disabled = false;
-          btn.textContent = "Test Connection";
-        }
-      });
-
-      // Clear key
-      document.getElementById("clearGroqBtn").addEventListener("click", () => {
-        if (confirm("Clear your API key?")) {
-          groq.setGroqApiKey("");
-          document.getElementById("groqApiKey").value = "";
-          document.getElementById("aiStatusMessage").style.display = "none";
-          document.getElementById("aiStatusIndicator").classList.remove("connected");
-          document.getElementById("aiStatusIndicator").classList.add("disconnected");
-          loadSettings();
-          alert("API key cleared");
-        }
-      });
-
-      document.getElementById("groqApiKey").addEventListener("input", (e) => {
-        const key = e.target.value.trim();
-        setProviderUI(detectProviderFromKey(key));
-        if (key) {
-          document.getElementById("aiStatusIndicator").classList.add("connected");
-          document.getElementById("aiStatusIndicator").classList.remove("disconnected");
-        } else {
-          document.getElementById("aiStatusIndicator").classList.add("disconnected");
-          document.getElementById("aiStatusIndicator").classList.remove("connected");
-        }
-      });
-
-      // Prompt templates
-      document.querySelectorAll(".prompt-template").forEach(el => {
-        el.addEventListener("click", () => {
-          const type = el.dataset.promptType;
-          const prompt = SYSTEM_PROMPTS[type] || SYSTEM_PROMPTS.general;
-          alert("Prompt:\n\n" + prompt);
+        const authActions = $("authActions");
+        authActions.replaceChildren();
+        const label = document.createElement("span");
+        label.className = "auth-meta";
+        label.textContent = state.user.email || "Member";
+        const logout = document.createElement("button");
+        logout.type = "button";
+        logout.className = "btn ghost";
+        logout.textContent = "Log Out";
+        logout.addEventListener("click", async () => {
+          logout.disabled = true;
+          const result = await signOut();
+          if (result?.error) logout.disabled = false;
+          else window.location.reload();
         });
+        authActions.append(label, logout);
+        return true;
+      }
+
+      providerSelect.addEventListener("change", () => {
+        const provider = providerSelect.value;
+        state.provider = provider;
+        populateModels(provider);
+        setProvider(provider);
+        setStatus(`Provider changed to ${PROVIDERS[provider]}. Save to keep this choice.`, null);
       });
 
-      // Quick chat
-      document.getElementById("quickChatForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        const input = document.getElementById("quickChatInput");
-        const message = input.value.trim();
-        if (!message) return;
+      modelSelect.addEventListener("change", () => {
+        state.model = modelSelect.value;
+        localStorage.setItem("ai_model", state.model);
+        setStatus(`Model selected: ${state.model}`, null);
+      });
 
-        const preview = document.getElementById("chatPreview");
-        const btn = document.getElementById("quickChatBtn");
+      $("saveAiSettingsBtn").addEventListener("click", () => {
+        const provider = providerSelect.value;
+        const model = modelSelect.value;
+        if (!setProvider(provider)) {
+          setStatus("Invalid provider selection.", false);
+          return;
+        }
+        if (!getModelsForProvider(provider).includes(model)) {
+          setStatus("Invalid model selection.", false);
+          return;
+        }
+        localStorage.setItem("ai_model", model);
+        state.provider = provider;
+        state.model = model;
+        setStatus("AI settings saved for this browser.", true);
+      });
 
-        // Add user message
-        state.chatHistory.push({ role: "user", content: message });
-        preview.innerHTML += `<div style="margin: 8px 0; color: #0f766e;"><strong>You:</strong> ${message}</div>`;
-        
-        input.value = "";
-        btn.disabled = true;
-        btn.textContent = "...";
+      $("testAiBtn").addEventListener("click", testConnection);
 
+      quickForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const message = quickInput.value.trim();
+        if (!message || state.sending) return;
+        state.sending = true;
+        quickInput.value = "";
+        quickButton.disabled = true;
+        appendChat("user", message);
         try {
-          const response = await groq.chat({
+          const reply = await aiChat({
             message,
             systemPrompt: SYSTEM_PROMPTS.general,
-            model: document.getElementById("aiModel").value
+            model: modelSelect.value,
+            provider: providerSelect.value
           });
-
-          state.chatHistory.push({ role: "assistant", content: response });
-          preview.innerHTML += `<div style="margin: 8px 0; color: #666;"><strong>AI:</strong> ${response}</div>`;
-          preview.scrollTop = preview.scrollHeight;
+          appendChat("assistant", reply || "The AI returned an empty response.");
         } catch (error) {
-          preview.innerHTML += `<div style="margin: 8px 0; color: #ef4444;"><strong>Error:</strong> ${error.message}</div>`;
+          appendChat("assistant", `AI request failed: ${error?.message || "Unknown error"}`);
         } finally {
-          btn.disabled = false;
-          btn.textContent = "Send";
+          state.sending = false;
+          quickButton.disabled = false;
+          quickInput.focus();
         }
       });
 
-      // Save model preference
-      document.getElementById("aiModel").addEventListener("change", (e) => {
-        localStorage.setItem("ai_model", e.target.value);
+      quickInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          quickForm.requestSubmit();
+        }
       });
 
-      // Init
-      setupAuth();
-      loadSettings();
+      async function boot() {
+        if (!(await setupAuth())) return;
+        loadSettings();
+        renderPrompts();
+      }
+
+      boot().catch((error) => {
+        console.error("AI settings boot failed:", error);
+        setStatus("AI settings could not be initialized.", false);
+      });
     </script>
   </body>
 </html>
-
-
-
