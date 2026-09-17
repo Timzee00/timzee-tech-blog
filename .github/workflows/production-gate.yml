@@ -28,7 +28,7 @@ jobs:
           set -euo pipefail
           while IFS= read -r file; do
             node --check "$file"
-          done < <(find netlify/functions -type f -name '*.js' -print)
+          done < <(find assets netlify/functions scripts -type f \( -name '*.js' -o -name '*.mjs' \) -print)
 
       - name: Validate site configuration
         run: node scripts/validate-production-config.mjs
