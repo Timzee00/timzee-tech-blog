@@ -1,8 +1,4 @@
-/* ========================================================================== 
-   styles.css — main stylesheet entry point
-   Modular CSS with a final consistency layer before responsive overrides.
-   ========================================================================== */
-
+/* Timzee Tech Hub stylesheet entry point */
 @import url("variables.css");
 @import url("base.css");
 @import url("navbar.css");
@@ -11,13 +7,26 @@
 @import url("avatars.css");
 @import url("design-system.css");
 @import url("chat.css");
+@import url("chat-context-menu.css");
 @import url("profile.css");
 @import url("marketplace.css");
 @import url("discussion.css");
+@import url("discussion-enhancements.css");
 @import url("novels.css");
 @import url("stories.css");
 @import url("content-pages.css");
 @import url("home.css");
+@import url("fyp.css");
+@import url("settings.css");
 @import url("animations.css");
 @import url("utilities.css");
 @import url("responsive.css");
+
+/* Reader preferences are applied through data attributes on <html>. */
+html[data-reader-font="small"] .reader-content{font-size:.95rem;}
+html[data-reader-font="medium"] .reader-content{font-size:1.05rem;}
+html[data-reader-font="large"] .reader-content{font-size:1.2rem;}
+html[data-reader-font="xlarge"] .reader-content{font-size:1.35rem;}
+html[data-reader-width="compact"] .reader-content{max-width:700px;margin-inline:auto;}
+html[data-reader-width="comfortable"] .reader-content{max-width:820px;margin-inline:auto;}
+html[data-reader-width="wide"] .reader-content{max-width:1000px;margin-inline:auto;}
