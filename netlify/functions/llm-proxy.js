@@ -1,12 +1,18 @@
 /**
- * LLM Proxy Function
- * Routes requests to Groq/OpenAI/Anthropic using either env keys or user-provided keys.
+ * Authenticated LLM proxy.
+ * Provider API keys are server-side environment variables only.
  */
+const { createClient } = require("@supabase/supabase-js");
+
 function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" }
-  });
+  return {
+    statusCode: status,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store"
+    },
+    body: JSON.stringify(body)
+  };
 }
 
 function safeJsonParse(text) {
@@ -18,9 +24,14 @@ function safeJsonParse(text) {
 }
 
 function normalizeMessages(messages = [], systemPrompt = "") {
-  const normalized = Array.isArray(messages) ? messages : [];
+  const normalized = Array.isArray(messages)
+    ? messages
+        .filter((msg) => msg && (msg.role === "user" || msg.role === "assistant" || msg.role === "system"))
+        .map((msg) => ({ role: msg.role, content: String(msg.content || "") }))
+    : [];
+
   if (systemPrompt) {
-    return [{ role: "system", content: systemPrompt }, ...normalized];
+    return [{ role: "system", content: String(systemPrompt) }, ...normalized.filter((msg) => msg.role !== "system")];
   }
   return normalized;
 }
@@ -40,34 +51,66 @@ function extractAnthropicSystem(messages = []) {
   return { system, messages: filtered };
 }
 
-export default async (req) => {
-  if (req.method !== "POST") {
+function getBearerToken(event) {
+  const header = event.headers?.authorization || event.headers?.Authorization || "";
+  if (!header || !/^Bearer\s+/i.test(header)) return "";
+  return header.replace(/^Bearer\s+/i, "").trim();
+}
+
+exports.handler = async (event) => {
+  if (event.httpMethod !== "POST") {
     return jsonResponse({ error: "Method not allowed. Use POST." }, 405);
   }
 
-  const raw = req.body || "";
-  const payload = safeJsonParse(raw) || {};
-  const provider = (payload.provider || "groq").toLowerCase();
-  const apiKey =
-    payload.apiKey ||
-    (provider === "openai" ? process.env.OPENAI_API_KEY : null) ||
-    (provider === "anthropic" ? process.env.ANTHROPIC_API_KEY : null) ||
-    process.env.GROQ_API_KEY;
-
-  if (!apiKey) {
-    return jsonResponse({ error: "API key not configured on server." }, 500);
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    return jsonResponse({ error: "Server authentication is not configured." }, 500);
   }
 
-  const model =
-    payload.model ||
-    (provider === "openai"
-      ? "gpt-4o-mini"
+  const token = getBearerToken(event);
+  if (!token) return jsonResponse({ error: "Authentication required." }, 401);
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+  const { data: authData, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !authData?.user) {
+    return jsonResponse({ error: "Invalid or expired auth token." }, 401);
+  }
+
+  const rawPayload = safeJsonParse(event.body || "{}");
+  if (!rawPayload || typeof rawPayload !== "object") {
+    return jsonResponse({ error: "Invalid request body." }, 400);
+  }
+
+  const provider = String(rawPayload.provider || "groq").toLowerCase();
+  if (!["groq", "openai", "anthropic"].includes(provider)) {
+    return jsonResponse({ error: "Unsupported AI provider." }, 400);
+  }
+
+  const apiKey =
+    provider === "openai"
+      ? process.env.OPENAI_API_KEY
       : provider === "anthropic"
-        ? "claude-sonnet-5"
-        : "llama-3.3-70b-versatile");
-  const temperature = typeof payload.temperature === "number" ? payload.temperature : 0.7;
-  const maxTokens = typeof payload.max_tokens === "number" ? payload.max_tokens : 1024;
-  const messages = normalizeMessages(payload.messages, payload.systemPrompt);
+        ? process.env.ANTHROPIC_API_KEY
+        : process.env.GROQ_API_KEY;
+
+  if (!apiKey) {
+    return jsonResponse({ error: `${provider} API key is not configured on the server.` }, 503);
+  }
+
+  const model = String(
+    rawPayload.model ||
+      (provider === "openai"
+        ? "gpt-4o-mini"
+        : provider === "anthropic"
+          ? "claude-sonnet-5"
+          : "llama-3.3-70b-versatile")
+  );
+  const temperature = typeof rawPayload.temperature === "number" ? Math.min(Math.max(rawPayload.temperature, 0), 2) : 0.7;
+  const maxTokens = typeof rawPayload.max_tokens === "number" ? Math.min(Math.max(Math.floor(rawPayload.max_tokens), 1), 8192) : 1024;
+  const messages = normalizeMessages(rawPayload.messages, rawPayload.systemPrompt);
 
   try {
     if (provider === "anthropic") {
@@ -76,7 +119,7 @@ export default async (req) => {
         model,
         max_tokens: maxTokens,
         temperature,
-        system,
+        ...(system ? { system } : {}),
         messages: anthropicMessages
       };
 
@@ -135,9 +178,7 @@ export default async (req) => {
       return jsonResponse({ error: data.error || text || "API error" }, resp.status);
     }
 
-    const message =
-      data.choices?.[0]?.message?.content || data.message || "No response from AI";
-
+    const message = data.choices?.[0]?.message?.content || data.message || "No response from AI";
     return jsonResponse({
       success: true,
       message,
@@ -145,6 +186,7 @@ export default async (req) => {
       usage: data.usage
     });
   } catch (error) {
-    return jsonResponse({ error: "Failed to process request", message: error.message }, 500);
+    console.error("LLM proxy error:", error);
+    return jsonResponse({ error: "Failed to process request." }, 500);
   }
 };
