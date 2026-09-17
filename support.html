@@ -1,149 +1,41 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Support - Timzee Tech Hub</title>
-    <meta name="description" content="Get help and support for your Timzee Tech Hub account.">
-    <meta name="keywords" content="Timzee Tech Hub support, help center, tech blog support">
-    <meta name="robots" content="index, follow">
-    <meta name="theme-color" content="#0f766e">
-    <link rel="canonical" href="https://timzee-tech-blog.netlify.app/support.html">
-    <meta property="og:site_name" content="Timzee Tech Hub">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Support - Timzee Tech Hub">
-    <meta property="og:description" content="Get help and support for your Timzee Tech Hub account.">
-    <meta property="og:url" content="https://timzee-tech-blog.netlify.app/support.html">
-    <meta property="og:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Support - Timzee Tech Hub">
-    <meta name="twitter:description" content="Get help and support for your Timzee Tech Hub account.">
-    <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/styles.css">
-      <script defer src="assets/js/theme-init.js"></script>
-  </head>
-  <body>
-    <a class="skip-link" href="#main-content">Skip to main content</a>
-    <header class="site-header">
-      <div class="container wrap">
-        <a class="brand" href="index.html">
-          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
-          <span class="tagline" id="siteTagline">Support & success desk</span>
-        </a>
-        <nav class="nav-pill">
-          <a href="discussion.html">Discussion</a>
-          <a href="marketplace.html">Marketplace</a>
-          <a href="videos.html">Videos</a>
-          <a href="novels.html">Novels</a>
-          <div class="nav-more">
-            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
-            <div class="nav-more-menu">
-              <a href="announcements.html">Announcements</a>
-              <a href="ads.html">Advertise</a>
-              <a href="newsletter.html">Newsletter</a>
-              <a href="contact.html">Contact</a>
-              <a href="support.html">Support</a>
-            </div>
-          </div>
-        </nav>
-        <div class="header-actions">
-          <a class="icon-btn" href="stories.html" data-label="Stories" aria-label="Stories" title="Stories">&#128247;</a>
-          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
-          <div class="auth-actions" id="authActions"></div>
-        </div>
-      </div>
-    </header>
-
-    <main id="main-content" class="page-shell">
-      <div class="container">
-        <section class="post-shell" data-reveal>
-          <h1>Support</h1>
-          <p class="tagline">Need help publishing, moderating, or setting up AdSense? We are here to help.</p>
-          <div class="feature-grid" style="margin-top:20px;">
-            <article class="feature-card" data-reveal>
-              <div class="feature-icon">FAQ</div>
-              <h3>Quick answers</h3>
-              <p>Find instant help for admin access, post approvals, and analytics.</p>
-            </article>
-            <article class="feature-card" data-reveal>
-              <div class="feature-icon">24/7</div>
-              <h3>Priority support</h3>
-              <p>Enterprise customers get fast escalation and onboarding support.</p>
-            </article>
-            <article class="feature-card" data-reveal>
-              <div class="feature-icon">LIVE</div>
-              <h3>Guided setup</h3>
-              <p>We can guide your team through ads, roles, and publishing workflows.</p>
-            </article>
-          </div>
-
-          <section style="margin-top:24px;" id="faqBlock">
-            <h2>FAQ</h2>
-            <p style="color:#666;">Frequently asked questions by community members. Click a question to expand the answer.</p>
-            <div id="faqList">Loading FAQs...</div>
-          </section>
-          <form class="form-grid" style="margin-top:24px;" id="supportForm">
-            <input type="text" name="name" placeholder="Full name" required>
-            <input type="email" name="email" placeholder="Email address" required>
-            <input type="text" name="issue" placeholder="What do you need help with?" required>
-            <textarea name="message" placeholder="Describe the issue..." required></textarea>
-            <button class="btn" type="submit">Submit Support Request</button>
-          </form>
-          <div class="callout" id="supportStatus" style="margin-top:18px; display:none;"></div>
-          <div class="callout" style="margin-top:12px;">Email: support@timzeetechhub.com · Response within 24 hours.</div>
-
-          <script type="module">
-            import { getPublishedFaqs } from './assets/js/faq.js';
-            function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-            (async function(){
-              try{
-                const container = document.getElementById('faqList');
-                const faqs = await getPublishedFaqs();
-                if(!faqs.length){ container.innerHTML = '<p style="color:#666;">No FAQs available yet.</p>'; return; }
-                container.innerHTML = faqs.map(f => `\n                  <details style="margin-bottom:12px; padding:12px; border:1px solid #eee; border-radius:6px;"><summary style="font-weight:600; cursor:pointer;">${escapeHtml(f.question)}</summary><div style="margin-top:8px; color:#333;">${escapeHtml(f.answer).replace(/\n/g,'<br>')}</div></details>\n                `).join('');
-              }catch(err){ console.error('FAQ load failed', err); document.getElementById('faqList').innerHTML = '<p style="color:#f00;">Failed to load FAQs</p>'; }
-            })();
-          </script>
-        </section>
-      </div>
-    </main>
-
-    <a class="floating-action whatsapp" id="whatsappSupportBtn" href="#" target="_blank" rel="noopener" style="display:none;">
-      <span>Chat on WhatsApp</span>
-    </a>
-
-    <button class="floating-action donate" id="donationBtn" type="button" style="display:none;">
-      <span>Donate</span>
-    </button>
-
-    <div class="donation-modal" id="donationModal" aria-hidden="true">
-      <div class="donation-card">
-        <div class="donation-header">
-          <h3 id="donationTitle">Support Timzee Tech Hub</h3>
-          <button class="btn ghost" id="donationClose" type="button">Close</button>
-        </div>
-        <p id="donationDetails">Thanks for supporting our community.</p>
-        <a class="btn" id="donationLink" href="#" target="_blank" rel="noopener">Donate now</a>
-      </div>
-    </div>
-
-    <footer class="footer">
-      <div class="container">
-        <div class="footer-links">
-          <a href="contact.html">Contact Us</a>
-          <a href="newsletter.html">Newsletter</a>
-          <a href="ads.html">Advertise</a>
-          <a href="discussion.html">Discussion</a>
-        </div>
-      </div>
-    </footer>
-
-    <script type="module" src="assets/js/forms.js"></script>
-  </body>
-</html>
-
-
-
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Support - Timzee Tech Hub</title>
+  <meta name="description" content="Get help and support for your Timzee Tech Hub account and community features.">
+  <meta name="robots" content="index, follow"><meta name="theme-color" content="#0f766e">
+  <link rel="canonical" href="https://timzee-tech-blog.netlify.app/support.html">
+  <link rel="stylesheet" href="assets/css/styles.css"><script defer src="assets/js/theme-init.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<header class="site-header"><div class="container wrap">
+  <a class="brand" href="index.html"><span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span><span class="tagline" id="siteTagline">Support &amp; help desk</span></a>
+  <nav class="nav-pill" aria-label="Primary navigation"><a href="discussion.html">Discussion</a><a href="marketplace.html">Marketplace</a><a href="videos.html">Videos</a><a href="novels.html">Novels</a><div class="nav-more"><button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span aria-hidden="true">&#9662;</span></button><div class="nav-more-menu"><a href="announcements.html">Announcements</a><a href="ads.html">Advertise</a><a href="newsletter.html">Newsletter</a><a href="contact.html">Contact</a><a href="support.html">Support</a></div></div></nav>
+  <div class="header-actions"><a class="icon-btn" href="stories.html" aria-label="Stories" title="Stories">&#128247;</a><a class="icon-btn" href="chat.html" aria-label="Chat" title="Chat">&#128172;</a><div class="auth-actions" id="authActions"></div></div>
+</div></header>
+<main id="main-content" class="page-shell"><div class="container"><section class="post-shell" data-reveal>
+  <span class="chip">Timzee Corp</span><h1>Support</h1>
+  <p class="tagline">Need help with your Timzee Tech Hub account, community features, publishing, or a technical issue? Send us the details and we will review the request.</p>
+  <div class="feature-grid" style="margin-top:20px;">
+    <article class="feature-card" data-reveal><div class="feature-icon">FAQ</div><h3>Quick answers</h3><p>Check common questions about accounts, posts, community features, and settings.</p></article>
+    <article class="feature-card" data-reveal><div class="feature-icon">HELP</div><h3>Technical support</h3><p>Describe the problem, page, and action that caused it so we can investigate.</p></article>
+    <article class="feature-card" data-reveal><div class="feature-icon">GUIDE</div><h3>Setup guidance</h3><p>Ask about available publishing, moderation, profile, or community workflows.</p></article>
+  </div>
+  <section style="margin-top:24px" id="faqBlock"><h2>FAQ</h2><p style="color:#666">Frequently asked questions from community members. Select a question to expand the answer.</p><div id="faqList">Loading FAQs...</div></section>
+  <form class="form-grid" style="margin-top:24px" id="supportForm"><input type="text" name="name" placeholder="Full name" required><input type="email" name="email" placeholder="Email address" required><input type="text" name="issue" placeholder="What do you need help with?" required><textarea name="message" placeholder="Describe the issue..." required></textarea><button class="btn" type="submit">Submit Support Request</button></form>
+  <div class="callout" id="supportStatus" style="margin-top:18px;display:none"></div>
+  <div class="callout" style="margin-top:12px"><strong>Operated by Timzee Corp.</strong> Support route: this form. Email: support@timzeetechhub.com.</div>
+  <script type="module">
+    import { getPublishedFaqs } from './assets/js/faq.js';
+    const escapeHtml=(s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    (async()=>{try{const box=document.getElementById('faqList');const faqs=await getPublishedFaqs();if(!faqs.length){box.innerHTML='<p style="color:#666">No FAQs available yet.</p>';return;}box.innerHTML=faqs.map(f=>`<details style="margin-bottom:12px;padding:12px;border:1px solid #eee;border-radius:6px"><summary style="font-weight:600;cursor:pointer">${escapeHtml(f.question)}</summary><div style="margin-top:8px;color:#333">${escapeHtml(f.answer).replace(/\n/g,'<br>')}</div></details>`).join('');}catch(err){console.error('FAQ load failed',err);document.getElementById('faqList').innerHTML='<p style="color:#f00">Failed to load FAQs</p>';}})();
+  </script>
+</section></div></main>
+<a class="floating-action whatsapp" id="whatsappSupportBtn" href="#" target="_blank" rel="noopener" style="display:none"><span>Chat on WhatsApp</span></a>
+<button class="floating-action donate" id="donationBtn" type="button" style="display:none"><span>Donate</span></button>
+<div class="donation-modal" id="donationModal" aria-hidden="true"><div class="donation-card"><div class="donation-header"><h3 id="donationTitle">Support Timzee Tech Hub</h3><button class="btn ghost" id="donationClose" type="button">Close</button></div><p id="donationDetails">Thanks for supporting our community.</p><a class="btn" id="donationLink" href="#" target="_blank" rel="noopener">Donate now</a></div></div>
+<footer class="footer"><div class="container"><div class="footer-links"><a href="contact.html">Contact Us</a><a href="newsletter.html">Newsletter</a><a href="ads.html">Advertise</a><a href="discussion.html">Discussion</a></div></div></footer>
+<script type="module" src="assets/js/forms.js"></script>
+</body></html>
