@@ -1,4 +1,4 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/+esm";
 import "./app-hardening.js";
 
 const SUPABASE_URL = "https://duvbcwwprkzzyzikmcol.supabase.co";
@@ -160,17 +160,6 @@ async function resolveTrustedRole(user) {
 
   if (role) {
     user.app_metadata = { ...(user.app_metadata || {}), role };
-    try {
-      if (!user.user_metadata) user.user_metadata = {};
-      Object.defineProperty(user.user_metadata, "role", {
-        value: role,
-        writable: false,
-        enumerable: false,
-        configurable: true
-      });
-    } catch (err) {
-      console.warn("Unable to expose legacy in-memory role:", err);
-    }
   }
 
   return role;
