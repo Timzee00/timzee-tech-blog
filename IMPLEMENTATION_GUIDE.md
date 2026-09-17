@@ -9,7 +9,7 @@ This document describes the current production architecture. Older setup notes t
 - Server-side integrations: Netlify Functions under `netlify/functions/`.
 - AI provider keys: server-side environment variables only.
 - Public community media: `media` storage bucket.
-- Direct-message media: currently tracked as a dedicated privacy work item; do not assume the public `media` bucket provides private chat-media access.
+- Direct-message media: `chat-media` private bucket with authenticated uploads scoped to the uploader, server-side signed URL issuance, and participant/membership checks before retrieval. The browser refreshes short-lived signed URLs automatically when needed.
 - Scheduled automation: `automation-maintenance` every 5 minutes; Scout/news collection runs hourly.
 - Dynamic sitemap: `/sitemap.xml` is served through the Netlify sitemap function.
 
@@ -84,7 +84,8 @@ The current migration history includes:
 - announcement lifecycle and scheduled publishing;
 - job-health observability;
 - backend-owned friend-request notifications;
-- duplicate storage-policy cleanup.
+- duplicate storage-policy cleanup;
+- private chat-media bucket, storage policy, and media-path tracking.
 
 ## Release gates
 
@@ -102,11 +103,10 @@ Supabase performance advisors still report multiple-permissive-policy combinatio
 
 ## Current release blockers
 
-1. Complete private direct-message media migration to a private bucket with signed retrieval and membership checks.
-2. Diagnose and turn the GitHub production gate green without weakening its checks.
-3. Deploy the current `main` revision to Netlify only after the above blockers are clear.
-4. Run a real browser/end-to-end verification against the resulting deployment.
-5. Enable Supabase leaked-password protection.
+1. Turn the GitHub production gate green. The workflow now targets GitHub's lightweight `ubuntu-slim` runner because this repository's previous `ubuntu-latest` jobs were failing before any step executed.
+2. Deploy the current `main` revision to Netlify only after the gate is confirmed green.
+3. Run a real browser/end-to-end verification against the resulting deployment.
+4. Enable Supabase leaked-password protection.
 
 ## Maintenance principle
 
