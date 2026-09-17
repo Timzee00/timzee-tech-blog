@@ -1,0 +1,24 @@
+/* Cross-page layout polish */
+#timzee-announcement-banner {
+  top: clamp(10px, 2vw, 24px);
+  width: min(900px, calc(100vw - 32px));
+}
+#timzee-announcement-banner .timzee-announcement-body {
+  max-width: 680px;
+}
+#timzee-cookie-settings-modal,
+#timzee-consent-banner {
+  isolation: isolate;
+}
+@media (min-width: 900px) {
+  #timzee-announcement-banner .timzee-announcement-actions {
+    align-self: center;
+    white-space: nowrap;
+  }
+}
+@media (max-width: 680px) {
+  #timzee-announcement-banner {
+    top: 8px;
+    width: calc(100vw - 16px);
+  }
+}
