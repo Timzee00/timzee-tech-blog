@@ -1,5 +1,7 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/+esm";
 import "./app-hardening.js";
+import "./site-shell.js";
+import "./privacy-consent.js";
 
 const SUPABASE_URL = "https://duvbcwwprkzzyzikmcol.supabase.co";
 // Publishable key: safe for browser clients. Never put the service/secret key here.
