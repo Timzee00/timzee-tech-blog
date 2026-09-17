@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
-      <script defer src="assets/js/theme-init.js"></script>
+    <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -52,7 +52,6 @@
         <h1>Marketplace</h1>
         <p class="tagline">Discover tech products, services, and gear from our community</p>
 
-        <!-- Category Filters -->
         <div class="category-filter" id="categoryFilter">
           <button class="filter-btn active" data-category="all">All</button>
           <button class="filter-btn" data-category="electronics">Electronics</button>
@@ -62,17 +61,17 @@
           <button class="filter-btn" data-category="other">Other</button>
         </div>
 
-        <!-- Create Listing Section -->
         <div id="createSection" class="market-panel" style="display: none;">
           <h2>Create Listing</h2>
+          <p class="market-help">Your WhatsApp number is used only for marketplace buyer contact and can be updated from your seller profile.</p>
           <form id="createForm">
             <div class="market-form-row">
               <div>
-                <label><strong>Title</strong></label>
-                <input type="text" id="listingTitle" placeholder="What are you selling?" required>
+                <label for="listingTitle"><strong>Title</strong></label>
+                <input type="text" id="listingTitle" placeholder="What are you selling?" maxlength="120" required>
               </div>
               <div>
-                <label><strong>Category</strong></label>
+                <label for="listingCategory"><strong>Category</strong></label>
                 <select id="listingCategory" required>
                   <option value="electronics">Electronics</option>
                   <option value="software">Software</option>
@@ -83,16 +82,16 @@
               </div>
             </div>
 
-            <label><strong>Description</strong></label>
-            <textarea id="listingDescription" placeholder="Describe your item..." style="margin-bottom: 16px;"></textarea>
+            <label for="listingDescription"><strong>Description</strong></label>
+            <textarea id="listingDescription" placeholder="Describe your item..." maxlength="5000" style="margin-bottom: 16px;"></textarea>
 
             <div class="market-form-row">
               <div>
-                <label><strong>Price</strong></label>
-                <input type="number" id="listingPrice" placeholder="0.00" step="0.01" required>
+                <label for="listingPrice"><strong>Price</strong></label>
+                <input type="number" id="listingPrice" placeholder="0.00" step="0.01" min="0" required>
               </div>
               <div>
-                <label><strong>Condition</strong></label>
+                <label for="listingCondition"><strong>Condition</strong></label>
                 <select id="listingCondition" required>
                   <option value="new">New</option>
                   <option value="like-new">Like New</option>
@@ -104,27 +103,35 @@
 
             <div class="market-form-row">
               <div>
-                <label><strong>Location</strong></label>
-                <input type="text" id="listingLocation" placeholder="Your city/state">
+                <label for="listingLocation"><strong>Location</strong></label>
+                <input type="text" id="listingLocation" placeholder="Your city/state" maxlength="120">
               </div>
               <div>
-                <label><strong>Photos</strong></label>
-                <input type="file" id="listingPhotos" multiple accept="image/*">
+                <label for="marketplaceWhatsapp"><strong>WhatsApp number</strong></label>
+                <input type="tel" id="marketplaceWhatsapp" placeholder="e.g. +2348012345678" inputmode="tel" autocomplete="tel" maxlength="20" required>
+                <small class="field-hint">Use your full international number. Buyers can contact you on WhatsApp after sending an inquiry.</small>
               </div>
             </div>
 
+            <div>
+              <label for="listingPhotos"><strong>Photos</strong></label>
+              <input type="file" id="listingPhotos" multiple accept="image/*">
+              <small class="field-hint">Select several at once or add more in separate selections. Maximum 8 images, 10 MB each.</small>
+              <div id="photoSelection" class="market-photo-selection" aria-live="polite"></div>
+            </div>
+
             <div id="createStatus" class="market-status" style="display: none;"></div>
-            <button class="btn" type="submit">Create Listing</button>
-            <button class="btn ghost market-cancel-btn" type="button" id="cancelCreate">Cancel</button>
+            <div class="market-form-actions">
+              <button class="btn" type="submit">Create Listing</button>
+              <button class="btn ghost market-cancel-btn" type="button" id="cancelCreate">Cancel</button>
+            </div>
           </form>
         </div>
 
-        <!-- Listings Grid -->
         <div id="listingsContainer">
           <div class="callout">Loading marketplace...</div>
         </div>
 
-        <!-- Load More -->
         <div class="market-load-more">
           <button class="btn ghost" id="loadMoreBtn" style="display: none;">Load More</button>
         </div>
@@ -144,32 +151,110 @@
 
     <script type="module" src="assets/js/nav.js"></script>
     <script type="module">
-      import { 
+      import {
         fetchMarketplaceItems,
         searchMarketplace,
         createMarketplaceItem
       } from "./assets/js/videos-marketplace.js";
-      import { getCurrentUser, signOut } from "./assets/js/supabase.js";
+      import { getCurrentUser, signOut, supabase, getDisplayName } from "./assets/js/supabase.js";
       import { uploadMedia } from "./assets/js/media.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
 
-      let state = {
+      const MAX_PHOTOS = 8;
+      const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+      const state = {
         user: null,
         listings: [],
         offset: 0,
         category: "all",
-        limit: 20
+        limit: 20,
+        selectedPhotos: []
       };
 
-      // Setup auth
+      function normalizeWhatsapp(raw) {
+        return String(raw || "").replace(/[\s()\-]/g, "");
+      }
+
+      function isValidWhatsapp(raw) {
+        const value = normalizeWhatsapp(raw);
+        return /^\+?\d{8,15}$/.test(value);
+      }
+
+      function renderPhotoSelection() {
+        const target = document.getElementById("photoSelection");
+        if (!target) return;
+        if (!state.selectedPhotos.length) {
+          target.innerHTML = "";
+          return;
+        }
+        target.innerHTML = state.selectedPhotos.map((file, index) => `
+          <div class="market-photo-chip">
+            <span>${escapeHTML(file.name)}</span>
+            <button type="button" data-photo-index="${index}" aria-label="Remove ${escapeHTML(file.name)}">Remove</button>
+          </div>
+        `).join("");
+        target.querySelectorAll("[data-photo-index]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const index = Number(button.dataset.photoIndex);
+            state.selectedPhotos.splice(index, 1);
+            renderPhotoSelection();
+          });
+        });
+      }
+
+      function resetPhotoSelection() {
+        state.selectedPhotos = [];
+        const input = document.getElementById("listingPhotos");
+        if (input) input.value = "";
+        renderPhotoSelection();
+      }
+
+      function addSelectedPhotos(files) {
+        const incoming = Array.from(files || []);
+        const existing = new Set(state.selectedPhotos.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+        for (const file of incoming) {
+          if (!file.type.startsWith("image/")) continue;
+          if (file.size > MAX_IMAGE_BYTES) {
+            window.appUI?.toast?.(`${file.name} is larger than 10 MB.`, { tone: "warning", title: "Photo skipped" });
+            continue;
+          }
+          const key = `${file.name}:${file.size}:${file.lastModified}`;
+          if (existing.has(key)) continue;
+          if (state.selectedPhotos.length >= MAX_PHOTOS) {
+            window.appUI?.toast?.(`You can add up to ${MAX_PHOTOS} images.`, { tone: "warning", title: "Photo limit" });
+            break;
+          }
+          state.selectedPhotos.push(file);
+          existing.add(key);
+        }
+        renderPhotoSelection();
+      }
+
+      async function loadSellerProfile() {
+        if (!state.user) return null;
+        const result = await supabase
+          .from("profiles")
+          .select("display_name, marketplace_whatsapp")
+          .eq("id", state.user.id)
+          .maybeSingle();
+        if (result.error) {
+          console.warn("Seller profile lookup failed:", result.error);
+          return null;
+        }
+        const phone = result.data?.marketplace_whatsapp || "";
+        const input = document.getElementById("marketplaceWhatsapp");
+        if (input) input.value = phone;
+        return result.data || null;
+      }
+
       async function setupAuth() {
         state.user = await getCurrentUser();
-        
         const authActions = document.getElementById("authActions");
         if (state.user) {
           authActions.innerHTML = `
-            <span class="auth-meta">${escapeHTML(state.user.email || '')}</span>
-            <a class="btn ghost" href="profile.html">Profile</a>
+            <span class="auth-meta">${escapeHTML(getDisplayName(state.user))}</span>
+            <a class="btn ghost" href="profile.html?id=${encodeURIComponent(state.user.id)}">Profile</a>
             <button class="btn ghost" id="logoutBtn">Log Out</button>
           `;
           document.getElementById("logoutBtn").addEventListener("click", async () => {
@@ -178,12 +263,12 @@
           });
           document.getElementById("createSection").style.display = "block";
           document.getElementById("createBtnHeader").style.display = "inline-flex";
+          await loadSellerProfile();
         } else {
           authActions.innerHTML = `<a class="btn ghost" href="login.html?next=${encodeURIComponent('marketplace.html')}">Log In</a>`;
         }
       }
 
-      // Load listings
       async function loadListings() {
         try {
           const listings = await fetchMarketplaceItems({
@@ -193,183 +278,193 @@
             onlyAvailable: true
           });
 
-          if (state.offset === 0) {
-            state.listings = listings;
-          } else {
-            state.listings.push(...listings);
-          }
+          if (state.offset === 0) state.listings = listings;
+          else state.listings.push(...listings);
 
           renderListings();
           document.getElementById("loadMoreBtn").style.display = listings.length === state.limit ? "inline-flex" : "none";
         } catch (error) {
-          console.error("Load error:", error);
-          document.getElementById("listingsContainer").innerHTML = `<div class="callout">Failed to load listings</div>`;
+          console.error("Load marketplace error:", error);
+          document.getElementById("listingsContainer").innerHTML = `<div class="callout">Failed to load listings. Please try again.</div>`;
         }
       }
 
-      // Render listings
-      async function renderListings() {
+      function renderListings() {
         const container = document.getElementById("listingsContainer");
-        
         if (!state.listings.length) {
           container.innerHTML = `<div class="callout">No listings in this category</div>`;
           return;
         }
 
-        container.innerHTML = `<div class="marketplace-grid">${state.listings.map(item => `
+        container.innerHTML = `<div class="marketplace-grid">${state.listings.map((item) => `
           <div class="listing-card" data-id="${encodeURIComponent(item.id)}">
             <div class="listing-image">
-              ${item.images && item.images[0] && isSafeUrl(item.images[0]) ? `<img src="${item.images[0]}" alt="${escapeHTML(item.title || '')}">` : '📦'}
-              ${item.condition ? `<div class="listing-badge">${escapeHTML(item.condition || '')}</div>` : ''}
+              ${item.images?.[0] && isSafeUrl(item.images[0]) ? `<img src="${escapeHTML(item.images[0])}" alt="${escapeHTML(item.title || '')}">` : '<div class="listing-image-placeholder" aria-hidden="true">Image</div>'}
+              ${item.condition ? `<div class="listing-badge">${escapeHTML(item.condition)}</div>` : ''}
             </div>
             <div class="listing-info">
               <div class="listing-category">${escapeHTML(item.category || '')}</div>
               <div class="listing-title">${escapeHTML(item.title || '')}</div>
-              <div class="listing-price">$${escapeHTML((parseFloat(item.price) || 0).toFixed(2))}</div>
+              <div class="listing-price">${escapeHTML(item.currency || "USD")} ${escapeHTML((parseFloat(item.price) || 0).toFixed(2))}</div>
               <div class="listing-meta">
-                <span>👁 ${escapeHTML(String(item.view_count || 0))}</span>
-                <span>📍 ${escapeHTML(item.location || 'Online')}</span>
+                <span>Views ${escapeHTML(String(item.view_count || 0))}</span>
+                <span>${escapeHTML(item.location || 'Online')}</span>
               </div>
               <div class="listing-seller">
-                <a class="seller-avatar" href="profile.html?id=${encodeURIComponent(item.user_id || '')}" aria-label="View seller profile">${escapeHTML((item.seller_name || '?').trim().slice(0,1).toUpperCase())}</a>
+                <a class="seller-avatar" href="profile.html?id=${encodeURIComponent(item.user_id || '')}" aria-label="View seller profile">${escapeHTML((item.seller_name || '?').trim().slice(0, 1).toUpperCase())}</a>
                 <span>${escapeHTML(item.seller_name || '')}</span>
-                ${item.seller_verified ? '<span class="badge-chip verified" title="Verified Seller">✔ Verified Seller</span>' : ''}
+                ${item.seller_verified ? '<span class="badge-chip verified" title="Verified Seller">Verified Seller</span>' : ''}
               </div>
             </div>
           </div>
         `).join("")}</div>`;
 
-        // Add click handlers
-        container.querySelectorAll(".listing-card").forEach(card => {
+        container.querySelectorAll(".listing-card").forEach((card) => {
           card.addEventListener("click", () => {
-            const itemId = card.dataset.id;
-            window.location.href = `listing.html?id=${itemId}`;
+            window.location.href = `listing.html?id=${card.dataset.id}`;
           });
         });
       }
 
-      // Category filters
-      document.getElementById("categoryFilter").addEventListener("click", (e) => {
-        if (e.target.classList.contains("filter-btn")) {
-          document.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
-          e.target.classList.add("active");
-          state.category = e.target.dataset.category;
-          state.offset = 0;
-          loadListings();
-        }
+      document.getElementById("categoryFilter").addEventListener("click", (event) => {
+        const button = event.target.closest(".filter-btn");
+        if (!button) return;
+        document.querySelectorAll(".filter-btn").forEach((btn) => btn.classList.remove("active"));
+        button.classList.add("active");
+        state.category = button.dataset.category || "all";
+        state.offset = 0;
+        loadListings();
       });
 
-      // Search
       let searchTimer;
-      document.getElementById("marketplaceSearch").addEventListener("input", async (e) => {
+      document.getElementById("marketplaceSearch").addEventListener("input", (event) => {
         clearTimeout(searchTimer);
-        const term = e.target.value.trim();
-        
+        const term = event.target.value.trim();
         if (term.length < 2) {
           state.offset = 0;
           loadListings();
           return;
         }
-
         searchTimer = setTimeout(async () => {
           try {
-            const results = await searchMarketplace({ 
-              query: term, 
+            const results = await searchMarketplace({
+              query: term,
               category: state.category === "all" ? null : state.category,
-              limit: state.limit 
+              limit: state.limit
             });
             state.listings = results;
             state.offset = 0;
             renderListings();
           } catch (error) {
-            console.error("Search error:", error);
+            console.error("Marketplace search error:", error);
           }
         }, 300);
       });
 
-      // Create listing
-      document.getElementById("createForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
+      document.getElementById("listingPhotos").addEventListener("change", (event) => {
+        addSelectedPhotos(event.target.files);
+        event.target.value = "";
+      });
+
+      document.getElementById("createForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
         if (!state.user) {
-          alert("Please log in");
+          window.location.href = `login.html?next=${encodeURIComponent('marketplace.html')}`;
           return;
         }
 
         const status = document.getElementById("createStatus");
-        const btn = document.querySelector("#createForm button[type='submit']");
-        
-        btn.disabled = true;
+        const button = document.querySelector("#createForm button[type='submit']");
+        const whatsapp = normalizeWhatsapp(document.getElementById("marketplaceWhatsapp").value);
+        const price = Number(document.getElementById("listingPrice").value);
+
+        if (!isValidWhatsapp(whatsapp)) {
+          status.style.display = "block";
+          status.textContent = "Enter a valid WhatsApp number with country code.";
+          status.style.color = "#b91c1c";
+          return;
+        }
+        if (!Number.isFinite(price) || price < 0) {
+          status.style.display = "block";
+          status.textContent = "Enter a valid price.";
+          status.style.color = "#b91c1c";
+          return;
+        }
+
+        button.disabled = true;
         status.style.display = "block";
-        status.textContent = "Creating listing...";
+        status.textContent = "Saving seller details...";
         status.style.color = "#0f766e";
 
         try {
-          // Upload photos
-          const photosInput = document.getElementById("listingPhotos");
+          const profileUpdate = await supabase
+            .from("profiles")
+            .update({ marketplace_whatsapp: whatsapp, updated_at: new Date().toISOString() })
+            .eq("id", state.user.id);
+          if (profileUpdate.error) throw profileUpdate.error;
+
           const images = [];
-          
-          if (photosInput.files.length > 0) {
-            for (const file of photosInput.files) {
-              const url = await uploadMedia(file, "marketplace");
-              if (url) images.push(url);
-            }
+          if (state.selectedPhotos.length) {
+            status.textContent = `Uploading ${state.selectedPhotos.length} photo${state.selectedPhotos.length === 1 ? "" : "s"}...`;
+            const uploaded = await Promise.all(
+              state.selectedPhotos.map((file) => uploadMedia(file, "marketplace"))
+            );
+            uploaded.filter(Boolean).forEach((url) => images.push(url));
           }
 
+          status.textContent = "Creating listing...";
           const result = await createMarketplaceItem({
             userId: state.user.id,
-            sellerName: state.user.user_metadata?.display_name || state.user.email,
-            title: document.getElementById("listingTitle").value,
-            description: document.getElementById("listingDescription").value,
+            sellerName: getDisplayName(state.user),
+            title: document.getElementById("listingTitle").value.trim(),
+            description: document.getElementById("listingDescription").value.trim(),
             category: document.getElementById("listingCategory").value,
-            price: parseFloat(document.getElementById("listingPrice").value),
+            price,
             condition: document.getElementById("listingCondition").value,
-            location: document.getElementById("listingLocation").value,
+            location: document.getElementById("listingLocation").value.trim(),
             images
           });
 
-          if (result.error) {
-            status.textContent = `Error: ${result.error.message}`;
-            status.style.color = "#ef4444";
-          } else {
-            status.textContent = "✓ Listing created!";
-            status.style.color = "#10b981";
-            document.getElementById("createForm").reset();
-            setTimeout(() => {
-              document.getElementById("createSection").style.display = "none";
-              state.offset = 0;
-              loadListings();
-            }, 1500);
-          }
+          if (result.error) throw result.error;
+
+          status.textContent = "Listing created successfully.";
+          status.style.color = "#047857";
+          document.getElementById("createForm").reset();
+          resetPhotoSelection();
+          await loadSellerProfile();
+          setTimeout(() => {
+            document.getElementById("createSection").style.display = "none";
+            state.offset = 0;
+            loadListings();
+          }, 900);
         } catch (error) {
-          status.textContent = `Error: ${error.message}`;
-          status.style.color = "#ef4444";
+          console.error("Create marketplace listing failed:", error);
+          status.textContent = `Error: ${error?.message || "Unable to create listing."}`;
+          status.style.color = "#b91c1c";
         } finally {
-          btn.disabled = false;
+          button.disabled = false;
         }
       });
 
       document.getElementById("cancelCreate").addEventListener("click", () => {
+        document.getElementById("createForm").reset();
+        resetPhotoSelection();
         document.getElementById("createSection").style.display = "none";
       });
 
-      document.getElementById("createBtnHeader").addEventListener("click", () => {
+      document.getElementById("createBtnHeader").addEventListener("click", (event) => {
+        event.preventDefault();
         document.getElementById("createSection").style.display = "block";
         document.getElementById("listingTitle").focus();
       });
 
-      // Load more
       document.getElementById("loadMoreBtn").addEventListener("click", () => {
         state.offset += state.limit;
         loadListings();
       });
 
-      // Init
-      setupAuth();
-      loadListings();
+      await setupAuth();
+      await loadListings();
     </script>
   </body>
 </html>
-
-
-
