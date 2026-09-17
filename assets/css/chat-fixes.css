@@ -1,0 +1,29 @@
+/* Chat reliability overrides. Keep native hidden elements truly hidden. */
+.chat-page [hidden],
+.chat-page .voice-recording-sheet[hidden],
+.chat-page .chat-modal-overlay[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .chat-page .chat-main {
+    min-height: calc(100dvh - 74px);
+  }
+  .chat-page .chat-app-shell {
+    width: 100%;
+    height: calc(100dvh - 74px);
+    min-height: 520px;
+    overflow: hidden;
+  }
+  .chat-page .chat-sidebar {
+    width: 100%;
+    min-height: 0;
+  }
+  .chat-page .chat-tab-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .chat-page .chat-list {
+    padding-bottom: 90px;
+  }
+}
