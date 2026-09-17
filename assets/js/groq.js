@@ -1,7 +1,6 @@
 import { supabase } from "./supabase.js";
 
 const NETLIFY_PROXY_URL = "/.netlify/functions/llm-proxy";
-const STORAGE_KEY = "ai_api_key";
 const PROVIDER_KEY = "ai_provider";
 
 export const PROVIDERS = {
@@ -11,44 +10,23 @@ export const PROVIDERS = {
 };
 
 export const PROVIDER_MODELS = {
-  groq: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-120b"],
-  openai: ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
+  groq: ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
+  openai: ["gpt-4o-mini", "gpt-4o"],
   anthropic: ["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"]
 };
 
 export const DEFAULT_MODEL = PROVIDER_MODELS.groq[0];
 
-export function detectProviderFromKey(key = "") {
-  const trimmed = String(key).trim();
-  if (!trimmed) return "groq";
-  if (trimmed.startsWith("gsk_")) return "groq";
-  if (trimmed.startsWith("sk-ant-")) return "anthropic";
-  if (trimmed.startsWith("sk-") || trimmed.startsWith("sk-proj-")) return "openai";
-  return "groq";
-}
-
-// Legacy compatibility: provider API secrets are NEVER persisted in localStorage.
-// The Netlify proxy reads the real secret from its server-side environment.
-export function setGroqApiKey(key) {
-  const provider = detectProviderFromKey(key);
-  localStorage.removeItem(STORAGE_KEY);
-  if (String(key || "").trim()) {
-    localStorage.setItem(PROVIDER_KEY, provider);
-  } else {
-    localStorage.removeItem(PROVIDER_KEY);
-  }
-}
-
-export function getGroqApiKey() {
-  return "";
-}
-
 export function getProvider() {
-  return localStorage.getItem(PROVIDER_KEY) || "groq";
+  const provider = localStorage.getItem(PROVIDER_KEY) || "groq";
+  return PROVIDER_MODELS[provider] ? provider : "groq";
 }
 
-export function hasGroqApiKey() {
-  return false;
+export function setProvider(provider) {
+  const normalized = String(provider || "").toLowerCase();
+  if (!PROVIDER_MODELS[normalized]) return false;
+  localStorage.setItem(PROVIDER_KEY, normalized);
+  return true;
 }
 
 export function getModelsForProvider(provider = "groq") {
@@ -66,8 +44,14 @@ export const SYSTEM_PROMPTS = {
 
 export async function savePromptTemplate(userId, title, systemPrompt, description = "", category = "general", isPublic = false) {
   return supabase.from("ai_prompts").insert({
-    id: crypto.randomUUID(), user_id: userId, title, system_prompt: systemPrompt,
-    description, category, is_public: isPublic, created_at: new Date().toISOString()
+    id: crypto.randomUUID(),
+    user_id: userId,
+    title,
+    system_prompt: systemPrompt,
+    description,
+    category,
+    is_public: isPublic,
+    created_at: new Date().toISOString()
   }).select().single();
 }
 
@@ -81,33 +65,51 @@ export async function loadPromptTemplates(userId = null, isPublic = true) {
 
 export async function createConversation(userId, title = "New Chat") {
   return supabase.from("ai_conversations").insert({
-    id: crypto.randomUUID(), user_id: userId, title, model: DEFAULT_MODEL,
+    id: crypto.randomUUID(),
+    user_id: userId,
+    title,
+    model: DEFAULT_MODEL,
     created_at: new Date().toISOString()
   }).select().single();
 }
 
 export async function getConversationHistory(conversationId) {
-  const result = await supabase.from("ai_messages").select("*")
-    .eq("conversation_id", conversationId).order("created_at", { ascending: true });
+  const result = await supabase
+    .from("ai_messages")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true });
   return result.data || [];
 }
 
 export async function saveMessage(conversationId, userId, role, content, tokensUsed = 0) {
   return supabase.from("ai_messages").insert({
-    id: crypto.randomUUID(), conversation_id: conversationId, user_id: userId,
-    role, content, tokens_used: tokensUsed, created_at: new Date().toISOString()
+    id: crypto.randomUUID(),
+    conversation_id: conversationId,
+    user_id: userId,
+    role,
+    content,
+    tokens_used: tokensUsed,
+    created_at: new Date().toISOString()
   }).select().single();
 }
 
 export async function callGroqAPI({
-  messages = [], systemPrompt = SYSTEM_PROMPTS.general, model = DEFAULT_MODEL,
-  temperature = 0.7, maxTokens = 1024, onStream = null, provider = null
+  messages = [],
+  systemPrompt = SYSTEM_PROMPTS.general,
+  model = DEFAULT_MODEL,
+  temperature = 0.7,
+  maxTokens = 1024,
+  provider = null
 } = {}) {
-  const resolvedProvider = provider || getProvider() || "groq";
+  const resolvedProvider = provider || getProvider();
   const payload = {
     provider: resolvedProvider,
     model,
-    messages: [{ role: "system", content: systemPrompt }, ...messages],
+    messages: [
+      { role: "system", content: systemPrompt },
+      ...messages
+    ],
     temperature,
     max_tokens: maxTokens,
     stream: false
@@ -120,21 +122,29 @@ export async function callGroqAPI({
     if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
     const response = await fetch(NETLIFY_PROXY_URL, {
-      method: "POST", headers, body: JSON.stringify(payload)
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload)
     });
+
     const text = await response.text();
     let data = {};
-    try { data = text ? JSON.parse(text) : {}; }
-    catch { data = { error: text || `API Error: ${response.status}` }; }
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { error: text || `API Error: ${response.status}` };
+    }
 
     if (!response.ok) {
       const message = data?.error?.message || data?.error || data?.message || `API Error: ${response.status}`;
       throw new Error(message);
     }
 
-    const content = data.message || data.choices?.[0]?.message?.content || "";
-    if (onStream) onStream({ content });
-    return { content, usage: data.usage, model: data.model || model };
+    return {
+      content: data.message || data.choices?.[0]?.message?.content || "",
+      usage: data.usage,
+      model: data.model || model
+    };
   } catch (error) {
     console.error("AI API call failed:", error);
     throw error;
@@ -142,32 +152,55 @@ export async function callGroqAPI({
 }
 
 export async function generateContent({
-  prompt, systemPrompt = SYSTEM_PROMPTS.contentIdeas, model = DEFAULT_MODEL,
-  onStream = null, maxTokens = 2048, provider = null
+  prompt,
+  systemPrompt = SYSTEM_PROMPTS.contentIdeas,
+  model = DEFAULT_MODEL,
+  maxTokens = 2048,
+  provider = null
 } = {}) {
   return callGroqAPI({
-    messages: [{ role: "user", content: prompt }], systemPrompt, model,
-    maxTokens, onStream, provider
+    messages: [{ role: "user", content: prompt }],
+    systemPrompt,
+    model,
+    maxTokens,
+    provider
   });
 }
 
 export async function chat({
-  conversationId = null, userId = null, message,
-  systemPrompt = SYSTEM_PROMPTS.general, model = DEFAULT_MODEL,
-  onStream = null, provider = null
+  conversationId = null,
+  userId = null,
+  message,
+  systemPrompt = SYSTEM_PROMPTS.general,
+  model = DEFAULT_MODEL,
+  provider = null
 } = {}) {
   let history = [];
   if (conversationId) history = await getConversationHistory(conversationId);
-  const messages = history.filter(msg => msg.role === "user" || msg.role === "assistant")
-    .slice(-20).map(msg => ({ role: msg.role, content: msg.content }));
+
+  const messages = history
+    .filter(msg => msg.role === "user" || msg.role === "assistant")
+    .slice(-20)
+    .map(msg => ({ role: msg.role, content: msg.content }));
   messages.push({ role: "user", content: message });
-  const response = await callGroqAPI({ messages, systemPrompt, model, onStream, provider });
+
+  const response = await callGroqAPI({
+    messages,
+    systemPrompt,
+    model,
+    provider
+  });
+
   const responseContent = response.content || "";
   const tokensUsed = response.usage?.total_tokens || 0;
+
   if (conversationId && userId) {
-    await saveMessage(conversationId, userId, "user", message, 0);
-    await saveMessage(conversationId, userId, "assistant", responseContent, tokensUsed);
+    const userSave = await saveMessage(conversationId, userId, "user", message, 0);
+    if (userSave.error) console.warn("Failed to save AI user message:", userSave.error);
+    const assistantSave = await saveMessage(conversationId, userId, "assistant", responseContent, tokensUsed);
+    if (assistantSave.error) console.warn("Failed to save AI assistant message:", assistantSave.error);
   }
+
   return responseContent;
 }
 
@@ -179,8 +212,10 @@ export async function generatePostIdeas({ topic, count = 5 } = {}) {
 }
 
 export async function generateSEO({ topic, currentTitle = "", currentContent = "" } = {}) {
-  const prompt = `Generate SEO-optimized title, meta description, and 5 relevant keywords for a post about "${topic}". ${currentTitle ? `Current title: "${currentTitle}"` : ""} ${currentContent ? `Content preview: "${currentContent.slice(0, 200)}"` : ""} Format as JSON: { "title": "...", "metaDescription": "...", "keywords": ["..."] }`;
-  return generateContent({ prompt, systemPrompt: SYSTEM_PROMPTS.seo });
+  return generateContent({
+    prompt: `Generate SEO-optimized title, meta description, and 5 relevant keywords for a post about "${topic}". ${currentTitle ? `Current title: "${currentTitle}"` : ""} ${currentContent ? `Content preview: "${currentContent.slice(0, 200)}"` : ""} Format as JSON: { "title": "...", "metaDescription": "...", "keywords": ["..."] }`,
+    systemPrompt: SYSTEM_PROMPTS.seo
+  });
 }
 
 export async function improveWriting({ text, style = "professional" } = {}) {
@@ -193,15 +228,19 @@ export async function improveWriting({ text, style = "professional" } = {}) {
 export async function helpWithCode({ code, question, language = "javascript" } = {}) {
   return generateContent({
     prompt: `I have a ${language} code question: ${question}\n\nCode:\n\`\`\`${language}\n${code}\n\`\`\`\n\nProvide a helpful explanation or solution.`,
-    systemPrompt: SYSTEM_PROMPTS.codeHelper, maxTokens: 2048
+    systemPrompt: SYSTEM_PROMPTS.codeHelper,
+    maxTokens: 2048
   });
 }
 
 export async function checkModerationAI({ text, category = "content" } = {}) {
   const prompt = `Check if this ${category} violates community guidelines. Respond with JSON: { "safe": boolean, "reason": "explanation", "severity": "low|medium|high" }\n\nText: "${text}"`;
   try {
-    const response = await generateContent({ prompt, systemPrompt: "You are a content moderation AI. Be strict but fair." });
-    const jsonMatch = response.content?.match(/\{[\s\S]*\}/);
+    const response = await generateContent({
+      prompt,
+      systemPrompt: "You are a content moderation AI. Be strict but fair."
+    });
+    const jsonMatch = String(response?.content || "").match(/\{[\s\S]*\}/);
     if (jsonMatch) return JSON.parse(jsonMatch[0]);
     return { safe: true, reason: "Could not parse response", severity: "low" };
   } catch (error) {
@@ -211,9 +250,24 @@ export async function checkModerationAI({ text, category = "content" } = {}) {
 }
 
 export default {
-  PROVIDERS, PROVIDER_MODELS, setGroqApiKey, getGroqApiKey, getProvider,
-  hasGroqApiKey, getModelsForProvider, detectProviderFromKey, callGroqAPI,
-  generateContent, chat, createConversation, getConversationHistory, saveMessage,
-  savePromptTemplate, loadPromptTemplates, generatePostIdeas, generateSEO,
-  improveWriting, helpWithCode, checkModerationAI, DEFAULT_MODEL, SYSTEM_PROMPTS
+  PROVIDERS,
+  PROVIDER_MODELS,
+  DEFAULT_MODEL,
+  SYSTEM_PROMPTS,
+  getProvider,
+  setProvider,
+  getModelsForProvider,
+  callGroqAPI,
+  generateContent,
+  chat,
+  createConversation,
+  getConversationHistory,
+  saveMessage,
+  savePromptTemplate,
+  loadPromptTemplates,
+  generatePostIdeas,
+  generateSEO,
+  improveWriting,
+  helpWithCode,
+  checkModerationAI
 };
