@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const root = process.cwd();
@@ -11,6 +11,10 @@ const fail = (message) => {
 const netlify = read("netlify.toml");
 if (!/publish\s*=\s*["']\.["']/.test(netlify)) fail("Netlify publish directory must be the repository root.");
 if (!/functions\s*=\s*["']netlify\/functions["']/.test(netlify)) fail("Netlify functions directory is missing.");
+if (!/from\s*=\s*["']\/sitemap\.xml["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/sitemap["']/.test(netlify)) {
+  fail("Dynamic sitemap rewrite is missing.");
+}
+if (!existsSync(join(root, "netlify/functions/sitemap.js"))) fail("Dynamic sitemap function is missing.");
 
 const headers = read("_headers");
 for (const required of [
@@ -28,19 +32,11 @@ const robots = read("robots.txt");
 const sitemap = read("sitemap.xml");
 const sitemapMatch = robots.match(/^Sitemap:\s*(\S+)\s*$/m);
 if (!sitemapMatch) fail("robots.txt must declare a sitemap.");
-if (!sitemap.includes(sitemapMatch[1].replace(/\/sitemap\.xml$/, ""))) {
-  fail("robots.txt sitemap URL does not match the sitemap host.");
-}
-if (/2026-01-25/.test(sitemap)) fail("sitemap.xml still contains the obsolete January 2026 lastmod date.");
-
-for (const requiredPage of [
-  "<loc>https://timzee-tech-blog.netlify.app/</loc>",
-  "<loc>https://timzee-tech-blog.netlify.app/discussion.html</loc>",
-  "<loc>https://timzee-tech-blog.netlify.app/marketplace.html</loc>",
-  "<loc>https://timzee-tech-blog.netlify.app/videos.html</loc>",
-  "<loc>https://timzee-tech-blog.netlify.app/novels.html</loc>"
-]) {
-  if (!sitemap.includes(requiredPage)) fail(`sitemap.xml is missing ${requiredPage}`);
+if (!sitemapMatch[1].endsWith("/sitemap.xml")) fail("robots.txt must point to /sitemap.xml.");
+// The deployed /sitemap.xml route is dynamically generated from published DB content.
+// Keep the repository XML as a fallback, but do not require its historical lastmod values.
+if (!sitemap.includes("<loc>https://timzee-tech-blog.netlify.app/</loc>")) {
+  fail("Static sitemap fallback is missing the homepage.");
 }
 
 const packageJson = JSON.parse(read("package.json"));
@@ -76,6 +72,10 @@ for (const base of scanRoots) {
       if (pattern.test(text)) fail(`Potential client-side secret or obsolete API-key storage found in ${relative(root, file)}.`);
     }
   }
+}
+
+if (!existsSync(join(root, "package-lock.json"))) {
+  console.warn("Warning: package-lock.json is not committed yet; generate and commit one on a networked development machine.");
 }
 
 console.log("Production configuration validation passed.");
