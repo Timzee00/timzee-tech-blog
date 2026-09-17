@@ -11,12 +11,9 @@ const fail = (message) => {
 const netlify = read("netlify.toml");
 if (!/publish\s*=\s*["']\.["']/.test(netlify)) fail("Netlify publish directory must be the repository root.");
 if (!/functions\s*=\s*["']netlify\/functions["']/.test(netlify)) fail("Netlify functions directory is missing.");
-if (!/from\s*=\s*["']\/sitemap\.xml["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/sitemap["']/.test(netlify)) {
-  fail("Dynamic sitemap rewrite is missing.");
-}
-if (!/from\s*=\s*["']\/health["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/health["']/.test(netlify)) {
-  fail("Production health rewrite is missing.");
-}
+if (!/from\s*=\s*["']\/sitemap\.xml["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/sitemap["']/.test(netlify)) fail("Dynamic sitemap rewrite is missing.");
+if (!/from\s*=\s*["']\/health["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/health["']/.test(netlify)) fail("Production health rewrite is missing.");
+
 for (const file of [
   "netlify/functions/sitemap.js",
   "netlify/functions/health.js",
@@ -24,10 +21,22 @@ for (const file of [
   "action-result.html",
   "offline.html",
   "maintenance.html",
+  "privacy.html",
+  "terms.html",
+  "refund-policy.html",
+  "cookies.html",
+  "accessibility.html",
   "assets/js/action-result.js",
   "assets/js/notification-popup.js",
+  "assets/js/site-shell.js",
+  "assets/js/privacy-consent.js",
+  "assets/js/popularity-engine.js",
+  "assets/js/chat-v2.js",
+  "assets/css/design-system.css",
+  "assets/css/chat-v2.css",
   "assets/js/media.js",
-  "supabase/migrations/20260917123000_secure_private_chat_media.sql"
+  "supabase/migrations/20260917123000_secure_private_chat_media.sql",
+  "supabase/migrations/upgrade_chat_groups_and_message_metadata.sql"
 ]) {
   if (!existsSync(join(root, file))) fail(`Required production surface is missing: ${file}`);
 }
@@ -36,6 +45,11 @@ const media = read("assets/js/media.js");
 if (!media.includes('const CHAT_BUCKET = "chat-media"')) fail("Chat media must use the private chat-media bucket.");
 if (!media.includes("requestChatSignedUrl")) fail("Chat media signing helper is missing.");
 if (!media.includes('folder === CHAT_FOLDER')) fail("Chat uploads are not routed through the private-media path.");
+
+const chat = read("assets/js/chat-v2.js");
+for (const required of ["postgres_changes", "broadcast", "presence", "MediaRecorder", "group-avatars", "data-edit-member-tags"]) {
+  if (!chat.includes(required)) fail(`Upgraded chat surface is missing: ${required}`);
+}
 
 const headers = read("_headers");
 for (const required of [
@@ -54,9 +68,16 @@ const sitemap = read("sitemap.xml");
 const sitemapMatch = robots.match(/^Sitemap:\s*(\S+)\s*$/m);
 if (!sitemapMatch) fail("robots.txt must declare a sitemap.");
 if (!sitemapMatch[1].endsWith("/sitemap.xml")) fail("robots.txt must point to /sitemap.xml.");
-if (!sitemap.includes("<loc>https://timzee-tech-blog.netlify.app/</loc>")) {
-  fail("Static sitemap fallback is missing the homepage.");
+if (!sitemap.includes("<loc>https://timzee-tech-blog.netlify.app/</loc>")) fail("Static sitemap fallback is missing the homepage.");
+
+const legal = ["privacy.html", "terms.html", "refund-policy.html", "cookies.html", "accessibility.html"];
+for (const file of legal) {
+  const text = read(file);
+  if (!text.includes("Powered by Timzee Corp")) console.warn(`Warning: ${file} relies on site-shell branding injection.`);
 }
+
+const popularity = read("assets/js/popularity-engine.js");
+if (!popularity.includes('get_popular_posts')) fail("Homepage popular posts must use the automated database ranking.");
 
 const packageJson = JSON.parse(read("package.json"));
 for (const [name, version] of Object.entries(packageJson.dependencies || {})) {
@@ -94,8 +115,6 @@ for (const base of scanRoots) {
   }
 }
 
-if (!existsSync(join(root, "package-lock.json"))) {
-  console.warn("Warning: package-lock.json is not committed yet; generate and commit one on a networked development machine.");
-}
+if (!existsSync(join(root, "package-lock.json"))) console.warn("Warning: package-lock.json is not committed yet; generate and commit one on a networked development machine.");
 
 console.log("Production configuration validation passed.");
