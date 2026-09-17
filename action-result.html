@@ -41,52 +41,6 @@
       <div class="meta" id="resultMeta" hidden></div>
     </section>
   </main>
-  <script>
-    (() => {
-      const params = new URLSearchParams(location.search);
-      const allowedStatuses = new Set(["success", "error", "warning", "info", "pending"]);
-      const status = allowedStatuses.has((params.get("status") || "").toLowerCase()) ? (params.get("status") || "info").toLowerCase() : "info";
-      const title = (params.get("title") || "Action status").slice(0, 140);
-      const message = (params.get("message") || "Your request has been processed.").slice(0, 2000);
-      const next = params.get("next") || "index.html";
-      const nextLabel = (params.get("nextLabel") || "Continue").slice(0, 40);
-      const retry = params.get("retry") || "";
-
-      const safeRelativeUrl = (value) => {
-        try {
-          const url = new URL(value, location.href);
-          const sameOrigin = url.origin === location.origin;
-          if (!sameOrigin) return "";
-          if (url.protocol !== "http:" && url.protocol !== "https:") return "";
-          return url.pathname + url.search + url.hash;
-        } catch { return ""; }
-      };
-
-      document.getElementById("resultStatus").textContent = status === "pending" ? "Pending" : status;
-      document.getElementById("resultTitle").textContent = title;
-      document.getElementById("resultMessage").textContent = message;
-      const indicator = document.getElementById("resultIndicator");
-      indicator.className = `indicator status-${status === "pending" ? "warning" : status}`;
-      indicator.textContent = status === "success" ? "✓" : status === "error" ? "!" : status === "pending" ? "…" : "i";
-
-      const safeNext = safeRelativeUrl(next) || "index.html";
-      const nextLink = document.getElementById("resultNext");
-      nextLink.href = safeNext;
-      nextLink.textContent = nextLabel;
-
-      const retryUrl = safeRelativeUrl(retry);
-      const retryBtn = document.getElementById("resultRetry");
-      if (retryUrl) {
-        retryBtn.hidden = false;
-        retryBtn.addEventListener("click", () => { location.href = retryUrl; });
-      }
-
-      if (status === "pending") {
-        const meta = document.getElementById("resultMeta");
-        meta.hidden = false;
-        meta.textContent = "You can leave this page safely. Check back through your account or return to the previous screen.";
-      }
-    })();
-  </script>
+  <script src="assets/js/action-result.js" defer></script>
 </body>
 </html>
