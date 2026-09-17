@@ -52,6 +52,34 @@ function applyChatPreferences(preferences) {
   } catch (_) {}
 }
 
+function applyDiscussionPreferences(preferences) {
+  const sort = preferences.discussion?.defaultSort || "trending";
+  const control = document.getElementById("discussionSort");
+  if (!control) return;
+  const mapping = { trending: "top", popular: "top", new: "new", active: "top", unanswered: "top" };
+  const supported = mapping[sort] || "top";
+  if ([...control.options].some((option) => option.value === supported)) {
+    control.value = supported;
+    control.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  document.documentElement.dataset.discussionDefault = sort;
+}
+
+function applyMarketplacePreferences(preferences) {
+  const settings = preferences.marketplace || {};
+  document.documentElement.dataset.marketplaceLocation = settings.showLocation === false ? "hidden" : "visible";
+  document.documentElement.dataset.marketplaceCurrency = settings.currency || "NGN";
+
+  if (settings.showLocation !== false) return;
+  const hideListingLocation = () => {
+    const location = document.getElementById("location");
+    if (location?.parentElement?.classList.contains("detail-row")) location.parentElement.hidden = true;
+  };
+  hideListingLocation();
+  const observer = new MutationObserver(hideListingLocation);
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
 async function boot() {
   const user = await getCurrentUser();
   if (!user) return;
@@ -60,7 +88,9 @@ async function boot() {
   if (path.endsWith("/novel.html")) applyNovelPreferences(preferences);
   if (path.endsWith("/video.html") || path.endsWith("/videos.html")) applyVideoPreferences(preferences);
   if (path.endsWith("/chat.html")) applyChatPreferences(preferences);
-  if (typeof window !== "undefined") window.timzeePreferences = preferences;
+  if (path.endsWith("/discussion.html")) applyDiscussionPreferences(preferences);
+  if (path.endsWith("/listing.html") || path.endsWith("/marketplace.html")) applyMarketplacePreferences(preferences);
+  window.timzeePreferences = preferences;
 }
 
 if (typeof window !== "undefined") {
