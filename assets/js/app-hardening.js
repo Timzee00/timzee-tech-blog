@@ -101,7 +101,7 @@
     window.setTimeout(() => toast.remove(), 180);
   }
 
-  function showSiteToast(message, { type = "info", title = "" , duration = 4200 } = {}) {
+  function showSiteToast(message, { type = "info", title = "", duration = 4200 } = {}) {
     const text = String(message ?? "").trim();
     if (!text) return null;
     const root = ensureFeedbackRoot();
@@ -135,16 +135,47 @@
     toast.appendChild(close);
     root.appendChild(toast);
 
-    if (duration > 0) {
-      window.setTimeout(() => dismissToast(toast), duration);
-    }
+    if (duration > 0) window.setTimeout(() => dismissToast(toast), duration);
     return toast;
+  }
+
+  function safeSameOriginUrl(value) {
+    try {
+      const url = new URL(String(value || ""), window.location.origin);
+      if (url.origin !== window.location.origin) return "";
+      if (url.protocol !== window.location.protocol && window.location.protocol !== "http:") return "";
+      return url.pathname + url.search + url.hash;
+    } catch {
+      return "";
+    }
   }
 
   function installActionFeedback() {
     window.siteToast = showSiteToast;
     window.siteNotice = (message, type = "info", title = "") =>
       showSiteToast(message, { type, title });
+
+    window.goToActionResult = ({
+      status = "success",
+      title = "Action completed",
+      message = "Your request has been processed.",
+      next = "index.html",
+      nextLabel = "Continue",
+      retry = ""
+    } = {}) => {
+      const allowed = new Set(["success", "error", "warning", "info", "pending"]);
+      const normalizedStatus = allowed.has(String(status).toLowerCase()) ? String(status).toLowerCase() : "info";
+      const params = new URLSearchParams({
+        status: normalizedStatus,
+        title: String(title).slice(0, 140),
+        message: String(message).slice(0, 2000),
+        next: safeSameOriginUrl(next) || "index.html",
+        nextLabel: String(nextLabel).slice(0, 40)
+      });
+      const retryUrl = safeSameOriginUrl(retry);
+      if (retryUrl) params.set("retry", retryUrl);
+      window.location.href = `action-result.html?${params.toString()}`;
+    };
 
     // Legacy pages still call alert(). Route those messages through the
     // branded non-blocking UI instead of browser-native dialogs.
@@ -175,9 +206,7 @@
       document.body.appendChild(banner);
     });
 
-    if (!navigator.onLine) {
-      window.setTimeout(() => window.dispatchEvent(new Event("offline")), 0);
-    }
+    if (!navigator.onLine) window.setTimeout(() => window.dispatchEvent(new Event("offline")), 0);
   }
 
   function installVisualConsistency() {
