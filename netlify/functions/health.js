@@ -36,8 +36,8 @@ exports.handler = async () => {
     ]);
 
     const dbOk = !dbError;
-    const jobOk = !jobError && (!job || !job.last_succeeded_at || new Date(job.last_succeeded_at).getTime() >= Date.now() - (15 * 60 * 1000));
-    const status = dbOk && jobOk ? "ok" : "degraded";
+    const automationOk = !jobError && !!job?.last_succeeded_at && new Date(job.last_succeeded_at).getTime() >= Date.now() - (15 * 60 * 1000);
+    const status = dbOk && automationOk ? "ok" : "degraded";
 
     return jsonResponse(status === "ok" ? 200 : 503, {
       status,
@@ -45,7 +45,7 @@ exports.handler = async () => {
       version: process.env.COMMIT_REF || "unknown",
       deploy_id: process.env.DEPLOY_ID || null,
       database: dbOk ? "ok" : "error",
-      automation: jobOk ? "ok" : "stale_or_unavailable",
+      automation: automationOk ? "ok" : "stale_or_unavailable",
       checked_at: new Date().toISOString(),
       latency_ms: Date.now() - startedAt
     });
