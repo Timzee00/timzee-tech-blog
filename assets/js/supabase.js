@@ -18,7 +18,29 @@ if (typeof window !== "undefined" && !window.supabase) {
   window.supabase = supabase;
 }
 
+const authCallbackPromise = (() => {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  const code = new URLSearchParams(window.location.search).get("code");
+  if (!code) return Promise.resolve(null);
+
+  return supabase.auth.exchangeCodeForSession(code).then((result) => {
+    if (result.error) {
+      console.error("OAuth code exchange failed:", result.error);
+      return result;
+    }
+
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("code");
+    history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+    return result;
+  }).catch((error) => {
+    console.error("OAuth callback exchange failed:", error);
+    return { data: null, error };
+  });
+})();
+
 export async function getSession() {
+  await authCallbackPromise;
   const { data, error } = await supabase.auth.getSession();
   if (error) {
     console.warn("Session fetch failed", error);
@@ -101,6 +123,7 @@ async function resolveTrustedRole(user) {
 }
 
 export async function getCurrentUser() {
+  await authCallbackPromise;
   const { data, error } = await supabase.auth.getUser();
   if (error) {
     console.warn("User fetch failed", error);
