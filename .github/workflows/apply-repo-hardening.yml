@@ -28,14 +28,22 @@ jobs:
 
       - name: Validate transformed files
         run: |
+          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import re
           root = Path('.')
           listing = (root / 'listing.html').read_text(encoding='utf-8')
           assert 'Opening contact with' not in listing
+          assert 'listing.seller_id' not in listing
           assert 'chat.html?user=' in listing
           assert 'marketplace_items' in listing
+          assert 'listing.review_count' not in listing
+          marketplace = (root / 'assets/js/videos-marketplace.js').read_text(encoding='utf-8')
+          assert not re.search(r'from\(["\']marketplace_items["\']\)\s*\.select\(["\']\*["\']\)', marketplace)
+          app_hardening = (root / 'assets/js/app-hardening.js').read_text(encoding='utf-8')
+          assert 'setupMultiFileInputs' not in app_hardening
+          assert 'setupListingContactFix' not in app_hardening
           print('Final static validation passed.')
           PY
 
@@ -49,6 +57,14 @@ jobs:
             echo 'No changes to commit.'
             exit 0
           fi
-          git add listing.html assets/js/profile.js assets/js/post.js assets/js/chat.js assets/js/videos-marketplace.js assets/js/admin.js
+          git add \
+            listing.html \
+            assets/js/app-hardening.js \
+            assets/js/profile.js \
+            assets/js/post.js \
+            assets/js/chat.js \
+            assets/js/videos-marketplace.js \
+            assets/js/admin.js \
+            verify.html
           git commit -m 'Fix critical app integration, privacy, and media issues'
           git push
