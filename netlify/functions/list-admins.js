@@ -1,23 +1,11 @@
 const { createClient } = require("@supabase/supabase-js");
+const { requireRole, roleFromUser } = require("./_lib/auth-role.js");
 
 const jsonResponse = (statusCode, payload) => ({
   statusCode,
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(payload)
 });
-
-function resolveRole(user) {
-  return user?.app_metadata?.role || "user";
-}
-
-async function requireSuper(supabase, token) {
-  if (!token) return { error: "Missing auth token." };
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data?.user) return { error: "Invalid auth token." };
-  const role = resolveRole(data.user);
-  if (role !== "super") return { error: "Only super admins can access this." };
-  return { user: data.user, role };
-}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "GET") return jsonResponse(405, { error: "Method not allowed." });
@@ -27,9 +15,9 @@ exports.handler = async (event) => {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
 
   const authHeader = event.headers.authorization || event.headers.Authorization || "";
-  const token = authHeader.replace("Bearer ", "");
+  const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const guard = await requireSuper(supabase, token);
+  const guard = await requireRole(supabase, token, ["super"], "Only super admins can access this.");
   if (guard.error) return jsonResponse(403, { error: guard.error });
 
   const params = event.queryStringParameters || {};
@@ -40,7 +28,6 @@ exports.handler = async (event) => {
   let users = [];
   let hasMore = false;
   let page = 1;
-
   if (requestedPage > 0) {
     page = requestedPage;
     const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
@@ -63,7 +50,7 @@ exports.handler = async (event) => {
   const userIds = users.map((user) => user.id);
   let profilesById = {};
   if (userIds.length) {
-    const profileResult = await supabase.from("profiles").select("id, role").in("id", userIds);
+    const profileResult = await supabase.from("profiles").select("id, display_name, username, role").in("id", userIds);
     if (!profileResult.error && profileResult.data) {
       profilesById = profileResult.data.reduce((acc, profile) => {
         acc[profile.id] = profile;
@@ -73,7 +60,7 @@ exports.handler = async (event) => {
   }
 
   const admins = users.filter((user) => {
-    const role = resolveRole(user);
+    const role = profilesById[user.id]?.role || roleFromUser(user);
     return role === "admin" || role === "super";
   });
 
@@ -97,12 +84,12 @@ exports.handler = async (event) => {
   const result = admins.map((user) => {
     const entry = postsByAdmin[user.id] || { count: 0, last: null, recent: [] };
     const recent = entry.recent.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
-    const role = resolveRole(user);
+    const role = profilesById[user.id]?.role || roleFromUser(user);
     return {
       id: user.id,
       email: user.email,
       role,
-      display_name: user.user_metadata?.display_name || user.email?.split("@")[0] || "Admin",
+      display_name: profilesById[user.id]?.display_name || user.user_metadata?.display_name || user.email?.split("@")[0] || "Admin",
       created_at: user.created_at,
       post_count: entry.count,
       last_post_at: entry.last ? entry.last.toISOString() : null,
