@@ -14,7 +14,7 @@ if (!/from\s*=\s*["']\/health["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/
 for (const file of [
   "netlify/functions/sitemap.js","netlify/functions/health.js","netlify/functions/automation-maintenance.js","netlify/functions/chat-media-sign.js",
   "action-result.html","offline.html","maintenance.html","privacy.html","terms.html","refund-policy.html","cookies.html","accessibility.html",
-  "settings.html","fyp.html","assets/js/action-result.js","assets/js/notification-popup.js","assets/js/site-shell.js","assets/js/privacy-consent.js",
+  "settings.html","fyp.html","assets/js/action-result.js","assets/js/notification-popup.js","assets/js/site-shell.js","assets/js/boot-loader.js","assets/js/privacy-consent.js",
   "assets/js/form-consent.js","assets/js/user-preferences.js","assets/js/settings-page.js","assets/js/fyp.js","assets/js/popularity-engine.js","assets/js/trending-engine.js",
   "assets/js/discussion-discovery.js","assets/js/chat-v2.js","assets/js/chat-context-menu.js","assets/js/ai-context.js","assets/js/experience-preferences.js","assets/js/media.js",
   "assets/css/design-system.css","assets/css/chat-v2.css","assets/css/chat-context-menu.css","assets/css/fyp.css","assets/css/settings.css","assets/css/discussion-enhancements.css",
@@ -79,6 +79,10 @@ if (!popularity.includes("get_popular_posts")) fail("Homepage popular posts must
 const shell = read("assets/js/site-shell.js");
 for (const required of ["fyp.html","settings.html","discussion-discovery.js","chat-context-menu.js","ai-context.js","experience-preferences.js","trending-engine.js"]) {
   if (!shell.includes(required)) fail(`Shared site shell is not aware of ${required}.`);
+}
+const loader = read("assets/js/boot-loader.js");
+for (const required of ["TIMZEE TECH HUB","Powered by Timzee Corp","tz-loader-progress","prefers-reduced-motion","MAX_SHOW_MS"]) {
+  if (!loader.includes(required)) fail(`Cinematic site loader is missing: ${required}`);
 }
 
 const automation = read("netlify/functions/automation-maintenance.js");
