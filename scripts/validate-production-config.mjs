@@ -30,6 +30,7 @@ for (const file of [
   "assets/js/notification-popup.js",
   "assets/js/site-shell.js",
   "assets/js/privacy-consent.js",
+  "assets/js/form-consent.js",
   "assets/js/popularity-engine.js",
   "assets/js/chat-v2.js",
   "assets/css/design-system.css",
@@ -68,14 +69,21 @@ if (!sitemapMatch) fail("robots.txt must declare a sitemap.");
 if (!sitemapMatch[1].endsWith("/sitemap.xml")) fail("robots.txt must point to /sitemap.xml.");
 if (!sitemap.includes("<loc>https://timzee-tech-blog.netlify.app/</loc>")) fail("Static sitemap fallback is missing the homepage.");
 
-const legal = ["privacy.html", "terms.html", "refund-policy.html", "cookies.html", "accessibility.html"];
-for (const file of legal) {
+for (const formId of ["contactForm", "supportForm", "newsletterForm", "adsForm"]) {
+  const page = formId === "contactForm" ? "contact.html" : formId === "supportForm" ? "support.html" : formId === "newsletterForm" ? "newsletter.html" : "ads.html";
+  if (!read(page).includes(`id="${formId}"`)) fail(`${page} is missing ${formId}.`);
+}
+const forms = read("assets/js/forms.js");
+if (!forms.includes("mountFormConsent")) fail("Public forms are not wired to explicit consent controls.");
+if (!forms.includes("consent_at")) fail("Public form consent is not persisted.");
+
+for (const file of ["privacy.html", "terms.html", "refund-policy.html", "cookies.html", "accessibility.html"]) {
   const text = read(file);
   if (!text.includes("Timzee Corp")) fail(`Business operator is missing from ${file}.`);
 }
 
 const popularity = read("assets/js/popularity-engine.js");
-if (!popularity.includes('get_popular_posts')) fail("Homepage popular posts must use the automated database ranking.");
+if (!popularity.includes("get_popular_posts")) fail("Homepage popular posts must use the automated database ranking.");
 
 const packageJson = JSON.parse(read("package.json"));
 for (const [name, version] of Object.entries(packageJson.dependencies || {})) {
@@ -114,5 +122,4 @@ for (const base of scanRoots) {
 }
 
 if (!existsSync(join(root, "package-lock.json"))) console.warn("Warning: package-lock.json is not committed yet; generate and commit one on a networked development machine.");
-
 console.log("Production configuration validation passed.");
