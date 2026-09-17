@@ -2,7 +2,7 @@ const Parser = require("rss-parser");
 const { createClient } = require("@supabase/supabase-js");
 const { randomUUID } = require("crypto");
 
-const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(payload) });
 function escapeHTML(text = "") { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;"); }
 function stripHTML(text = "") { return text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(); }
 function slugify(text = "") { return text.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 80); }
@@ -20,7 +20,7 @@ exports.handler = async (event) => {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const headers = event.headers || {};
   const isScheduled = headers["x-nf-event"] === "schedule" || headers["X-Nf-Event"] === "schedule";
   if (!isScheduled) {
@@ -32,39 +32,111 @@ exports.handler = async (event) => {
     if (!requireSuperForManualUser(data.user)) return jsonResponse(403, { error: "Only super admins can run manually." });
   }
 
-  const settings = await supabase.from("curator_settings").select("*").maybeSingle();
-  const enabled = settings.data?.enabled ?? true;
+  const settingsResult = await supabase.from("curator_settings").select("*").maybeSingle();
+  if (settingsResult.error) return jsonResponse(500, { error: settingsResult.error.message || "Unable to load curator settings." });
+  const enabled = settingsResult.data?.enabled ?? true;
   if (!enabled) return jsonResponse(200, { ok: true, skipped: "disabled" });
-  const perSource = settings.data?.posts_per_source || 5;
+  const perSource = Math.max(1, Number(settingsResult.data?.posts_per_source || 5));
+
   const sourcesResult = await supabase.from("curator_sources").select("*").eq("enabled", true);
+  if (sourcesResult.error) return jsonResponse(500, { error: sourcesResult.error.message || "Unable to load curator sources." });
   const fetchedSources = sourcesResult.data || [];
   const envFeedUrls = parseEnvFeeds(process.env.NEWS_FEEDS);
   const envTipUrls = parseEnvFeeds(process.env.NEWS_TIPS_FEEDS);
-  const knownUrls = new Set(fetchedSources.map((source) => source.feed_url).filter(Boolean));
+  const knownUrls = new Set(fetchedSources.flatMap((source) => [source.feed_url, source.url]).filter(Boolean));
   const combinedEnv = [...envFeedUrls, ...envTipUrls];
-  const fallbackSources = combinedEnv.filter((url) => url && !knownUrls.has(url)).map((url, index) => ({ id: randomUUID(), name: `Env source ${index + 1}`, source_type: "rss", feed_url: url, tags: [], enabled: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }));
-  const finalSources = fallbackSources.length ? [...fetchedSources, ...fallbackSources] : fetchedSources;
-  if (!finalSources.length) return jsonResponse(200, { ok: true, skipped: "no_sources" });
+  const fallbackSources = combinedEnv.filter((url) => !knownUrls.has(url)).map((url, index) => ({
+    name: `Env source ${index + 1}`,
+    source_type: "rss",
+    url,
+    feed_url: url,
+    tags: [],
+    enabled: true,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }));
+
+  const persistedFallbacks = [];
+  for (const source of fallbackSources) {
+    const upsert = await supabase
+      .from("curator_sources")
+      .upsert(source, { onConflict: "url" })
+      .select("*")
+      .single();
+    if (upsert.error) {
+      persistedFallbacks.push({ ...source, __error: upsert.error.message || "source_upsert_failed" });
+    } else if (upsert.data) {
+      persistedFallbacks.push(upsert.data);
+    }
+  }
+
+  const finalSources = [...fetchedSources, ...persistedFallbacks.filter((source) => !source.__error && source.feed_url)];
+  const setupErrors = persistedFallbacks.filter((source) => source.__error).map((source) => ({ source: source.name, error: source.__error }));
+  if (!finalSources.length) return jsonResponse(200, { ok: true, skipped: "no_sources", feedErrors: setupErrors });
 
   const parser = new Parser({ timeout: 15000, customFields: { item: ["media:content", "media:thumbnail", "enclosure"] } });
   const posted = [];
-  const feedErrors = [];
+  const feedErrors = [...setupErrors];
   for (const source of finalSources) {
     let items = [];
-    try { items = source.source_type === "gdelt" ? await fetchGdeltItems(source) : await fetchRssItems(source, parser); }
-    catch (error) { feedErrors.push({ source: source.name, error: error.message || "fetch_failed" }); continue; }
+    try {
+      items = source.source_type === "gdelt" ? await fetchGdeltItems(source) : await fetchRssItems(source, parser);
+    } catch (error) {
+      feedErrors.push({ source: source.name, error: error.message || "fetch_failed" });
+      continue;
+    }
+
     let insertedCount = 0;
     for (const item of items) {
       if (insertedCount >= perSource) break;
       if (!item.title || !item.link) continue;
-      const title = item.title.trim(); const slug = slugify(title); if (!slug) continue;
+      const title = item.title.trim();
+      const slug = slugify(title);
+      if (!slug) continue;
       const summary = stripHTML(item.summary || "");
-      const payload = { id: randomUUID(), source_id: source.id, source_name: source.name, title, slug, excerpt: rewriteExcerpt(summary, title), content: buildContent(summary), source_url: item.link, published_at: item.published_at || new Date().toISOString(), tags: normalizeTags(source.tags, item.tags), image_url: item.image_url || "", image_source_url: item.link, image_credit: source.image_credit || source.name || getDomain(item.link), status: "draft" };
-      const existing = await supabase.from("scout_articles").select("id").eq("source_url", item.link).maybeSingle();
+      const payload = {
+        id: randomUUID(),
+        source_id: source.id,
+        source_name: source.name,
+        title,
+        slug,
+        excerpt: rewriteExcerpt(summary, title),
+        description: rewriteExcerpt(summary, title),
+        content: buildContent(summary),
+        source_url: item.link,
+        url: item.link,
+        author: source.name,
+        published_at: item.published_at || new Date().toISOString(),
+        tags: normalizeTags(source.tags, item.tags),
+        image_url: item.image_url || "",
+        image_source_url: item.image_url || item.link,
+        image_credit: source.image_credit || source.name || getDomain(item.link),
+        status: "draft",
+        is_posted: false
+      };
+
+      const existing = await supabase.from("curator_posts").select("id").eq("source_url", item.link).maybeSingle();
+      if (existing.error) {
+        feedErrors.push({ source: source.name, title, error: existing.error.message || "duplicate_check_failed" });
+        continue;
+      }
       if (existing.data?.id) continue;
-      const insertResult = await supabase.from("scout_articles").insert(payload).select().single();
-      if (!insertResult.error) { insertedCount += 1; posted.push({ source: source.name, title }); }
+
+      const insertResult = await supabase.from("curator_posts").insert(payload).select("id, title, source_url").single();
+      if (insertResult.error) {
+        feedErrors.push({ source: source.name, title, error: insertResult.error.message || "insert_failed" });
+        continue;
+      }
+      insertedCount += 1;
+      posted.push({ source: source.name, title });
     }
+
+    await supabase
+      .from("curator_sources")
+      .update({ last_fetched_at: new Date().toISOString(), failure_count: 0, last_error: null })
+      .eq("id", source.id);
   }
+
   return jsonResponse(200, { ok: true, posted, feedErrors });
 };
