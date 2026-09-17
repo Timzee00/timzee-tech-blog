@@ -12,7 +12,7 @@ if (!/from\s*=\s*["']\/sitemap\.xml["']/.test(netlify) || !/to\s*=\s*["']\/\.net
 if (!/from\s*=\s*["']\/health["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/health["']/.test(netlify)) fail("Production health rewrite is missing.");
 
 for (const file of [
-  "netlify/functions/sitemap.js","netlify/functions/health.js","netlify/functions/chat-media-sign.js",
+  "netlify/functions/sitemap.js","netlify/functions/health.js","netlify/functions/automation-maintenance.js","netlify/functions/chat-media-sign.js",
   "action-result.html","offline.html","maintenance.html","privacy.html","terms.html","refund-policy.html","cookies.html","accessibility.html",
   "settings.html","fyp.html","assets/js/action-result.js","assets/js/notification-popup.js","assets/js/site-shell.js","assets/js/privacy-consent.js",
   "assets/js/form-consent.js","assets/js/user-preferences.js","assets/js/settings-page.js","assets/js/fyp.js","assets/js/popularity-engine.js","assets/js/trending-engine.js",
@@ -79,6 +79,15 @@ if (!popularity.includes("get_popular_posts")) fail("Homepage popular posts must
 const shell = read("assets/js/site-shell.js");
 for (const required of ["fyp.html","settings.html","discussion-discovery.js","chat-context-menu.js","ai-context.js","experience-preferences.js","trending-engine.js"]) {
   if (!shell.includes(required)) fail(`Shared site shell is not aware of ${required}.`);
+}
+
+const automation = read("netlify/functions/automation-maintenance.js");
+for (const required of ["migrateLegacyChatMedia","chat-media","storage.from(\"media\").download","storage.from(CHAT_BUCKET).upload"]) {
+  if (!automation.includes(required)) fail(`Scheduled legacy private-chat media migration is missing: ${required}`);
+}
+const health = read("netlify/functions/health.js");
+for (const required of ["legacy_public_chat_media_count","legacy_public_objects_pending"]) {
+  if (!health.includes(required)) fail(`Production health is not checking legacy chat media cleanup: ${required}`);
 }
 
 const packageJson = JSON.parse(read("package.json"));
