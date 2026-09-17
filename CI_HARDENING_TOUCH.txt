@@ -1,0 +1,1 @@
+Temporary trigger for the repository hardening verification workflow. The workflow removes this file after a successful run.
