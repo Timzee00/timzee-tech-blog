@@ -16,7 +16,7 @@ function injectStyles() {
     .timzee-consent-card{max-width:980px;margin:0 auto;padding:18px 20px;border:1px solid var(--color-border-strong,rgba(15,23,42,.16));border-radius:14px;background:var(--color-surface,#fff);color:var(--color-text,#131417);box-shadow:0 16px 40px rgba(15,23,42,.18);display:flex;gap:20px;align-items:flex-end;justify-content:space-between}
     .timzee-consent-copy{min-width:0;font-size:.9rem;line-height:1.55}.timzee-consent-copy strong{display:block;margin-bottom:5px}.timzee-consent-copy a{text-decoration:underline}
     .timzee-consent-actions{display:flex;gap:8px;flex:0 0 auto;flex-wrap:wrap}.timzee-consent-actions button{border:1px solid var(--color-border-strong,rgba(15,23,42,.16));background:transparent;color:var(--color-text,#131417);padding:9px 13px;border-radius:10px;font:600 .84rem var(--font-body,system-ui);cursor:pointer;white-space:nowrap}.timzee-consent-actions button[data-consent="accept"]{background:var(--color-primary,#0f766e);color:#fff;border-color:transparent}
-    .timzee-consent-manage{display:inline-block;margin-top:8px;font-size:.78rem;opacity:.78}
+    .timzee-consent-manage{display:inline-block;margin:8px 0 0;padding:0;border:0;background:none;font:600 .78rem var(--font-body,system-ui);text-decoration:underline;cursor:pointer;color:inherit}
     @media (max-width:680px){.timzee-consent-card{align-items:stretch;flex-direction:column;gap:12px}.timzee-consent-actions{width:100%}.timzee-consent-actions button{flex:1;min-width:0}}
   `;
   document.head.appendChild(style);
@@ -31,19 +31,14 @@ function getCookie(name) {
 function setCookie(name, value, maxAge = COOKIE_MAX_AGE) {
   document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Max-Age=${maxAge}; Path=/; SameSite=Lax; Secure`;
 }
-
-function removeCookie(name) {
-  document.cookie = `${encodeURIComponent(name)}=; Max-Age=0; Path=/; SameSite=Lax; Secure`;
-}
+function removeCookie(name) { document.cookie = `${encodeURIComponent(name)}=; Max-Age=0; Path=/; SameSite=Lax; Secure`; }
 
 function readConsent() {
   try {
     const local = localStorage.getItem(CONSENT_KEY) || "";
     const cookie = getCookie(CONSENT_COOKIE);
     return local === "accepted" || local === "declined" ? local : cookie;
-  } catch (_) {
-    return getCookie(CONSENT_COOKIE);
-  }
+  } catch (_) { return getCookie(CONSENT_COOKIE); }
 }
 
 function writeConsent(value) {
@@ -65,7 +60,7 @@ function renderBanner(force = false) {
     document.body.appendChild(banner);
     banner.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-consent]");
-      if (!button) return;
+      if (!button || button.dataset.consent === "manage") return;
       writeConsent(button.dataset.consent === "accept" ? "accepted" : "declined");
       banner.classList.remove("is-visible");
     });
@@ -82,9 +77,9 @@ function renderBanner(force = false) {
         <button type="button" data-consent="decline">Reject optional</button>
         <button type="button" data-consent="accept">Accept optional cookies</button>
       </div>
-    </div>
-  `;
-  banner.querySelector('[data-consent="manage"]')?.addEventListener("click", () => {
+    </div>`;
+  banner.querySelector('[data-consent="manage"]')?.addEventListener("click", (event) => {
+    event.stopPropagation();
     banner.classList.add("is-visible");
   });
   if (force || !readConsent()) requestAnimationFrame(() => banner.classList.add("is-visible"));
