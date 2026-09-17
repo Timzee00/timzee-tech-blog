@@ -8,6 +8,9 @@
 [functions."scout-news"]
   schedule = "0 * * * *"
 
+[functions."automation-maintenance"]
+  schedule = "*/5 * * * *"
+
 [[redirects]]
   from = "/sitemap.xml"
   to = "/.netlify/functions/sitemap"
