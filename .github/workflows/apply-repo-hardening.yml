@@ -18,31 +18,20 @@ jobs:
           fetch-depth: 0
 
       - name: Run hardening
+        id: hardening
+        continue-on-error: true
         shell: bash
         run: |
           set +e
           python3 tools/repo_hardening.py > /tmp/hardening.log 2>&1
           status=$?
+          printf '%s\n' "$status" > /tmp/hardening.status
           cat /tmp/hardening.log
-          if [ "$status" -ne 0 ]; then
-            {
-              echo '# Hardening Diagnostic'
-              echo
-              echo "Exit code: $status"
-              echo
-              echo '```text'
-              cat /tmp/hardening.log
-              echo '```'
-            } > HARDENING_DEBUG.md
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add HARDENING_DEBUG.md
-            git commit -m 'Record hardening verification diagnostic' || true
-            git push origin HEAD:main
-            exit "$status"
-          fi
+          exit "$status"
 
       - name: Validate JavaScript syntax
+        id: syntax
+        continue-on-error: true
         shell: bash
         run: |
           set +e
@@ -57,23 +46,12 @@ jobs:
               errors=1
             fi
           done < <(find assets netlify/functions -type f -name '*.js' -print0)
-          if [ "$errors" -ne 0 ]; then
-            {
-              echo '# JavaScript Syntax Diagnostic'
-              echo
-              echo '```text'
-              cat /tmp/node-failures.log
-              echo '```'
-            } > HARDENING_DEBUG.md
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add HARDENING_DEBUG.md
-            git commit -m 'Record JavaScript syntax diagnostic' || true
-            git push origin HEAD:main
-            exit 1
-          fi
+          printf '%s\n' "$errors" > /tmp/node.status
+          exit "$errors"
 
       - name: Validate transformed files
+        id: static
+        continue-on-error: true
         shell: bash
         run: |
           set +e
@@ -113,67 +91,51 @@ jobs:
           PY
           status=$?
           cat /tmp/static-validation.log
-          if [ "$status" -ne 0 ]; then
-            {
-              echo '# Static Validation Diagnostic'
-              echo
-              echo '```text'
-              cat /tmp/static-validation.log
-              echo '```'
-              echo
-              echo '### Current snippets'
-              echo
-              echo '```text'
-              grep -nE 'formatCurrency|seller_id|review_count|Opening contact|authoritativeSellerId|select\("\*"\)' listing.html assets/js/videos-marketplace.js | head -80 || true
-              echo '```'
-            } > HARDENING_DEBUG.md
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add HARDENING_DEBUG.md
-            git commit -m 'Record static hardening diagnostic' || true
-            git push origin HEAD:main
-            exit "$status"
-          fi
+          printf '%s\n' "$status" > /tmp/static.status
+          exit "$status"
 
-      - name: Remove temporary diagnostics
+      - name: Collect diagnostics
+        if: always()
         shell: bash
         run: |
-          set -euo pipefail
-          changed=0
-          if [ -f CI_HARDENING_TOUCH.txt ]; then
-            git rm CI_HARDENING_TOUCH.txt
-            changed=1
-          fi
-          if [ -f HARDENING_DEBUG.md ]; then
-            git rm HARDENING_DEBUG.md
-            changed=1
-          fi
-          if [ "$changed" -eq 1 ]; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'Remove hardening diagnostics'
-            git push origin HEAD:main
-          fi
+          {
+            echo "head=${GITHUB_SHA}"
+            echo "hardening=$(cat /tmp/hardening.status 2>/dev/null || echo missing)"
+            echo "syntax=$(cat /tmp/node.status 2>/dev/null || echo missing)"
+            echo "static=$(cat /tmp/static.status 2>/dev/null || echo missing)"
+            echo
+            echo '== hardening =='
+            cat /tmp/hardening.log 2>/dev/null || true
+            echo
+            echo '== javascript =='
+            cat /tmp/node-failures.log 2>/dev/null || true
+            echo
+            echo '== static =='
+            cat /tmp/static-validation.log 2>/dev/null || true
+            echo
+            echo '== git status =='
+            git status --short
+            echo
+            echo '== key grep =='
+            grep -nE 'formatCurrency|seller_id|review_count|Opening contact|authoritativeSellerId|select\("\*"\)' listing.html assets/js/videos-marketplace.js 2>/dev/null | head -100 || true
+          } > hardening-diagnostics.txt
 
-      - name: Commit fixes
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            listing.html \
-            assets/js/app-hardening.js \
-            assets/js/profile.js \
-            assets/js/post.js \
-            assets/js/chat.js \
-            assets/js/videos-marketplace.js \
-            assets/js/admin.js \
-            verify.html \
-            assets/js/announcements.js
-          if git diff --cached --quiet; then
-            echo 'No hardening changes to commit.'
-            exit 0
-          fi
-          git commit -m 'Apply repo hardening fixes'
-          git push origin HEAD:main
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardening-diagnostics-${{ github.run_id }}
+          path: hardening-diagnostics.txt
+          if-no-files-found: error
+
+      - name: Fail on hardening errors
+        if: steps.hardening.outcome == 'failure'
+        run: exit 1
+
+      - name: Fail on JavaScript errors
+        if: steps.syntax.outcome == 'failure'
+        run: exit 1
+
+      - name: Fail on static validation errors
+        if: steps.static.outcome == 'failure'
+        run: exit 1
