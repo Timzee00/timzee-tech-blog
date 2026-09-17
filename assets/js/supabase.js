@@ -1,4 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+import "./app-hardening.js";
 
 const SUPABASE_URL = "https://duvbcwwprkzzyzikmcol.supabase.co";
 // Publishable key: safe for browser clients. Never put the service/secret key here.
