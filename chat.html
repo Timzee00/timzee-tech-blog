@@ -5,41 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Chat - Timzee Tech Hub</title>
     <meta name="description" content="Private, real-time messaging for the Timzee Tech Hub community.">
-    <meta name="keywords" content="Timzee Tech Hub, chat, direct messages, tech community">
     <meta name="robots" content="index, follow">
-    <meta name="theme-color" content="#0f766e">
     <link rel="canonical" href="https://timzee-tech-blog.netlify.app/chat.html">
-    <meta property="og:site_name" content="Timzee Tech Hub">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Chat - Timzee Tech Hub">
-    <meta property="og:description" content="Private, real-time messaging for the Timzee Tech Hub community.">
-    <meta property="og:url" content="https://timzee-tech-blog.netlify.app/chat.html">
-    <meta property="og:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Chat - Timzee Tech Hub">
-    <meta name="twitter:description" content="Private, real-time messaging for the Timzee Tech Hub community.">
-    <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
-      <script defer src="assets/js/theme-init.js"></script>
+    <script defer src="assets/js/theme-init.js"></script>
   </head>
-  <body>
+  <body class="chat-page">
     <a class="skip-link" href="#main-content">Skip to main content</a>
-    <header class="site-header">
+    <header class="site-header chat-site-header">
       <div class="container wrap">
         <a class="brand" href="index.html">
           <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
           <span class="tagline" id="siteTagline">Private, real-time chats with friends.</span>
         </a>
-        <nav class="nav-pill">
+        <nav class="nav-pill" aria-label="Primary navigation">
           <a href="discussion.html">Discussion</a>
           <a href="marketplace.html">Marketplace</a>
           <a href="videos.html">Videos</a>
           <a href="novels.html">Novels</a>
           <div class="nav-more">
-            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span aria-hidden="true">&#9662;</span></button>
             <div class="nav-more-menu">
               <a href="announcements.html">Announcements</a>
               <a href="ads.html">Advertise</a>
@@ -50,161 +38,169 @@
           </div>
         </nav>
         <div class="header-actions">
-          <a class="icon-btn" href="stories.html" data-label="Stories" aria-label="Stories" title="Stories">&#128247;</a>
-          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
+          <a class="icon-btn" href="stories.html" aria-label="Stories" title="Stories"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></a>
+          <a class="icon-btn" href="chat.html" aria-label="Chat" title="Chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></a>
           <div class="auth-actions" id="authActions"></div>
         </div>
       </div>
     </header>
 
-    <main id="main-content" class="page-shell">
-      <div class="container chat-layout" id="chatLayout" data-view="list">
+    <main id="main-content" class="chat-main">
+      <div class="chat-app-shell" id="chatLayout" data-view="list">
         <aside class="chat-sidebar" data-reveal>
           <div class="chat-sidebar-header">
-            <h3>Chats</h3>
-            <div class="inline-actions">
-              <button class="btn ghost icon-only" id="peopleSearchToggle" type="button" aria-label="Find people" title="Find people">&#128269;</button>
-              <button class="btn ghost" id="newGroupBtn" type="button">New Group</button>
+            <div>
+              <div class="chat-page-kicker">Messages</div>
+              <h1>Chats</h1>
+            </div>
+            <div class="chat-sidebar-actions">
+              <button class="chat-icon-btn" id="peopleSearchToggle" type="button" aria-label="Find people" title="Find people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+              <button class="chat-icon-btn" id="newGroupBtn" type="button" aria-label="Create group" title="Create group"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
             </div>
           </div>
-          <div class="chat-search">
-            <input type="search" id="chatSearch" placeholder="Search chats...">
+          <div class="chat-search-shell">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <input type="search" id="chatSearch" placeholder="Search chats" autocomplete="off">
           </div>
-
-          <div class="chat-tabs" role="tablist">
+          <div class="chat-tabs" role="tablist" aria-label="Chat filters">
             <button class="chat-tab active" type="button" data-tab="all" role="tab" aria-selected="true">All</button>
             <button class="chat-tab" type="button" data-tab="groups" role="tab" aria-selected="false">Groups</button>
-            <button class="chat-tab" type="button" data-tab="requests" role="tab" aria-selected="false">
-              Requests <span class="chat-tab-badge" id="requestsBadge" hidden>0</span>
-            </button>
+            <button class="chat-tab" type="button" data-tab="requests" role="tab" aria-selected="false">Requests <span class="chat-tab-badge" id="requestsBadge" hidden>0</span></button>
             <button class="chat-tab" type="button" data-tab="blocked" role="tab" aria-selected="false">Blocked</button>
           </div>
-
-          <div class="chat-tab-panel" data-panel="all">
-            <div class="chat-list" id="friendList"></div>
-          </div>
-          <div class="chat-tab-panel" data-panel="groups" hidden>
-            <div class="chat-list" id="groupList"></div>
-          </div>
+          <div class="chat-tab-panel" data-panel="all"><div class="chat-list" id="friendList"></div></div>
+          <div class="chat-tab-panel" data-panel="groups" hidden><div class="chat-list" id="groupList"></div></div>
           <div class="chat-tab-panel" data-panel="requests" hidden>
-            <h4>Received</h4>
+            <div class="chat-section-label">Received</div>
             <div class="chat-list" id="friendRequests"></div>
-            <h4>Sent</h4>
+            <div class="chat-section-label">Sent</div>
             <div class="chat-list" id="friendRequestsSent"></div>
           </div>
-          <div class="chat-tab-panel" data-panel="blocked" hidden>
-            <div class="chat-list" id="blockedList"></div>
-          </div>
-
+          <div class="chat-tab-panel" data-panel="blocked" hidden><div class="chat-list" id="blockedList"></div></div>
           <div class="chat-people-search" id="peopleSearchPanel" hidden>
-            <h4>Find people</h4>
-            <div class="chat-search">
-              <input type="search" id="peopleSearch" placeholder="Search by email or username">
-            </div>
+            <div class="chat-section-label">Find people</div>
+            <div class="chat-search-shell"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input type="search" id="peopleSearch" placeholder="Name, username or email"></div>
             <div class="chat-list" id="peopleResults"></div>
           </div>
         </aside>
 
-        <!-- Friend-picker modal for mobile-friendly group creation -->
-        <div class="modal hidden" id="friendPickerModal" aria-hidden="true" role="dialog" aria-labelledby="friendPickerTitle">
-          <div class="modal-panel">
-            <div class="modal-header">
-              <h3 id="friendPickerTitle">Create Group</h3>
-              <button class="btn ghost modal-close" id="friendPickerClose">Close</button>
-            </div>
-            <div class="modal-body">
-              <label for="groupNameInput" class="sr-only">Group name</label>
-              <input id="groupNameInput" type="text" placeholder="Group name" class="input" />
-              <div class="picker-search">
-                <input id="pickerSearch" type="search" placeholder="Find friends by name or username" />
-              </div>
-              <div id="pickerList" class="picker-list"></div>
-              <div id="pickerNoResults" class="callout" style="display:none;">No friends found.</div>
-            </div>
-            <div class="modal-footer">
-              <button class="btn ghost" id="friendPickerCancel">Cancel</button>
-              <button class="btn" id="friendPickerCreate">Create Group</button>
-            </div>
-          </div>
-        </div>
-
         <section class="chat-pane" data-reveal>
-          <div class="chat-pane-header" id="chatHeader">
-            <button class="btn ghost chat-back" type="button" id="chatBackBtn">Back</button>
-            <div class="chat-user">
-              <a id="chatAvatarLink" href="#">
-                <img id="chatAvatar" alt="Chat avatar">
-              </a>
-              <div>
-                <div id="chatName">Select a chat to start messaging</div>
-                <div class="chat-status" id="chatStatusText">Ready when you are.</div>
-              </div>
-            </div>
-            <div class="chat-actions">
-              <button class="btn ghost icon-only" type="button" id="chatInfoToggle" aria-label="Chat info" title="Chat info">&#9432;</button>
-            </div>
+          <div class="chat-empty" id="chatEmptyState">
+            <div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+            <h2>Your conversations</h2>
+            <p>Choose a chat from the left or start a new group.</p>
           </div>
-          <div class="chat-messages message-list" id="chatMessages"></div>
-          <form id="chatForm" class="chat-input">
-            <div id="chatMediaPreview" class="media-preview"></div>
-            <div class="chat-input-row">
-              <label class="chat-input-icon-btn" for="chatMedia" title="Attach file" aria-label="Attach file">&#128206;</label>
-              <input type="file" id="chatMedia" accept="*/*" hidden>
-              <textarea id="chatBody" placeholder="Write a message..." rows="1"></textarea>
-              <button type="button" class="chat-input-icon-btn" id="recordVoiceBtn" title="Record voice" aria-label="Record voice">&#127908;</button>
-              <button type="submit" class="chat-input-icon-btn chat-send-btn" title="Send" aria-label="Send message">&#10148;</button>
-            </div>
-            <div class="callout" id="chatStatus" style="margin-top:12px; display:none;"></div>
-          </form>
+
+          <div class="chat-conversation" id="chatConversation" hidden>
+            <header class="chat-conversation-header">
+              <button class="chat-mobile-back" id="chatBackBtn" type="button" aria-label="Back to chats"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <img id="chatAvatar" class="chat-header-avatar" alt="" src="">
+              <div class="chat-header-copy">
+                <div class="chat-header-name" id="chatName">Conversation</div>
+                <div class="chat-header-status-row"><span class="chat-live-dot" id="chatLiveDot"></span><span id="chatStatusText">Connecting…</span></div>
+              </div>
+              <div class="chat-header-actions">
+                <button class="chat-icon-btn" id="chatInfoToggle" type="button" aria-label="Chat details" title="Chat details"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 10.5v5M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+                <button class="chat-icon-btn" id="chatMenuToggle" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Conversation menu" title="Conversation menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg></button>
+                <div class="chat-header-menu" id="chatHeaderMenu" hidden>
+                  <button type="button" data-chat-menu="search">Search in chat</button>
+                  <button type="button" data-chat-menu="mute">Mute notifications</button>
+                  <button type="button" data-chat-menu="pin">Pin chat</button>
+                  <button type="button" data-chat-menu="settings">Chat settings</button>
+                  <button type="button" data-chat-menu="report">Report</button>
+                </div>
+              </div>
+            </header>
+
+            <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+            <div class="chat-typing" id="chatTyping" hidden><span></span><span></span><span></span><strong id="chatTypingName">Someone</strong><span>is typing</span></div>
+
+            <form id="chatForm" class="chat-composer">
+              <div class="chat-attachment-preview" id="chatMediaPreview"></div>
+              <div class="chat-composer-row">
+                <label class="chat-composer-btn" for="chatMedia" title="Attach file" aria-label="Attach file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 6.7-6.7a3.2 3.2 0 0 1 4.5 4.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></label>
+                <input type="file" id="chatMedia" accept="*/*" hidden>
+                <textarea id="chatBody" rows="1" placeholder="Write a message…" autocomplete="off"></textarea>
+                <button class="chat-composer-btn" id="recordVoiceBtn" type="button" title="Record voice" aria-label="Record voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="3" width="7" height="12" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 11.5a7 7 0 0 0 14 0M12 18.5v3M8.5 21.5h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+                <button class="chat-send-btn" type="submit" title="Send message" aria-label="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5 20 12 4 19.5l3-7.5-3-7.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+              </div>
+              <div class="chat-composer-hint" id="chatStatus" hidden></div>
+            </form>
+          </div>
         </section>
 
         <aside class="chat-info-panel" id="chatInfoPanel" aria-hidden="true">
           <div class="chat-info-header">
-            <h3>Details</h3>
-            <button class="btn ghost icon-only" id="chatInfoClose" type="button" aria-label="Close details">&times;</button>
+            <div><span class="chat-page-kicker">Conversation</span><h2 id="infoPanelTitle">Details</h2></div>
+            <button class="chat-icon-btn" id="chatInfoClose" type="button" aria-label="Close details"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
           </div>
           <div class="chat-info-body">
             <div class="chat-info-profile">
-              <img id="infoAvatar" class="chat-info-avatar" alt="">
+              <img id="infoAvatar" class="chat-info-avatar" alt="" src="">
               <div id="infoName" class="chat-info-name">—</div>
               <div id="infoStatus" class="chat-info-status">—</div>
             </div>
-            <div class="chat-info-actions">
-              <a class="btn ghost" id="chatProfileBtn" href="#">View Profile</a>
-              <button class="btn ghost" type="button" id="chatRemoveBtn">Remove</button>
-              <button class="btn ghost" type="button" id="chatBlockBtn">Block</button>
+            <div class="chat-info-actions" id="directInfoActions">
+              <a class="btn ghost" id="chatProfileBtn" href="#">View profile</a>
+              <button class="btn ghost" id="chatRemoveBtn" type="button">Remove</button>
+              <button class="btn ghost" id="chatBlockBtn" type="button">Block</button>
             </div>
-            <div class="chat-info-section" id="infoGroupMembersSection" hidden>
-              <h4>Members</h4>
-              <div class="chat-list" id="infoGroupMembers"></div>
-            </div>
-            <div class="chat-info-section">
-              <h4>Shared Media</h4>
-              <div class="chat-info-media-grid" id="infoMediaGrid">
-                <div class="callout">No media shared yet.</div>
+            <section id="groupInfoSection" class="chat-info-section" hidden>
+              <div class="chat-info-section-head"><h3>Group</h3><button class="btn ghost sm" id="editGroupBtn" type="button">Edit</button></div>
+              <div class="group-profile-editor" id="groupEditor" hidden>
+                <label class="group-avatar-upload"><img id="groupAvatarPreview" alt="Group photo"><input id="groupAvatarInput" type="file" accept="image/*" hidden><span>Change photo</span></label>
+                <input id="groupNameInput" class="input" type="text" maxlength="80" placeholder="Group name">
+                <textarea id="groupDescriptionInput" class="input" rows="3" maxlength="300" placeholder="Group description"></textarea>
+                <div class="inline-actions"><button class="btn" id="saveGroupBtn" type="button">Save group</button><button class="btn ghost" id="cancelGroupBtn" type="button">Cancel</button></div>
               </div>
-            </div>
+            </section>
+            <section class="chat-info-section" id="groupMembersSection" hidden>
+              <div class="chat-info-section-head"><h3>Members</h3><span class="chat-member-count" id="groupMemberCount">0</span></div>
+              <div class="chat-member-list" id="infoGroupMembers"></div>
+            </section>
+            <section class="chat-info-section">
+              <div class="chat-info-section-head"><h3>Shared media</h3><button class="btn ghost sm" id="viewAllMediaBtn" type="button">View all</button></div>
+              <div class="chat-info-media-grid" id="infoMediaGrid"><div class="callout">No media shared yet.</div></div>
+            </section>
           </div>
         </aside>
         <div class="chat-info-backdrop" id="chatInfoBackdrop" hidden></div>
+
+        <div class="chat-modal-overlay" id="friendPickerModal" hidden>
+          <div class="chat-modal" role="dialog" aria-modal="true" aria-labelledby="friendPickerTitle">
+            <div class="chat-modal-head"><div><span class="chat-page-kicker">New conversation</span><h2 id="friendPickerTitle">Create group</h2></div><button class="chat-icon-btn" id="friendPickerClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
+            <div class="chat-modal-body">
+              <input id="newGroupName" class="input" type="text" maxlength="80" placeholder="Group name">
+              <div class="chat-search-shell"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="groupMemberSearch" type="search" placeholder="Search friends"></div>
+              <div class="chat-pick-list" id="groupMemberPicker"></div>
+              <div class="callout" id="groupPickerEmpty" hidden>No matching friends.</div>
+            </div>
+            <div class="chat-modal-foot"><button class="btn ghost" id="friendPickerCancel" type="button">Cancel</button><button class="btn" id="friendPickerCreate" type="button">Create group</button></div>
+          </div>
+        </div>
+
+        <div class="chat-modal-overlay" id="chatSettingsModal" hidden>
+          <div class="chat-modal compact" role="dialog" aria-modal="true" aria-labelledby="chatSettingsTitle">
+            <div class="chat-modal-head"><div><span class="chat-page-kicker">Preferences</span><h2 id="chatSettingsTitle">Chat settings</h2></div><button class="chat-icon-btn" data-close-modal="chatSettingsModal" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
+            <div class="chat-settings-list">
+              <label class="chat-setting-row"><span><strong>Message notifications</strong><small>Keep new-message alerts visible.</small></span><input type="checkbox" data-chat-setting="notifications"></label>
+              <label class="chat-setting-row"><span><strong>Message sounds</strong><small>Play a subtle sound for new messages.</small></span><input type="checkbox" data-chat-setting="sounds"></label>
+              <label class="chat-setting-row"><span><strong>Enter to send</strong><small>Use Enter to send and Shift+Enter for a new line.</small></span><input type="checkbox" data-chat-setting="enterToSend"></label>
+              <label class="chat-setting-row"><span><strong>Compact messages</strong><small>Reduce bubble spacing for busy conversations.</small></span><input type="checkbox" data-chat-setting="compact"></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="voice-recording-sheet" id="voiceRecordingSheet" hidden>
+          <div class="voice-recording-card">
+            <div class="voice-recording-top"><span class="voice-recording-live"></span><strong>Recording voice</strong><span id="voiceRecordingTimer">0:00</span></div>
+            <div class="voice-waveform" id="voiceWaveform" aria-hidden="true"></div>
+            <div class="voice-recording-actions"><button class="btn ghost" id="voiceCancelBtn" type="button">Cancel</button><button class="btn" id="voiceStopBtn" type="button">Done</button></div>
+          </div>
+        </div>
       </div>
     </main>
 
-    <footer class="footer">
-      <div class="container">
-        <div class="footer-links">
-          <a href="support.html">Support</a>
-          <a href="contact.html">Contact Us</a>
-          <a href="newsletter.html">Newsletter</a>
-          <a href="ads.html">Advertise</a>
-          <a href="discussion.html">Discussion</a>
-        </div>
-      </div>
-    </footer>
-
-    <script type="module" src="assets/js/chat.js"></script>
+    <script type="module" src="assets/js/chat-v2.js"></script>
   </body>
 </html>
-
-
-
