@@ -1,6 +1,7 @@
 let channel = null;
 let activeToasts = [];
 let stylesReady = false;
+let currentUserId = null;
 
 function injectStyles() {
   if (stylesReady || document.getElementById("timzee-notification-styles")) return;
@@ -65,6 +66,11 @@ function removeToast(toast) {
   activeToasts = activeToasts.filter((item) => item !== toast);
 }
 
+function clearToasts() {
+  activeToasts.forEach((toast) => toast.remove());
+  activeToasts = [];
+}
+
 function showNotificationToast(notification, userId, supabase) {
   injectStyles();
   const region = getRegion();
@@ -112,23 +118,55 @@ function showNotificationToast(notification, userId, supabase) {
   window.setTimeout(() => removeToast(toast), 7000);
 }
 
+async function attachForUser(supabase, user) {
+  if (!user?.id) return;
+  if (currentUserId === user.id && channel) return;
+  if (channel) {
+    await supabase.removeChannel(channel);
+    channel = null;
+  }
+  currentUserId = user.id;
+  injectStyles();
+  channel = supabase
+    .channel(`notification-toasts-${user.id}`)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (payload) => {
+      showNotificationToast(payload.new, user.id, supabase);
+    })
+    .subscribe();
+}
+
 async function start() {
   if (typeof window === "undefined" || !document.body || window.__timzeeNotificationUiReady) return;
   window.__timzeeNotificationUiReady = true;
   const supabase = window.supabase;
   if (!supabase) return;
 
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) return;
-  const userId = data.user.id;
-
   injectStyles();
-  channel = supabase
-    .channel(`notification-toasts-${userId}`)
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, (payload) => {
-      showNotificationToast(payload.new, userId, supabase);
-    })
-    .subscribe();
+
+  const handleAuth = async (session) => {
+    const user = session?.user || null;
+    if (user) {
+      await attachForUser(supabase, user);
+    } else {
+      if (channel) {
+        await supabase.removeChannel(channel);
+        channel = null;
+      }
+      currentUserId = null;
+      clearToasts();
+    }
+  };
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    void handleAuth(session).catch((error) => console.warn("Notification auth lifecycle failed:", error));
+  });
+
+  try {
+    const { data } = await supabase.auth.getSession();
+    await handleAuth(data?.session || null);
+  } catch (error) {
+    console.warn("Notification session initialization failed:", error);
+  }
 
   window.addEventListener("beforeunload", () => {
     if (channel) supabase.removeChannel(channel);
