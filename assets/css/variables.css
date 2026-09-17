@@ -1,4 +1,4 @@
-/* ==========================================================================
+/* ========================================================================
    variables.css — shared design tokens
    ========================================================================== */
 
@@ -18,7 +18,9 @@
   --color-border-strong: rgba(15, 23, 42, 0.18);
   --color-text: var(--ink, #131417);
   --color-text-muted: var(--muted, #5b6573);
-  --color-text-subtle: #8a93a3;
+  --color-text-subtle: #6b7280;
+  --color-text-on-primary: #ffffff;
+  --color-text-on-danger: #ffffff;
 
   --elevation-1: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 1px rgba(15, 23, 42, 0.04);
   --elevation-2: 0 6px 16px rgba(15, 23, 42, 0.08);
@@ -96,5 +98,34 @@
   --color-text: #f1f3f6;
   --color-text-muted: #a7afbd;
   --color-text-subtle: #78808f;
+  --color-text-on-primary: #ffffff;
+  --color-text-on-danger: #ffffff;
   --color-primary-hover: #14b8a6;
+}
+
+/*
+   Light-theme contrast safety
+   ---------------------------
+   Some of the admin/control-panel components intentionally use bright text
+   tokens for the dark palette. The light theme must replace those tokens as
+   well; otherwise a component can inherit near-white text while its panel is
+   light, making the copy effectively disappear. These scoped overrides use
+   !important only on the custom properties so component rules can continue to
+   reference the same semantic tokens without rewriting every selector.
+*/
+:root[data-theme="light"] .admin-shell,
+:root[data-theme="light"] .login-shell {
+  --admin-bg-1: #f8fafc !important;
+  --admin-bg-2: #eef2f7 !important;
+  --admin-bg-3: #e2e8f0 !important;
+  --admin-text: #0f172a !important;
+  --admin-text-bright: #0f172a !important;
+  --admin-text-muted: #475569 !important;
+  --admin-accent: #0284c7 !important;
+  --admin-accent-soft: #0369a1 !important;
+  --admin-danger: #b91c1c !important;
+  --admin-border: rgba(15, 23, 42, 0.18) !important;
+  --admin-border-soft: rgba(15, 23, 42, 0.12) !important;
+  --admin-border-strong: rgba(15, 23, 42, 0.24) !important;
+  --admin-overlay: rgba(255, 255, 255, 0.78) !important;
 }
