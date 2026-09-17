@@ -1,11 +1,11 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const SUPABASE_URL = "https://duvbcwwprkzzyzikmcol.supabase.co";
-// Use the Supabase *anon* key here (never the service_role key).
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkdXZicHd3cHJrenp5emlrbWNvbCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzY5MTUzNTIyLCJleHAiOjIwODQ3Mjk1MjJ9.d2d9iFKGl7IYA3xR6GZ8HiAjUlBudSPO98o7EHQcdI4";
+// Publishable key: safe for browser clients. Never put the service/secret key here.
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_otXKj1pYtPToX6Dp4oq19g_Aid-WkkC";
 export const SITE_URL = "https://timzee-tech-blog.netlify.app";
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
