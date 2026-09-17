@@ -11,6 +11,15 @@ function currentSitePath() {
   return window.location.pathname || "";
 }
 
+function appendStylesheet(id, href) {
+  if (document.querySelector(`link[data-site-style="${id}"]`)) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = href;
+  link.dataset.siteStyle = id;
+  document.head.appendChild(link);
+}
+
 export function ensureSiteFooter() {
   const footer = document.querySelector("footer.footer");
   if (!footer) return;
@@ -55,15 +64,10 @@ export function ensureSiteFooter() {
 }
 
 function loadPageStyles() {
+  appendStylesheet("design-system", "assets/css/design-system.css");
   const path = currentSitePath().toLowerCase();
   if (path.endsWith("/chat.html") || path === "/chat.html") {
-    if (!document.querySelector('link[data-page-style="chat-v2"]')) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "assets/css/chat-v2.css";
-      link.dataset.pageStyle = "chat-v2";
-      document.head.appendChild(link);
-    }
+    appendStylesheet("chat-v2", "assets/css/chat-v2.css");
   }
 }
 
