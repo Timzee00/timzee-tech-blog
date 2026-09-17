@@ -2,7 +2,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = "https://duvbcwwprkzzyzikmcol.supabase.co";
 // Use the Supabase *anon* key here (never the service_role key).
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1dmJjd3dwcmt6enl6aWttY29sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNTM1MjIsImV4cCI6MjA4NDcyOTUyMn0.d2d9iFKGl7IYA3xR6GZ8HiAjUlBudSPO98o7EHQcdI4";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkdXZicHd3cHJrenp5emlrbWNvbCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzY5MTUzNTIyLCJleHAiOjIwODQ3Mjk1MjJ9.d2d9iFKGl7IYA3xR6GZ8HiAjUlBudSPO98o7EHQcdI4";
 export const SITE_URL = "https://timzee-tech-blog.netlify.app";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -33,6 +33,25 @@ export async function signIn(email, password) {
     return await supabase.auth.signInWithPassword({ email, password });
   } catch (error) {
     console.error("SignIn network error:", error);
+    return {
+      error: {
+        message: `Network error: ${error.message}. Check your internet connection and Supabase URL.`,
+        status: error.status
+      }
+    };
+  }
+}
+
+export async function signInWithProvider(provider, redirectTo) {
+  try {
+    return await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: redirectTo || `${SITE_URL}/login.html`
+      }
+    });
+  } catch (error) {
+    console.error(`${provider} OAuth network error:`, error);
     return {
       error: {
         message: `Network error: ${error.message}. Check your internet connection and Supabase URL.`,
@@ -114,7 +133,10 @@ export function getUserRole(user) {
 }
 
 export function getDisplayName(user) {
-  const fromMeta = user?.user_metadata?.display_name;
+  const fromMeta =
+    user?.user_metadata?.display_name ||
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name;
   if (fromMeta) return fromMeta;
   if (user?.email) return user.email.split("@")[0];
   return "Member";
