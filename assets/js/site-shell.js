@@ -7,9 +7,7 @@ const LEGAL_LINKS = [
   ["Accessibility", "accessibility.html"]
 ];
 
-function currentSitePath() {
-  return window.location.pathname || "";
-}
+function currentSitePath() { return window.location.pathname || ""; }
 
 function appendStylesheet(id, href) {
   if (document.querySelector(`link[data-site-style="${id}"]`)) return;
@@ -18,6 +16,20 @@ function appendStylesheet(id, href) {
   link.href = href;
   link.dataset.siteStyle = id;
   document.head.appendChild(link);
+}
+
+function ensureProductNavigation() {
+  const menu = document.querySelector(".nav-more-menu");
+  if (!menu) return;
+  const addLink = (href, label) => {
+    if (menu.querySelector(`a[href="${href}"]`)) return;
+    const link = document.createElement("a");
+    link.href = href;
+    link.textContent = label;
+    menu.insertBefore(link, menu.firstChild);
+  };
+  addLink("fyp.html", "For You");
+  addLink("settings.html", "Settings");
 }
 
 export function ensureSiteFooter() {
@@ -42,14 +54,12 @@ export function ensureSiteFooter() {
     legal.setAttribute("aria-label", "Legal and accessibility information");
     container.appendChild(legal);
   }
-  legal.replaceChildren(
-    ...LEGAL_LINKS.map(([label, href]) => {
-      const link = document.createElement("a");
-      link.href = href;
-      link.textContent = label;
-      return link;
-    })
-  );
+  legal.replaceChildren(...LEGAL_LINKS.map(([label, href]) => {
+    const link = document.createElement("a");
+    link.href = href;
+    link.textContent = label;
+    return link;
+  }));
 
   const path = currentSitePath().toLowerCase();
   const oldText = Array.from(container.querySelectorAll("div, p, span"));
@@ -57,36 +67,39 @@ export function ensureSiteFooter() {
     if (node === brand || node.closest("[data-site-legal]")) return;
     if ((node.textContent || "").includes("Powered by Timzee-Tech")) node.textContent = BRAND_TEXT;
   });
-
-  if (/\/(privacy|terms|refund-policy|cookies|accessibility)\.html$/.test(path)) {
-    brand.setAttribute("aria-current", "page");
-  }
+  if (/\/(privacy|terms|refund-policy|cookies|accessibility)\.html$/.test(path)) brand.setAttribute("aria-current", "page");
 }
 
 function loadPageStyles() {
   appendStylesheet("design-system", "assets/css/design-system.css");
+  appendStylesheet("fyp", "assets/css/fyp.css");
+  appendStylesheet("settings", "assets/css/settings.css");
+  appendStylesheet("discussion-enhancements", "assets/css/discussion-enhancements.css");
+  appendStylesheet("chat-context-menu", "assets/css/chat-context-menu.css");
   const path = currentSitePath().toLowerCase();
-  if (path.endsWith("/chat.html") || path === "/chat.html") {
-    appendStylesheet("chat-v2", "assets/css/chat-v2.css");
-  }
+  if (path.endsWith("/chat.html") || path === "/chat.html") appendStylesheet("chat-v2", "assets/css/chat-v2.css");
 }
 
-async function loadHomepageEnhancements() {
+async function loadPageEnhancements() {
   const path = currentSitePath().toLowerCase();
   const home = path === "/" || path.endsWith("/index.html") || path === "";
-  if (!home || !document.getElementById("popularTrack")) return;
-  try {
-    await import("./popularity-engine.js");
-  } catch (error) {
-    console.warn("Homepage popularity engine failed to load:", error);
+  const imports = [];
+  if (home && document.getElementById("popularTrack")) {
+    imports.push(import("./popularity-engine.js"), import("./trending-engine.js"));
   }
+  if (path.endsWith("/discussion.html")) imports.push(import("./discussion-discovery.js"));
+  if (path.endsWith("/chat.html")) imports.push(import("./chat-context-menu.js"), import("./experience-preferences.js"));
+  if (path.endsWith("/ai-chat.html")) imports.push(import("./ai-context.js"));
+  if (path.endsWith("/novel.html") || path.endsWith("/video.html") || path.endsWith("/videos.html")) imports.push(import("./experience-preferences.js"));
+  if (imports.length) await Promise.allSettled(imports);
 }
 
 if (typeof window !== "undefined") {
   const start = () => {
     loadPageStyles();
+    ensureProductNavigation();
     ensureSiteFooter();
-    void loadHomepageEnhancements();
+    void loadPageEnhancements();
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
   else start();
