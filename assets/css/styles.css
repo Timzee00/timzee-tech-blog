@@ -22,7 +22,6 @@
 @import url("utilities.css");
 @import url("responsive.css");
 
-/* Reader preferences are applied through data attributes on <html>. */
 html[data-reader-font="small"] .reader-content{font-size:.95rem;}
 html[data-reader-font="medium"] .reader-content{font-size:1.05rem;}
 html[data-reader-font="large"] .reader-content{font-size:1.2rem;}
@@ -30,3 +29,8 @@ html[data-reader-font="xlarge"] .reader-content{font-size:1.35rem;}
 html[data-reader-width="compact"] .reader-content{max-width:700px;margin-inline:auto;}
 html[data-reader-width="comfortable"] .reader-content{max-width:820px;margin-inline:auto;}
 html[data-reader-width="wide"] .reader-content{max-width:1000px;margin-inline:auto;}
+
+html[data-reduce-motion="true"] *,html[data-reduce-motion="true"] *::before,html[data-reduce-motion="true"] *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important;}
+html[data-high-contrast="true"]{filter:contrast(1.08);}
+html[data-high-contrast="true"] :where(button,a,input,select,textarea){border-color:var(--color-text,#16181d);}
+html[data-high-contrast="true"] :where(.card,.post-card,.popular-card,.feature-card,.side-card,.post-shell,.board,.hero-card,.stats-card,.category-card){border-color:var(--color-text,#16181d);}
