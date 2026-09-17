@@ -19,13 +19,73 @@ export async function getSession() {
   return data.session;
 }
 
+async function resolveTrustedRole(user) {
+  if (!user) return null;
+
+  let role = user.app_metadata?.role || null;
+
+  if (!role) {
+    try {
+      const profileResult = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profileResult.error) {
+        console.warn("Failed to fetch trusted profile role:", profileResult.error);
+      } else if (profileResult.data?.role) {
+        role = profileResult.data.role;
+      }
+    } catch (err) {
+      console.warn("Failed to fetch role from profiles:", err);
+    }
+  }
+
+  if (!role) {
+    try {
+      const roleResult = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!roleResult.error && roleResult.data?.role) {
+        role = roleResult.data.role;
+      }
+    } catch (err) {
+      console.warn("Failed to fetch role mapping:", err);
+    }
+  }
+
+  if (role) {
+    user.app_metadata = { ...(user.app_metadata || {}), role };
+    try {
+      if (!user.user_metadata) user.user_metadata = {};
+      Object.defineProperty(user.user_metadata, "role", {
+        value: role,
+        writable: false,
+        enumerable: false,
+        configurable: true
+      });
+    } catch (err) {
+      console.warn("Unable to expose legacy in-memory role:", err);
+    }
+  }
+
+  return role;
+}
+
 export async function getCurrentUser() {
   const { data, error } = await supabase.auth.getUser();
   if (error) {
     console.warn("User fetch failed", error);
     return null;
   }
-  return data.user;
+  const user = data.user;
+  if (!user) return null;
+  await resolveTrustedRole(user);
+  return user;
 }
 
 export async function signIn(email, password) {
@@ -91,74 +151,7 @@ export async function signOut() {
 }
 
 export async function getCurrentUserWithRole() {
-  const { data, error } = await supabase.auth.getUser();
-  if (error) {
-    console.warn("User fetch failed", error);
-    return null;
-  }
-  const user = data.user;
-  if (!user) return null;
-
-  // Authorization roles must never be taken from user-editable user_metadata.
-  // app_metadata is server-controlled; profiles is the database fallback.
-  let role = user.app_metadata?.role || null;
-
-  if (!role) {
-    try {
-      const profileResult = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (profileResult.error) {
-        console.warn("Failed to fetch trusted profile role:", profileResult.error);
-      } else if (profileResult.data?.role) {
-        role = profileResult.data.role;
-      }
-    } catch (err) {
-      console.warn("Failed to fetch role from profiles:", err);
-    }
-  }
-
-  if (!role) {
-    try {
-      const roleResult = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!roleResult.error && roleResult.data?.role) {
-        role = roleResult.data.role;
-      }
-    } catch (err) {
-      console.warn("Failed to fetch role mapping:", err);
-    }
-  }
-
-  // Keep the resolved role only on this in-memory user object for UI gating.
-  // The app_metadata mirror is used by the canonical getUserRole() helper.
-  // For legacy pages that still read user_metadata.role directly, expose a
-  // non-enumerable, non-writable in-memory property. It will not be serialized
-  // into an Auth update and therefore cannot turn trusted authorization into
-  // user-editable persisted metadata.
-  if (role) {
-    user.app_metadata = { ...(user.app_metadata || {}), role };
-    try {
-      if (!user.user_metadata) user.user_metadata = {};
-      Object.defineProperty(user.user_metadata, "role", {
-        value: role,
-        writable: false,
-        enumerable: false,
-        configurable: true
-      });
-    } catch (err) {
-      console.warn("Unable to expose legacy in-memory role:", err);
-    }
-  }
-
-  return user;
+  return getCurrentUser();
 }
 
 export function getUserRole(user) {
