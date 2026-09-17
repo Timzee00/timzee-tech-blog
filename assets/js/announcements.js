@@ -12,10 +12,6 @@ const state = {
   settings: null
 };
 
-// ============================================================
-// DB FETCHING
-// ============================================================
-
 async function fetchAnnouncements() {
   try {
     const { data, error } = await supabase
@@ -36,7 +32,6 @@ async function fetchAnnouncements() {
 
 async function createAnnouncement(announcement) {
   try {
-    // Remove undefined keys so Supabase doesn't reject unknown/undefined values
     Object.keys(announcement).forEach((k) => {
       if (announcement[k] === undefined) delete announcement[k];
     });
@@ -53,50 +48,6 @@ async function createAnnouncement(announcement) {
     return { error: err };
   }
 }
-
-// ============================================================
-// NOTIFICATIONS
-// ============================================================
-
-async function broadcastNotificationToAllUsers(title, body, type = "announcement") {
-  try {
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id");
-
-    if (profilesError) throw profilesError;
-
-    const userIds = (profiles || []).map((p) => p.id);
-
-    const notifications = userIds.map((userId) => ({
-      id: crypto.randomUUID(),
-      user_id: userId,
-      type: type,
-      title: title,
-      body: body,
-      link_url: "/announcements.html",
-      created_at: new Date().toISOString(),
-      read_at: null
-    }));
-
-    if (notifications.length > 0) {
-      const { error: notifError } = await supabase
-        .from("notifications")
-        .insert(notifications);
-
-      if (notifError) throw notifError;
-    }
-
-    return { ok: true };
-  } catch (err) {
-    console.error("Broadcast error:", err);
-    return { error: err.message || String(err) };
-  }
-}
-
-// ============================================================
-// UI RENDERING
-// ============================================================
 
 function renderAnnouncements(announcements = state.announcements) {
   const container = document.getElementById("announcementsList");
@@ -148,13 +99,8 @@ function renderAnnouncements(announcements = state.announcements) {
 
 function filterAnnouncements(filter) {
   state.activeFilter = filter;
-
-  if (filter === "all") {
-    renderAnnouncements(state.announcements);
-  } else {
-    const filtered = state.announcements.filter((a) => (a.type || "update") === filter);
-    renderAnnouncements(filtered);
-  }
+  if (filter === "all") renderAnnouncements(state.announcements);
+  else renderAnnouncements(state.announcements.filter((a) => (a.type || "update") === filter));
 }
 
 function setupFilters() {
@@ -167,15 +113,11 @@ function setupFilters() {
   });
 }
 
-// ============================================================
-// ADMIN PANEL + FORM
-// ============================================================
-
 function showAdminPanel() {
   const user = state.user;
   if (!user) return;
 
-  const role = user.user_metadata?.role;
+  const role = user.app_metadata?.role || user.user_metadata?.role;
   if (role === "admin" || role === "super") {
     const adminPanel = document.getElementById("adminPanel");
     if (adminPanel) adminPanel.style.display = "block";
@@ -184,12 +126,8 @@ function showAdminPanel() {
 }
 
 function readPublishModeAndTime() {
-  // Optional UI controls (if they exist)
-  // - A dropdown that might say: "Publish now" or "Schedule"
-  // - A datetime input for scheduling
-  const modeEl = document.getElementById("publishMode"); // optional
-  const timeEl = document.getElementById("publishTime"); // optional
-
+  const modeEl = document.getElementById("publishMode");
+  const timeEl = document.getElementById("publishTime");
   const mode = (modeEl?.value || "now").toLowerCase();
   const rawTime = timeEl?.value || "";
 
@@ -204,8 +142,8 @@ function readPublishModeAndTime() {
 function setupAnnouncementForm() {
   const form = document.getElementById("announcementForm");
   const clearBtn = document.getElementById("clearAnnouncementBtn");
-
-  if (!form) return;
+  if (!form || form.dataset.bound === "1") return;
+  form.dataset.bound = "1";
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -213,7 +151,6 @@ function setupAnnouncementForm() {
     const title = (document.getElementById("announcementTitle")?.value || "").trim();
     const type = (document.getElementById("announcementType")?.value || "").trim();
     const body = (document.getElementById("announcementBody")?.value || "").trim();
-    const notifyAll = !!document.getElementById("notifyAllUsers")?.checked;
 
     if (!title || !type || !body) {
       showStatus("All fields are required.", true);
@@ -221,39 +158,33 @@ function setupAnnouncementForm() {
     }
 
     const publish_at = readPublishModeAndTime();
+    const isScheduled = new Date(publish_at).getTime() > Date.now();
 
-    // ✅ Important: Send BOTH body and message so whichever your DB expects is satisfied
-    // ✅ Also include status/publish_at for your UI
     const announcement = {
       id: crypto.randomUUID(),
       title,
       type,
       body,
       message: body,
-      status: "success",
+      status: isScheduled ? "scheduled" : "published",
       publish_at,
       created_by: state.user?.id || null,
       created_at: new Date().toISOString()
     };
 
     const result = await createAnnouncement(announcement);
-
     if (result.error) {
       const msg = result.error?.message || String(result.error);
       showStatus("Failed to create announcement: " + msg, true);
       return;
     }
 
-    if (notifyAll) {
-      const broadcastResult = await broadcastNotificationToAllUsers(title, body, "announcement");
-      if (broadcastResult.error) {
-        showStatus("Announcement created but notification broadcast failed.", true);
-      } else {
-        showStatus("✓ Announcement published and all users notified!", false);
-      }
-    } else {
-      showStatus("✓ Announcement published!", false);
-    }
+    showStatus(
+      isScheduled
+        ? "Announcement scheduled. It will publish and notify users automatically."
+        : "Announcement published. Users will be notified automatically.",
+      false
+    );
 
     form.reset();
     state.announcements = await fetchAnnouncements();
@@ -266,45 +197,29 @@ function setupAnnouncementForm() {
 function showStatus(message, isError = false) {
   const status = document.getElementById("announcementStatus");
   if (!status) return;
-
   status.textContent = message;
   status.style.display = "block";
   status.style.color = isError ? "#ef4444" : "#059669";
 
   if (!isError) {
-    setTimeout(() => {
-      status.style.display = "none";
-    }, 3000);
+    setTimeout(() => { status.style.display = "none"; }, 3500);
   }
 }
-
-// ============================================================
-// REALTIME
-// ============================================================
 
 async function setupRealTimeAnnouncements() {
   try {
     supabase
       .channel("announcements_updates")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "announcements" },
-        async (payload) => {
-          state.announcements.unshift(payload.new);
-          // respect current filter
-          if (state.activeFilter === "all") renderAnnouncements();
-          else filterAnnouncements(state.activeFilter);
-        }
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "announcements" }, async (payload) => {
+        state.announcements.unshift(payload.new);
+        if (state.activeFilter === "all") renderAnnouncements();
+        else filterAnnouncements(state.activeFilter);
+      })
       .subscribe();
   } catch (err) {
     console.warn("Real-time announcements setup failed:", err);
   }
 }
-
-// ============================================================
-// BOOT
-// ============================================================
 
 async function boot() {
   setupReveal();
@@ -315,9 +230,7 @@ async function boot() {
     if (theme) applyThemeVariables(theme);
   }
   state.settings = settings;
-
   state.user = await getCurrentUserWithRole();
-
   state.announcements = await fetchAnnouncements();
   renderAnnouncements();
   setupFilters();
@@ -329,7 +242,5 @@ boot().catch((error) => {
   reportAppError(error, "Announcements load failed");
   const message = extractErrorMessage(error, "Unable to load announcements.");
   const list = document.getElementById("announcementsList");
-  if (list) {
-    list.innerHTML = `<div class="callout">${escapeHTML(message)}</div>`;
-  }
+  if (list) list.innerHTML = `<div class="callout">${escapeHTML(message)}</div>`;
 });
