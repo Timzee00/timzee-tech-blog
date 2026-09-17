@@ -29,10 +29,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   }
 });
 
-// The legacy app still contains a few `select("*")` calls. Constrain those
-// requests centrally so a missed call site cannot accidentally fetch private
-// profile fields or internal marketplace metadata. Explicit column lists are
-// never changed by this guard.
 const originalFrom = supabase.from.bind(supabase);
 supabase.from = (table) => {
   const builder = originalFrom(table);
@@ -72,11 +68,12 @@ if (typeof window !== "undefined" && !window.supabase) {
   window.supabase = supabase;
 }
 
-// Load the global notification UI after the shared client exists. The UI only
-// runs for an authenticated user and degrades harmlessly on anonymous pages.
 if (typeof window !== "undefined") {
   import("./notifications-ui.js").catch((error) => {
     console.warn("Realtime notification UI failed to load:", error);
+  });
+  import("./announcement-banner.js").catch((error) => {
+    console.warn("Announcement banner failed to load:", error);
   });
 }
 
@@ -167,9 +164,6 @@ async function resolveTrustedRole(user) {
   }
 
   if (role) {
-    // Authorization continues to use app_metadata / DB-backed role state.
-    // This non-enumerable property exists only in memory for a few legacy UI
-    // components that still read user_metadata.role; it is never persisted.
     user.app_metadata = { ...(user.app_metadata || {}), role };
     try {
       if (!user.user_metadata) user.user_metadata = {};
