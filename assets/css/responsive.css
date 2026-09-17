@@ -44,6 +44,11 @@ iframe {
   .search-box { flex: 1 1 160px; min-width: 0; }
 }
 
+@media (max-width: 900px) {
+  main,
+  .page-shell { overflow-x: clip !important; }
+}
+
 @media (max-width: 768px) {
   .container { padding-inline: var(--space-4, 16px); }
   .hero-grid,
