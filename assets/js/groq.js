@@ -9,8 +9,9 @@ export const PROVIDERS = {
   anthropic: "Anthropic"
 };
 
+// Keep production defaults on models explicitly listed as production by the provider.
 export const PROVIDER_MODELS = {
-  groq: ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b"],
+  groq: ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
   openai: ["gpt-4o-mini", "gpt-4o"],
   anthropic: ["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"]
 };
