@@ -14,7 +14,11 @@ if (!/functions\s*=\s*["']netlify\/functions["']/.test(netlify)) fail("Netlify f
 if (!/from\s*=\s*["']\/sitemap\.xml["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/sitemap["']/.test(netlify)) {
   fail("Dynamic sitemap rewrite is missing.");
 }
+if (!/from\s*=\s*["']\/health["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/health["']/.test(netlify)) {
+  fail("Production health rewrite is missing.");
+}
 if (!existsSync(join(root, "netlify/functions/sitemap.js"))) fail("Dynamic sitemap function is missing.");
+if (!existsSync(join(root, "netlify/functions/health.js"))) fail("Production health function is missing.");
 
 const headers = read("_headers");
 for (const required of [
@@ -33,8 +37,6 @@ const sitemap = read("sitemap.xml");
 const sitemapMatch = robots.match(/^Sitemap:\s*(\S+)\s*$/m);
 if (!sitemapMatch) fail("robots.txt must declare a sitemap.");
 if (!sitemapMatch[1].endsWith("/sitemap.xml")) fail("robots.txt must point to /sitemap.xml.");
-// The deployed /sitemap.xml route is dynamically generated from published DB content.
-// Keep the repository XML as a fallback, but do not require its historical lastmod values.
 if (!sitemap.includes("<loc>https://timzee-tech-blog.netlify.app/</loc>")) {
   fail("Static sitemap fallback is missing the homepage.");
 }
