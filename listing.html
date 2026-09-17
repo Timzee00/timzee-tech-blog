@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
-      <script defer src="assets/js/theme-init.js"></script>
+    <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -44,19 +44,15 @@
 
     <main id="main-content" class="page-shell">
       <div class="container">
-        <!-- Breadcrumb -->
         <div style="margin-bottom: 20px;">
           <a href="marketplace.html" style="color: #0f766e; text-decoration: none;">← Back to Marketplace</a>
         </div>
 
-        <!-- Loading State -->
         <div id="loadingState" class="callout">
           <span>Loading listing...</span>
         </div>
 
-        <!-- Content -->
         <div id="content" style="display: none;">
-          <!-- Header -->
           <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
             <div>
               <h1 id="listingTitle" style="margin: 0 0 8px 0;"></h1>
@@ -69,19 +65,15 @@
             <div id="price" style="font-size: 28px; font-weight: 700; color: #0f766e;"></div>
           </div>
 
-          <!-- Gallery & Sidebar -->
           <div class="listing-hero">
-            <!-- Gallery -->
             <div>
               <div class="listing-gallery">
-                <img class="gallery-main" id="mainImage" alt="Product">
+                <img class="gallery-main" id="mainImage" alt="Product" loading="eager" decoding="async">
               </div>
               <div id="thumbnails" class="gallery-thumbs"></div>
             </div>
 
-            <!-- Sidebar -->
             <div>
-              <!-- Seller Info -->
               <div class="seller-info">
                 <div class="seller-header">
                   <a class="seller-avatar" id="sellerAvatar" href="#" aria-label="View seller profile"></a>
@@ -89,16 +81,15 @@
                     <div class="seller-name" id="sellerName"></div>
                     <span id="sellerVerifiedBadge"></span>
                     <div class="seller-rating">
-                      <span id="sellerRating">★★★★★</span>
+                      <span id="sellerRating" aria-label="Seller rating">No ratings</span>
                       <span id="reviewCount" style="margin-left: 4px;"></span>
                     </div>
                   </div>
                 </div>
-                <button class="btn btn-full" id="contactBtn">Contact Seller</button>
-                <button class="btn ghost btn-full" id="reportBtn">Report Listing</button>
+                <button class="btn btn-full" id="contactBtn" type="button">Contact Seller</button>
+                <button class="btn ghost btn-full" id="reportBtn" type="button">Report Listing</button>
               </div>
 
-              <!-- Quick Details -->
               <div class="listing-details">
                 <div class="detail-row">
                   <span class="detail-label">Location</span>
@@ -116,29 +107,25 @@
             </div>
           </div>
 
-          <!-- Description -->
           <div class="description-box">
             <h3>Description</h3>
             <p class="description-text" id="description"></p>
           </div>
 
-          <!-- Inquiry Form -->
           <div id="inquiryContainer" class="inquiry-section" style="display: none;">
             <h3>Interested? Send an Inquiry</h3>
             <form id="inquiryForm" class="inquiry-form">
-              <textarea id="inquiryMessage" placeholder="What would you like to know?" required style="min-height: 100px;"></textarea>
+              <textarea id="inquiryMessage" placeholder="What would you like to know?" required maxlength="2000" style="min-height: 100px;"></textarea>
               <button class="btn" type="submit">Send Inquiry</button>
-              <div id="inquiryStatus" style="display: none;"></div>
+              <div id="inquiryStatus" role="status" aria-live="polite" style="display: none;"></div>
             </form>
           </div>
 
-          <!-- Reviews Section -->
           <div id="reviewsSection" class="reviews-section" style="display: none;">
             <h2 style="margin: 0 0 20px 0;">Reviews from Buyers</h2>
             <div id="reviewsList"></div>
           </div>
 
-          <!-- Similar Listings -->
           <div class="similar-listings">
             <h2>Similar Listings</h2>
             <div id="similarListings" class="similar-grid"></div>
@@ -163,13 +150,13 @@
       import { createContentReport } from "./assets/js/data.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
 
-      let state = {
+      const state = {
         user: null,
         listing: null,
+        sellerProfile: null,
         itemId: null
       };
 
-      // Get listing ID from URL
       const urlParams = new URLSearchParams(window.location.search);
       state.itemId = urlParams.get("id");
 
@@ -178,14 +165,44 @@
         document.getElementById("loadingState").textContent = "No listing ID provided";
       }
 
+      const currencySymbols = {
+        NGN: "₦",
+        USD: "$",
+        GBP: "£",
+        EUR: "€",
+        GHS: "₵",
+        KES: "KSh "
+      };
+
+      function formatCurrency(price, currencyCode) {
+        const currency = String(currencyCode || "USD").toUpperCase();
+        const symbol = currencySymbols[currency] || `${currency} `;
+        const amount = Number(price);
+        return Number.isFinite(amount)
+          ? `${symbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : "Price unavailable";
+      }
+
+      function setInquiryStatus(message, tone = "muted") {
+        const status = document.getElementById("inquiryStatus");
+        if (!status) return;
+        const tones = {
+          error: "#b91c1c",
+          success: "#047857",
+          muted: "#64748b"
+        };
+        status.style.display = "block";
+        status.textContent = message;
+        status.style.color = tones[tone] || tones.muted;
+      }
+
       async function loadListing() {
         try {
           state.user = await getCurrentUser();
-          
-          // Fetch listing
+
           const { data, error } = await supabase
             .from("marketplace_items")
-            .select("*")
+            .select("id,user_id,seller_name,title,description,category,subcategory,price,currency,condition,location,images,is_available,view_count,created_at,updated_at,expires_at")
             .eq("id", state.itemId)
             .single();
 
@@ -196,7 +213,15 @@
 
           state.listing = data;
 
-          // Increment view count
+          const sellerResult = data.user_id
+            ? await supabase
+                .from("profiles")
+                .select("id,display_name,avatar_url,is_verified,allow_messages")
+                .eq("id", data.user_id)
+                .maybeSingle()
+            : { data: null };
+          state.sellerProfile = sellerResult.data || null;
+
           await incrementMarketplaceView(state.itemId);
           state.listing.view_count = (state.listing.view_count || 0) + 1;
 
@@ -204,32 +229,32 @@
           setupEventListeners();
         } catch (error) {
           console.error("Load error:", error);
-          document.getElementById("loadingState").textContent = `Error: ${error.message}`;
+          document.getElementById("loadingState").textContent = "Unable to load this listing right now.";
         }
       }
 
       function renderListing() {
         const listing = state.listing;
-        
-        // Title and basics
-        document.getElementById("listingTitle").textContent = listing.title;
-        document.getElementById("price").textContent = `$${parseFloat(listing.price).toFixed(2)}`;
-        document.getElementById("category").textContent = listing.category;
-        document.getElementById("condition").textContent = listing.condition;
+        const seller = state.sellerProfile;
+        document.getElementById("listingTitle").textContent = listing.title || "Untitled listing";
+        document.getElementById("price").textContent = formatCurrency(listing.price, listing.currency);
+        document.getElementById("category").textContent = listing.category || "General";
+        document.getElementById("condition").textContent = listing.condition || "Not specified";
         document.getElementById("location").textContent = listing.location || "Online";
-        document.getElementById("description").textContent = listing.description;
+        document.getElementById("description").textContent = listing.description || "No description provided.";
         document.getElementById("viewCount").textContent = listing.view_count || 0;
-        document.getElementById("sellerName").textContent = listing.seller_name;
+
+        const sellerName = seller?.display_name || listing.seller_name || "Seller";
+        document.getElementById("sellerName").textContent = sellerName;
         const sellerAvatarEl = document.getElementById("sellerAvatar");
         if (sellerAvatarEl) {
           sellerAvatarEl.href = `profile.html?id=${encodeURIComponent(listing.user_id || "")}`;
-          sellerAvatarEl.textContent = (listing.seller_name || "?").trim().slice(0, 1).toUpperCase();
+          sellerAvatarEl.textContent = sellerName.trim().slice(0, 1).toUpperCase() || "S";
+          sellerAvatarEl.setAttribute("aria-label", `View ${sellerName}'s profile`);
         }
-        document.getElementById("sellerVerifiedBadge").innerHTML = listing.seller_verified
-          ? '<span class="badge-chip verified" title="Verified Seller">✔ Verified Seller</span>'
-          : '';
 
-        // Status
+        document.getElementById("sellerVerifiedBadge").textContent = seller?.is_verified ? "Verified Seller" : "";
+
         const statusEl = document.getElementById("status");
         if (listing.is_available) {
           statusEl.textContent = "Available";
@@ -239,177 +264,227 @@
           statusEl.className = "status-badge sold";
         }
 
-        // Date
         const date = new Date(listing.created_at);
-        document.getElementById("postedDate").textContent = date.toLocaleDateString();
+        document.getElementById("postedDate").textContent = Number.isNaN(date.getTime())
+          ? "Unknown"
+          : date.toLocaleDateString();
 
-        // Images
-        if (listing.images && listing.images.length > 0) {
-          const firstImg = isSafeUrl(listing.images[0]) ? listing.images[0] : '';
-          if (firstImg) document.getElementById("mainImage").src = firstImg;
-          
-          const thumbs = document.getElementById("thumbnails");
-          thumbs.innerHTML = listing.images.map((img, idx) => {
-            const safeImg = isSafeUrl(img) ? img : '';
-            return safeImg ? `
-              <img class="gallery-thumb ${idx === 0 ? 'active' : ''}" src="${safeImg}" alt="${escapeHTML('Photo ' + (idx + 1))}" data-idx="${idx}">
-            ` : '';
-          }).join("");
+        const thumbs = document.getElementById("thumbnails");
+        const mainImage = document.getElementById("mainImage");
+        const safeImages = Array.isArray(listing.images)
+          ? listing.images.filter((img) => typeof img === "string" && isSafeUrl(img))
+          : [];
 
-          thumbs.querySelectorAll(".gallery-thumb").forEach(thumb => {
+        if (safeImages.length) {
+          mainImage.src = safeImages[0];
+          mainImage.alt = `${escapeHTML(listing.title || "Listing")} photo`;
+          thumbs.innerHTML = safeImages.map((img, idx) => `
+            <img class="gallery-thumb ${idx === 0 ? "active" : ""}" src="${escapeHTML(img)}" alt="Photo ${idx + 1}" data-idx="${idx}" loading="lazy" decoding="async">
+          `).join("");
+          thumbs.querySelectorAll(".gallery-thumb").forEach((thumb) => {
             thumb.addEventListener("click", () => {
-              thumbs.querySelectorAll(".gallery-thumb").forEach(t => t.classList.remove("active"));
+              thumbs.querySelectorAll(".gallery-thumb").forEach((item) => item.classList.remove("active"));
               thumb.classList.add("active");
-              const idx = parseInt(thumb.dataset.idx);
-              const safe = isSafeUrl(listing.images[idx]) ? listing.images[idx] : '';
-              if (safe) document.getElementById("mainImage").src = safe;
+              const idx = Number.parseInt(thumb.dataset.idx, 10);
+              const selected = safeImages[idx];
+              if (selected) mainImage.src = selected;
             });
           });
+        } else {
+          mainImage.removeAttribute("src");
+          mainImage.alt = "No listing image available";
+          thumbs.innerHTML = '<div class="similar-card-placeholder">No image</div>';
         }
 
-        // Seller info
-        getSellerRating(listing.seller_id).then(rating => {
-          if (rating) {
-            const stars = "★".repeat(Math.round(rating.average_rating || 5)) + "☆".repeat(5 - Math.round(rating.average_rating || 5));
-            document.getElementById("sellerRating").textContent = stars;
-            if (rating.total_reviews > 0) {
-              document.getElementById("reviewCount").textContent = `(${rating.total_reviews} reviews)`;
-            }
-          }
-        });
-
-        // Show inquiry form if available and user not seller
-        if (state.user && listing.is_available && state.user.id !== listing.seller_id) {
+        if (state.user && listing.is_available && state.user.id !== listing.user_id) {
           document.getElementById("inquiryContainer").style.display = "block";
+        } else {
+          document.getElementById("inquiryContainer").style.display = "none";
         }
 
-        // Load reviews
-        if (listing.review_count > 0) {
-          loadReviews();
-        }
-
-        // Load similar listings
+        loadSellerRating();
+        loadReviews();
         loadSimilarListings();
 
         document.getElementById("loadingState").style.display = "none";
         document.getElementById("content").style.display = "block";
       }
 
+      async function loadSellerRating() {
+        if (!state.listing?.user_id) return;
+        try {
+          const rating = await getSellerRating(state.listing.user_id);
+          const ratingEl = document.getElementById("sellerRating");
+          const reviewCountEl = document.getElementById("reviewCount");
+          if (!rating || !rating.total_reviews) {
+            ratingEl.textContent = "No ratings";
+            reviewCountEl.textContent = "";
+            return;
+          }
+          const average = Number(rating.average_rating || 0);
+          ratingEl.textContent = `${average.toFixed(1)} / 5`;
+          reviewCountEl.textContent = `(${rating.total_reviews} reviews)`;
+        } catch (error) {
+          console.error("Seller rating error:", error);
+        }
+      }
+
       async function loadReviews() {
         try {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from("marketplace_reviews")
-            .select("*")
-            .eq("seller_id", state.listing.seller_id)
+            .select("id,reviewer_id,reviewee_id,rating,comment,created_at")
+            .eq("reviewee_id", state.listing.user_id)
             .order("created_at", { ascending: false })
             .limit(10);
 
-          if (data && data.length > 0) {
-            document.getElementById("reviewsSection").style.display = "block";
-            document.getElementById("reviewsList").innerHTML = data.map(review => `
+          if (error) throw error;
+          if (!data || !data.length) {
+            document.getElementById("reviewsSection").style.display = "none";
+            return;
+          }
+
+          document.getElementById("reviewsSection").style.display = "block";
+          document.getElementById("reviewsList").innerHTML = data.map((review) => {
+            const rating = Math.max(0, Math.min(5, Number(review.rating) || 0));
+            const date = new Date(review.created_at);
+            return `
               <div class="review-item">
                 <div class="review-header">
-                  <div class="review-rating">${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)}</div>
-                  <span class="review-date">${escapeHTML(new Date(review.created_at).toLocaleDateString())}</span>
+                  <div class="review-rating">${rating.toFixed(1)} / 5</div>
+                  <span class="review-date">${escapeHTML(Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString())}</span>
                 </div>
-                <p style="margin: 8px 0 0 0;">${escapeHTML(review.comment || '')}</p>
+                <p style="margin: 8px 0 0 0;">${escapeHTML(review.comment || "")}</p>
               </div>
-            `).join("");
-          }
+            `;
+          }).join("");
         } catch (error) {
           console.error("Reviews error:", error);
+          document.getElementById("reviewsSection").style.display = "none";
         }
       }
 
       async function loadSimilarListings() {
         try {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from("marketplace_items")
-            .select("*")
+            .select("id,user_id,seller_name,title,price,currency,images,is_available")
             .eq("category", state.listing.category)
             .neq("id", state.itemId)
             .eq("is_available", true)
             .limit(6);
 
-          if (data && data.length > 0) {
-            document.getElementById("similarListings").innerHTML = data.map(item => {
-              const img = item.images && item.images[0] && isSafeUrl(item.images[0]) ? item.images[0] : '';
-              return `
+          if (error) throw error;
+          const target = document.getElementById("similarListings");
+          if (!data || !data.length) {
+            target.innerHTML = '<div class="callout">No similar listings found.</div>';
+            return;
+          }
+
+          target.innerHTML = data.map((item) => {
+            const img = Array.isArray(item.images) && typeof item.images[0] === "string" && isSafeUrl(item.images[0])
+              ? item.images[0]
+              : "";
+            return `
               <a href="listing.html?id=${encodeURIComponent(item.id)}" class="similar-card-link">
                 <div class="similar-card">
-                  ${img ? `<img src="${img}" alt="${escapeHTML(item.title || '')}">` : `<div class="similar-card-placeholder">📦</div>`}
+                  ${img ? `<img src="${escapeHTML(img)}" alt="${escapeHTML(item.title || "Listing")}" loading="lazy" decoding="async">` : '<div class="similar-card-placeholder">No image</div>'}
                   <div class="similar-card-info">
-                    <div class="similar-card-title">${escapeHTML(item.title || '')}</div>
-                    <div class="similar-card-price">$${escapeHTML((parseFloat(item.price) || 0).toFixed(2))}</div>
+                    <div class="similar-card-title">${escapeHTML(item.title || "Untitled listing")}</div>
+                    <div class="similar-card-price">${escapeHTML(formatCurrency(item.price, item.currency))}</div>
                   </div>
                 </div>
               </a>
-            `}).join("");
-          }
+            `;
+          }).join("");
         } catch (error) {
           console.error("Similar listings error:", error);
+          document.getElementById("similarListings").innerHTML = '<div class="callout">Similar listings are unavailable right now.</div>';
         }
       }
 
       function setupEventListeners() {
-        document.getElementById("contactBtn").addEventListener("click", async () => {
+        document.getElementById("contactBtn").addEventListener("click", () => {
           if (!state.user) {
-            window.location.href = `login.html?next=listing.html?id=${state.itemId}`;
+            const next = encodeURIComponent(`listing.html?id=${state.itemId}`);
+            window.location.href = `login.html?next=${next}`;
             return;
           }
-          // Could open a direct message or contact form here
-          alert("Opening contact with " + state.listing.seller_name);
+
+          const sellerId = state.listing.user_id;
+          if (!sellerId) {
+            setInquiryStatus("Seller contact is unavailable for this listing.", "error");
+            return;
+          }
+          if (sellerId === state.user.id) {
+            setInquiryStatus("This is your own listing.", "muted");
+            return;
+          }
+          if (state.sellerProfile && state.sellerProfile.allow_messages === false) {
+            setInquiryStatus("This seller is not accepting direct messages.", "muted");
+            return;
+          }
+          window.location.href = `chat.html?user=${encodeURIComponent(sellerId)}`;
         });
 
         document.getElementById("reportBtn").addEventListener("click", async () => {
           if (!state.user) {
-            window.location.href = `login.html?next=listing.html?id=${state.itemId}`;
+            const next = encodeURIComponent(`listing.html?id=${state.itemId}`);
+            window.location.href = `login.html?next=${next}`;
             return;
           }
           const reason = prompt("Why are you reporting this listing?");
-          if (reason === null) return;
-          const result = await createContentReport({
-            reporterId: state.user.id,
-            contentType: "marketplace_item",
-            contentId: state.itemId,
-            reason: reason.trim()
-          });
-          if (result?.error) {
-            alert(result.error.message || "Failed to submit report.");
-          } else {
-            alert("Report submitted. Thank you.");
+          if (reason === null || !reason.trim()) return;
+          try {
+            const result = await createContentReport({
+              reporterId: state.user.id,
+              contentType: "marketplace_item",
+              contentId: state.itemId,
+              reason: reason.trim()
+            });
+            if (result?.error) {
+              setInquiryStatus(result.error.message || "Failed to submit report.", "error");
+            } else {
+              setInquiryStatus("Report submitted. Thank you.", "success");
+            }
+          } catch (error) {
+            console.error("Report error:", error);
+            setInquiryStatus("Unable to submit the report right now.", "error");
           }
         });
 
-        document.getElementById("inquiryForm").addEventListener("submit", async (e) => {
-          e.preventDefault();
-          
-          const message = document.getElementById("inquiryMessage").value;
-          const status = document.getElementById("inquiryStatus");
+        document.getElementById("inquiryForm").addEventListener("submit", async (event) => {
+          event.preventDefault();
 
-          status.style.display = "block";
-          status.textContent = "Sending...";
-          status.style.color = "#0f766e";
+          const message = document.getElementById("inquiryMessage").value.trim();
+          const submitButton = document.querySelector('#inquiryForm button[type="submit"]');
+          if (!message) {
+            setInquiryStatus("Please enter a message.", "error");
+            return;
+          }
+
+          if (submitButton) submitButton.disabled = true;
+          setInquiryStatus("Sending...", "muted");
 
           try {
             const result = await createMarketplaceInquiry({
               itemId: state.itemId,
               buyerId: state.user.id,
-              sellerId: state.listing.seller_id,
+              sellerId: state.listing.user_id,
               message
             });
 
-            if (result.error) {
-              status.textContent = `Error: ${result.error.message}`;
-              status.style.color = "#ef4444";
+            if (result?.error) {
+              setInquiryStatus(result.error.message || "Unable to send the inquiry.", "error");
             } else {
-              status.textContent = "✓ Inquiry sent! The seller will respond soon.";
-              status.style.color = "#10b981";
+              setInquiryStatus("Inquiry sent. The seller will respond soon.", "success");
               document.getElementById("inquiryForm").reset();
             }
           } catch (error) {
-            status.textContent = `Error: ${error.message}`;
-            status.style.color = "#ef4444";
+            console.error("Inquiry error:", error);
+            setInquiryStatus("Unable to send the inquiry right now.", "error");
+          } finally {
+            if (submitButton) submitButton.disabled = false;
           }
         });
       }
@@ -420,6 +495,3 @@
     </script>
   </body>
 </html>
-
-
-
