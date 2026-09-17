@@ -6,6 +6,20 @@ const SUPABASE_URL = "https://duvbcwwprkzzyzikmcol.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_otXKj1pYtPToX6Dp4oq19g_Aid-WkkC";
 export const SITE_URL = "https://timzee-tech-blog.netlify.app";
 
+const PROFILE_PUBLIC_COLUMNS = [
+  "id", "display_name", "username", "avatar_url", "cover_url", "bio", "headline",
+  "location", "website", "role", "is_verified", "is_featured", "is_staff_pick",
+  "verification_tier", "verified_at", "points", "level", "created_at",
+  "allow_messages", "allow_requests", "show_email"
+].join(",");
+
+const PROFILE_SELF_COLUMNS = `${PROFILE_PUBLIC_COLUMNS},email,notify_messages,notify_replies,notify_follows,notify_mentions`;
+const MARKETPLACE_PUBLIC_COLUMNS = [
+  "id", "user_id", "seller_name", "title", "description", "category", "subcategory",
+  "price", "currency", "condition", "location", "images", "is_available", "view_count",
+  "created_at", "updated_at", "expires_at"
+].join(",");
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
@@ -14,6 +28,45 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     flowType: "pkce"
   }
 });
+
+// The legacy app still contains a few `select("*")` calls. Constrain those
+// requests centrally so a missed call site cannot accidentally fetch private
+// profile fields or internal marketplace metadata. Explicit column lists are
+// never changed by this guard.
+const originalFrom = supabase.from.bind(supabase);
+supabase.from = (table) => {
+  const builder = originalFrom(table);
+  const originalSelect = builder.select.bind(builder);
+
+  builder.select = (columns = "*", ...rest) => {
+    const requested = String(columns || "*").trim();
+    if (requested !== "*") return originalSelect(columns, ...rest);
+
+    const pathname = typeof window === "undefined" ? "" : window.location.pathname;
+    const internalAdminArea = /^\/(?:admin|moderator|super)\//i.test(pathname);
+    const profilePage = /\/profile\.html$/i.test(pathname);
+    const profileId = typeof window === "undefined"
+      ? ""
+      : new URLSearchParams(window.location.search).get("id") || "";
+    const currentUserId = typeof window === "undefined" ? "" : window.__timzeeCurrentUserId || "";
+
+    if (table === "profiles") {
+      if (internalAdminArea) return originalSelect(columns, ...rest);
+      if (profilePage && (!profileId || (currentUserId && profileId === currentUserId))) {
+        return originalSelect(PROFILE_SELF_COLUMNS, ...rest);
+      }
+      return originalSelect(PROFILE_PUBLIC_COLUMNS, ...rest);
+    }
+
+    if (table === "marketplace_items") {
+      return originalSelect(MARKETPLACE_PUBLIC_COLUMNS, ...rest);
+    }
+
+    return originalSelect(columns, ...rest);
+  };
+
+  return builder;
+};
 
 if (typeof window !== "undefined" && !window.supabase) {
   window.supabase = supabase;
@@ -132,6 +185,7 @@ export async function getCurrentUser() {
   }
   const user = data.user;
   if (!user) return null;
+  if (typeof window !== "undefined") window.__timzeeCurrentUserId = user.id;
   await resolveTrustedRole(user);
   return user;
 }
@@ -195,6 +249,7 @@ export async function signUp(email, password, displayName = "") {
 }
 
 export async function signOut() {
+  if (typeof window !== "undefined") delete window.__timzeeCurrentUserId;
   return supabase.auth.signOut();
 }
 
