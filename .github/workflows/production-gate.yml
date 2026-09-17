@@ -26,9 +26,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          # Netlify Functions use CommonJS.
           while IFS= read -r file; do
             node --check "$file"
-          done < <(find assets netlify/functions scripts -type f \( -name '*.js' -o -name '*.mjs' \) -print)
+          done < <(find netlify/functions -type f -name '*.js' -print)
+
+          # Browser scripts are ES modules but keep the .js extension. Copy each
+          # to a temporary .mjs file so Node parses it with module semantics.
+          tmp_root=$(mktemp -d)
+          trap 'rm -rf "$tmp_root"' EXIT
+          while IFS= read -r file; do
+            tmp_file="$tmp_root/$(basename "$file").mjs"
+            cp "$file" "$tmp_file"
+            node --check "$tmp_file"
+          done < <(find assets -type f -name '*.js' -print)
+
+          # Repository validation script is explicitly ESM.
+          while IFS= read -r file; do
+            node --check "$file"
+          done < <(find scripts -type f -name '*.mjs' -print)
 
       - name: Validate site configuration
         run: node scripts/validate-production-config.mjs
