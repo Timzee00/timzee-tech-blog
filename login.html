@@ -23,7 +23,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
-      <script defer src="assets/js/theme-init.js"></script>
+    <script defer src="assets/js/theme-init.js"></script>
+    <style>
+      .oauth-divider { display:flex; align-items:center; gap:12px; margin:18px 0 14px; color:var(--muted,#6b7280); font-size:.82rem; }
+      .oauth-divider::before, .oauth-divider::after { content:""; height:1px; flex:1; background:currentColor; opacity:.25; }
+      .oauth-buttons { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+      .oauth-btn { display:flex; align-items:center; justify-content:center; gap:9px; width:100%; min-height:44px; border:1px solid rgba(127,127,127,.25); border-radius:10px; background:transparent; color:inherit; font:inherit; font-weight:600; cursor:pointer; transition:transform .15s ease, border-color .15s ease, background .15s ease; }
+      .oauth-btn:hover { transform:translateY(-1px); background:rgba(127,127,127,.07); border-color:rgba(127,127,127,.45); }
+      .oauth-btn:disabled { opacity:.6; cursor:wait; transform:none; }
+      .oauth-icon { width:19px; height:19px; display:block; flex:none; }
+      @media (max-width:520px) { .oauth-buttons { grid-template-columns:1fr; } }
+    </style>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -95,16 +105,8 @@
                   <label for="loginPassword">Password</label>
                   <div class="password-field">
                     <input type="password" id="loginPassword" placeholder="••••••••" required>
-                    <button
-                      type="button"
-                      class="password-toggle"
-                      data-password-toggle="loginPassword"
-                      aria-label="Show password"
-                      title="Show password">
-                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
+                    <button type="button" class="password-toggle" data-password-toggle="loginPassword" aria-label="Show password" title="Show password">
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
                   </div>
                 </div>
@@ -113,22 +115,25 @@
                   <button class="btn ghost" type="button" id="forgotToggle">Forgot password?</button>
                 </div>
               </form>
-              <form id="forgotForm" class="form-grid hidden auth-form" style="margin-top:12px;">
-                <div class="auth-input-group">
-                  <label for="forgotEmail">Reset email</label>
-                  <input type="email" id="forgotEmail" placeholder="you@example.com" required>
-                </div>
-                <button class="btn ghost" type="submit">Send reset link</button>
-              </form>
+
+              <div class="oauth-divider" aria-hidden="true"><span>or continue with</span></div>
+              <div class="oauth-buttons" aria-label="Social sign in options">
+                <button class="oauth-btn" type="button" id="googleSignIn">
+                  <svg class="oauth-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.72-.06-1.42-.19-2.09H12v3.96h5.38a4.6 4.6 0 0 1-1.99 3.02v2.51h3.22c1.89-1.74 2.99-4.31 2.99-7.4Z"/><path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.61-2.43l-3.22-2.51c-.9.6-2.04.96-3.39.96-2.61 0-4.82-1.76-5.61-4.13H3.06v2.59A9.98 9.98 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.39 13.89A6 6 0 0 1 6.08 12c0-.66.11-1.3.31-1.89V7.52H3.06A10 10 0 0 0 2 12c0 1.61.39 3.14 1.06 4.48l3.33-2.59Z"/><path fill="#EA4335" d="M12 5.98c1.47 0 2.8.51 3.84 1.51l2.88-2.88C16.95 3.03 14.7 2 12 2a9.98 9.98 0 0 0-8.94 5.52l3.33 2.59C7.18 7.74 9.39 5.98 12 5.98Z"/></svg>
+                  <span>Google</span>
+                </button>
+                <button class="oauth-btn" type="button" id="appleSignIn">
+                  <svg class="oauth-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.77 12.67c.02 2.19 1.92 2.92 1.94 2.93-.02.05-.3 1.04-1 2.05-.6.87-1.22 1.74-2.2 1.76-.96.02-1.27-.57-2.37-.57-1.1 0-1.44.55-2.35.59-.95.04-1.68-.94-2.28-1.81-1.24-1.79-2.19-5.05-.92-7.24.63-1.09 1.66-1.78 2.77-1.8.86-.02 1.67.61 2.37.61.7 0 2.02-.75 3.41-.64.58.02 2.2.23 3.24 1.76-.08.05-1.94 1.13-1.92 3.36ZM14.52 4.99c.5-.61.84-1.46.75-2.31-.73.03-1.61.49-2.13 1.1-.47.54-.88 1.4-.77 2.22.81.06 1.64-.41 2.15-1.01Z"/></svg>
+                  <span>Apple</span>
+                </button>
+              </div>
               <p class="callout" id="loginMessage" style="display:none; margin-top:14px;"></p>
               <div class="callout" style="margin-top:14px;">
                 Use your exact email/password. If you just signed up, confirm your email before logging in.
               </div>
               <div class="auth-switch">
                 <span>New here?</span>
-                <button class="btn ghost auth-switch-btn" type="button" data-switch="signup">
-                  Create Account
-                </button>
+                <button class="btn ghost auth-switch-btn" type="button" data-switch="signup">Create Account</button>
               </div>
             </div>
 
@@ -148,57 +153,29 @@
                   <label for="signupPassword">Password</label>
                   <div class="password-field">
                     <input type="password" id="signupPassword" placeholder="Create a strong password" required>
-                    <button
-                      type="button"
-                      class="password-toggle"
-                      data-password-toggle="signupPassword"
-                      aria-label="Show password"
-                      title="Show password">
-                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
+                    <button type="button" class="password-toggle" data-password-toggle="signupPassword" aria-label="Show password" title="Show password">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
                   </div>
                 </div>
                 <button class="btn secondary" type="submit">Sign Up</button>
               </form>
               <p class="callout" id="signupMessage" style="display:none; margin-top:14px;"></p>
-              <div class="callout" style="margin-top:14px;">
-                After sign-up, check inbox/spam for email confirmation before your first login.
-              </div>
-              <div class="auth-switch">
-                <span>Already have an account?</span>
-                <button class="btn ghost auth-switch-btn" type="button" data-switch="login">
-                  Sign In
-                </button>
-              </div>
+              <div class="callout" style="margin-top:14px;">After sign-up, check inbox/spam for email confirmation before your first login.</div>
+              <div class="auth-switch"><span>Already have an account?</span><button class="btn ghost auth-switch-btn" type="button" data-switch="login">Sign In</button></div>
             </div>
 
             <div class="auth-card auth-panel auth-panel-reset secondary-card">
               <h2>Reset Password</h2>
               <p class="tagline">Create a new password for your account.</p>
               <form id="resetForm" class="form-grid auth-form">
-                <div class="auth-input-group">
-                  <label for="resetPassword">New password</label>
-                  <input type="password" id="resetPassword" placeholder="Enter a new password" required>
-                </div>
-                <div class="auth-input-group">
-                  <label for="resetPasswordConfirm">Confirm password</label>
-                  <input type="password" id="resetPasswordConfirm" placeholder="Confirm new password" required>
-                </div>
+                <div class="auth-input-group"><label for="resetPassword">New password</label><input type="password" id="resetPassword" placeholder="Enter a new password" required></div>
+                <div class="auth-input-group"><label for="resetPasswordConfirm">Confirm password</label><input type="password" id="resetPasswordConfirm" placeholder="Confirm new password" required></div>
                 <button class="btn secondary" type="submit">Update Password</button>
               </form>
               <p class="callout" id="resetMessage" style="display:none; margin-top:14px;"></p>
-              <div class="callout" style="margin-top:14px;">
-                Open this tab from your reset email link. If expired, request a new reset link.
-              </div>
-              <div class="auth-switch">
-                <span>Remembered your password?</span>
-                <button class="btn ghost auth-switch-btn" type="button" data-switch="login">
-                  Back to login
-                </button>
-              </div>
+              <div class="callout" style="margin-top:14px;">Open this tab from your reset email link. If expired, request a new reset link.</div>
+              <div class="auth-switch"><span>Remembered your password?</span><button class="btn ghost auth-switch-btn" type="button" data-switch="login">Back to login</button></div>
             </div>
           </div>
         </section>
@@ -219,6 +196,3 @@
     <script type="module" src="assets/js/user-auth.js"></script>
   </body>
 </html>
-
-
-
