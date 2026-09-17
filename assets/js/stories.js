@@ -1,6 +1,81 @@
 import { supabase } from "./supabase.js";
 import { uploadMedia } from "./media.js";
 
+function ensureStoryCreationUI() {
+  if (document.getElementById("timzeeStoriesStyles")) return;
+
+  const stylesheet = document.createElement("link");
+  stylesheet.id = "timzeeStoriesStyles";
+  stylesheet.rel = "stylesheet";
+  stylesheet.href = "assets/css/stories.css";
+  document.head.appendChild(stylesheet);
+
+  const rail = document.getElementById("storiesRail");
+  const addStoryBtn = document.getElementById("addStoryBtn");
+  if (!rail || !addStoryBtn) return;
+
+  const action = document.createElement("button");
+  action.type = "button";
+  action.id = "createStatusAction";
+  action.className = "story-create-action";
+  action.setAttribute("aria-label", "Create a new status");
+  action.innerHTML = `
+    <span class="story-create-action-icon" aria-hidden="true">+</span>
+    <span>
+      <strong>Create status</strong>
+      <small>Photo or video · 24 hours</small>
+    </span>
+  `;
+
+  action.addEventListener("click", () => addStoryBtn.click());
+  rail.parentElement?.insertBefore(action, rail);
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .story-create-action {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 18px 0 4px;
+      padding: 14px 16px;
+      border: 1px solid var(--color-border, rgba(15,23,42,.14));
+      border-radius: 16px;
+      background: var(--color-surface, #fff);
+      color: var(--color-text, #0f172a);
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(15,23,42,.06);
+    }
+    .story-create-action:hover { transform: translateY(-1px); }
+    .story-create-action-icon {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--color-primary, #0f766e);
+      color: #fff;
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .story-create-action strong,
+    .story-create-action small { display: block; }
+    .story-create-action small {
+      margin-top: 2px;
+      color: var(--color-text-muted, #64748b);
+      font-size: .78rem;
+    }
+    @media (max-width: 600px) {
+      .story-create-action { margin-top: 12px; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+ensureStoryCreationUI();
+
 // Fetches every currently-active (non-expired, visibility-permitted) story
 // the current user is allowed to see, grouped by author. RLS already filters
 // out expired/private-not-a-friend rows server-side; this just groups them.
