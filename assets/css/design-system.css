@@ -24,9 +24,7 @@ a.btn {
 
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 select,
-textarea {
-  border-radius: var(--radius-sm, 10px);
-}
+textarea { border-radius: var(--radius-sm, 10px); }
 
 .post-card,
 .popular-card,
@@ -40,11 +38,9 @@ textarea {
 .callout,
 .ad-slot,
 .modal,
-.card {
-  border-radius: var(--radius-md, 14px);
-}
+.card { border-radius: var(--radius-md, 14px); }
 
-/* "Popular" is computed by the automated ranking engine. Pinned remains an editorial control, not a popularity claim. */
+/* "Popular" is computed by the automated ranking engine. Pinned is an editorial control. */
 .post-card-header .chip { display: none !important; }
 
 .chip,
@@ -61,6 +57,10 @@ textarea {
 .popular-media { overflow: hidden; border-radius: var(--radius-md, 14px); }
 .popular-media-fallback { width: 100%; height: 100%; min-height: 180px; display:grid; place-items:center; background:linear-gradient(135deg, rgba(15,118,110,.12), rgba(14,165,233,.1)); color:var(--color-primary); font:700 .72rem var(--font-mono); letter-spacing:.08em; }
 .popular-card-foot { display:flex; justify-content:space-between; gap:10px; margin-top:10px; color:var(--color-text-muted); font-size:.7rem; }
+
+.form-consent-row { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:start; gap:9px; padding:10px 0; color:var(--color-text-muted); font-size:.78rem; line-height:1.45; }
+.form-consent-row input { width:18px; height:18px; margin:2px 0 0; accent-color:var(--color-primary); }
+.form-consent-row a { color:var(--color-primary); text-decoration:underline; }
 
 .footer-brand { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.01em; }
 .footer-legal-links { display:flex; flex-wrap:wrap; gap:12px; margin-top:8px; }
