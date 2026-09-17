@@ -17,8 +17,17 @@ if (!/from\s*=\s*["']\/sitemap\.xml["']/.test(netlify) || !/to\s*=\s*["']\/\.net
 if (!/from\s*=\s*["']\/health["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/health["']/.test(netlify)) {
   fail("Production health rewrite is missing.");
 }
-if (!existsSync(join(root, "netlify/functions/sitemap.js"))) fail("Dynamic sitemap function is missing.");
-if (!existsSync(join(root, "netlify/functions/health.js"))) fail("Production health function is missing.");
+for (const file of [
+  "netlify/functions/sitemap.js",
+  "netlify/functions/health.js",
+  "action-result.html",
+  "offline.html",
+  "maintenance.html",
+  "assets/js/action-result.js",
+  "assets/js/notification-popup.js"
+]) {
+  if (!existsSync(join(root, file))) fail(`Required production surface is missing: ${file}`);
+}
 
 const headers = read("_headers");
 for (const required of [
@@ -52,7 +61,8 @@ const suspicious = [
   /gsk_[A-Za-z0-9_-]{20,}/,
   /sb_secret_[A-Za-z0-9_-]{20,}/,
   /service_role_[A-Za-z0-9_-]{20,}/,
-  /localStorage\.(?:setItem|getItem)\((?:["'])groq_api_key/i
+  /localStorage\.(?:setItem|getItem)\((?:["'])groq_api_key/i,
+  /llama-3\.3-70b-versatile/i
 ];
 
 const walk = async (dir) => {
@@ -71,7 +81,7 @@ for (const base of scanRoots) {
   for (const file of await walk(base)) {
     const text = read(file);
     for (const pattern of suspicious) {
-      if (pattern.test(text)) fail(`Potential client-side secret or obsolete API-key storage found in ${relative(root, file)}.`);
+      if (pattern.test(text)) fail(`Potential client-side secret, obsolete API-key storage, or retired provider model found in ${relative(root, file)}.`);
     }
   }
 }
