@@ -70,8 +70,7 @@ export async function signUp(email, password, displayName = "") {
       options: {
         data: {
           display_name: displayName,
-          username: displayName ? displayName.toLowerCase().replace(/\s+/g, "") : fallbackUsername,
-          role: "user"
+          username: displayName ? displayName.toLowerCase().replace(/\s+/g, "") : fallbackUsername
         },
         emailRedirectTo: SITE_URL ? `${SITE_URL}/login.html` : undefined
       }
@@ -100,10 +99,10 @@ export async function getCurrentUserWithRole() {
   const user = data.user;
   if (!user) return null;
 
-  // Try JWT metadata first.
-  let role = user.user_metadata?.role || user.app_metadata?.role;
+  // Authorization roles must never be taken from user-editable user_metadata.
+  // app_metadata is server-controlled; profiles is the database fallback.
+  let role = user.app_metadata?.role || null;
 
-  // If role not in JWT metadata, fetch from profiles table as fallback
   if (!role) {
     try {
       const profileResult = await supabase
@@ -111,25 +110,44 @@ export async function getCurrentUserWithRole() {
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
-      if (profileResult.data?.role) {
+      if (profileResult.error) {
+        console.warn("Failed to fetch trusted profile role:", profileResult.error);
+      } else if (profileResult.data?.role) {
         role = profileResult.data.role;
-        // Update the user object so subsequent calls have it
-        if (user.user_metadata) {
-          user.user_metadata.role = role;
-        } else {
-          user.user_metadata = { role };
-        }
       }
     } catch (err) {
       console.warn("Failed to fetch role from profiles:", err);
     }
   }
 
+  if (!role) {
+    try {
+      const roleResult = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!roleResult.error && roleResult.data?.role) {
+        role = roleResult.data.role;
+      }
+    } catch (err) {
+      console.warn("Failed to fetch role mapping:", err);
+    }
+  }
+
+  // Keep the resolved role only on this in-memory user object for UI gating.
+  // Never persist it back to user-editable metadata.
+  if (role) {
+    user.app_metadata = { ...(user.app_metadata || {}), role };
+  }
+
   return user;
 }
 
 export function getUserRole(user) {
-  return user?.user_metadata?.role || user?.app_metadata?.role || "user";
+  return user?.app_metadata?.role || "user";
 }
 
 export function getDisplayName(user) {
