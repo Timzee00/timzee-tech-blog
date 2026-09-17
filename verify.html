@@ -6,9 +6,9 @@
     <title>Apply for Verification - Timzee Tech Hub</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
-      <script defer src="assets/js/theme-init.js"></script>
+    <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -49,13 +49,12 @@
           <p>Stand out in the community with an official verification badge</p>
         </div>
 
-        <!-- Verification Levels -->
         <div class="form-section">
           <h3>Select Verification Level</h3>
           <div class="badge-levels">
             <div class="level-card" data-level="silver">
               <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 28px;">🟩</span>
+                <span style="font-size: 28px;">Silver</span>
                 <div>
                   <strong>Silver</strong>
                   <p style="margin: 4px 0; font-size: 13px; color: #666;">For active community members</p>
@@ -70,7 +69,7 @@
 
             <div class="level-card" data-level="gold">
               <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 28px;">🟨</span>
+                <span style="font-size: 28px;">Gold</span>
                 <div>
                   <strong>Gold</strong>
                   <p style="margin: 4px 0; font-size: 13px; color: #666;">For prominent creators</p>
@@ -86,7 +85,7 @@
 
             <div class="level-card" data-level="platinum">
               <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 28px;">⬜</span>
+                <span style="font-size: 28px;">Platinum</span>
                 <div>
                   <strong>Platinum</strong>
                   <p style="margin: 4px 0; font-size: 13px; color: #666;">For industry leaders</p>
@@ -102,7 +101,7 @@
 
             <div class="level-card" data-level="business">
               <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 28px;">🏢</span>
+                <span style="font-size: 28px;">Business</span>
                 <div>
                   <strong>Business</strong>
                   <p style="margin: 4px 0; font-size: 13px; color: #666;">For companies and organizations</p>
@@ -118,9 +117,8 @@
           </div>
         </div>
 
-        <!-- Form -->
         <form id="verificationForm">
-          <div id="statusBox" class="status-box"></div>
+          <div id="statusBox" class="status-box" role="status" aria-live="polite"></div>
 
           <div class="form-section">
             <h3>Why should you be verified?</h3>
@@ -131,9 +129,8 @@
           <div class="form-section">
             <h3>Upload Supporting Documents</h3>
             <p style="font-size: 13px; color: #666; margin-bottom: 12px;">Examples: ID, Portfolio, Press Features, Social Media Screenshots</p>
-            
-            <div class="doc-upload" id="docUpload">
-              <div style="font-size: 32px; margin-bottom: 8px;">📄</div>
+            <div class="doc-upload" id="docUpload" role="button" tabindex="0" aria-controls="docInput" aria-label="Upload supporting documents">
+              <div style="font-size: 32px; margin-bottom: 8px;">Documents</div>
               <p style="margin: 0; font-weight: 500;">Drop files here or click to upload</p>
               <small style="color: #999;">Max 5MB per file, PNG/JPG/PDF</small>
               <input type="file" id="docInput" multiple accept=".pdf,.png,.jpg,.jpeg" style="display: none;">
@@ -155,9 +152,8 @@
           </div>
         </form>
 
-        <!-- Info Box -->
         <div class="callout" style="margin-top: 40px;">
-          <strong>ℹ️ Review Process</strong>
+          <strong>Review Process</strong>
           <p>Applications are reviewed within 3-5 business days. You'll receive an email notification about the decision. Approval is based on community activity, authenticity, and contribution to the platform.</p>
         </div>
       </div>
@@ -169,17 +165,15 @@
       import { createVerificationApplication, getUserVerificationBadge } from "./assets/js/data.js";
       import { escapeHTML } from "./assets/js/utils.js";
 
-      let state = {
+      const state = {
         user: null,
         selectedLevel: "gold",
         documents: [],
         hasExistingApplication: false
       };
 
-      // Setup auth
       async function setupAuth() {
         state.user = await getCurrentUser();
-        
         if (!state.user) {
           window.location.href = `login.html?next=verify.html`;
           return;
@@ -189,19 +183,18 @@
         authActions.innerHTML = `
           <span class="auth-meta">${escapeHTML(state.user.email || '')}</span>
           <a class="btn ghost" href="profile.html">Profile</a>
-          <button class="btn ghost" id="logoutBtn">Log Out</button>
+          <button class="btn ghost" id="logoutBtn" type="button">Log Out</button>
         `;
         document.getElementById("logoutBtn").addEventListener("click", async () => {
           await signOut();
           window.location.reload();
         });
 
-        // Check for existing verification
         const badge = await getUserVerificationBadge(state.user.id);
         if (badge?.verification_level && badge.verification_level !== "none") {
           document.getElementById("verificationForm").innerHTML = `
             <div class="callout" style="background: #dbeafe; border-color: #0284c7;">
-              <strong>✓ Already Verified</strong>
+              <strong>Already Verified</strong>
               <p>Your profile has <strong>${escapeHTML(badge.verification_level || '')}</strong> verification status.</p>
               <a href="profile.html" class="btn" style="margin-top: 12px;">Back to Profile</a>
             </div>
@@ -210,99 +203,130 @@
         }
       }
 
-      // Level selection
-      document.querySelectorAll(".level-card").forEach(card => {
+      document.querySelectorAll(".level-card").forEach((card) => {
         card.addEventListener("click", () => {
-          document.querySelectorAll(".level-card").forEach(c => c.classList.remove("selected"));
+          document.querySelectorAll(".level-card").forEach((item) => item.classList.remove("selected"));
           card.classList.add("selected");
           state.selectedLevel = card.dataset.level;
         });
       });
 
-      // Set initial selection
-      document.querySelector("[data-level='gold']").classList.add("selected");
+      const initialLevel = document.querySelector("[data-level='gold']");
+      if (initialLevel) initialLevel.classList.add("selected");
 
-      // Document upload
       const docUpload = document.getElementById("docUpload");
       const docInput = document.getElementById("docInput");
 
-      docUpload.addEventListener("click", () => docInput.click());
-      docUpload.addEventListener("dragover", (e) => {
-        e.preventDefault();
+      function openDocumentPicker() {
+        docInput.click();
+      }
+
+      docUpload.addEventListener("click", openDocumentPicker);
+      docUpload.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openDocumentPicker();
+        }
+      });
+      docUpload.addEventListener("dragover", (event) => {
+        event.preventDefault();
         docUpload.classList.add("dragover");
       });
       docUpload.addEventListener("dragleave", () => {
         docUpload.classList.remove("dragover");
       });
-      docUpload.addEventListener("drop", (e) => {
-        e.preventDefault();
+      docUpload.addEventListener("drop", (event) => {
+        event.preventDefault();
         docUpload.classList.remove("dragover");
-        handleFiles(e.dataTransfer.files);
+        handleFiles(event.dataTransfer?.files || []);
       });
 
-      docInput.addEventListener("change", (e) => {
-        handleFiles(e.target.files);
+      docInput.addEventListener("change", (event) => {
+        handleFiles(event.target.files || []);
       });
+
+      function fileKey(file) {
+        return `${file.name}:${file.size}:${file.lastModified}:${file.type}`;
+      }
+
+      function isSupportedDocument(file) {
+        const allowedTypes = new Set(["application/pdf", "image/png", "image/jpeg"]);
+        return allowedTypes.has(file.type);
+      }
+
+      function setStatus(message, isError = false) {
+        const status = document.getElementById("statusBox");
+        status.classList.toggle("error", isError);
+        status.classList.toggle("success", !isError);
+        status.textContent = message;
+        status.style.display = "block";
+      }
 
       function handleFiles(files) {
-        for (const file of files) {
-          if (file.size > 5 * 1024 * 1024) {
-            alert(`${file.name} is too large (max 5MB)`);
+        const existing = new Set(state.documents.map(fileKey));
+        let skipped = 0;
+        for (const file of Array.from(files || [])) {
+          if (file.size > 5 * 1024 * 1024 || !isSupportedDocument(file)) {
+            skipped += 1;
             continue;
           }
+          const key = fileKey(file);
+          if (existing.has(key)) continue;
           state.documents.push(file);
+          existing.add(key);
         }
+        docInput.value = "";
         renderDocuments();
+        if (skipped) setStatus(`${skipped} unsupported or oversized file(s) were skipped.`, true);
       }
 
       function renderDocuments() {
         const list = document.getElementById("docList");
         list.innerHTML = state.documents.map((doc, idx) => `
           <div class="doc-item">
-            <span>📎 ${escapeHTML(doc.name || '')}</span>
-            <button class="remove-doc" type="button" data-idx="${idx}">✕</button>
+            <span>${escapeHTML(doc.name || '')}</span>
+            <button class="remove-doc" type="button" data-idx="${idx}" aria-label="Remove ${escapeHTML(doc.name || 'document')}">Remove</button>
           </div>
         `).join("");
 
-        list.querySelectorAll(".remove-doc").forEach(btn => {
-          btn.addEventListener("click", (e) => {
-            e.preventDefault();
-            state.documents.splice(parseInt(btn.dataset.idx), 1);
+        list.querySelectorAll(".remove-doc").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            const index = Number.parseInt(button.dataset.idx, 10);
+            if (Number.isInteger(index) && index >= 0) state.documents.splice(index, 1);
             renderDocuments();
           });
         });
       }
 
-      // Form submission
-      document.getElementById("verificationForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
+      document.getElementById("verificationForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+
         if (state.hasExistingApplication) {
-          alert("You already have a verification");
+          setStatus("You already have a verification.", true);
           return;
         }
 
         const reason = document.getElementById("reason").value.trim();
         if (reason.length < 20) {
-          alert("Please provide at least 20 characters");
+          setStatus("Please provide at least 20 characters.", true);
           return;
         }
 
         const status = document.getElementById("statusBox");
         const btn = document.getElementById("submitBtn");
-
         btn.disabled = true;
         status.classList.remove("error", "success");
         status.textContent = "Submitting...";
         status.style.display = "block";
 
         try {
-          // Convert documents to base64
           const documentsData = [];
           for (const doc of state.documents) {
-            const base64 = await new Promise((resolve) => {
+            const base64 = await new Promise((resolve, reject) => {
               const reader = new FileReader();
               reader.onload = () => resolve(reader.result);
+              reader.onerror = () => reject(new Error(`Unable to read ${doc.name}.`));
               reader.readAsDataURL(doc);
             });
             documentsData.push({
@@ -319,17 +343,18 @@
             documents: documentsData
           });
 
-          if (result.error) {
+          if (result?.error) {
             status.classList.add("error");
             status.textContent = `Error: ${result.error.message}`;
           } else {
             status.classList.add("success");
-            status.textContent = "✓ Application submitted! We'll review it within 3-5 business days.";
+            status.textContent = "Application submitted. We'll review it within 3-5 business days.";
             document.getElementById("verificationForm").style.display = "none";
           }
         } catch (error) {
+          console.error("Verification submission error:", error);
           status.classList.add("error");
-          status.textContent = `Error: ${error.message}`;
+          status.textContent = "Unable to submit the application right now.";
         } finally {
           btn.disabled = false;
         }
@@ -339,6 +364,3 @@
     </script>
   </body>
 </html>
-
-
-
