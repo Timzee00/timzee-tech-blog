@@ -1,5 +1,3 @@
-import { supabase, getCurrentUser } from "./supabase.js";
-
 let channel = null;
 let activeToasts = [];
 let stylesReady = false;
@@ -10,88 +8,21 @@ function injectStyles() {
   const style = document.createElement("style");
   style.id = "timzee-notification-styles";
   style.textContent = `
-    #timzee-notification-region {
-      position: fixed;
-      top: 84px;
-      right: 18px;
-      width: min(390px, calc(100vw - 36px));
-      display: grid;
-      gap: 10px;
-      z-index: 10050;
-      pointer-events: none;
-    }
-    .timzee-notification-toast {
-      pointer-events: auto;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      padding: 14px 14px 13px;
-      border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
-      border-radius: 14px;
-      background: var(--card-solid, #fff);
-      color: var(--ink, #111827);
-      box-shadow: 0 16px 42px rgba(0,0,0,.16);
-      animation: timzeeNotifIn .22s ease-out both;
-      overflow: hidden;
-    }
+    #timzee-notification-region { position: fixed; top: 84px; right: 18px; width: min(390px, calc(100vw - 36px)); display: grid; gap: 10px; z-index: 10050; pointer-events: none; }
+    .timzee-notification-toast { pointer-events: auto; display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 14px 14px 13px; border: 1px solid color-mix(in srgb, currentColor 14%, transparent); border-radius: 14px; background: var(--card-solid, #fff); color: var(--ink, #111827); box-shadow: 0 16px 42px rgba(0,0,0,.16); animation: timzeeNotifIn .22s ease-out both; overflow: hidden; }
     .timzee-notification-toast.is-leaving { animation: timzeeNotifOut .18s ease-in both; }
     .timzee-notification-main { min-width: 0; }
-    .timzee-notification-title {
-      margin: 0 0 4px;
-      font-size: .94rem;
-      font-weight: 700;
-      line-height: 1.25;
-    }
-    .timzee-notification-body {
-      margin: 0;
-      font-size: .86rem;
-      line-height: 1.45;
-      opacity: .82;
-      overflow-wrap: anywhere;
-    }
-    .timzee-notification-actions {
-      display: flex;
-      align-items: flex-start;
-      gap: 6px;
-    }
-    .timzee-notification-action,
-    .timzee-notification-close {
-      border: 0;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-    }
-    .timzee-notification-action {
-      font-size: .78rem;
-      font-weight: 700;
-      padding: 5px 7px;
-      border-radius: 8px;
-      text-decoration: none;
-      background: color-mix(in srgb, currentColor 9%, transparent);
-    }
-    .timzee-notification-close {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      font-size: 1.15rem;
-      line-height: 1;
-    }
-    .timzee-notification-close:hover,
-    .timzee-notification-action:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
-    @keyframes timzeeNotifIn {
-      from { opacity: 0; transform: translateY(-10px) translateX(10px); }
-      to { opacity: 1; transform: translateY(0) translateX(0); }
-    }
-    @keyframes timzeeNotifOut {
-      from { opacity: 1; transform: translateY(0); max-height: 220px; }
-      to { opacity: 0; transform: translateY(-8px); max-height: 0; margin-top: -10px; padding-top: 0; padding-bottom: 0; border-width: 0; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .timzee-notification-toast { animation: none; }
-    }
-    @media (max-width: 640px) {
-      #timzee-notification-region { top: 72px; right: 10px; width: calc(100vw - 20px); }
-    }
+    .timzee-notification-title { margin: 0 0 4px; font-size: .94rem; font-weight: 700; line-height: 1.25; }
+    .timzee-notification-body { margin: 0; font-size: .86rem; line-height: 1.45; opacity: .82; overflow-wrap: anywhere; }
+    .timzee-notification-actions { display: flex; align-items: flex-start; gap: 6px; }
+    .timzee-notification-action, .timzee-notification-close { border: 0; background: transparent; color: inherit; cursor: pointer; }
+    .timzee-notification-action { font-size: .78rem; font-weight: 700; padding: 5px 7px; border-radius: 8px; text-decoration: none; background: color-mix(in srgb, currentColor 9%, transparent); }
+    .timzee-notification-close { width: 28px; height: 28px; border-radius: 8px; font-size: 1.15rem; line-height: 1; }
+    .timzee-notification-close:hover, .timzee-notification-action:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
+    @keyframes timzeeNotifIn { from { opacity: 0; transform: translateY(-10px) translateX(10px); } to { opacity: 1; transform: translateY(0) translateX(0); } }
+    @keyframes timzeeNotifOut { from { opacity: 1; transform: translateY(0); max-height: 220px; } to { opacity: 0; transform: translateY(-8px); max-height: 0; margin-top: -10px; padding-top: 0; padding-bottom: 0; border-width: 0; } }
+    @media (prefers-reduced-motion: reduce) { .timzee-notification-toast { animation: none; } }
+    @media (max-width: 640px) { #timzee-notification-region { top: 72px; right: 10px; width: calc(100vw - 20px); } }
   `;
   document.head.appendChild(style);
 }
@@ -118,17 +49,12 @@ function safeSameOriginLink(rawLink) {
   }
 }
 
-async function markRead(notificationId, userId) {
-  if (!notificationId || !userId) return;
+async function markRead(notificationId, userId, supabase) {
+  if (!notificationId || !userId || !supabase) return;
   try {
-    await supabase
-      .from("notifications")
-      .update({ read_at: new Date().toISOString() })
-      .eq("id", notificationId)
-      .eq("user_id", userId)
-      .is("read_at", null);
+    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", notificationId).eq("user_id", userId).is("read_at", null);
   } catch {
-    // Navigation/visual feedback should still work if marking read fails.
+    // Keep navigation/visual feedback usable if marking read fails.
   }
 }
 
@@ -139,7 +65,7 @@ function removeToast(toast) {
   activeToasts = activeToasts.filter((item) => item !== toast);
 }
 
-function showNotificationToast(notification, userId) {
+function showNotificationToast(notification, userId, supabase) {
   injectStyles();
   const region = getRegion();
   const toast = document.createElement("article");
@@ -148,27 +74,23 @@ function showNotificationToast(notification, userId) {
 
   const main = document.createElement("div");
   main.className = "timzee-notification-main";
-
   const title = document.createElement("p");
   title.className = "timzee-notification-title";
   title.textContent = notification?.title || "New notification";
-
   const body = document.createElement("p");
   body.className = "timzee-notification-body";
   body.textContent = notification?.body || "You have a new notification.";
-
   main.append(title, body);
 
   const actions = document.createElement("div");
   actions.className = "timzee-notification-actions";
-
   const link = safeSameOriginLink(notification?.link_url || notification?.link);
   if (link) {
     const action = document.createElement("a");
     action.className = "timzee-notification-action";
     action.href = link;
     action.textContent = "Open";
-    action.addEventListener("click", () => markRead(notification.id, userId), { once: true });
+    action.addEventListener("click", () => markRead(notification.id, userId, supabase), { once: true });
     actions.appendChild(action);
   }
 
@@ -178,7 +100,7 @@ function showNotificationToast(notification, userId) {
   close.setAttribute("aria-label", "Dismiss notification");
   close.textContent = "×";
   close.addEventListener("click", () => {
-    markRead(notification.id, userId);
+    markRead(notification.id, userId, supabase);
     removeToast(toast);
   });
   actions.appendChild(close);
@@ -186,33 +108,26 @@ function showNotificationToast(notification, userId) {
   toast.append(main, actions);
   region.prepend(toast);
   activeToasts.push(toast);
-
   while (activeToasts.length > 3) removeToast(activeToasts[0]);
   window.setTimeout(() => removeToast(toast), 7000);
 }
 
 async function start() {
-  if (typeof window === "undefined" || !document.body) return;
-  if (window.__timzeeNotificationUiReady) return;
+  if (typeof window === "undefined" || !document.body || window.__timzeeNotificationUiReady) return;
   window.__timzeeNotificationUiReady = true;
+  const supabase = window.supabase;
+  if (!supabase) return;
 
-  const user = await getCurrentUser();
-  if (!user) return;
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) return;
+  const userId = data.user.id;
 
   injectStyles();
-
   channel = supabase
-    .channel(`notification-toasts-${user.id}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "notifications",
-        filter: `user_id=eq.${user.id}`
-      },
-      (payload) => showNotificationToast(payload.new, user.id)
-    )
+    .channel(`notification-toasts-${userId}`)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, (payload) => {
+      showNotificationToast(payload.new, userId, supabase);
+    })
     .subscribe();
 
   window.addEventListener("beforeunload", () => {
