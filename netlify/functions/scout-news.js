@@ -18,12 +18,13 @@ function requireSuperForManualUser(user) { return user?.app_metadata?.role === "
 
 exports.handler = async (event) => {
   const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const isScheduled = event.headers["x-nf-event"] === "schedule";
+  const headers = event.headers || {};
+  const isScheduled = headers["x-nf-event"] === "schedule" || headers["X-Nf-Event"] === "schedule";
   if (!isScheduled) {
-    const authHeader = event.headers.authorization || event.headers.Authorization || "";
+    const authHeader = headers.authorization || headers.Authorization || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");
     if (!token) return jsonResponse(403, { error: "Missing auth token." });
     const { data, error } = await supabase.auth.getUser(token);
@@ -32,13 +33,16 @@ exports.handler = async (event) => {
   }
 
   const settings = await supabase.from("curator_settings").select("*").maybeSingle();
-  if (!settings.data?.enabled ?? false) return jsonResponse(200, { ok: true, skipped: "disabled" });
+  const enabled = settings.data?.enabled ?? true;
+  if (!enabled) return jsonResponse(200, { ok: true, skipped: "disabled" });
   const perSource = settings.data?.posts_per_source || 5;
   const sourcesResult = await supabase.from("curator_sources").select("*").eq("enabled", true);
   const fetchedSources = sourcesResult.data || [];
-  const fallbackSources = [...parseEnvFeeds(process.env.NEWS_FEEDS), ...parseEnvFeeds(process.env.NEWS_TIPS_FEEDS)]
-    .filter((url) => url && !fetchedSources.some((source) => source.feed_url === url))
-    .map((url, index) => ({ id: randomUUID(), name: `Env source ${index + 1}`, source_type: "rss", feed_url: url, tags: [], enabled: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }));
+  const envFeedUrls = parseEnvFeeds(process.env.NEWS_FEEDS);
+  const envTipUrls = parseEnvFeeds(process.env.NEWS_TIPS_FEEDS);
+  const knownUrls = new Set(fetchedSources.map((source) => source.feed_url).filter(Boolean));
+  const combinedEnv = [...envFeedUrls, ...envTipUrls];
+  const fallbackSources = combinedEnv.filter((url) => url && !knownUrls.has(url)).map((url, index) => ({ id: randomUUID(), name: `Env source ${index + 1}`, source_type: "rss", feed_url: url, tags: [], enabled: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }));
   const finalSources = fallbackSources.length ? [...fetchedSources, ...fallbackSources] : fetchedSources;
   if (!finalSources.length) return jsonResponse(200, { ok: true, skipped: "no_sources" });
 
@@ -50,7 +54,8 @@ exports.handler = async (event) => {
     try { items = source.source_type === "gdelt" ? await fetchGdeltItems(source) : await fetchRssItems(source, parser); }
     catch (error) { feedErrors.push({ source: source.name, error: error.message || "fetch_failed" }); continue; }
     let insertedCount = 0;
-    for (const item of items.slice(0, perSource)) {
+    for (const item of items) {
+      if (insertedCount >= perSource) break;
       if (!item.title || !item.link) continue;
       const title = item.title.trim(); const slug = slugify(title); if (!slug) continue;
       const summary = stripHTML(item.summary || "");
