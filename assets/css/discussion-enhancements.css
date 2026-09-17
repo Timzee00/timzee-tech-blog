@@ -1,0 +1,17 @@
+.discussion-discovery{margin-bottom:18px;}
+.discussion-discovery{padding:24px;border:1px solid var(--color-border,#e2e8f0);border-radius:16px;background:var(--color-surface,#fff);box-shadow:0 8px 28px rgba(15,23,42,.05);}
+.discussion-discovery-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:18px;}
+.discussion-discovery-head h1{margin:.35rem 0 .5rem;font-size:clamp(1.45rem,2.8vw,2.1rem);}
+.discussion-discovery-head p{margin:0;max-width:780px;color:var(--color-text-muted,#667085);line-height:1.6;}
+.discussion-discovery-kicker{font:700 .68rem var(--font-mono,monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--color-primary,#0f766e);}
+.discussion-discovery-tabs{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;}
+.discussion-discovery-tab{border:1px solid var(--color-border,#d7dce4);background:var(--color-surface-muted,#f7f8fa);padding:9px 13px;border-radius:10px;white-space:nowrap;cursor:pointer;font:600 .8rem var(--font-body,Inter,system-ui,sans-serif);}
+.discussion-discovery-tab.active{background:var(--color-primary,#0f766e);border-color:var(--color-primary,#0f766e);color:#fff;}
+.discussion-discovery-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+.discussion-discovery-card{min-width:0;padding:15px;border:1px solid var(--color-border,#e2e8f0);border-radius:13px;background:var(--color-surface,#fff);display:flex;flex-direction:column;}
+.discussion-discovery-card-top,.discussion-discovery-foot{display:flex;justify-content:space-between;gap:8px;align-items:center;color:var(--color-text-muted,#667085);font-size:.7rem;}
+.discussion-discovery-title{border:0;background:none;text-align:left;padding:11px 0 7px;font:700 1rem/1.35 var(--font-display,Space Grotesk,system-ui,sans-serif);color:var(--color-text,#16181d);cursor:pointer;}
+.discussion-discovery-card p{margin:0;color:var(--color-text-muted,#667085);font-size:.8rem;line-height:1.55;}
+.discussion-discovery-foot{margin-top:auto;padding-top:12px;}
+@media (max-width:1100px){.discussion-discovery-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:640px){.discussion-discovery{padding:17px;border-radius:13px;}.discussion-discovery-head{align-items:flex-start;flex-direction:column;}.discussion-discovery-grid{grid-template-columns:1fr;}.discussion-discovery-head .btn{width:auto;}}
