@@ -5,7 +5,15 @@ const SUPABASE_URL = "https://duvbcwwprkzzyzikmcol.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkdXZicHd3cHJrenp5emlrbWNvbCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzY5MTUzNTIyLCJleHAiOjIwODQ3Mjk1MjJ9.d2d9iFKGl7IYA3xR6GZ8HiAjUlBudSPO98o7EHQcdI4";
 export const SITE_URL = "https://timzee-tech-blog.netlify.app";
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+    flowType: "pkce"
+  }
+});
+
 if (typeof window !== "undefined" && !window.supabase) {
   window.supabase = supabase;
 }
@@ -17,6 +25,22 @@ export async function getSession() {
     return null;
   }
   return data.session;
+}
+
+export async function exchangeOAuthCode(code) {
+  if (!code) return { data: null, error: null };
+  try {
+    return await supabase.auth.exchangeCodeForSession(code);
+  } catch (error) {
+    console.error("OAuth code exchange failed:", error);
+    return {
+      data: null,
+      error: {
+        message: error?.message || "OAuth session exchange failed.",
+        status: error?.status
+      }
+    };
+  }
 }
 
 async function resolveTrustedRole(user) {
