@@ -177,8 +177,6 @@
       window.location.href = `action-result.html?${params.toString()}`;
     };
 
-    // Legacy pages still call alert(). Route those messages through the
-    // branded non-blocking UI instead of browser-native dialogs.
     const originalAlert = window.alert;
     if (!window.__timzeeOriginalAlert) window.__timzeeOriginalAlert = originalAlert;
     window.alert = (message) => {
@@ -286,6 +284,11 @@
     installMultiFileHardening();
     installActionFeedback();
     installVisualConsistency();
+    window.setTimeout(() => {
+      import("./notification-popup.js")
+        .then(({ initSiteNotifications }) => initSiteNotifications())
+        .catch((error) => console.warn("Realtime site notifications unavailable:", error));
+    }, 0);
   }
 
   if (document.readyState === "loading") {
