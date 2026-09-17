@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Action status — Timzee Tech Hub</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f5f7fb; --card:#fff; --ink:#16181d; --muted:#626a78; --accent:#2563eb; --border:#dfe4ec; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#0d1117; --card:#151b23; --ink:#eef2f7; --muted:#9aa5b5; --border:#26303c; } }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; background:radial-gradient(circle at 50% 0%, rgba(37,99,235,.10), transparent 42%), var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(620px, calc(100vw - 32px)); }
+    .card { padding:34px; background:var(--card); border:1px solid var(--border); border-radius:22px; box-shadow:0 24px 70px rgba(0,0,0,.10); }
+    .eyebrow { display:inline-flex; padding:6px 10px; border:1px solid var(--border); border-radius:999px; font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+    .indicator { width:64px; height:64px; display:grid; place-items:center; margin:0 0 18px; border-radius:50%; border:2px solid currentColor; font-weight:800; font-size:1.3rem; }
+    h1 { margin:0 0 10px; font-size:clamp(1.7rem,4vw,2.4rem); }
+    p { margin:0 0 20px; color:var(--muted); white-space:pre-wrap; overflow-wrap:anywhere; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 16px; border:1px solid var(--border); border-radius:11px; text-decoration:none; color:inherit; font-weight:700; cursor:pointer; background:transparent; }
+    .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .meta { margin-top:18px; color:var(--muted); font-size:.84rem; }
+    .status-success { color:#0f9f6e; }
+    .status-error { color:#dc2626; }
+    .status-warning { color:#c47c00; }
+    .status-info { color:var(--accent); }
+    @media (max-width:560px) { .card{padding:24px;} .actions{flex-direction:column;} .btn{width:100%;} }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card" id="resultCard" aria-live="polite">
+      <div class="eyebrow" id="resultStatus">Status</div>
+      <div class="indicator status-info" id="resultIndicator" aria-hidden="true">i</div>
+      <h1 id="resultTitle">Action completed</h1>
+      <p id="resultMessage">Your request has been processed.</p>
+      <div class="actions">
+        <a class="btn primary" id="resultNext" href="index.html">Continue</a>
+        <button class="btn" id="resultRetry" type="button" hidden>Try again</button>
+      </div>
+      <div class="meta" id="resultMeta" hidden></div>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      const allowedStatuses = new Set(["success", "error", "warning", "info", "pending"]);
+      const status = allowedStatuses.has((params.get("status") || "").toLowerCase()) ? (params.get("status") || "info").toLowerCase() : "info";
+      const title = (params.get("title") || "Action status").slice(0, 140);
+      const message = (params.get("message") || "Your request has been processed.").slice(0, 2000);
+      const next = params.get("next") || "index.html";
+      const nextLabel = (params.get("nextLabel") || "Continue").slice(0, 40);
+      const retry = params.get("retry") || "";
+
+      const safeRelativeUrl = (value) => {
+        try {
+          const url = new URL(value, location.href);
+          const sameOrigin = url.origin === location.origin;
+          if (!sameOrigin) return "";
+          if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+          return url.pathname + url.search + url.hash;
+        } catch { return ""; }
+      };
+
+      document.getElementById("resultStatus").textContent = status === "pending" ? "Pending" : status;
+      document.getElementById("resultTitle").textContent = title;
+      document.getElementById("resultMessage").textContent = message;
+      const indicator = document.getElementById("resultIndicator");
+      indicator.className = `indicator status-${status === "pending" ? "warning" : status}`;
+      indicator.textContent = status === "success" ? "✓" : status === "error" ? "!" : status === "pending" ? "…" : "i";
+
+      const safeNext = safeRelativeUrl(next) || "index.html";
+      const nextLink = document.getElementById("resultNext");
+      nextLink.href = safeNext;
+      nextLink.textContent = nextLabel;
+
+      const retryUrl = safeRelativeUrl(retry);
+      const retryBtn = document.getElementById("resultRetry");
+      if (retryUrl) {
+        retryBtn.hidden = false;
+        retryBtn.addEventListener("click", () => { location.href = retryUrl; });
+      }
+
+      if (status === "pending") {
+        const meta = document.getElementById("resultMeta");
+        meta.hidden = false;
+        meta.textContent = "You can leave this page safely. Check back through your account or return to the previous screen.";
+      }
+    })();
+  </script>
+</body>
+</html>
