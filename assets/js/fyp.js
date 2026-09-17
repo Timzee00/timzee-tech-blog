@@ -2,12 +2,12 @@ import { supabase, getCurrentUser } from "./supabase.js";
 import { loadUserPreferences, mergePreferences } from "./user-preferences.js";
 import { escapeHTML, clampText, stripHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
 
-const state = { user: null, preferences: mergePreferences(), type: "all", loading: false };
+const state = { user: null, preferences: mergePreferences(), type: "all", mode: "for-you", loading: false };
 const $ = (id) => document.getElementById(id);
 
-function getType() {
+function readQuery() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("type") || "all";
+  return { type: params.get("type") || "all", mode: params.get("mode") || "for-you" };
 }
 
 function typeLabel(type) {
@@ -40,29 +40,44 @@ function renderRow(row) {
   </article>`;
 }
 
+function updateUrl() {
+  const params = new URLSearchParams();
+  if (state.mode !== "for-you") params.set("mode", state.mode);
+  if (state.type !== "all") params.set("type", state.type);
+  window.history.replaceState({}, "", `fyp.html${params.toString() ? `?${params}` : ""}`);
+}
+
+function applyActiveControls() {
+  document.querySelectorAll("[data-fyp-mode]").forEach((button) => button.classList.toggle("active", button.dataset.fypMode === state.mode));
+  document.querySelectorAll("[data-fyp-filter]").forEach((button) => button.classList.toggle("active", button.dataset.fypFilter === state.type));
+  const label = $("fypModeLabel");
+  if (label) label.textContent = state.mode === "following" ? "Following" : "For You";
+}
+
 async function loadFeed() {
   const target = $("fypGrid");
   if (!target || state.loading) return;
   state.loading = true;
   target.setAttribute("aria-busy", "true");
-  target.innerHTML = `<div class="callout">Building your feed…</div>`;
+  target.innerHTML = `<div class="callout">Building your ${state.mode === "following" ? "following" : "personalized"} feed…</div>`;
   try {
-    if (!state.preferences.feed.showRecommendations) {
-      target.innerHTML = `<div class="fyp-empty card"><h2>Recommendations are off</h2><p>Your For You feed is paused in settings. You can still browse the public sections directly.</p><a class="btn" href="settings.html#feed">Open feed settings</a></div>`;
+    if (state.mode === "for-you" && !state.preferences.feed.showRecommendations) {
+      target.innerHTML = `<div class="fyp-empty card"><h2>Recommendations are off</h2><p>Your For You feed is paused in settings. Switch to Following or turn recommendations back on.</p><div class="settings-inline-actions"><button class="btn" type="button" data-fyp-mode="following">Open Following</button><a class="btn ghost" href="settings.html#feed">Open feed settings</a></div></div>`;
+      const switchButton = target.querySelector('[data-fyp-mode="following"]');
+      switchButton?.addEventListener("click", () => { state.mode = "following"; updateUrl(); applyActiveControls(); void loadFeed(); });
       return;
     }
-    const result = await supabase.rpc("get_personalized_feed", {
-      p_limit: 30,
-      p_content_type: state.type === "all" ? "all" : state.type
-    });
+
+    const rpcName = state.mode === "following" ? "get_following_feed" : "get_personalized_feed";
+    const result = await supabase.rpc(rpcName, { p_limit: 30, p_content_type: state.type === "all" ? "all" : state.type });
     if (result.error) throw result.error;
     const rows = result.data || [];
     target.innerHTML = rows.length
       ? rows.map(renderRow).join("")
-      : `<div class="fyp-empty card"><h2>No recommendations yet</h2><p>Follow creators and communities, save useful posts, like topics you enjoy, and your feed will learn from those signals.</p><a class="btn" href="index.html">Explore the community</a></div>`;
+      : `<div class="fyp-empty card"><h2>${state.mode === "following" ? "Nothing from followed creators yet" : "No recommendations yet"}</h2><p>${state.mode === "following" ? "Follow creators or communities and their new content will collect here." : "Follow creators and communities, save useful posts, like topics you enjoy, and your feed will learn from those signals."}</p><a class="btn" href="index.html">Explore the community</a></div>`;
   } catch (error) {
-    target.innerHTML = `<div class="callout">Unable to load your For You feed right now. Please try again.</div>`;
-    reportAppError(error, "Personalized feed failed");
+    target.innerHTML = `<div class="callout">Unable to load your feed right now. Please try again.</div>`;
+    reportAppError(error, "Feed loading failed");
   } finally {
     state.loading = false;
     target.setAttribute("aria-busy", "false");
@@ -82,41 +97,40 @@ async function markNotInterested(card) {
 }
 
 function wire() {
-  document.querySelectorAll("[data-fyp-filter]").forEach((button) => {
+  document.querySelectorAll("[data-fyp-mode]").forEach((button) => {
     button.addEventListener("click", () => {
-      const type = button.dataset.fypFilter || "all";
-      window.history.replaceState({}, "", type === "all" ? "fyp.html" : `fyp.html?type=${encodeURIComponent(type)}`);
-      state.type = type;
-      document.querySelectorAll("[data-fyp-filter]").forEach((item) => item.classList.toggle("active", item === button));
+      state.mode = button.dataset.fypMode || "for-you";
+      updateUrl();
+      applyActiveControls();
       void loadFeed();
     });
   });
-
+  document.querySelectorAll("[data-fyp-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.type = button.dataset.fypFilter || "all";
+      updateUrl();
+      applyActiveControls();
+      void loadFeed();
+    });
+  });
   $("refreshFypBtn")?.addEventListener("click", () => void loadFeed());
-
   $("fypGrid")?.addEventListener("click", async (event) => {
     const action = event.target.closest("[data-fyp-action]");
     if (!action) return;
     event.preventDefault();
     const card = action.closest(".fyp-card");
-    if (!card) return;
-    try {
-      await markNotInterested(card);
-    } catch (error) {
-      reportAppError(error, "Recommendation feedback failed");
-    }
+    try { await markNotInterested(card); } catch (error) { reportAppError(error, "Recommendation feedback failed"); }
   });
 }
 
 async function boot() {
   state.user = await getCurrentUser();
-  if (!state.user) {
-    window.location.href = `login.html?next=${encodeURIComponent(window.location.href)}`;
-    return;
-  }
-  state.type = getType();
+  if (!state.user) { window.location.href = `login.html?next=${encodeURIComponent(window.location.href)}`; return; }
   state.preferences = mergePreferences(await loadUserPreferences(state.user));
-  document.querySelectorAll("[data-fyp-filter]").forEach((button) => button.classList.toggle("active", button.dataset.fypFilter === state.type));
+  const query = readQuery();
+  state.type = query.type;
+  state.mode = query.mode === "following" ? "following" : state.preferences.feed.defaultFeed === "following" && !window.location.search ? "following" : "for-you";
+  applyActiveControls();
   wire();
   await loadFeed();
 }
