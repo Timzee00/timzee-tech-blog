@@ -14,8 +14,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Run hardening and capture failures
+      - name: Run hardening
         shell: bash
         run: |
           set +e
@@ -35,8 +37,8 @@ jobs:
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add HARDENING_DEBUG.md
-            git commit -m 'Record hardening verification diagnostic'
-            git push
+            git commit -m 'Record hardening verification diagnostic' || true
+            git push origin HEAD:main
             exit "$status"
           fi
 
@@ -66,8 +68,8 @@ jobs:
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add HARDENING_DEBUG.md
-            git commit -m 'Record JavaScript syntax diagnostic'
-            git push
+            git commit -m 'Record JavaScript syntax diagnostic' || true
+            git push origin HEAD:main
             exit 1
           fi
 
@@ -126,14 +128,14 @@ jobs:
               echo '```'
             } > HARDENING_DEBUG.md
             git config user.name 'github-actions[bot]'
-            git config user.email '41898282+users.noreply.github.com'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add HARDENING_DEBUG.md
-            git commit -m 'Record static hardening diagnostic'
-            git push
+            git commit -m 'Record static hardening diagnostic' || true
+            git push origin HEAD:main
             exit "$status"
           fi
 
-      - name: Remove touch file and stale diagnostic
+      - name: Remove temporary diagnostics
         shell: bash
         run: |
           set -euo pipefail
@@ -148,9 +150,9 @@ jobs:
           fi
           if [ "$changed" -eq 1 ]; then
             git config user.name 'github-actions[bot]'
-            git config user.email '41898282+users.noreply.github.com'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git commit -m 'Remove hardening diagnostics'
-            git push
+            git push origin HEAD:main
           fi
 
       - name: Commit fixes
@@ -158,7 +160,7 @@ jobs:
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
-          git config user.email '41898282+users.noreply.github.com'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add \
             listing.html \
             assets/js/app-hardening.js \
@@ -174,4 +176,4 @@ jobs:
             exit 0
           fi
           git commit -m 'Apply repo hardening fixes'
-          git push
+          git push origin HEAD:main
