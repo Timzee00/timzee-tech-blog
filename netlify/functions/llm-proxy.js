@@ -14,7 +14,7 @@ const MAX_MODEL_CHARS = 120;
 const MAX_TOKENS = 4096;
 
 const ALLOWED_MODELS = {
-  groq: new Set(["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile"]),
+  groq: new Set(["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b"]),
   openai: new Set(["gpt-4o-mini", "gpt-4o"]),
   anthropic: new Set(["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"])
 };
