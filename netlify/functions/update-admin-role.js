@@ -8,19 +8,8 @@ const jsonResponse = (statusCode, payload) => ({
   body: JSON.stringify(payload)
 });
 
-async function resolveRole(supabase, user) {
-  let role = user?.user_metadata?.role || user?.app_metadata?.role;
-  if (!role && user?.id) {
-    const profileResult = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (profileResult.data?.role) {
-      role = profileResult.data.role;
-    }
-  }
-  return role || "user";
+function resolveRole(user) {
+  return user?.app_metadata?.role || "user";
 }
 
 const ALLOWED_ACTIONS = {
@@ -53,7 +42,7 @@ exports.handler = async (event) => {
     return jsonResponse(401, { error: "Invalid auth token." });
   }
 
-  const callerRole = await resolveRole(supabase, callerData.user);
+  const callerRole = resolveRole(callerData.user);
   if (callerRole !== "super") {
     return jsonResponse(403, { error: "Only super admins can change admin roles." });
   }
@@ -76,20 +65,15 @@ exports.handler = async (event) => {
 
   const nextRole = ALLOWED_ACTIONS[action];
 
-  // Safety net: never allow the last super admin to be demoted/removed.
   if (nextRole !== "super") {
-    const { data: targetProfile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (targetProfile?.role === "super") {
-      const { count } = await supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("role", "super");
-      if ((count || 0) <= 1) {
+    const { data: authTarget } = await supabase.auth.admin.getUserById(userId);
+    if (authTarget?.user && resolveRole(authTarget.user) === "super") {
+      const { data: allUsers, error: listError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (listError) {
+        return jsonResponse(500, { error: "Unable to verify super admin count." });
+      }
+      const superCount = (allUsers?.users || []).filter((user) => resolveRole(user) === "super").length;
+      if (superCount <= 1) {
         return jsonResponse(400, { error: "Cannot remove the last super admin." });
       }
     }
@@ -104,21 +88,20 @@ exports.handler = async (event) => {
     .from("profiles")
     .update({ role: nextRole, updated_at: new Date().toISOString() })
     .eq("id", userId)
-    .select()
+    .select("id,display_name,username,role,updated_at")
     .single();
 
   if (error) {
     return jsonResponse(400, { error: error.message });
   }
 
-  // Keep JWT metadata in sync too, since some RLS policies still read role
-  // from there — avoids the exact stale-role inconsistency found earlier.
   try {
     await supabase.auth.admin.updateUserById(userId, {
+      app_metadata: { ...(authUserData.user.app_metadata || {}), role: nextRole },
       user_metadata: { ...(authUserData.user.user_metadata || {}), role: nextRole }
     });
   } catch (syncError) {
-    // Non-fatal: profile role is the source of truth; metadata sync is best-effort.
+    return jsonResponse(500, { error: "Role changed in profile but auth metadata synchronization failed." });
   }
 
   return jsonResponse(200, { profile: data });
