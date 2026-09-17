@@ -138,9 +138,24 @@ export async function getCurrentUserWithRole() {
   }
 
   // Keep the resolved role only on this in-memory user object for UI gating.
-  // Never persist it back to user-editable metadata.
+  // The app_metadata mirror is used by the canonical getUserRole() helper.
+  // For legacy pages that still read user_metadata.role directly, expose a
+  // non-enumerable, non-writable in-memory property. It will not be serialized
+  // into an Auth update and therefore cannot turn trusted authorization into
+  // user-editable persisted metadata.
   if (role) {
     user.app_metadata = { ...(user.app_metadata || {}), role };
+    try {
+      if (!user.user_metadata) user.user_metadata = {};
+      Object.defineProperty(user.user_metadata, "role", {
+        value: role,
+        writable: false,
+        enumerable: false,
+        configurable: true
+      });
+    } catch (err) {
+      console.warn("Unable to expose legacy in-memory role:", err);
+    }
   }
 
   return user;
