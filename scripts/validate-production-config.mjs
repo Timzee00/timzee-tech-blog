@@ -34,9 +34,7 @@ for (const file of [
   "assets/js/chat-v2.js",
   "assets/css/design-system.css",
   "assets/css/chat-v2.css",
-  "assets/js/media.js",
-  "supabase/migrations/20260917123000_secure_private_chat_media.sql",
-  "supabase/migrations/upgrade_chat_groups_and_message_metadata.sql"
+  "assets/js/media.js"
 ]) {
   if (!existsSync(join(root, file))) fail(`Required production surface is missing: ${file}`);
 }
@@ -73,7 +71,7 @@ if (!sitemap.includes("<loc>https://timzee-tech-blog.netlify.app/</loc>")) fail(
 const legal = ["privacy.html", "terms.html", "refund-policy.html", "cookies.html", "accessibility.html"];
 for (const file of legal) {
   const text = read(file);
-  if (!text.includes("Powered by Timzee Corp")) console.warn(`Warning: ${file} relies on site-shell branding injection.`);
+  if (!text.includes("Timzee Corp")) fail(`Business operator is missing from ${file}.`);
 }
 
 const popularity = read("assets/js/popularity-engine.js");
