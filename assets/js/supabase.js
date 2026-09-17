@@ -72,6 +72,14 @@ if (typeof window !== "undefined" && !window.supabase) {
   window.supabase = supabase;
 }
 
+// Load the global notification UI after the shared client exists. The UI only
+// runs for an authenticated user and degrades harmlessly on anonymous pages.
+if (typeof window !== "undefined") {
+  import("./notifications-ui.js").catch((error) => {
+    console.warn("Realtime notification UI failed to load:", error);
+  });
+}
+
 const authCallbackPromise = (() => {
   if (typeof window === "undefined") return Promise.resolve(null);
   const code = new URLSearchParams(window.location.search).get("code");
