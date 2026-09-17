@@ -1,11 +1,19 @@
+import { getCurrentUser } from "./supabase.js";
+import { loadUserPreferences, mergePreferences } from "./user-preferences.js";
+
 function getContextFromUrl() {
   const value = new URLSearchParams(window.location.search).get("context") || "";
   try { return decodeURIComponent(value); } catch (_) { return value; }
 }
 
-function boot() {
+async function boot() {
   const context = getContextFromUrl();
   if (!context) return;
+  const user = await getCurrentUser();
+  if (user) {
+    const preferences = mergePreferences(await loadUserPreferences(user));
+    if (preferences.ai?.assistantContext === false) return;
+  }
   const input = document.getElementById("aiChatInput");
   if (!input) return;
   const prefix = "Use this selected context from Timzee Tech Hub and help me understand it:\n\n";
@@ -16,5 +24,5 @@ function boot() {
   window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.hash}`);
 }
 
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
-else boot();
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => void boot(), { once: true });
+else void boot();
