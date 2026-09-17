@@ -2,5 +2,14 @@
   publish = "."
   functions = "netlify/functions"
 
+[build.environment]
+  NODE_VERSION = "22"
+
 [functions."scout-news"]
   schedule = "0 * * * *"
+
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/.netlify/functions/sitemap"
+  status = 200
+  force = true
