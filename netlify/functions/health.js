@@ -30,14 +30,20 @@ exports.handler = async () => {
       auth: { persistSession: false, autoRefreshToken: false }
     });
 
-    const [{ error: dbError }, { data: job, error: jobError }] = await Promise.all([
+    const [{ error: dbError }, { data: job, error: jobError }, legacyMedia] = await Promise.all([
       supabase.from("profiles").select("id", { head: true, count: "exact" }).limit(1),
-      supabase.from("system_job_status").select("last_succeeded_at,last_failed_at,last_error,run_count").eq("job_name", "automation-maintenance").maybeSingle()
+      supabase.from("system_job_status").select("last_succeeded_at,last_failed_at,last_error,run_count").eq("job_name", "automation-maintenance").maybeSingle(),
+      supabase
+        .from("direct_messages")
+        .select("id", { head: true, count: "exact" })
+        .or("media_url.ilike.%/storage/v1/object/public/media/direct-messages/%,media_url.ilike.%/storage/v1/object/sign/media/direct-messages/%")
     ]);
 
     const dbOk = !dbError;
     const automationOk = !jobError && !!job?.last_succeeded_at && new Date(job.last_succeeded_at).getTime() >= Date.now() - (15 * 60 * 1000);
-    const status = dbOk && automationOk ? "ok" : "degraded";
+    const legacyCount = legacyMedia.error ? null : Number(legacyMedia.count || 0);
+    const privateChatMediaOk = legacyCount === 0;
+    const status = dbOk && automationOk && privateChatMediaOk ? "ok" : "degraded";
 
     return jsonResponse(status === "ok" ? 200 : 503, {
       status,
@@ -46,6 +52,8 @@ exports.handler = async () => {
       deploy_id: process.env.DEPLOY_ID || null,
       database: dbOk ? "ok" : "error",
       automation: automationOk ? "ok" : "stale_or_unavailable",
+      private_chat_media: privateChatMediaOk ? "ok" : "legacy_public_objects_pending",
+      legacy_public_chat_media_count: legacyCount,
       checked_at: new Date().toISOString(),
       latency_ms: Date.now() - startedAt
     });
@@ -57,6 +65,8 @@ exports.handler = async () => {
       version: process.env.COMMIT_REF || "unknown",
       database: "error",
       automation: "unknown",
+      private_chat_media: "unknown",
+      legacy_public_chat_media_count: null,
       checked_at: new Date().toISOString(),
       latency_ms: Date.now() - startedAt
     });
