@@ -91,6 +91,9 @@ function normalizeAuthError(error, context = "generic") {
     if (lower.includes("access_denied") || lower.includes("cancel")) {
       return "Sign-in was cancelled. You can try again whenever you're ready.";
     }
+    if (lower.includes("code verifier") || lower.includes("pkce")) {
+      return "Secure sign-in could not be completed. Restart the sign-in from this page and try again.";
+    }
   }
 
   if (context === "signup") {
@@ -136,6 +139,40 @@ function clearHash() {
   }
 }
 
+function getSafeNextUrl(rawNext) {
+  if (!rawNext) return "index.html";
+  try {
+    const siteOrigin = new URL(SITE_URL).origin;
+    const candidate = new URL(rawNext, `${SITE_URL}/`);
+    if (candidate.origin !== siteOrigin) return "index.html";
+    if (candidate.protocol !== "https:" && candidate.protocol !== "http:") return "index.html";
+    const path = `${candidate.pathname}${candidate.search}${candidate.hash}`;
+    return path.startsWith("/") ? path.slice(1) || "index.html" : path || "index.html";
+  } catch {
+    return "index.html";
+  }
+}
+
+function buildOAuthRedirect(nextUrl) {
+  const target = new URL(`${SITE_URL}/login.html`);
+  if (nextUrl && nextUrl !== "index.html") target.searchParams.set("next", nextUrl);
+  return target.toString();
+}
+
+function isOAuthCallback() {
+  const hashParams = getHashParams();
+  const queryParams = new URLSearchParams(window.location.search);
+  return Boolean(
+    hashParams.get("access_token") ||
+    hashParams.get("refresh_token") ||
+    hashParams.get("error") ||
+    hashParams.get("error_description") ||
+    queryParams.get("code") ||
+    queryParams.get("error") ||
+    queryParams.get("error_description")
+  );
+}
+
 function sanitizeUsername(value = "") {
   return value
     .toLowerCase()
@@ -155,6 +192,7 @@ async function ensureUniqueUsername(base, userId) {
       .neq("id", userId)
       .limit(1)
       .maybeSingle();
+    if (existing.error) throw existing.error;
     if (!existing.data) break;
     candidate = `${seed}${suffix}`;
     suffix += 1;
@@ -164,24 +202,44 @@ async function ensureUniqueUsername(base, userId) {
 
 async function ensureProfileRecord(user) {
   if (!user) return;
-  const displayName = getDisplayName(user);
-  const email = user.email || "";
-  const username =
-    user.user_metadata?.username ||
-    (email ? email.split("@")[0] : displayName.toLowerCase().replace(/\s+/g, ""));
-  const safeUsername = await ensureUniqueUsername(username, user.id);
-  const result = await supabase
+
+  const profileResult = await supabase
     .from("profiles")
-    .upsert({
-      id: user.id,
-      display_name: displayName,
-      username: safeUsername,
+    .select("id, display_name, username, email, role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileResult.error) {
+    console.warn("Profile lookup failed:", profileResult.error);
+    return;
+  }
+
+  const existing = profileResult.data;
+  const displayName = getDisplayName(user);
+  const email = user.email || existing?.email || "";
+
+  // Existing trusted roles are never overwritten by OAuth/user metadata.
+  if (existing) {
+    const updates = {
+      display_name: existing.display_name || displayName,
       email,
-      role: user.user_metadata?.role || "user",
       updated_at: new Date().toISOString()
-    })
-    .select();
-  if (result.error) console.warn("Profile sync failed:", result.error);
+    };
+    const result = await supabase.from("profiles").update(updates).eq("id", user.id);
+    if (result.error) console.warn("Profile sync failed:", result.error);
+    return;
+  }
+
+  const baseUsername = user.user_metadata?.username || (email ? email.split("@")[0] : displayName);
+  const username = await ensureUniqueUsername(baseUsername, user.id);
+  const result = await supabase.from("profiles").insert({
+    id: user.id,
+    display_name: displayName,
+    username,
+    email,
+    updated_at: new Date().toISOString()
+  });
+  if (result.error) console.warn("Profile creation failed:", result.error);
 }
 
 async function fetchProfileStatus() {
@@ -205,25 +263,13 @@ async function fetchProfileStatus() {
   return { blocked: false };
 }
 
-function isOAuthCallback() {
-  const hashParams = getHashParams();
-  return Boolean(
-    hashParams.get("access_token") ||
-    hashParams.get("refresh_token") ||
-    hashParams.get("error") ||
-    hashParams.get("error_description") ||
-    new URLSearchParams(window.location.search).get("code")
-  );
-}
-
 async function handleOAuthSignIn(provider, button, loginMessage, nextUrl) {
   if (!button) return;
   const originalText = button.querySelector("span")?.textContent || provider;
   button.disabled = true;
   if (button.querySelector("span")) button.querySelector("span").textContent = "Connecting…";
 
-  const redirectTo = `${SITE_URL}/login.html${window.location.search}`;
-  const result = await signInWithProvider(provider, redirectTo);
+  const result = await signInWithProvider(provider, buildOAuthRedirect(nextUrl));
   if (result.error) {
     setMessage(loginMessage, normalizeAuthError(result.error, "oauth"));
     button.disabled = false;
@@ -232,10 +278,9 @@ async function handleOAuthSignIn(provider, button, loginMessage, nextUrl) {
   }
 
   // signInWithOAuth redirects the browser when successful.
-  // This fallback is only reached if the provider did not redirect.
   button.disabled = false;
   if (button.querySelector("span")) button.querySelector("span").textContent = originalText;
-  if (nextUrl) setMessage(loginMessage, "Opening secure sign-in…");
+  setMessage(loginMessage, "Opening secure sign-in…");
 }
 
 async function boot() {
@@ -246,8 +291,9 @@ async function boot() {
     const theme = await fetchThemeById(settings.themeId);
     if (theme) applyThemeVariables(theme);
   }
+
   const params = new URLSearchParams(window.location.search);
-  const nextUrl = params.get("next") || "index.html";
+  const nextUrl = getSafeNextUrl(params.get("next"));
 
   const loginForm = document.getElementById("loginForm");
   const signupForm = document.getElementById("signupForm");
@@ -275,6 +321,7 @@ async function boot() {
   };
 
   const hashParams = getHashParams();
+  const queryParams = new URLSearchParams(window.location.search);
   const recoveryType = hashParams.get("type") || "";
   const accessToken = hashParams.get("access_token");
   const refreshToken = hashParams.get("refresh_token");
@@ -296,10 +343,20 @@ async function boot() {
     clearHash();
   }
 
-  if (hashParams.get("error") || hashParams.get("error_description")) {
-    const oauthError = hashParams.get("error_description") || hashParams.get("error");
-    setMessage(loginMessage, normalizeAuthError({ message: oauthError }, "oauth"));
+  const callbackError =
+    hashParams.get("error_description") ||
+    hashParams.get("error") ||
+    queryParams.get("error_description") ||
+    queryParams.get("error");
+  if (callbackError) {
+    setMessage(loginMessage, normalizeAuthError({ message: callbackError }, "oauth"));
     clearHash();
+    if (window.location.search.includes("error")) {
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("error");
+      clean.searchParams.delete("error_description");
+      history.replaceState({}, document.title, clean.pathname + clean.search);
+    }
   }
 
   const user = await getCurrentUser();
