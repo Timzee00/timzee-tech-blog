@@ -18,7 +18,7 @@ for (const file of [
   "assets/js/form-consent.js","assets/js/user-preferences.js","assets/js/settings-page.js","assets/js/fyp.js","assets/js/popularity-engine.js","assets/js/trending-engine.js",
   "assets/js/discussion-discovery.js","assets/js/chat-v2.js","assets/js/chat-context-menu.js","assets/js/ai-context.js","assets/js/experience-preferences.js","assets/js/media.js",
   "assets/css/design-system.css","assets/css/chat-v2.css","assets/css/chat-context-menu.css","assets/css/fyp.css","assets/css/settings.css","assets/css/discussion-enhancements.css",
-  "supabase/migrations/20260917123000_secure_private_chat_media.sql"
+  "supabase/migrations/20260917112635_secure_private_chat_media.sql"
 ]) {
   if (!existsSync(join(root, file))) fail(`Required production surface is missing: ${file}`);
 }
