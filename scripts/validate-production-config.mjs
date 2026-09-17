@@ -20,14 +20,22 @@ if (!/from\s*=\s*["']\/health["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/
 for (const file of [
   "netlify/functions/sitemap.js",
   "netlify/functions/health.js",
+  "netlify/functions/chat-media-sign.js",
   "action-result.html",
   "offline.html",
   "maintenance.html",
   "assets/js/action-result.js",
-  "assets/js/notification-popup.js"
+  "assets/js/notification-popup.js",
+  "assets/js/media.js",
+  "supabase/migrations/20260917123000_secure_private_chat_media.sql"
 ]) {
   if (!existsSync(join(root, file))) fail(`Required production surface is missing: ${file}`);
 }
+
+const media = read("assets/js/media.js");
+if (!media.includes('const CHAT_BUCKET = "chat-media"')) fail("Chat media must use the private chat-media bucket.");
+if (!media.includes("requestChatSignedUrl")) fail("Chat media signing helper is missing.");
+if (!media.includes('folder === CHAT_FOLDER')) fail("Chat uploads are not routed through the private-media path.");
 
 const headers = read("_headers");
 for (const required of [
