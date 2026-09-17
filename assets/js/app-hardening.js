@@ -47,14 +47,6 @@
     });
   }
 
-  function removeTrackedFile(input, index) {
-    const state = fileStates.get(input);
-    if (!state || !Number.isInteger(index)) return;
-    if (index < 0 || index >= state.files.length) return;
-    state.files.splice(index, 1);
-    setInputFiles(input, state.files);
-  }
-
   function clearTrackedFileState(input) {
     const state = fileStates.get(input);
     if (!state) return;
@@ -63,23 +55,25 @@
   }
 
   function installMultiFileHardening() {
+    // Admin gallery replaces its local array from input.files, so this shared
+    // layer makes separate picker openings cumulative while preserving the
+    // page's own preview/removal state.
     const postMediaInput = document.getElementById("postMediaFiles");
     if (postMediaInput) setupAccumulatingInput(postMediaInput, { maxFiles: 8 });
 
+    // Verification already owns accumulation/removal in verify.html. We only
+    // reset the picker value after the page handler has received the selection
+    // so selecting the same file again can fire another change event.
     const docInput = document.getElementById("docInput");
-    if (docInput) setupAccumulatingInput(docInput, { maxFiles: 20, maxBytes: 5 * 1024 * 1024 });
+    if (docInput) {
+      docInput.addEventListener("change", () => {
+        window.setTimeout(() => {
+          docInput.value = "";
+        }, 0);
+      }, true);
+    }
 
     document.addEventListener("click", (event) => {
-      const removeNew = event.target.closest("[data-action=\"remove-new\"]");
-      if (removeNew && postMediaInput) {
-        removeTrackedFile(postMediaInput, Number(removeNew.dataset.index));
-      }
-
-      const removeDoc = event.target.closest(".remove-doc");
-      if (removeDoc && docInput) {
-        removeTrackedFile(docInput, Number(removeDoc.dataset.idx));
-      }
-
       const clearPostMedia = event.target.closest("#clearPostMediaBtn");
       if (clearPostMedia && postMediaInput) {
         clearTrackedFileState(postMediaInput);
@@ -89,9 +83,7 @@
     document.querySelectorAll("form").forEach((form) => {
       form.addEventListener("reset", () => {
         const postMediaInput = form.querySelector("#postMediaFiles");
-        const docInput = form.querySelector("#docInput");
         if (postMediaInput) postMediaInput.dispatchEvent(new Event("resetmultifiles"));
-        if (docInput) docInput.dispatchEvent(new Event("resetmultifiles"));
       }, true);
     });
   }
