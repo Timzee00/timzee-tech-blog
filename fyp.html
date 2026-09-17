@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>For You — Timzee Tech Hub</title>
+  <meta name="description" content="A personalized Timzee Tech Hub feed built from the topics, people and content you engage with.">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script defer src="assets/js/theme-init.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<header class="site-header">
+  <div class="container wrap">
+    <a class="brand" href="index.html"><span class="logo">Timzee <span>Tech</span> Hub</span><span class="tagline">Personalized discovery</span></a>
+    <nav class="nav-pill" aria-label="Primary navigation">
+      <a href="index.html">Home</a>
+      <a href="fyp.html" aria-current="page">For You</a>
+      <a href="discussion.html">Discussion</a>
+      <a href="marketplace.html">Marketplace</a>
+      <a href="videos.html">Videos</a>
+      <a href="novels.html">Novels</a>
+    </nav>
+    <div class="header-actions"><a class="btn ghost" href="settings.html#feed">Feed settings</a></div>
+  </div>
+</header>
+
+<main id="main-content" class="page-shell">
+  <section class="container fyp-hero card" data-reveal>
+    <div>
+      <span class="chip">For You</span>
+      <h1>A feed that learns what you care about.</h1>
+      <p>Timzee combines your follows, likes, saves, reading, viewing, community activity and explicit feedback to build a discovery feed across the platform.</p>
+    </div>
+    <div class="fyp-hero-actions"><button class="btn" id="refreshFypBtn" type="button">Refresh feed</button><a class="btn ghost" href="settings.html#feed">Customize</a></div>
+  </section>
+
+  <section class="container" aria-label="For You filters">
+    <div class="fyp-toolbar card">
+      <div class="fyp-filter-list" role="tablist" aria-label="Content type">
+        <button class="fyp-filter active" type="button" data-fyp-filter="all">Everything</button>
+        <button class="fyp-filter" type="button" data-fyp-filter="post">Posts</button>
+        <button class="fyp-filter" type="button" data-fyp-filter="discussion">Discussions</button>
+        <button class="fyp-filter" type="button" data-fyp-filter="video">Videos</button>
+        <button class="fyp-filter" type="button" data-fyp-filter="novel">Novels</button>
+        <button class="fyp-filter" type="button" data-fyp-filter="marketplace">Marketplace</button>
+      </div>
+      <p class="fyp-toolbar-note">Your feedback changes future recommendations. No manual popularity labels are required.</p>
+    </div>
+  </section>
+
+  <section class="container">
+    <div id="fypGrid" class="fyp-grid" aria-live="polite"></div>
+  </section>
+</main>
+
+<footer class="footer"><div class="container"><div>Powered by Timzee Corp</div></div></footer>
+<script type="module" src="assets/js/fyp.js"></script>
+</body>
+</html>
