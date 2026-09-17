@@ -1,0 +1,54 @@
+name: Apply repo hardening
+
+on:
+  push:
+    paths:
+      - 'tools/repo_hardening.py'
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python checks and fixes
+        run: python3 tools/repo_hardening.py
+
+      - name: Validate JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find assets netlify/functions -type f -name '*.js' -print0)
+
+      - name: Validate transformed files
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root = Path('.')
+          listing = (root / 'listing.html').read_text(encoding='utf-8')
+          assert 'Opening contact with' not in listing
+          assert 'chat.html?user=' in listing
+          assert 'marketplace_items' in listing
+          print('Final static validation passed.')
+          PY
+
+      - name: Commit fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git diff --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git add listing.html assets/js/profile.js assets/js/post.js assets/js/chat.js assets/js/videos-marketplace.js assets/js/admin.js
+          git commit -m 'Fix critical app integration, privacy, and media issues'
+          git push
