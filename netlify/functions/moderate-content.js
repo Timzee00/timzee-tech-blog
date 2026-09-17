@@ -2,7 +2,10 @@ const { createClient } = require("@supabase/supabase-js");
 
 const jsonResponse = (statusCode, payload) => ({
   statusCode,
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store"
+  },
   body: JSON.stringify(payload)
 });
 
@@ -19,6 +22,39 @@ async function requireModerator(supabase, token) {
   return { user: data.user, role };
 }
 
+function getBearerToken(event) {
+  const header = event.headers?.authorization || event.headers?.Authorization || "";
+  return /^Bearer\s+/i.test(header) ? header.replace(/^Bearer\s+/i, "").trim() : "";
+}
+
+const ACTIONS = {
+  posts: {
+    publish: { table: "posts", mutation: { status: "published" } },
+    unpublish: { table: "posts", mutation: { status: "draft" } },
+    delete: { table: "posts", mutation: null }
+  },
+  comments: {
+    approve: { table: "comments", mutation: { status: "approved" } },
+    hide: { table: "comments", mutation: { status: "pending" } },
+    delete: { table: "comments", mutation: null }
+  },
+  discussion_messages: {
+    delete: { table: "discussion_messages", mutation: null }
+  },
+  marketplace_items: {
+    hide: { table: "marketplace_items", mutation: { is_available: false } },
+    delete: { table: "marketplace_items", mutation: null }
+  },
+  videos: {
+    hide: { table: "videos", mutation: { is_public: false } },
+    delete: { table: "videos", mutation: null }
+  },
+  novels: {
+    hide: { table: "novels", mutation: { status: "paused" } },
+    delete: { table: "novels", mutation: null }
+  }
+};
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return jsonResponse(405, { error: "Method not allowed." });
 
@@ -26,48 +62,71 @@ exports.handler = async (event) => {
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
 
-  const authHeader = event.headers.authorization || event.headers.Authorization || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const guard = await requireModerator(supabase, token);
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+  const guard = await requireModerator(supabase, getBearerToken(event));
   if (guard.error) return jsonResponse(403, { error: guard.error });
 
-  let payload = {};
+  let payload;
   try {
     payload = JSON.parse(event.body || "{}");
-  } catch (error) {
+  } catch {
     return jsonResponse(400, { error: "Invalid JSON body." });
   }
 
-  const { action, type, id } = payload;
-  if (!action || !type || !id) return jsonResponse(400, { error: "Missing action/type/id." });
+  const action = String(payload.action || "");
+  const type = String(payload.type || "");
+  const id = String(payload.id || "");
+  const definition = ACTIONS[type]?.[action];
+  if (!definition || !id) return jsonResponse(400, { error: "Invalid action, content type, or id." });
 
   try {
-    if (type === "posts") {
-      if (action === "publish") await supabase.from("posts").update({ status: "published" }).eq("id", id);
-      else if (action === "unpublish") await supabase.from("posts").update({ status: "draft" }).eq("id", id);
-      else if (action === "delete") await supabase.from("posts").delete().eq("id", id);
-    } else if (type === "comments") {
-      if (action === "approve") await supabase.from("comments").update({ status: "approved" }).eq("id", id);
-      else if (action === "hide") await supabase.from("comments").update({ status: "pending" }).eq("id", id);
-      else if (action === "delete") await supabase.from("comments").delete().eq("id", id);
-    } else if (type === "discussion_messages") {
-      if (action === "delete") await supabase.from("discussion_messages").delete().eq("id", id);
-    } else if (type === "marketplace_items") {
-      if (action === "hide") await supabase.from("marketplace_items").update({ is_available: false }).eq("id", id);
-      else if (action === "delete") await supabase.from("marketplace_items").delete().eq("id", id);
-    } else if (type === "videos") {
-      if (action === "hide") await supabase.from("videos").update({ is_public: false }).eq("id", id);
-      else if (action === "delete") await supabase.from("videos").delete().eq("id", id);
-    } else if (type === "novels") {
-      if (action === "hide") await supabase.from("novels").update({ status: "paused" }).eq("id", id);
-      else if (action === "delete") await supabase.from("novels").delete().eq("id", id);
+    let result;
+    if (definition.mutation) {
+      result = await supabase
+        .from(definition.table)
+        .update(definition.mutation)
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
     } else {
-      return jsonResponse(400, { error: "Unknown content type." });
+      result = await supabase
+        .from(definition.table)
+        .delete()
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
     }
 
-    return jsonResponse(200, { ok: true });
+    if (result.error) {
+      console.error("Moderation mutation failed:", result.error);
+      return jsonResponse(400, { error: result.error.message || "Moderation action failed." });
+    }
+
+    if (!result.data) {
+      return jsonResponse(404, { error: "Content item was not found or was already removed." });
+    }
+
+    const audit = await supabase.from("moderation_audit").insert({
+      moderator_id: guard.user.id,
+      moderator_role: guard.role,
+      action,
+      content_type: type,
+      content_id: id,
+      details: { source: "moderate-content" }
+    });
+
+    if (audit.error) {
+      console.error("Moderation audit write failed:", audit.error);
+    }
+
+    return jsonResponse(200, {
+      ok: true,
+      auditRecorded: !audit.error
+    });
   } catch (error) {
-    return jsonResponse(400, { error: error.message });
+    console.error("Moderation handler error:", error);
+    return jsonResponse(500, { error: "Failed to process moderation action." });
   }
 };
