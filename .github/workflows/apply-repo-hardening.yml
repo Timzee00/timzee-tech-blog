@@ -3,7 +3,7 @@ name: Apply repo hardening
 on:
   push:
     paths:
-      - 'tools/repo_hardening.py'
+      - '**'
 
 permissions:
   contents: write
@@ -45,12 +45,13 @@ jobs:
         run: |
           set +e
           errors=0
+          : > /tmp/node-failures.log
           while IFS= read -r -d '' file; do
             node --check "$file" >/tmp/node-check.log 2>&1
             status=$?
             if [ "$status" -ne 0 ]; then
-              echo "Syntax failure: $file"
-              cat /tmp/node-check.log
+              echo "Syntax failure: $file" | tee -a /tmp/node-failures.log
+              cat /tmp/node-check.log | tee -a /tmp/node-failures.log
               errors=1
             fi
           done < <(find assets netlify/functions -type f -name '*.js' -print0)
@@ -58,7 +59,9 @@ jobs:
             {
               echo '# JavaScript Syntax Diagnostic'
               echo
-              echo 'One or more JavaScript files failed node --check. See workflow output for the file-level errors.'
+              echo '```text'
+              cat /tmp/node-failures.log
+              echo '```'
             } > HARDENING_DEBUG.md
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -69,36 +72,84 @@ jobs:
           fi
 
       - name: Validate transformed files
+        shell: bash
         run: |
-          set -euo pipefail
-          python3 - <<'PY'
+          set +e
+          python3 - <<'PY' > /tmp/static-validation.log 2>&1
           from pathlib import Path
           import re
           root = Path('.')
           listing = (root / 'listing.html').read_text(encoding='utf-8')
+          required = [
+              'formatCurrency(listing.price, listing.currency)',
+              'chat.html?user=',
+              'listing.user_id',
+          ]
+          for item in required:
+              assert item in listing, f'Listing invariant missing: {item}'
           assert 'Opening contact with' not in listing
           assert 'listing.seller_id' not in listing
-          assert 'chat.html?user=' in listing
           assert 'listing.review_count' not in listing
-          assert 'formatCurrency(listing.price, listing.currency)' in listing
           marketplace = (root / 'assets/js/videos-marketplace.js').read_text(encoding='utf-8')
           assert not re.search(r'from\(["\']marketplace_items["\']\)\s*\.select\(["\']\*["\']\)', marketplace)
-          assert 'authoritativeSellerId' in marketplace
+          assert 'listing.data.user_id' in marketplace
           hardening = (root / 'assets/js/app-hardening.js').read_text(encoding='utf-8')
           assert 'setupMultiFileInputs' not in hardening
           assert 'setupListingContactFix' not in hardening
+          verify = (root / 'verify.html').read_text(encoding='utf-8')
+          assert 'docInput.value = "";' in verify
+          admin = (root / 'assets/js/admin.js').read_text(encoding='utf-8')
+          assert 'const MAX_MEDIA_FILES = 8;' in admin
+          assert 'postMediaFiles.push(file)' in admin
+          for path in root.rglob('*.js'):
+              if '.git' in path.parts or 'node_modules' in path.parts:
+                  continue
+              source = path.read_text(encoding='utf-8', errors='ignore')
+              if re.search(r'from\(["\']profiles["\']\)\s*\.select\(["\']\*["\']\)', source):
+                  raise AssertionError(f'Raw profiles select(*) remains in {path}')
           print('Final static validation passed.')
           PY
+          status=$?
+          cat /tmp/static-validation.log
+          if [ "$status" -ne 0 ]; then
+            {
+              echo '# Static Validation Diagnostic'
+              echo
+              echo '```text'
+              cat /tmp/static-validation.log
+              echo '```'
+              echo
+              echo '### Current snippets'
+              echo
+              echo '```text'
+              grep -nE 'formatCurrency|seller_id|review_count|Opening contact|authoritativeSellerId|select\("\*"\)' listing.html assets/js/videos-marketplace.js | head -80 || true
+              echo '```'
+            } > HARDENING_DEBUG.md
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+users.noreply.github.com'
+            git add HARDENING_DEBUG.md
+            git commit -m 'Record static hardening diagnostic'
+            git push
+            exit "$status"
+          fi
 
-      - name: Remove stale diagnostic on success
+      - name: Remove touch file and stale diagnostic
         shell: bash
         run: |
           set -euo pipefail
+          changed=0
+          if [ -f CI_HARDENING_TOUCH.txt ]; then
+            git rm CI_HARDENING_TOUCH.txt
+            changed=1
+          fi
           if [ -f HARDENING_DEBUG.md ]; then
             git rm HARDENING_DEBUG.md
+            changed=1
+          fi
+          if [ "$changed" -eq 1 ]; then
             git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'Remove resolved hardening diagnostic'
+            git config user.email '41898282+users.noreply.github.com'
+            git commit -m 'Remove hardening diagnostics'
             git push
           fi
 
@@ -107,11 +158,7 @@ jobs:
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          if git diff --quiet; then
-            echo 'No changes to commit.'
-            exit 0
-          fi
+          git config user.email '41898282+users.noreply.github.com'
           git add \
             listing.html \
             assets/js/app-hardening.js \
@@ -122,5 +169,9 @@ jobs:
             assets/js/admin.js \
             verify.html \
             assets/js/announcements.js
+          if git diff --cached --quiet; then
+            echo 'No hardening changes to commit.'
+            exit 0
+          fi
           git commit -m 'Apply repo hardening fixes'
           git push
