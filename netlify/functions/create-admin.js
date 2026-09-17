@@ -1,4 +1,5 @@
 const { createClient } = require("@supabase/supabase-js");
+const { requireRole } = require("./_lib/auth-role.js");
 
 const jsonResponse = (statusCode, payload) => ({
   statusCode,
@@ -15,21 +16,13 @@ exports.handler = async (event) => {
 
   const authHeader = event.headers.authorization || event.headers.Authorization || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
-  if (!token) return jsonResponse(401, { error: "Missing auth token." });
-
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const { data: userData, error: userError } = await supabase.auth.getUser(token);
-  if (userError || !userData?.user) return jsonResponse(401, { error: "Invalid auth token." });
-  if ((userData.user.app_metadata?.role || "user") !== "super") {
-    return jsonResponse(403, { error: "Only super admins can create admins." });
-  }
+  const guard = await requireRole(supabase, token, ["super"], "Only super admins can create admins.");
+  if (guard.error) return jsonResponse(guard.error === "Missing auth token." || guard.error === "Invalid auth token." ? 401 : 403, { error: guard.error });
 
   let payload = {};
-  try {
-    payload = JSON.parse(event.body || "{}");
-  } catch (error) {
-    return jsonResponse(400, { error: "Invalid JSON body." });
-  }
+  try { payload = JSON.parse(event.body || "{}"); }
+  catch { return jsonResponse(400, { error: "Invalid JSON body." }); }
 
   const { email, password, displayName, username } = payload;
   if (!email) return jsonResponse(400, { error: "Email is required." });
@@ -90,11 +83,7 @@ exports.handler = async (event) => {
     password,
     email_confirm: true,
     app_metadata: { role: "admin" },
-    user_metadata: {
-      role: "admin",
-      display_name: displayName || email.split("@")[0],
-      username: normalizedUsername
-    }
+    user_metadata: { role: "admin", display_name: displayName || email.split("@")[0], username: normalizedUsername }
   });
 
   if (createError) {
