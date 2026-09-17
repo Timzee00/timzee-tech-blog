@@ -23,20 +23,78 @@ jobs:
           node-version: 22
 
       - name: Validate Netlify Functions syntax
+        id: functions
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
+          : > /tmp/netlify-functions.log
+          rc=0
           while IFS= read -r file; do
-            node --check "$file"
-          done < <(find netlify/functions -type f -name '*.js' -print)
+            echo "Checking $file" | tee -a /tmp/netlify-functions.log
+            node --check "$file" >> /tmp/netlify-functions.log 2>&1
+            result=$?
+            if [ "$result" -ne 0 ]; then
+              echo "FAILED: $file" | tee -a /tmp/netlify-functions.log
+              rc=1
+            fi
+          done < <(find netlify/functions -type f -name '*.js' -print | sort)
+          echo "$rc" > /tmp/netlify-functions.rc
+          exit 0
 
       - name: Validate repository scripts
+        id: scripts
+        shell: bash
+        run: |
+          set +e
+          : > /tmp/repository-scripts.log
+          rc=0
+          while IFS= read -r file; do
+            echo "Checking $file" | tee -a /tmp/repository-scripts.log
+            node --check "$file" >> /tmp/repository-scripts.log 2>&1
+            result=$?
+            if [ "$result" -ne 0 ]; then
+              echo "FAILED: $file" | tee -a /tmp/repository-scripts.log
+              rc=1
+            fi
+          done < <(find scripts -type f -name '*.mjs' -print | sort)
+          echo "$rc" > /tmp/repository-scripts.rc
+          exit 0
+
+      - name: Validate site configuration
+        id: config
+        shell: bash
+        run: |
+          set +e
+          node scripts/validate-production-config.mjs > /tmp/site-config.log 2>&1
+          rc=$?
+          cat /tmp/site-config.log
+          echo "$rc" > /tmp/site-config.rc
+          exit 0
+
+      - name: Upload production gate diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-gate-diagnostics
+          path: |
+            /tmp/netlify-functions.log
+            /tmp/netlify-functions.rc
+            /tmp/repository-scripts.log
+            /tmp/repository-scripts.rc
+            /tmp/site-config.log
+            /tmp/site-config.rc
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Fail if any production gate check failed
         shell: bash
         run: |
           set -euo pipefail
-          while IFS= read -r file; do
-            node --check "$file"
-          done < <(find scripts -type f -name '*.mjs' -print)
-
-      - name: Validate site configuration
-        run: node scripts/validate-production-config.mjs
+          functions_rc=$(cat /tmp/netlify-functions.rc 2>/dev/null || echo 1)
+          scripts_rc=$(cat /tmp/repository-scripts.rc 2>/dev/null || echo 1)
+          config_rc=$(cat /tmp/site-config.rc 2>/dev/null || echo 1)
+          if [ "$functions_rc" -ne 0 ] || [ "$scripts_rc" -ne 0 ] || [ "$config_rc" -ne 0 ]; then
+            echo "Production gate failed. Download the production-gate-diagnostics artifact for exact details."
+            exit 1
+          fi
+          echo "Production gate passed."
