@@ -51,13 +51,27 @@ export function ensureSiteFooter() {
     }
   });
 
-  if (/\/privacy\.html$/.test(path) || /\/terms\.html$/.test(path) || /\/refund-policy\.html$/.test(path) || /\/cookies\.html$/.test(path) || /\/accessibility\.html$/.test(path)) {
+  if (/\/(privacy|terms|refund-policy|cookies|accessibility)\.html$/.test(path)) {
     brand.setAttribute("aria-current", "page");
   }
 }
 
+async function loadHomepageEnhancements() {
+  const path = currentSitePath().toLowerCase();
+  const home = path === "/" || path.endsWith("/index.html") || path === "";
+  if (!home || !document.getElementById("popularTrack")) return;
+  try {
+    await import("./popularity-engine.js");
+  } catch (error) {
+    console.warn("Homepage popularity engine failed to load:", error);
+  }
+}
+
 if (typeof window !== "undefined") {
-  const start = () => ensureSiteFooter();
+  const start = () => {
+    ensureSiteFooter();
+    void loadHomepageEnhancements();
+  };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
   else start();
 }
