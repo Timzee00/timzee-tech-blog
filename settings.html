@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Settings — Timzee Tech Hub</title>
   <meta name="description" content="Manage your Timzee Tech Hub account, privacy, feed, chat, media and content preferences.">
+  <meta name="robots" content="noindex,nofollow">
   <link rel="stylesheet" href="assets/css/styles.css">
   <script defer src="assets/js/theme-init.js"></script>
 </head>
@@ -17,160 +18,36 @@
       <span class="tagline">Account & product settings</span>
     </a>
     <nav class="nav-pill" aria-label="Primary navigation">
-      <a href="index.html">Home</a>
-      <a href="fyp.html">For You</a>
-      <a href="discussion.html">Discussion</a>
-      <a href="marketplace.html">Marketplace</a>
-      <a href="videos.html">Videos</a>
-      <a href="novels.html">Novels</a>
+      <a href="index.html">Home</a><a href="fyp.html">For You</a><a href="discussion.html">Discussion</a><a href="marketplace.html">Marketplace</a><a href="videos.html">Videos</a><a href="novels.html">Novels</a>
     </nav>
     <div class="header-actions"><a class="btn ghost" href="chat.html">Chat</a></div>
   </div>
 </header>
-
 <main id="main-content" class="page-shell">
   <div class="container settings-layout">
     <aside class="settings-sidebar" aria-label="Settings sections">
       <div class="settings-sidebar-head"><span class="settings-kicker">Preferences</span><h1>Settings</h1></div>
       <nav id="settingsNav" class="settings-nav">
-        <a href="#account">Account</a>
-        <a href="#privacy">Privacy & safety</a>
-        <a href="#notifications">Notifications</a>
-        <a href="#feed">Feed & recommendations</a>
-        <a href="#chat">Chat</a>
-        <a href="#groups">Groups</a>
-        <a href="#marketplace">Marketplace</a>
-        <a href="#discussion">Discussion</a>
-        <a href="#novels">Novels</a>
-        <a href="#videos">Videos</a>
-        <a href="#ai">AI</a>
-        <a href="#cookies">Cookies & data</a>
+        <a href="#account">Account</a><a href="#privacy">Privacy & safety</a><a href="#notifications">Notifications</a><a href="#feed">Feed & recommendations</a><a href="#chat">Chat</a><a href="#groups">Groups</a><a href="#marketplace">Marketplace</a><a href="#discussion">Discussion</a><a href="#novels">Novels</a><a href="#videos">Videos</a><a href="#ai">AI</a><a href="#cookies">Cookies & data</a>
       </nav>
     </aside>
-
     <section class="settings-content">
-      <div class="settings-hero card">
-        <span class="chip">Central control</span>
-        <h2>One place for how Timzee behaves for you</h2>
-        <p>These preferences are designed to affect the corresponding product areas instead of becoming a page full of switches that do nothing.</p>
-        <div class="settings-save-state" id="settingsStatus" role="status" aria-live="polite">Loading your settings...</div>
-      </div>
-
-      <section id="account" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">Account</span><h2>Account basics</h2></div></div>
-        <div class="settings-grid two">
-          <div class="setting-row static"><div><strong>Profile</strong><small>Update your public profile details and avatar.</small></div><a class="btn ghost sm" href="profile.html">Open profile</a></div>
-          <div class="setting-row static"><div><strong>For You feed</strong><small>Your personalized discovery surface uses follows, likes, saves and feedback.</small></div><a class="btn ghost sm" href="fyp.html">Open For You</a></div>
-        </div>
-      </section>
-
-      <section id="privacy" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">Privacy</span><h2>Privacy & safety</h2></div></div>
-        <div class="settings-stack">
-          <label class="toggle-row"><span><strong>Allow direct messages</strong><small>Let other members start a private chat when your account allows it.</small></span><input type="checkbox" data-profile-setting="allow_messages"></label>
-          <label class="toggle-row"><span><strong>Allow friend requests</strong><small>Let other members send you connection requests.</small></span><input type="checkbox" data-profile-setting="allow_requests"></label>
-          <label class="toggle-row"><span><strong>Show email on profile</strong><small>Keep your email hidden unless you deliberately enable this.</small></span><input type="checkbox" data-profile-setting="show_email"></label>
-        </div>
-      </section>
-
-      <section id="notifications" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">Notifications</span><h2>Choose what reaches you</h2></div></div>
-        <div class="settings-stack">
-          <label class="toggle-row"><span><strong>Messages</strong><small>New direct messages and chat activity.</small></span><input type="checkbox" data-path="notifications.messages"></label>
-          <label class="toggle-row"><span><strong>Replies</strong><small>Replies to your posts, comments and discussion activity.</small></span><input type="checkbox" data-path="notifications.replies"></label>
-          <label class="toggle-row"><span><strong>Follows</strong><small>New followers and follow-related updates.</small></span><input type="checkbox" data-path="notifications.follows"></label>
-          <label class="toggle-row"><span><strong>Mentions</strong><small>When another member mentions you.</small></span><input type="checkbox" data-path="notifications.mentions"></label>
-          <label class="toggle-row"><span><strong>Announcements</strong><small>Important platform announcements.</small></span><input type="checkbox" data-path="notifications.announcements"></label>
-          <label class="toggle-row"><span><strong>Marketplace</strong><small>Inquiry and transaction-related notifications.</small></span><input type="checkbox" data-path="notifications.marketplace"></label>
-        </div>
-      </section>
-
-      <section id="feed" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">Discovery</span><h2>Feed & recommendations</h2></div></div>
-        <div class="settings-grid two">
-          <label class="field"><span>Default feed</span><select data-path="feed.defaultFeed"><option value="for-you">For You</option><option value="following">Following</option><option value="latest">Latest</option></select></label>
-          <label class="toggle-row"><span><strong>Show recommendations</strong><small>Allow algorithmic recommendations on discovery surfaces.</small></span><input type="checkbox" data-path="feed.showRecommendations"></label>
-          <label class="toggle-row"><span><strong>Remember filters</strong><small>Keep your preferred sort/filter choices for future visits.</small></span><input type="checkbox" data-path="feed.rememberFilters"></label>
-        </div>
-        <div class="settings-help">Use “Not interested” on recommended content to teach the feed without needing to write rules manually.</div>
-      </section>
-
-      <section id="chat" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">Chat</span><h2>Conversation preferences</h2></div><a class="btn ghost sm" href="chat.html">Open chat</a></div>
-        <div class="settings-grid two">
-          <label class="toggle-row"><span><strong>Chat notifications</strong><small>Show new-message notifications in the chat UI.</small></span><input type="checkbox" data-path="chat.notifications"></label>
-          <label class="toggle-row"><span><strong>Chat sounds</strong><small>Play interface sounds for chat activity.</small></span><input type="checkbox" data-path="chat.sounds"></label>
-          <label class="toggle-row"><span><strong>Enter to send</strong><small>Press Enter to send; Shift+Enter creates a new line.</small></span><input type="checkbox" data-path="chat.enterToSend"></label>
-          <label class="field"><span>Disappearing messages</span><select data-path="chat.disappearingMessages"><option value="off">Off</option><option value="24h">24 hours</option><option value="7d">7 days</option><option value="90d">90 days</option></select></label>
-        </div>
-      </section>
-
-      <section id="groups" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">Groups</span><h2>Group experience</h2></div></div>
-        <div class="settings-grid two">
-          <label class="field"><span>Media download</span><select data-path="groups.mediaDownload"><option value="wifi">Wi-Fi only</option><option value="always">Wi-Fi & mobile</option><option value="never">Never automatically</option></select></label>
-          <label class="toggle-row"><span><strong>Show member tags</strong><small>Display role/label tags assigned inside a group.</small></span><input type="checkbox" data-path="groups.showMemberTags"></label>
-        </div>
-        <div class="settings-help">Group-specific controls such as photo, description, member tags, pin and mute remain available inside each group.</div>
-      </section>
-
-      <section id="marketplace" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">Marketplace</span><h2>Buying & selling preferences</h2></div><a class="btn ghost sm" href="marketplace.html">Open marketplace</a></div>
-        <div class="settings-grid two">
-          <label class="field"><span>Preferred currency</span><select data-path="marketplace.currency"><option value="NGN">NGN</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="EUR">EUR</option></select></label>
-          <label class="toggle-row"><span><strong>Show marketplace location</strong><small>Display the saved seller/buyer location where the marketplace supports it.</small></span><input type="checkbox" data-path="marketplace.showLocation"></label>
-          <label class="toggle-row"><span><strong>Save searches</strong><small>Remember useful marketplace search preferences locally.</small></span><input type="checkbox" data-path="marketplace.saveSearches"></label>
-        </div>
-      </section>
-
-      <section id="discussion" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">Discussion</span><h2>Forum defaults</h2></div><a class="btn ghost sm" href="discussion.html">Open discussion</a></div>
-        <div class="settings-grid two">
-          <label class="field"><span>Default topic discovery</span><select data-path="discussion.defaultSort"><option value="trending">Trending</option><option value="popular">Popular</option><option value="new">New</option><option value="active">Most active</option><option value="unanswered">Unanswered</option></select></label>
-          <label class="toggle-row"><span><strong>Live discussion updates</strong><small>Keep supported discussion views connected to realtime updates.</small></span><input type="checkbox" data-path="discussion.showLiveUpdates"></label>
-        </div>
-      </section>
-
-      <section id="novels" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">Reading</span><h2>Novel reader</h2></div><a class="btn ghost sm" href="novels.html">Open novels</a></div>
-        <div class="settings-grid two">
-          <label class="field"><span>Reader text size</span><select data-path="novels.fontSize"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">Extra large</option></select></label>
-          <label class="field"><span>Reader width</span><select data-path="novels.readerWidth"><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="wide">Wide</option></select></label>
-          <label class="toggle-row"><span><strong>Remember reading position</strong><small>Resume chapters where you left off on supported reader surfaces.</small></span><input type="checkbox" data-path="novels.rememberPosition"></label>
-        </div>
-      </section>
-
-      <section id="videos" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">Video</span><h2>Video preferences</h2></div><a class="btn ghost sm" href="videos.html">Open videos</a></div>
-        <div class="settings-grid two">
-          <label class="toggle-row"><span><strong>Autoplay</strong><small>Allow eligible video surfaces to begin playback automatically.</small></span><input type="checkbox" data-path="videos.autoplay"></label>
-          <label class="toggle-row"><span><strong>Muted by default</strong><small>Start automatically played media muted until you enable sound.</small></span><input type="checkbox" data-path="videos.mutedByDefault"></label>
-          <label class="toggle-row"><span><strong>Data saver</strong><small>Prefer lower-bandwidth playback where supported.</small></span><input type="checkbox" data-path="videos.dataSaver"></label>
-        </div>
-      </section>
-
-      <section id="ai" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">AI</span><h2>AI assistant</h2></div><a class="btn ghost sm" href="ai-chat.html">Open AI</a></div>
-        <div class="settings-stack">
-          <label class="toggle-row"><span><strong>Save AI history</strong><small>Keep AI conversations in your account so you can return to them.</small></span><input type="checkbox" data-path="ai.saveHistory"></label>
-          <label class="toggle-row"><span><strong>Use page context</strong><small>Allow supported “Ask AI” actions to pass selected content as context.</small></span><input type="checkbox" data-path="ai.assistantContext"></label>
-        </div>
-      </section>
-
-      <section id="cookies" class="settings-card card">
-        <div class="settings-card-head"><div><span class="settings-kicker">Privacy controls</span><h2>Cookies & data</h2></div></div>
-        <p>Essential storage is used for things such as sessions and security. Optional preference/measurement technologies stay disabled until you choose them.</p>
-        <div class="settings-inline-actions">
-          <button class="btn" type="button" id="cookieSettingsBtn">Open cookie settings</button>
-          <a class="btn ghost" href="cookies.html">Read cookie policy</a>
-          <button class="btn ghost" type="button" id="clearLocalDataBtn">Clear local preferences</button>
-        </div>
-      </section>
+      <div class="settings-hero card"><span class="chip">Central control</span><h2>One place for how Timzee behaves for you</h2><p>These preferences are designed to affect the corresponding product areas instead of becoming a page full of switches that do nothing.</p><div class="settings-save-state" id="settingsStatus" role="status" aria-live="polite">Loading your settings...</div></div>
+      <section id="account" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">Account</span><h2>Account basics</h2></div></div><div class="settings-grid two"><div class="setting-row static"><div><strong>Profile</strong><small>Update your public profile details and avatar.</small></div><a class="btn ghost sm" href="profile.html">Open profile</a></div><div class="setting-row static"><div><strong>For You feed</strong><small>Your personalized discovery surface uses follows, likes, saves and feedback.</small></div><a class="btn ghost sm" href="fyp.html">Open For You</a></div></div></section>
+      <section id="privacy" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">Privacy</span><h2>Privacy & safety</h2></div></div><div class="settings-stack"><label class="toggle-row"><span><strong>Allow direct messages</strong><small>Let other members start a private chat when your account allows it.</small></span><input type="checkbox" data-profile-setting="allow_messages"></label><label class="toggle-row"><span><strong>Allow friend requests</strong><small>Let other members send you connection requests.</small></span><input type="checkbox" data-profile-setting="allow_requests"></label><label class="toggle-row"><span><strong>Show email on profile</strong><small>Keep your email hidden unless you deliberately enable this.</small></span><input type="checkbox" data-profile-setting="show_email"></label></div></section>
+      <section id="notifications" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">Notifications</span><h2>Choose what reaches you</h2></div></div><div class="settings-stack"><label class="toggle-row"><span><strong>Messages</strong><small>New direct messages and chat activity.</small></span><input type="checkbox" data-path="notifications.messages"></label><label class="toggle-row"><span><strong>Replies</strong><small>Replies to your posts, comments and discussion activity.</small></span><input type="checkbox" data-path="notifications.replies"></label><label class="toggle-row"><span><strong>Follows</strong><small>New followers and follow-related updates.</small></span><input type="checkbox" data-path="notifications.follows"></label><label class="toggle-row"><span><strong>Mentions</strong><small>When another member mentions you.</small></span><input type="checkbox" data-path="notifications.mentions"></label><label class="toggle-row"><span><strong>Announcements</strong><small>Important platform announcements.</small></span><input type="checkbox" data-path="notifications.announcements"></label><label class="toggle-row"><span><strong>Marketplace</strong><small>Inquiry and transaction-related notifications.</small></span><input type="checkbox" data-path="notifications.marketplace"></label></div></section>
+      <section id="feed" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">Discovery</span><h2>Feed & recommendations</h2></div></div><div class="settings-grid two"><label class="field"><span>Default feed</span><select data-path="feed.defaultFeed"><option value="for-you">For You</option><option value="following">Following</option><option value="latest">Latest</option></select></label><label class="toggle-row"><span><strong>Show recommendations</strong><small>Allow algorithmic recommendations on discovery surfaces.</small></span><input type="checkbox" data-path="feed.showRecommendations"></label><label class="toggle-row"><span><strong>Remember filters</strong><small>Keep your preferred sort/filter choices for future visits.</small></span><input type="checkbox" data-path="feed.rememberFilters"></label></div><div class="settings-help">Use “Not interested” on recommended content to teach the feed without needing to write rules manually.</div></section>
+      <section id="chat" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">Chat</span><h2>Conversation preferences</h2></div><a class="btn ghost sm" href="chat.html">Open chat</a></div><div class="settings-grid two"><label class="toggle-row"><span><strong>Chat notifications</strong><small>Show new-message notifications in the chat UI.</small></span><input type="checkbox" data-path="chat.notifications"></label><label class="toggle-row"><span><strong>Chat sounds</strong><small>Play interface sounds for chat activity.</small></span><input type="checkbox" data-path="chat.sounds"></label><label class="toggle-row"><span><strong>Enter to send</strong><small>Press Enter to send; Shift+Enter creates a new line.</small></span><input type="checkbox" data-path="chat.enterToSend"></label><label class="field"><span>Disappearing messages</span><select data-path="chat.disappearingMessages"><option value="off">Off</option><option value="24h">24 hours</option><option value="7d">7 days</option><option value="90d">90 days</option></select></label></div></section>
+      <section id="groups" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">Groups</span><h2>Group experience</h2></div></div><div class="settings-grid two"><label class="field"><span>Media download</span><select data-path="groups.mediaDownload"><option value="wifi">Wi-Fi only</option><option value="always">Wi-Fi & mobile</option><option value="never">Never automatically</option></select></label><label class="toggle-row"><span><strong>Show member tags</strong><small>Display role/label tags assigned inside a group.</small></span><input type="checkbox" data-path="groups.showMemberTags"></label></div><div class="settings-help">Group-specific controls such as photo, description, member tags, pin and mute remain available inside each group.</div></section>
+      <section id="marketplace" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">Marketplace</span><h2>Buying & selling preferences</h2></div><a class="btn ghost sm" href="marketplace.html">Open marketplace</a></div><div class="settings-grid two"><label class="field"><span>Preferred currency</span><select data-path="marketplace.currency"><option value="NGN">NGN</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="EUR">EUR</option></select></label><label class="toggle-row"><span><strong>Show marketplace location</strong><small>Display the saved seller/buyer location where the marketplace supports it.</small></span><input type="checkbox" data-path="marketplace.showLocation"></label><label class="toggle-row"><span><strong>Save searches</strong><small>Remember useful marketplace search preferences locally.</small></span><input type="checkbox" data-path="marketplace.saveSearches"></label></div></section>
+      <section id="discussion" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">Discussion</span><h2>Forum defaults</h2></div><a class="btn ghost sm" href="discussion.html">Open discussion</a></div><div class="settings-grid two"><label class="field"><span>Default topic discovery</span><select data-path="discussion.defaultSort"><option value="trending">Trending</option><option value="popular">Popular</option><option value="new">New</option><option value="active">Most active</option><option value="unanswered">Unanswered</option></select></label><label class="toggle-row"><span><strong>Live discussion updates</strong><small>Keep supported discussion views connected to realtime updates.</small></span><input type="checkbox" data-path="discussion.showLiveUpdates"></label></div></section>
+      <section id="novels" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">Reading</span><h2>Novel reader</h2></div><a class="btn ghost sm" href="novels.html">Open novels</a></div><div class="settings-grid two"><label class="field"><span>Reader text size</span><select data-path="novels.fontSize"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">Extra large</option></select></label><label class="field"><span>Reader width</span><select data-path="novels.readerWidth"><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="wide">Wide</option></select></label><label class="toggle-row"><span><strong>Remember reading position</strong><small>Resume chapters where you left off on supported reader surfaces.</small></span><input type="checkbox" data-path="novels.rememberPosition"></label></div></section>
+      <section id="videos" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">Video</span><h2>Video preferences</h2></div><a class="btn ghost sm" href="videos.html">Open videos</a></div><div class="settings-grid two"><label class="toggle-row"><span><strong>Autoplay</strong><small>Allow eligible video surfaces to begin playback automatically.</small></span><input type="checkbox" data-path="videos.autoplay"></label><label class="toggle-row"><span><strong>Muted by default</strong><small>Start automatically played media muted until you enable sound.</small></span><input type="checkbox" data-path="videos.mutedByDefault"></label><label class="toggle-row"><span><strong>Data saver</strong><small>Prefer lower-bandwidth playback where supported.</small></span><input type="checkbox" data-path="videos.dataSaver"></label></div></section>
+      <section id="ai" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">AI</span><h2>AI assistant</h2></div><a class="btn ghost sm" href="ai-chat.html">Open AI</a></div><div class="settings-stack"><label class="toggle-row"><span><strong>Save AI history</strong><small>Keep AI conversations in your account so you can return to them.</small></span><input type="checkbox" data-path="ai.saveHistory"></label><label class="toggle-row"><span><strong>Use page context</strong><small>Allow supported “Ask AI” actions to pass selected content as context.</small></span><input type="checkbox" data-path="ai.assistantContext"></label></div></section>
+      <section id="cookies" class="settings-card card"><div class="settings-card-head"><div><span class="settings-kicker">Privacy controls</span><h2>Cookies & data</h2></div></div><p>Essential storage is used for things such as sessions and security. Optional preference/measurement technologies stay disabled until you choose them.</p><div class="settings-inline-actions"><button class="btn" type="button" id="cookieSettingsBtn">Open cookie settings</button><a class="btn ghost" href="cookies.html">Read cookie policy</a><button class="btn ghost" type="button" id="clearLocalDataBtn">Clear local preferences</button></div></section>
     </section>
   </div>
 </main>
-
 <footer class="footer"><div class="container"><div>Powered by Timzee Corp</div></div></footer>
 <script type="module" src="assets/js/settings-page.js"></script>
-</body>
-</html>
+</body></html>
