@@ -3,6 +3,8 @@ import { escapeHTML, stripHTML, clampText, isSafeUrl, timeAgo } from "./utils.js
 
 const TRACK_ID = "trendingList";
 const LIMIT = 5;
+let rendering = false;
+let lastCategory = null;
 
 function card(post) {
   const media = post.cover && isSafeUrl(post.cover)
@@ -19,22 +21,20 @@ function card(post) {
 
 async function renderTrending(categoryId = null) {
   const target = document.getElementById(TRACK_ID);
-  if (!target) return;
+  if (!target || rendering) return;
+  lastCategory = categoryId && categoryId !== "all" ? categoryId : null;
+  rendering = true;
   target.setAttribute("aria-busy", "true");
   try {
-    const result = await supabase.rpc("get_trending_posts", {
-      limit_count: LIMIT,
-      category_filter: categoryId && categoryId !== "all" ? categoryId : null
-    });
+    const result = await supabase.rpc("get_trending_posts", { limit_count: LIMIT, category_filter: lastCategory });
     if (result.error) throw result.error;
     const rows = result.data || [];
-    target.innerHTML = rows.length
-      ? rows.map(card).join("")
-      : `<div class="callout">Nothing is heating up yet. Recent activity will surface here automatically.</div>`;
+    target.innerHTML = rows.length ? rows.map(card).join("") : `<div class="callout">Nothing is heating up yet. Recent activity will surface here automatically.</div>`;
   } catch (error) {
     console.warn("Automated trending ranking failed:", error);
   } finally {
     target.setAttribute("aria-busy", "false");
+    rendering = false;
   }
 }
 
@@ -47,6 +47,16 @@ function boot() {
     if (!link) return;
     window.setTimeout(() => renderTrending(link.dataset.category || "all"), 80);
   });
+  const observer = new MutationObserver(() => {
+    if (rendering) return;
+    if (!target.dataset.trendingOwned) {
+      target.dataset.trendingOwned = "true";
+      return;
+    }
+    const hasTrendingCard = target.querySelector(".trending-card");
+    if (!hasTrendingCard && target.getAttribute("aria-busy") !== "true") window.setTimeout(() => renderTrending(lastCategory), 120);
+  });
+  observer.observe(target, { childList: true, subtree: true });
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
