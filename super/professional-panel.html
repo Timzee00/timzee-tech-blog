@@ -180,6 +180,7 @@
 
     <script type="module">
       import { getCurrentUserWithRole, signOut, supabase, getUserRole } from "../assets/js/supabase.js";
+      import { escapeHTML } from "../assets/js/utils.js";
       import ModeratorManager from "../assets/js/moderator-ui.js";
       import CuratorManager from "../assets/js/curator-ui.js";
       const SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
@@ -478,8 +479,8 @@
             }
             const cards = (data.admins || []).map((admin) => `
               <div class="form-card" style="margin-bottom:12px;" data-admin-id="${admin.id}">
-                <strong>${admin.display_name || admin.email}</strong>
-                <div style="color:#666;font-size:12px;">${admin.email} • ${admin.role}</div>
+                <strong>${escapeHTML(admin.display_name || admin.email || "Admin")}</strong>
+                <div style="color:#666;font-size:12px;">${escapeHTML(admin.email || "—")} • ${escapeHTML(admin.role || "admin")}</div>
                 <div style="color:#666;font-size:12px;">Posts: ${admin.post_count || 0}</div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                   ${admin.role !== "super" ? `<button class="btn ghost" data-admin-action="promote_to_super" data-admin-id="${admin.id}">Promote to Super</button>` : ""}
@@ -518,8 +519,8 @@
             }
             const cards = (data || []).map((admin) => `
               <div class="form-card" style="margin-bottom:12px;" data-admin-id="${admin.id}">
-                <strong>${admin.display_name || admin.username || "Admin"}</strong>
-                <div style="color:#666;font-size:12px;">${admin.email || admin.username || "—"} • ${admin.role || "admin"}</div>
+                <strong>${escapeHTML(admin.display_name || admin.username || "Admin")}</strong>
+                <div style="color:#666;font-size:12px;">${escapeHTML(admin.email || admin.username || "—")} • ${escapeHTML(admin.role || "admin")}</div>
                 <div style="color:#666;font-size:12px;">Joined: ${admin.created_at ? new Date(admin.created_at).toLocaleDateString() : "—"}</div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                   ${admin.role !== "super" ? `<button class="btn ghost" data-admin-action="promote_to_super" data-admin-id="${admin.id}">Promote to Super</button>` : ""}
@@ -574,8 +575,8 @@
             }
             const cards = (data.users || []).map((user) => `
               <div class="form-card" style="margin-bottom:12px;" data-user-id="${user.id}">
-                <strong>${user.display_name || user.email}</strong>
-                <div style="color:#666;font-size:12px;">${user.email} • ${user.role}</div>
+                <strong>${escapeHTML(user.display_name || user.email || "Member")}</strong>
+                <div style="color:#666;font-size:12px;">${escapeHTML(user.email || "—")} • ${escapeHTML(user.role || "user")}</div>
                 <div style="color:#666;font-size:12px;">Status: ${user.account_status || "active"} ${user.is_verified ? "• Verified" : ""} ${user.is_staff_pick ? "• Staff Pick" : ""} ${user.is_featured ? "• Featured" : ""}</div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                   <button class="btn ghost" data-user-action="${user.is_verified ? "unverify" : "verify"}" data-user-id="${user.id}">${user.is_verified ? "Unverify" : "Verify"}</button>
@@ -613,8 +614,8 @@
             }
             const cards = (data || []).map((user) => `
               <div class="form-card" style="margin-bottom:12px;">
-                <strong>${user.display_name || user.username || "Member"}</strong>
-                <div style="color:#666;font-size:12px;">${user.username || "—"} • ${user.role || "user"}</div>
+                <strong>${escapeHTML(user.display_name || user.username || "Member")}</strong>
+                <div style="color:#666;font-size:12px;">${escapeHTML(user.username || "—")} • ${escapeHTML(user.role || "user")}</div>
                 <div style="color:#666;font-size:12px;">Status: ${user.status || "active"}</div>
               </div>
             `);
@@ -632,7 +633,7 @@
             .order("created_at", { ascending: false })
             .limit(50);
           if (error) {
-            container.innerHTML = `<div class="callout" style="border-left-color:#ef4444;">${error.message}</div>`;
+            container.innerHTML = `<div class="callout" style="border-left-color:#ef4444;">${escapeHTML(error.message || "Unable to load posts.")}</div>`;
             return;
           }
           if (!data || !data.length) {
@@ -643,8 +644,8 @@
             .map(
               (post) => `
                 <div class="form-card" style="margin-bottom:12px;" data-post-id="${post.id}">
-                  <strong>${post.title || "Untitled"}</strong>
-                  <div style="color:#666;font-size:12px;">${post.author_name || "Unknown"} • ${post.status || "draft"}</div>
+                  <strong>${escapeHTML(post.title || "Untitled")}</strong>
+                  <div style="color:#666;font-size:12px;">${escapeHTML(post.author_name || "Unknown")} • ${escapeHTML(post.status || "draft")}</div>
                   <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                     <button class="btn ghost" data-post-action="${post.status === "published" ? "unpublish" : "publish"}" data-post-id="${post.id}">${post.status === "published" ? "Unpublish" : "Publish"}</button>
                     <button class="btn ghost" style="color:#ef4444;" data-post-action="delete" data-post-id="${post.id}">Delete</button>
