@@ -404,7 +404,7 @@
       }
 
       function setupEventListeners() {
-        document.getElementById("contactBtn").addEventListener("click", () => {
+        document.getElementById("contactBtn").addEventListener("click", async () => {
           if (!state.user) {
             const next = encodeURIComponent(`listing.html?id=${state.itemId}`);
             window.location.href = `login.html?next=${next}`;
@@ -426,9 +426,9 @@
             return;
           }
 
-          const whatsapp = String(state.sellerProfile?.marketplace_whatsapp || "").replace(/[^\\d+]/g, "");
+          const whatsapp = String(state.sellerProfile?.marketplace_whatsapp || "").replace(/[^\d+]/g, "");
           if (whatsapp) {
-            const digits = whatsapp.replace(/^\\+/, "");
+            const digits = whatsapp.replace(/^\+/, "");
             const message = `Hello, I'm interested in your listing: ${state.listing?.title || "your item"}.`;
             window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
             return;
