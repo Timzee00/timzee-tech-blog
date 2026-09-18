@@ -261,7 +261,7 @@ async function loadFriendships() {
     state.blockedProfiles = {};
     return;
   }
-  const profilesResult = await supabase.from("profiles").select("*").in("id", Array.from(profileIds));
+  const profilesResult = await supabase.from("public_profiles").select("*").in("id", Array.from(profileIds));
   const profiles = ensureSupabaseSuccess(profilesResult, "Failed to load chat profiles.");
   const map = {};
   profiles.forEach((profile) => {
@@ -322,7 +322,7 @@ async function loadGroupMembers(threadId) {
     const ids = (result.data || []).map((row) => row.user_id).filter(Boolean);
     state.groupMembers[threadId] = ids;
     if (ids.length) {
-      const profiles = await supabase.from("profiles").select("*").in("id", ids);
+      const profiles = await supabase.from("public_profiles").select("*").in("id", ids);
       (profiles.data || []).forEach((profile) => {
         state.profileCache[profile.id] = profile;
       });
@@ -701,7 +701,7 @@ async function searchPeople(term) {
     return;
   }
   const result = await supabase
-    .from("profiles")
+    .from("public_profiles")
     .select("id, display_name, username, email, avatar_url, headline, show_email")
     .or(`display_name.ilike.%${query}%,username.ilike.%${query}%,email.ilike.%${query}%`)
     .limit(20);
@@ -871,7 +871,7 @@ function subscribeToMessages(threadId) {
           // Cache profile if not already cached
           if (!state.profileCache[payload.new.sender_id]) {
             const result = await supabase
-              .from("profiles")
+              .from("public_profiles")
               .select("*")
               .eq("id", payload.new.sender_id)
               .single();
