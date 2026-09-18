@@ -832,21 +832,8 @@ function setupFollowButton() {
     });
     state.isFollowingTopic = result.following;
     updateFollowButton();
-    if (result.following && state.activeTopic?.author_id && state.activeTopic.author_id !== state.user.id) {
-      const authorPref = await supabase
-        .from("profiles")
-        .select("notify_follows")
-        .eq("id", state.activeTopic.author_id)
-        .maybeSingle();
-      if (authorPref.data?.notify_follows === false) return;
-      await createNotification({
-        userId: state.activeTopic.author_id,
-        type: "topic_follow",
-        title: "New topic follower",
-        body: `${getDisplayName(state.user)} followed your topic "${state.activeTopic.title}".`,
-        linkUrl: `discussion.html?topic=${state.activeTopicId}`
-      });
-    }
+    // The follows table trigger creates the notification and reads the
+    // recipient's private notification preference on the server.
   });
 }
 
