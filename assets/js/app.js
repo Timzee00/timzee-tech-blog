@@ -993,18 +993,39 @@ async function boot() {
     if (theme) applyThemeVariables(theme);
   }
 
-  const [categories, posts, comments, likes, ads, discussionTopics, discussionMessages, leaderboard, suggestedPeople] =
-    await Promise.all([
-      fetchCategories(),
-      fetchPosts({ status: "published" }),
-      fetchComments({ status: "approved" }),
-      fetchPostLikes(),
-      fetchAds({ status: "active" }),
-      fetchDiscussionTopics(),
-      fetchDiscussionMessages(),
-      fetchTopProfiles(5),
-      fetchSuggestedPeople(state.user?.id || null, 8)
-    ]);
+  const softTimeout = (promise, fallback, label, ms = 2800) =>
+    Promise.race([
+      Promise.resolve(promise),
+      new Promise((resolve) => window.setTimeout(() => {
+        console.warn(`Homepage data timed out: ${label}`);
+        resolve(fallback);
+      }, ms))
+    ]).catch((error) => {
+      console.warn(`Homepage data failed: ${label}`, error);
+      return fallback;
+    });
+
+  const [
+    categories,
+    posts,
+    comments,
+    likes,
+    ads,
+    discussionTopics,
+    discussionMessages,
+    leaderboard,
+    suggestedPeople
+  ] = await Promise.all([
+    softTimeout(fetchCategories(), [], "categories"),
+    softTimeout(fetchPosts({ status: "published" }), [], "posts"),
+    softTimeout(fetchComments({ status: "approved" }), [], "comments"),
+    softTimeout(fetchPostLikes(), [], "likes"),
+    softTimeout(fetchAds({ status: "active" }), [], "ads"),
+    softTimeout(fetchDiscussionTopics(), [], "discussion topics"),
+    softTimeout(fetchDiscussionMessages(), [], "discussion messages"),
+    softTimeout(fetchTopProfiles(5), [], "leaderboard"),
+    softTimeout(fetchSuggestedPeople(state.user?.id || null, 8), [], "suggested people")
+  ]);
 
   state.categories = categories;
   state.posts = posts;
