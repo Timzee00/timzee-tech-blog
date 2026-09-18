@@ -580,26 +580,10 @@ function extractMentionUsernames(text) {
   return Array.from(usernames);
 }
 
-async function notifyMentionTargets(usernames, post, commentId) {
-  if (!state.user || !post || !usernames.length) return;
-  const normalized = usernames.map((name) => name.toLowerCase());
-  const targets = await fetchProfilesByUsernames(normalized);
-  if (!targets.length) return;
-  const postUrl = SITE_URL ? `${SITE_URL}/post.html?id=${post.id}` : `post.html?id=${post.id}`;
-  const link = commentId ? `${postUrl}#comment-${commentId}` : `${postUrl}#comments`;
-  await Promise.all(
-    targets
-      .filter((profile) => profile.id && profile.id !== state.user.id && profile.notify_mentions !== false)
-      .map((profile) =>
-        createNotification({
-          userId: profile.id,
-          type: "mention",
-          title: `${getDisplayName(state.user)} mentioned you`,
-          body: `${getDisplayName(state.user)} mentioned you in "${post.title || "a post"}".`,
-          linkUrl: link
-        })
-      )
-  );
+async function notifyMentionTargets() {
+  // Mentions are persisted on the comment and the database notification trigger
+  // creates the recipient notification while honoring private preferences.
+  return;
 }
 
 async function loadCommentAuthors(comments) {
@@ -964,7 +948,7 @@ function setupCommentForm(post, comments) {
             };
           }
           renderComments(comments);
-          await notifyMentionTargets(mentionedUsernames, post, result.data?.id || newComment.id);
+          await notifyMentionTargets();
         }
 
         if (state.user) {
