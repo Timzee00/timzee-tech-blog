@@ -41,6 +41,25 @@ jobs:
           echo "$rc" > /tmp/netlify-functions.rc
           exit 0
 
+      - name: Validate browser JavaScript modules
+        id: client_js
+        shell: bash
+        run: |
+          set +e
+          : > /tmp/client-js.log
+          rc=0
+          while IFS= read -r file; do
+            echo "Checking $file" | tee -a /tmp/client-js.log
+            node --input-type=module --check < "$file" >> /tmp/client-js.log 2>&1
+            result=$?
+            if [ "$result" -ne 0 ]; then
+              echo "FAILED: $file" | tee -a /tmp/client-js.log
+              rc=1
+            fi
+          done < <(find assets/js -type f -name '*.js' -print | sort)
+          echo "$rc" > /tmp/client-js.rc
+          exit 0
+
       - name: Validate repository scripts
         id: scripts
         shell: bash
@@ -81,6 +100,8 @@ jobs:
             /tmp/netlify-functions.rc
             /tmp/repository-scripts.log
             /tmp/repository-scripts.rc
+            /tmp/client-js.log
+            /tmp/client-js.rc
             /tmp/site-config.log
             /tmp/site-config.rc
           if-no-files-found: ignore
@@ -92,9 +113,25 @@ jobs:
           set -euo pipefail
           functions_rc=$(cat /tmp/netlify-functions.rc 2>/dev/null || echo 1)
           scripts_rc=$(cat /tmp/repository-scripts.rc 2>/dev/null || echo 1)
+          client_js_rc=$(cat /tmp/client-js.rc 2>/dev/null || echo 1)
           config_rc=$(cat /tmp/site-config.rc 2>/dev/null || echo 1)
-          if [ "$functions_rc" -ne 0 ] || [ "$scripts_rc" -ne 0 ] || [ "$config_rc" -ne 0 ]; then
-            echo "Production gate failed. Download the production-gate-diagnostics artifact for exact details."
+
+          {
+            echo "## Production gate diagnostics"
+            echo ""
+            echo "- Netlify Functions syntax: $([ "$functions_rc" -eq 0 ] && echo PASS || echo FAIL)"
+            echo "- Repository scripts syntax: $([ "$scripts_rc" -eq 0 ] && echo PASS || echo FAIL)"
+            echo "- Browser JS modules syntax: $([ "$client_js_rc" -eq 0 ] && echo PASS || echo FAIL)"
+            echo "- Site configuration: $([ "$config_rc" -eq 0 ] && echo PASS || echo FAIL)"
+            echo ""
+            if [ "$functions_rc" -ne 0 ]; then echo '### Function syntax failures'; grep -B1 -A4 'FAILED:' /tmp/netlify-functions.log || true; fi
+            if [ "$scripts_rc" -ne 0 ]; then echo '### Script syntax failures'; grep -B1 -A4 'FAILED:' /tmp/repository-scripts.log || true; fi
+            if [ "$client_js_rc" -ne 0 ]; then echo '### Browser JS syntax failures'; grep -B1 -A4 'FAILED:' /tmp/client-js.log || true; fi
+            if [ "$config_rc" -ne 0 ]; then echo '### Configuration failure'; cat /tmp/site-config.log || true; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$functions_rc" -ne 0 ] || [ "$scripts_rc" -ne 0 ] || [ "$client_js_rc" -ne 0 ] || [ "$config_rc" -ne 0 ]; then
+            echo "Production gate failed. See the step summary or the production-gate-diagnostics artifact for exact details."
             exit 1
           fi
           echo "Production gate passed."
