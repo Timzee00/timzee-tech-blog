@@ -14,7 +14,7 @@ const state = {
   user: null, settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [],
   blockedProfiles: new Map(), groups: [], groupMembers: new Map(), messages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
   channel: null, presence: new Map(), reconnectTimer: null, searchTerm: "", peopleTerm: "", messageSearchTerm: "", mediaFile: null, mediaType: "", previewUrl: "",
-  recorder: null, recorderStream: null, recorderChunks: [], recorderTimer: null, recorderStartedAt: 0, analyserFrame: 0, audioContext: null, analyser: null
+  recorder: null, recorderStream: null, recorderChunks: [], recorderTimer: null, recorderStartedAt: 0, analyserFrame: 0, audioContext: null, analyser: null, recordingStarting: false, recordingRequestId: 0
 };
 
 const $ = (id) => document.getElementById(id);
@@ -63,6 +63,7 @@ function readSettings() {
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch (_) {} }
 function defaultSettingsUI() { document.querySelectorAll("[data-chat-setting]").forEach((input) => { input.checked = Boolean(state.settings[input.dataset.chatSetting]); }); }
 function setView(view) {
+  if (view !== 'chat' && view !== 'info') { stopRecording(false); clearMediaPreview(); }
   const layout = $("chatLayout"); if (layout) layout.dataset.view = view;
   if ($("chatConversation")) $("chatConversation").hidden = view === "list" || view === "info";
   if ($("chatEmptyState")) $("chatEmptyState").hidden = view !== "list";
@@ -139,8 +140,54 @@ function showMediaPreview(file){clearMediaPreview();state.mediaFile=file;state.m
 function stopRecorderTracks(){state.recorderStream?.getTracks().forEach(t=>t.stop());state.recorderStream=null;try{state.audioContext?.close();}catch(_){}state.audioContext=null;state.analyser=null;if(state.analyserFrame)cancelAnimationFrame(state.analyserFrame);state.analyserFrame=0;}
 function formatDuration(ms){const total=Math.max(0,Math.floor(ms/1000));return `${Math.floor(total/60)}:${String(total%60).padStart(2,'0')}`;}
 function animateWaveform(){const bars=[...document.querySelectorAll('#voiceWaveform [data-wave]')];const tick=()=>{bars.forEach((bar,i)=>{bar.style.height=`${8+Math.abs(Math.sin(Date.now()/180+i))*28}px`;});state.analyserFrame=requestAnimationFrame(tick);};tick();}
-async function startRecording(){if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('Voice recording is not supported in this browser.');const stream=await navigator.mediaDevices.getUserMedia({audio:true});state.recorderStream=stream;state.recorderChunks=[];state.recorder=new MediaRecorder(stream);state.recorderStartedAt=Date.now();$("voiceWaveform").innerHTML=Array.from({length:40},(_,i)=>`<span data-wave="${i}"></span>`).join('');$("voiceRecordingSheet").hidden=false;animateWaveform();state.recorder.ondataavailable=e=>{if(e.data.size)state.recorderChunks.push(e.data);};state.recorder.onstop=()=>{const blob=new Blob(state.recorderChunks,{type:state.recorder?.mimeType||'audio/webm'});showMediaPreview(new File([blob],`voice-${Date.now()}.webm`,{type:blob.type}));stopRecorderTracks();};state.recorder.start(120);$("recordVoiceBtn").classList.add('is-recording');state.recorderTimer=setInterval(()=>{$("voiceRecordingTimer").textContent=formatDuration(Date.now()-state.recorderStartedAt);},200);}
-function stopRecording(save=true){if(!state.recorder)return;clearInterval(state.recorderTimer);state.recorderTimer=null;if(!save){state.recorder.onstop=()=>stopRecorderTracks();}try{state.recorder.stop();}catch(_){}$("voiceRecordingSheet").hidden=true;$("recordVoiceBtn").classList.remove('is-recording');$("voiceRecordingTimer").textContent='0:00';state.recorder=null;}
+async function startRecording(){
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('Voice recording is not supported in this browser.');
+  if(state.recordingStarting||state.recorder)return;
+  state.recordingStarting=true;
+  const requestId=++state.recordingRequestId;
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    if(requestId!==state.recordingRequestId){
+      stream.getTracks().forEach(t=>t.stop());
+      return;
+    }
+    state.recorderStream=stream;
+    state.recorderChunks=[];
+    state.recorder=new MediaRecorder(stream);
+    state.recorderStartedAt=Date.now();
+    $("voiceWaveform").innerHTML=Array.from({length:40},(_,i)=>`<span data-wave="${i}"></span>`).join('');
+    $("voiceRecordingSheet").hidden=false;
+    animateWaveform();
+    state.recorder.ondataavailable=e=>{if(e.data.size)state.recorderChunks.push(e.data);};
+    state.recorder.onstop=()=>{
+      const blob=new Blob(state.recorderChunks,{type:state.recorder?.mimeType||'audio/webm'});
+      if(blob.size)showMediaPreview(new File([blob],`voice-${Date.now()}.webm`,{type:blob.type}));
+      stopRecorderTracks();
+    };
+    state.recorder.start(120);
+    $("recordVoiceBtn").classList.add('is-recording');
+    state.recorderTimer=setInterval(()=>$("voiceRecordingTimer").textContent=formatDuration(Date.now()-state.recorderStartedAt),200);
+  } finally {
+    state.recordingStarting=false;
+  }
+}
+function stopRecording(save=true){
+  state.recordingRequestId++;
+  clearInterval(state.recorderTimer);
+  state.recorderTimer=null;
+  if($("voiceRecordingSheet"))$("voiceRecordingSheet").hidden=true;
+  $("recordVoiceBtn")?.classList.remove('is-recording');
+  if($("voiceRecordingTimer"))$("voiceRecordingTimer").textContent='0:00';
+  if(!state.recorder){
+    stopRecorderTracks();
+    return;
+  }
+  if(!save){
+    state.recorder.onstop=()=>stopRecorderTracks();
+  }
+  try{state.recorder.stop();}catch(_){stopRecorderTracks();}
+  state.recorder=null;
+}
 async function sendMessage(){const body=($("chatBody").value||'').trim();if(!state.activeThreadId||(!body&&!state.mediaFile))return;let mediaUrl='';if(state.mediaFile)mediaUrl=await uploadMedia(state.mediaFile,'direct-messages');const payload={id:crypto.randomUUID(),thread_id:state.activeThreadId,sender_id:state.user.id,recipient_id:state.activeFriendId||null,body,media_url:mediaUrl,media_type:state.mediaType||'',created_at:new Date().toISOString()};const result=await supabase.from('direct_messages').insert(payload).select().single();if(result.error)throw result.error;const saved=result.data||payload;if(!state.messages.some(m=>m.id===saved.id))state.messages.push(saved);renderMessages();renderInfoMedia();$("chatBody").value='';$("chatBody").style.height='auto';clearMediaPreview();broadcastTyping(false);await renderFriends();renderGroups();}
 function openModal(id){$(id)?.removeAttribute('hidden');document.body.classList.add('modal-open');}
 function closeModal(id){$(id)?.setAttribute('hidden','');document.body.classList.remove('modal-open');}
@@ -158,7 +205,7 @@ function setupEvents(){
   $("peopleResults")?.addEventListener('click',async e=>{const b=e.target.closest('button[data-people-action]');if(!b||b.disabled)return;if(b.dataset.peopleAction==='message')await selectFriend(b.dataset.id);else{const r=await supabase.from('friendships').insert({id:crypto.randomUUID(),requester_id:state.user.id,requester_name:getDisplayName(state.user),addressee_id:b.dataset.id,status:'pending',created_at:new Date().toISOString()});if(r.error)throw r.error;await loadAllChatData();renderPeopleResults();renderRequests();}});
   $("chatBody")?.addEventListener('input',()=>{const t=$("chatBody");t.style.height='auto';t.style.height=`${Math.min(t.scrollHeight,140)}px`;broadcastTyping(true);clearTimeout(t._typingTimer);t._typingTimer=setTimeout(()=>broadcastTyping(false),900);});
   $("chatBody")?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&state.settings.enterToSend){e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));}}); $("chatForm")?.addEventListener('submit',e=>{e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));});
-  $("chatMedia")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)showMediaPreview(f);e.target.value='';}); $("recordVoiceBtn")?.addEventListener('click',()=>state.recorder?stopRecording(true):startRecording().catch(err=>window.siteToast?.(err.message||'Voice recording unavailable.',{type:'error',title:'Voice recording'}))); $("voiceCancelBtn")?.addEventListener('click',()=>{stopRecording(false);clearMediaPreview();}); $("voiceStopBtn")?.addEventListener('click',()=>stopRecording(true));
+  $("chatMedia")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)showMediaPreview(f);e.target.value='';}); $("recordVoiceBtn")?.addEventListener('click',()=>state.recorder||state.recordingStarting?stopRecording(true):startRecording().catch(err=>window.siteToast?.(err.message||'Voice recording unavailable.',{type:'error',title:'Voice recording'}))); $("voiceCancelBtn")?.addEventListener('click',()=>{stopRecording(false);clearMediaPreview();}); $("voiceStopBtn")?.addEventListener('click',()=>stopRecording(true));
   $("chatBackBtn")?.addEventListener('click',async()=>{await unsubscribeRealtime();setView('list');}); $("chatInfoToggle")?.addEventListener('click',()=>{$("chatInfoPanel").classList.add('open');$("chatInfoBackdrop").hidden=false;}); $("chatInfoClose")?.addEventListener('click',()=>{$("chatInfoPanel").classList.remove('open');$("chatInfoBackdrop").hidden=true;}); $("chatInfoBackdrop")?.addEventListener('click',()=>{$("chatInfoPanel").classList.remove('open');$("chatInfoBackdrop").hidden=true;});
   $("chatMenuToggle")?.addEventListener('click',e=>{e.stopPropagation();$("chatHeaderMenu").hidden?openHeaderMenu():closeHeaderMenu();}); document.addEventListener('click',e=>{if(!e.target.closest('.chat-header-actions'))closeHeaderMenu();});
   $("chatHeaderMenu")?.addEventListener('click',async e=>{const a=e.target.closest('[data-chat-menu]')?.dataset.chatMenu;if(!a)return;closeHeaderMenu();if(a==='search'){state.messageSearchTerm=window.prompt('Search in this chat:',state.messageSearchTerm)||'';renderMessages();}if(a==='settings'){defaultSettingsUI();openModal('chatSettingsModal');}if(a==='mute'||a==='pin')await toggleChatMemberFlag(a);if(a==='report')location.href='contact.html?subject='+encodeURIComponent('Chat report');});
