@@ -1098,7 +1098,7 @@
         const userIds = [...new Set(videos.map((v) => v.user_id).filter(Boolean))];
         if (userIds.length) {
           const profiles = await supabase
-            .from("profiles")
+            .from("public_profiles")
             .select("id, is_verified, is_staff_pick")
             .in("id", userIds);
           const map = {};
