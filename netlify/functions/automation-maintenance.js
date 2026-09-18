@@ -34,6 +34,53 @@ function getFileName(path = "") {
   return normalized.split("/").pop() || "attachment";
 }
 
+async function removeOrphanedLegacyPublicChatMedia(supabase) {
+  const [messages, objects] = await Promise.all([
+    supabase
+      .from("direct_messages")
+      .select("media_url")
+      .or("media_url.ilike.%/storage/v1/object/public/media/direct-messages/%,media_url.ilike.%/storage/v1/object/sign/media/direct-messages/%")
+      .limit(5000),
+    supabase
+      .from("storage.objects")
+      .select("name")
+      .eq("bucket_id", "media")
+      .like("name", "direct-messages/%")
+      .limit(5000)
+  ]);
+
+  if (messages.error) throw messages.error;
+  if (objects.error) throw objects.error;
+
+  const referenced = new Set(
+    (messages.data || [])
+      .map((row) => extractLegacyPath(row.media_url))
+      .filter(Boolean)
+  );
+
+  const orphaned = (objects.data || [])
+    .map((row) => String(row.name || ""))
+    .filter((name) =>
+      name.startsWith("direct-messages/") &&
+      name.split("/").slice(2).some((part) => part.startsWith("legacy-")) &&
+      !referenced.has(name)
+    );
+
+  let removed = 0;
+  const failed = [];
+  for (let index = 0; index < orphaned.length; index += 100) {
+    const batch = orphaned.slice(index, index + 100);
+    const result = await supabase.storage.from("media").remove(batch);
+    if (result.error) {
+      failed.push({ paths: batch, error: result.error.message });
+      continue;
+    }
+    removed += batch.length;
+  }
+
+  return { found: orphaned.length, removed, failed };
+}
+
 async function migrateLegacyChatMedia(supabase) {
   const result = await supabase
     .from("direct_messages")
@@ -114,13 +161,14 @@ exports.handler = async () => {
   });
 
   const mediaMigration = await migrateLegacyChatMedia(supabase);
+  const orphanCleanup = await removeOrphanedLegacyPublicChatMedia(supabase);
   const { data, error } = await supabase.rpc("process_automation_tick");
   if (error) {
     console.error("Production automation tick failed:", error);
     throw error;
   }
 
-  console.log("Production automation tick completed:", { automation: data, legacyChatMedia: mediaMigration });
+  console.log("Production automation tick completed:", { automation: data, legacyChatMedia: mediaMigration, orphanLegacyPublicChatMedia: orphanCleanup });
 };
 
 exports.config = {
