@@ -147,7 +147,7 @@ async function ensureProfile(user) {
 }
 
 async function loadProfile(viewingId) {
-  const result = await supabase.from("profiles").select("*").eq("id", viewingId).maybeSingle();
+  const result = await supabase.from("public_profiles").select("*").eq("id", viewingId).maybeSingle();
   return result.data || null;
 }
 
@@ -179,7 +179,7 @@ async function loadFriendSummary() {
   state.friendCount = friendIds.length;
   if (!friendIds.length) return;
   const profiles = await supabase
-    .from("profiles")
+    .from("public_profiles")
     .select("id, display_name, avatar_url")
     .in("id", friendIds);
   state.friendSummary = profiles.data || [];
