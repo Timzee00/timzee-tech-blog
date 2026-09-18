@@ -95,7 +95,7 @@ export async function fetchStoriesFeed() {
   if (!userIds.length) return [];
 
   const profilesResult = await supabase
-    .from("profiles")
+    .from("public_profiles")
     .select("id, display_name, avatar_url")
     .in("id", userIds);
   if (profilesResult.error) {
