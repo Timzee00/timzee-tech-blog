@@ -10,6 +10,7 @@ function ensureObserver() {
     (entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
+          entry.target.classList.remove("reveal-pending");
           entry.target.classList.add("in");
           observer.unobserve(entry.target);
         }
@@ -26,6 +27,7 @@ export function setupReveal(scope = document) {
   if (reduceMotion && reduceMotion.matches) {
     nodes.forEach((node) => {
       node.dataset.revealReady = "true";
+      node.classList.remove("reveal-pending");
       node.classList.add("in");
     });
     return;
@@ -39,6 +41,7 @@ export function setupReveal(scope = document) {
   }
   nodes.forEach((node, index) => {
     node.dataset.revealReady = "true";
+    node.classList.add("reveal-pending");
     if (!node.style.getPropertyValue("--delay")) {
       node.style.setProperty("--delay", `${index * 0.06}s`);
     }
