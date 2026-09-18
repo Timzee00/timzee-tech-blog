@@ -21,6 +21,7 @@
 @import url("animations.css");
 @import url("utilities.css");
 @import url("responsive.css");
+@import url("site-ux-fixes.css");
 
 html[data-reader-font="small"] .reader-content{font-size:.95rem;}
 html[data-reader-font="medium"] .reader-content{font-size:1.05rem;}
