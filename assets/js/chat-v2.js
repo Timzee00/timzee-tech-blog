@@ -78,7 +78,7 @@ function isOwnerOfActiveGroup() { return Boolean(state.activeGroupId && activeGr
 
 async function loadProfiles(ids) {
   const unique=[...new Set(ids.filter(Boolean))]; if(!unique.length)return;
-  const result=await supabase.from("profiles").select("*").in("id",unique); if(result.error)throw result.error;
+  const result=await supabase.from("public_profiles").select("*").in("id",unique); if(result.error)throw result.error;
   (result.data||[]).forEach((p)=>state.friendProfiles.set(p.id,p));
 }
 async function loadAllChatData() {
