@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "./supabase.js";
+import { escapeHTML, isSafeUrl } from "./utils.js";
 
 let mentionCache = {};
 let activeMentionDropdown = null;
@@ -102,16 +103,23 @@ async function showMentionDropdown(field, searchTerm) {
       transition: background 0.2s;
     `;
     
-    item.innerHTML = `
-      <img src="${user.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI4IiBmaWxsPSIjZTJlOGYwIi8+PC9zdmc+'}" 
-           alt="${user.display_name || user.username}"
-           class="avatar avatar--xs"
-           style="border-radius: 50%; object-fit: cover;">
-      <div style="flex: 1; min-width: 0;">
-        <div style="font-weight: 600; font-size: 13px;">${user.display_name || user.username}</div>
-        <div style="font-size: 12px; color: #999;">@${user.username}</div>
-      </div>
-    `;
+    const img = document.createElement("img");
+    const avatar = isSafeUrl(user.avatar_url) ? user.avatar_url : "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI4IiBmaWxsPSIjZTJlOGYwIi8+PC9zdmc+";
+    img.src = avatar;
+    img.alt = String(user.display_name || user.username || "Member");
+    img.className = "avatar avatar--xs";
+    img.style.cssText = "border-radius: 50%; object-fit: cover;";
+
+    const copy = document.createElement("div");
+    copy.style.cssText = "flex: 1; min-width: 0;";
+    const name = document.createElement("div");
+    name.style.cssText = "font-weight: 600; font-size: 13px;";
+    name.textContent = String(user.display_name || user.username || "Member");
+    const handle = document.createElement("div");
+    handle.style.cssText = "font-size: 12px; color: #999;";
+    handle.textContent = `@${user.username || ""}`;
+    copy.append(name, handle);
+    item.append(img, copy);
 
     item.addEventListener("mouseover", () => {
       item.style.background = "#f9fafb";
