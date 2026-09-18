@@ -1079,39 +1079,9 @@ function setupMessageForm() {
       }
       return;
     }
-      const mentionHandles = extractMentions(finalBody || "");
-      if (mentionHandles.length) {
-        const mentioned = await fetchProfilesByUsernames(mentionHandles);
-        const link = `discussion.html?topic=${state.activeTopicId}`;
-        const mentionResults = await Promise.all(
-          mentioned
-            .filter((profile) => profile.id && profile.id !== state.user.id && profile.notify_mentions !== false)
-            .map((profile) =>
-              createNotification({
-                userId: profile.id,
-                type: "mention",
-                title: "You were mentioned",
-                body: `${getDisplayName(state.user)} mentioned you in "${state.activeTopic?.title || "a topic"}".`,
-                linkUrl: link
-              })
-            )
-        );
-        mentionResults.forEach((result) => {
-          if (result?.error) console.warn("Mention notification failed:", result.error);
-        });
-      }
-    if (state.replyTo?.author_id && state.replyTo.author_id !== state.user.id) {
-      const replyNotifyResult = await createNotification({
-        userId: state.replyTo.author_id,
-        type: "reply",
-        title: "New reply",
-        body: `${getDisplayName(state.user)} replied to your message.`,
-        linkUrl: `discussion.html?topic=${state.activeTopicId}`
-      });
-      if (replyNotifyResult?.error) {
-        console.warn("Discussion reply notification failed:", replyNotifyResult.error);
-      }
-    }
+    // Discussion replies and @mentions are emitted by the database trigger
+    // after the message is persisted, so the browser never inserts recipient
+    // notifications directly.
     await supabase
       .from("discussion_topics")
       .update({ updated_at: new Date().toISOString() })
