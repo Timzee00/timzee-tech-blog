@@ -309,7 +309,7 @@ export async function searchPosts({ query = "", tags = [] } = {}) {
 
 export async function fetchTopProfiles(limit = 5) {
   const result = await supabase
-    .from("profiles")
+    .from("public_profiles")
     .select("id, display_name, username, avatar_url, points, level, is_verified, is_featured, is_staff_pick")
     .order("points", { ascending: false })
     .limit(limit);
@@ -321,7 +321,7 @@ export async function fetchTopProfiles(limit = 5) {
 // them, so the section only ever surfaces genuinely new connections.
 export async function fetchSuggestedPeople(currentUserId, limit = 8) {
   const result = await supabase
-    .from("profiles")
+    .from("public_profiles")
     .select("id, display_name, username, avatar_url, is_verified, created_at")
     .order("created_at", { ascending: false })
     .limit(limit + (currentUserId ? 1 : 0));
@@ -531,7 +531,7 @@ export async function fetchProfilesByUsernames(usernames = []) {
   const list = Array.isArray(usernames) ? usernames.filter(Boolean) : [];
   if (!list.length) return [];
   const result = await supabase
-    .from("profiles")
+    .from("public_profiles")
     .select("id, username, display_name, notify_mentions, notify_messages")
     .in("username", list);
   return normalizeResponse(result);
@@ -553,7 +553,7 @@ export async function fetchProfilesByIds(ids = []) {
   const list = Array.isArray(ids) ? ids.filter(Boolean) : [];
   if (!list.length) return [];
   const result = await supabase
-    .from("profiles")
+    .from("public_profiles")
     .select("id, username, display_name, avatar_url, notify_mentions")
     .in("id", list);
   return normalizeResponse(result);
