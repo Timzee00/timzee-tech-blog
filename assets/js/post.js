@@ -398,16 +398,19 @@ function renderAuthorCard(post) {
 function renderGallery(mediaItems) {
   const gallery = document.getElementById("postGallery");
   if (!gallery) return;
-  if (!mediaItems.length) {
+  const safeItems = (Array.isArray(mediaItems) ? mediaItems : [])
+    .filter((item) => item && typeof item.url === "string" && isSafeUrl(item.url));
+  if (!safeItems.length) {
     gallery.innerHTML = "";
     return;
   }
-  gallery.innerHTML = mediaItems
+  gallery.innerHTML = safeItems
     .map((item) => {
+      const url = escapeHTML(item.url);
       if (item.media_type === "video") {
-        return `<video controls src="${item.url}"></video>`;
+        return `<video controls preload="metadata" src="${url}"></video>`;
       }
-      return `<img src="${item.url}" alt="post media">`;
+      return `<img loading="lazy" decoding="async" src="${url}" alt="Post media">`;
     })
     .join("");
 }
