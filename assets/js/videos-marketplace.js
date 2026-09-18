@@ -416,7 +416,7 @@ async function attachSellerVerification(items) {
   if (!sellerIds.length) return;
   try {
     const result = await supabase
-      .from("profiles")
+      .from("public_profiles")
       .select("id, is_verified")
       .in("id", sellerIds);
     if (result.error) {
