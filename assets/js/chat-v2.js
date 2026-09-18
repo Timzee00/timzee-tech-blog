@@ -92,11 +92,23 @@ async function loadAllChatData() {
   state.groups=(gr.data||[]).map(r=>({...(r.chat_threads||{}),member_tags:r.tags||[],is_muted:r.is_muted,is_pinned:r.is_pinned})).filter(g=>g.id&&g.is_group);
   await loadProfiles([...state.friends,...state.requests.map(r=>r.requester_id),...state.sentRequests.map(r=>r.addressee_id),...state.blocked]);
 }
-async function loadThreadPreview(threadId) { const result=await supabase.from("direct_messages").select("id,thread_id,body,media_type,created_at,sender_id").eq("thread_id",threadId).order("created_at",{ascending:false}).limit(1).maybeSingle(); return result.data||null; }
+async function loadThreadPreviews(threadIds = []) {
+  const unique=[...new Set(threadIds.filter(Boolean))];
+  if(!unique.length)return new Map();
+  const result=await supabase.from("direct_messages")
+    .select("id,thread_id,body,media_type,created_at,sender_id")
+    .in("thread_id",unique)
+    .order("created_at",{ascending:false});
+  if(result.error)throw result.error;
+  const previews=new Map();
+  (result.data||[]).forEach(row=>{if(!previews.has(row.thread_id))previews.set(row.thread_id,row);});
+  return previews;
+}
 
 async function renderFriends() {
   const target=$("friendList"); if(!target)return;
-  const rows=await Promise.all(state.friends.map(async friendId=>({friendId,profile:profileFor(friendId)||{},preview:await loadThreadPreview(threadForFriend(friendId))})));
+  const previewMap=await loadThreadPreviews(state.friends.map(threadForFriend));
+  const rows=state.friends.map(friendId=>({friendId,profile:profileFor(friendId)||{},preview:previewMap.get(threadForFriend(friendId))||null}));
   const q=state.searchTerm.trim().toLowerCase();
   const filtered=rows.filter(({profile})=>!q||[profile.display_name,profile.username,profile.email].some(v=>String(v||"").toLowerCase().includes(q))).sort((a,b)=>new Date(b.preview?.created_at||0)-new Date(a.preview?.created_at||0));
   target.innerHTML=filtered.length?filtered.map(({friendId,profile,preview})=>`<button class="chat-list-row ${friendId===state.activeFriendId?'active':''}" type="button" data-friend-id="${friendId}"><img class="chat-list-avatar" src="${escapeHTML(profile.avatar_url||DEFAULT_AVATAR)}" alt=""><span class="chat-list-copy"><strong>${escapeHTML(profile.display_name||"Member")}</strong><small>${escapeHTML(preview?.body||(preview?.media_type?`Sent ${preview.media_type}`:'Start a conversation'))}</small></span><span class="chat-list-time">${preview?timeAgo(preview.created_at):''}</span></button>`).join(''):`<div class="callout">${q?'No matching chats.':'No friends yet. Use Find people to connect.'}</div>`;
