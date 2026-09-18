@@ -5,8 +5,8 @@
 
   const STYLE_ID = "timzee-boot-loader-style";
   const LOADER_ID = "timzeeBootLoader";
-  const MIN_SHOW_MS = 650;
-  const MAX_SHOW_MS = 7000;
+  const MIN_SHOW_MS = 360;
+  const MAX_SHOW_MS = 5000;
   const NAV_SHOW_MS = 900;
   const bootStartedAt = performance.now();
   let hideTimer = 0;
