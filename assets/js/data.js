@@ -532,7 +532,7 @@ export async function fetchProfilesByUsernames(usernames = []) {
   if (!list.length) return [];
   const result = await supabase
     .from("public_profiles")
-    .select("id, username, display_name, notify_mentions, notify_messages")
+    .select("id, username, display_name")
     .in("username", list);
   return normalizeResponse(result);
 }
@@ -554,7 +554,7 @@ export async function fetchProfilesByIds(ids = []) {
   if (!list.length) return [];
   const result = await supabase
     .from("public_profiles")
-    .select("id, username, display_name, avatar_url, notify_mentions")
+    .select("id, username, display_name, avatar_url")
     .in("id", list);
   return normalizeResponse(result);
 }
