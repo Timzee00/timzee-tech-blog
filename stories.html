@@ -160,7 +160,16 @@
           });
         }
 
-        state.groups = await fetchStoriesFeed();
+        try {
+          state.groups = await fetchStoriesFeed();
+        } catch (error) {
+          state.groups = [];
+          const empty = document.getElementById("storiesEmpty");
+          if (empty) {
+            empty.hidden = false;
+            empty.textContent = error?.message || "Stories could not be loaded. Please refresh and try again.";
+          }
+        }
         renderRail();
 
         const params = new URLSearchParams(window.location.search);
