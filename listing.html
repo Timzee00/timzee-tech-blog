@@ -215,7 +215,7 @@
 
           const sellerResult = data.user_id
             ? await supabase
-                .from("profiles")
+                .from("public_profiles")
                 .select("id,display_name,avatar_url,is_verified,allow_messages,marketplace_whatsapp")
                 .eq("id", data.user_id)
                 .maybeSingle()
