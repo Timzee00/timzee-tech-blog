@@ -25,7 +25,7 @@ export async function searchUsersForMention(query) {
 
   try {
     const { data, error } = await supabase
-      .from("profiles")
+      .from("public_profiles")
       .select("id, username, display_name, avatar_url")
       .ilike("username", `%${query}%`)
       .limit(10);
@@ -289,7 +289,7 @@ export async function getMentionedUserIds(text) {
 
   try {
     const { data } = await supabase
-      .from("profiles")
+      .from("public_profiles")
       .select("id")
       .in("username", mentions);
 
