@@ -4,7 +4,7 @@ async function getUserWithTrustedRole(supabase, token) {
   if (error || !data?.user) return { error: "Invalid auth token." };
 
   const user = data.user;
-  let role = user.app_metadata?.role || user.user_metadata?.role || null;
+  let role = user.app_metadata?.role || null;
 
   const profileResult = await supabase
     .from("profiles")
@@ -25,7 +25,7 @@ async function requireRole(supabase, token, allowedRoles, message) {
 }
 
 function roleFromUser(user) {
-  return user?.app_metadata?.role || user?.user_metadata?.role || "user";
+  return user?.app_metadata?.role || "user";
 }
 
 module.exports = { getUserWithTrustedRole, requireRole, roleFromUser };
