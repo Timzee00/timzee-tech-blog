@@ -22,3 +22,55 @@
     width: calc(100vw - 16px);
   }
 }
+
+
+/* Header layout: keep the brand, navigation and account actions aligned
+   across pages that render the nav directly and pages that wrap it in .site-menu. */
+@media (min-width: 961px) {
+  .site-header .wrap {
+    display: grid;
+    grid-template-columns: minmax(180px, auto) minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--space-4, 16px);
+  }
+
+  .site-header .wrap > .nav-pill,
+  .site-header .wrap > .site-menu {
+    min-width: 0;
+  }
+
+  .site-header .wrap > .nav-pill {
+    justify-self: center;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .site-header .wrap > .nav-pill::-webkit-scrollbar {
+    display: none;
+  }
+
+  .site-header .wrap > .site-menu {
+    width: 100%;
+  }
+
+  .site-header .wrap > .header-actions {
+    justify-self: end;
+    min-width: max-content;
+    flex-wrap: nowrap;
+  }
+}
+
+/* The consent UI must sit above the site footer, floating controls and drawers. */
+#timzee-consent-banner {
+  z-index: 2147483640 !important;
+  pointer-events: none;
+}
+
+#timzee-consent-banner .timzee-consent-card {
+  pointer-events: auto;
+}
+
+#timzee-cookie-settings-modal {
+  z-index: 2147483641 !important;
+}
