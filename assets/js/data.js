@@ -352,11 +352,6 @@ export async function sendFriendRequestTo(currentUser, targetUserId) {
     status: "pending",
     created_at: new Date().toISOString()
   });
-  if (!result.error) {
-    notifyFriendRequest(targetUserId, getDisplayName(currentUser), currentUser.id).catch((error) =>
-      console.warn("Friend-request notification failed:", error)
-    );
-  }
   return result;
 }
 
