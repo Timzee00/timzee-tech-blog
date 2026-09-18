@@ -130,7 +130,7 @@ async function ensureProfile(user) {
     email: fallbackEmail,
     bio: "",
     avatar_url: "",
-    role: user.user_metadata?.role || "user",
+    role: "user",
     headline: "",
     location: "",
     website: "",
