@@ -420,17 +420,17 @@
             setInquiryStatus("This is your own listing.", "muted");
             return;
           }
-          if (state.sellerProfile && state.sellerProfile.allow_messages === false) {
-            setInquiryStatus("This seller is not accepting direct messages. You can still send a marketplace inquiry below.", "muted");
-            document.getElementById("inquiryContainer")?.scrollIntoView({ behavior: "smooth", block: "center" });
-            return;
-          }
-
           const whatsapp = String(state.sellerProfile?.marketplace_whatsapp || "").replace(/[^\d+]/g, "");
           if (whatsapp) {
             const digits = whatsapp.replace(/^\+/, "");
             const message = `Hello, I'm interested in your listing: ${state.listing?.title || "your item"}.`;
-            window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+            window.location.assign(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`);
+            return;
+          }
+
+          if (state.sellerProfile && state.sellerProfile.allow_messages === false) {
+            setInquiryStatus("This seller is not accepting direct messages. You can still send a marketplace inquiry below.", "muted");
+            document.getElementById("inquiryContainer")?.scrollIntoView({ behavior: "smooth", block: "center" });
             return;
           }
 
