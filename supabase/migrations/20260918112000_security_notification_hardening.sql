@@ -300,3 +300,5 @@ after insert on public.discussion_messages
 for each row execute function public.notify_discussion_message_event();
 
 commit;
+
+revoke execute on function public._safe_create_index(text) from public, anon, authenticated;
