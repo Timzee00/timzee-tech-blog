@@ -18,8 +18,6 @@ import {
   fetchProfilesByIds,
   incrementPostViews,
   createContentReport,
-  notifyPostLike,
-  notifyCommentReply
 } from "./data.js";
 import { setupMentionInput, extractMentions, getMentionedUserIds } from "./mentions.js";
 import { uploadMedia } from "./media.js";
@@ -621,11 +619,6 @@ function setupLike(post) {
     state.hasLiked = result.liked;
     if (result.liked) {
       state.likeCount += 1;
-      if (post.author_id && post.author_id !== state.user.id) {
-        notifyPostLike(post.author_id, getDisplayName(state.user), post.id).catch((error) => {
-          console.warn("Post-like notification failed:", error);
-        });
-      }
     } else {
       state.likeCount = Math.max(0, state.likeCount - 1);
     }
@@ -744,20 +737,6 @@ function setupFollowAuthor(post) {
     });
     state.isFollowingAuthor = result.following;
     updateLabel();
-    if (
-      result.following &&
-      post.author_id &&
-      post.author_id !== state.user.id &&
-      state.authorProfile?.notify_follows !== false
-    ) {
-      await createNotification({
-        userId: post.author_id,
-        type: "follow",
-        title: "New follower",
-        body: `${getDisplayName(state.user)} followed you.`,
-        linkUrl: `profile.html?id=${encodeURIComponent(state.user.id)}`
-      });
-    }
   });
 }
 
@@ -878,50 +857,8 @@ function setupCommentForm(post, comments) {
           replyPreview.innerHTML = "";
         }
 
-        if (commentReplyTo && commentReplyTo.author_id && commentReplyTo.author_id !== state.user.id) {
-          await createNotification({
-            userId: commentReplyTo.author_id,
-            type: "reply",
-            title: "New reply",
-            body: `${getDisplayName(state.user)} replied to your comment.`,
-            linkUrl: `post.html?id=${post.id}#comment-${result.data?.id || newComment.id}`
-          });
-        }
-
-        // Also notify the POST author whenever their post gets a new
-        // comment — previously this only ever fired for nested
-        // comment-replies above, so a post author commented on directly
-        // (not replying to another comment) never got notified at all.
-        // Skip if we already just notified this same person above.
-        if (
-          post.author_id &&
-          post.author_id !== state.user.id &&
-          post.author_id !== commentReplyTo?.author_id
-        ) {
-          await notifyCommentReply(
-            post.author_id,
-            getDisplayName(state.user),
-            post.id,
-            result.data?.id || newComment.id
-          );
-        }
-
-        // Notify mentioned users
-        if (mentionedUserIds && mentionedUserIds.length > 0) {
-          const uniqueMentions = [...new Set(mentionedUserIds)];
-          for (const userId of uniqueMentions) {
-            if (userId !== state.user.id) { // Don't notify self
-              await createNotification({
-                userId: userId,
-                type: "mention",
-                title: "You were mentioned",
-                body: `${getDisplayName(state.user)} mentioned you in a comment.`,
-                linkUrl: `post.html?id=${post.id}#comment-${result.data?.id || newComment.id}`
-              });
-            }
-          }
-        }
-
+        // Comment replies, post-owner notifications, and mentions are emitted
+        // by the database trigger after the comment is persisted.
         commentReplyTo = null;
         
         if (status === "pending") {
