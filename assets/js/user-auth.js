@@ -186,7 +186,7 @@ async function ensureUniqueUsername(base, userId) {
   let suffix = 1;
   while (true) {
     const existing = await supabase
-      .from("profiles")
+      .from("public_profiles")
       .select("id")
       .ilike("username", candidate)
       .neq("id", userId)
