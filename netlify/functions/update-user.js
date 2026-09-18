@@ -71,6 +71,23 @@ exports.handler = async (event) => {
   if (existingProfile) {
     const { data, error } = await supabase.from("profiles").update(updates).eq("id", userId).select().single();
     if (error) return jsonResponse(400, { error: error.message });
+
+    if (["verify", "unverify", "set_tier"].includes(action)) {
+      const notification = await supabase.rpc("emit_user_notification", {
+        p_user_id: userId,
+        p_type: "verification_status",
+        p_title: action === "unverify" ? "Verification removed" : "Verification status updated",
+        p_body: action === "verify"
+          ? "Your account has been verified."
+          : action === "unverify"
+            ? "Your verified status has been removed."
+            : `Your verification tier is now ${updates.verification_tier}.`,
+        p_link: "/profile.html",
+        p_data: { user_id: userId, action, verification_tier: updates.verification_tier || null, actor_id: guard.user.id }
+      });
+      if (notification.error) console.warn("Verification notification failed:", notification.error);
+    }
+
     return jsonResponse(200, { profile: data });
   }
 
