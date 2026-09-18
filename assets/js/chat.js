@@ -4,7 +4,6 @@ import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import { uploadMedia } from "./media.js";
 import { timeAgo, escapeHTML, isSafeUrl, extractErrorMessage, reportAppError } from "./utils.js";
 import { setupReveal } from "./reveal.js";
-import { notifyFriendRequest, notifyFriendRequestAccepted, notifyNewMessage } from "./data.js";
 import "./nav.js";
 
 const state = {
