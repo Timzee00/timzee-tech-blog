@@ -61,7 +61,6 @@ exports.handler = async (event) => {
   try {
     await supabase.auth.admin.updateUserById(userId, {
       app_metadata: { ...(authTarget.user.app_metadata || {}), role: nextRole },
-      user_metadata: { ...(authTarget.user.user_metadata || {}), role: nextRole }
     });
   } catch {
     return jsonResponse(500, { error: "Role changed in profile but auth metadata synchronization failed." });
