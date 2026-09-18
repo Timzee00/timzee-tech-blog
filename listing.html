@@ -216,7 +216,7 @@
           const sellerResult = data.user_id
             ? await supabase
                 .from("profiles")
-                .select("id,display_name,avatar_url,is_verified,allow_messages")
+                .select("id,display_name,avatar_url,is_verified,allow_messages,marketplace_whatsapp")
                 .eq("id", data.user_id)
                 .maybeSingle()
             : { data: null };
@@ -421,10 +421,37 @@
             return;
           }
           if (state.sellerProfile && state.sellerProfile.allow_messages === false) {
-            setInquiryStatus("This seller is not accepting direct messages.", "muted");
+            setInquiryStatus("This seller is not accepting direct messages. You can still send a marketplace inquiry below.", "muted");
+            document.getElementById("inquiryContainer")?.scrollIntoView({ behavior: "smooth", block: "center" });
             return;
           }
-          window.location.href = `chat.html?user=${encodeURIComponent(sellerId)}`;
+
+          const whatsapp = String(state.sellerProfile?.marketplace_whatsapp || "").replace(/[^\\d+]/g, "");
+          if (whatsapp) {
+            const digits = whatsapp.replace(/^\\+/, "");
+            const message = `Hello, I'm interested in your listing: ${state.listing?.title || "your item"}.`;
+            window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+            return;
+          }
+
+          const friendship = await supabase
+            .from("friendships")
+            .select("id,status")
+            .or(`and(requester_id.eq.${state.user.id},addressee_id.eq.${sellerId}),and(requester_id.eq.${sellerId},addressee_id.eq.${state.user.id})`)
+            .maybeSingle();
+
+          if (!friendship.error && friendship.data?.status === "accepted") {
+            window.location.href = `chat.html?user=${encodeURIComponent(sellerId)}`;
+            return;
+          }
+
+          const inquiry = document.getElementById("inquiryContainer");
+          if (inquiry) {
+            inquiry.style.display = "block";
+            inquiry.scrollIntoView({ behavior: "smooth", block: "center" });
+            document.getElementById("inquiryMessage")?.focus();
+            setInquiryStatus("Start an inquiry to contact this seller.", "muted");
+          }
         });
 
         document.getElementById("reportBtn").addEventListener("click", async () => {
