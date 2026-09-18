@@ -1156,7 +1156,7 @@ async function boot() {
     state.authorPostCount = relatedPosts.filter((item) => item.author_id === post.author_id).length;
     if (post.author_id) {
       const profile = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("*")
         .eq("id", post.author_id)
         .maybeSingle();
