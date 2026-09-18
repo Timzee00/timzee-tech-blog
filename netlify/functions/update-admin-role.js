@@ -66,5 +66,25 @@ exports.handler = async (event) => {
     return jsonResponse(500, { error: "Role changed in profile but auth metadata synchronization failed." });
   }
 
+  if (currentTargetRole !== nextRole) {
+    const roleTitle = nextRole === "super"
+      ? "Your account is now a super admin"
+      : nextRole === "admin"
+        ? "Your account is now an admin"
+        : "Your admin access has changed";
+    const roleBody = nextRole === "user"
+      ? "Your admin access has been removed."
+      : `Your Timzee Tech Hub role is now ${nextRole}.`;
+    const notification = await supabase.rpc("emit_user_notification", {
+      p_user_id: userId,
+      p_type: "admin_role_changed",
+      p_title: roleTitle,
+      p_body: roleBody,
+      p_link: "/profile.html",
+      p_data: { user_id: userId, role: nextRole, actor_id: guard.user.id }
+    });
+    if (notification.error) console.warn("Admin role notification failed:", notification.error);
+  }
+
   return jsonResponse(200, { profile: data });
 };
