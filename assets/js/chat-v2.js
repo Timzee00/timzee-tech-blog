@@ -205,7 +205,18 @@ function setupEvents(){
   $("peopleResults")?.addEventListener('click',async e=>{const b=e.target.closest('button[data-people-action]');if(!b||b.disabled)return;if(b.dataset.peopleAction==='message')await selectFriend(b.dataset.id);else{const r=await supabase.from('friendships').insert({id:crypto.randomUUID(),requester_id:state.user.id,requester_name:getDisplayName(state.user),addressee_id:b.dataset.id,status:'pending',created_at:new Date().toISOString()});if(r.error)throw r.error;await loadAllChatData();renderPeopleResults();renderRequests();}});
   $("chatBody")?.addEventListener('input',()=>{const t=$("chatBody");t.style.height='auto';t.style.height=`${Math.min(t.scrollHeight,140)}px`;broadcastTyping(true);clearTimeout(t._typingTimer);t._typingTimer=setTimeout(()=>broadcastTyping(false),900);});
   $("chatBody")?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&state.settings.enterToSend){e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));}}); $("chatForm")?.addEventListener('submit',e=>{e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));});
-  $("chatMedia")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)showMediaPreview(f);e.target.value='';}); $("recordVoiceBtn")?.addEventListener('click',()=>state.recorder||state.recordingStarting?stopRecording(true):startRecording().catch(err=>window.siteToast?.(err.message||'Voice recording unavailable.',{type:'error',title:'Voice recording'}))); $("voiceCancelBtn")?.addEventListener('click',()=>{stopRecording(false);clearMediaPreview();}); $("voiceStopBtn")?.addEventListener('click',()=>stopRecording(true));
+  $("chatMedia")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)showMediaPreview(f);e.target.value='';});
+  $("recordVoiceBtn")?.addEventListener('click',()=>{
+    if(state.recorder||state.recordingStarting){stopRecording(false);return;}
+    startRecording().catch(err=>{
+      stopRecording(false);
+      window.siteToast?.(err.message||'Voice recording unavailable.',{type:'error',title:'Voice recording'});
+    });
+  });
+  $("voiceCancelBtn")?.addEventListener('click',()=>{stopRecording(false);clearMediaPreview();});
+  $("voiceStopBtn")?.addEventListener('click',()=>stopRecording(true));
+  $("voiceRecordingSheet")?.addEventListener('click',e=>{if(e.target===$("voiceRecordingSheet")){stopRecording(false);clearMediaPreview();}});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$("voiceRecordingSheet")?.hidden){stopRecording(false);clearMediaPreview();}});
   $("chatBackBtn")?.addEventListener('click',async()=>{await unsubscribeRealtime();setView('list');}); $("chatInfoToggle")?.addEventListener('click',()=>{$("chatInfoPanel").classList.add('open');$("chatInfoBackdrop").hidden=false;}); $("chatInfoClose")?.addEventListener('click',()=>{$("chatInfoPanel").classList.remove('open');$("chatInfoBackdrop").hidden=true;}); $("chatInfoBackdrop")?.addEventListener('click',()=>{$("chatInfoPanel").classList.remove('open');$("chatInfoBackdrop").hidden=true;});
   $("chatMenuToggle")?.addEventListener('click',e=>{e.stopPropagation();$("chatHeaderMenu").hidden?openHeaderMenu():closeHeaderMenu();}); document.addEventListener('click',e=>{if(!e.target.closest('.chat-header-actions'))closeHeaderMenu();});
   $("chatHeaderMenu")?.addEventListener('click',async e=>{const a=e.target.closest('[data-chat-menu]')?.dataset.chatMenu;if(!a)return;closeHeaderMenu();if(a==='search'){state.messageSearchTerm=window.prompt('Search in this chat:',state.messageSearchTerm)||'';renderMessages();}if(a==='settings'){defaultSettingsUI();openModal('chatSettingsModal');}if(a==='mute'||a==='pin')await toggleChatMemberFlag(a);if(a==='report')location.href='contact.html?subject='+encodeURIComponent('Chat report');});
