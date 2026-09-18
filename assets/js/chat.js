@@ -363,6 +363,9 @@ function renderFriendList() {
   list.innerHTML = filtered
     .map((friendId) => {
       const profile = state.friendProfiles[friendId];
+      const avatarUrl = isSafeUrl(profile?.avatar_url)
+        ? escapeHTML(profile.avatar_url)
+        : "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
       const isActive = friendId === state.activeFriendId;
       const threadId = getThreadId(friendId);
       const last = state.lastMessages[threadId];
@@ -378,7 +381,7 @@ function renderFriendList() {
       return `
         <div class="chat-item ${isActive ? "active" : ""}" data-id="${friendId}">
           <a class="chat-item-avatar-link" href="profile.html?id=${encodeURIComponent(friendId)}" onclick="event.stopPropagation()" aria-label="View profile">
-            <img class="chat-item-avatar" src="${profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="friend avatar">
+            <img class="chat-item-avatar" src="${avatarUrl}" alt="friend avatar">
           </a>
           <div class="chat-item-body">
             <div class="chat-item-top">
@@ -469,10 +472,13 @@ function renderRequests() {
     list.innerHTML = state.requests
       .map((req) => {
         const profile = state.requestProfiles[req.requester_id];
+        const avatarUrl = isSafeUrl(profile?.avatar_url)
+          ? escapeHTML(profile.avatar_url)
+          : "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
         return `
           <div class="chat-item" data-id="${req.id}">
             <a href="profile.html?id=${encodeURIComponent(req.requester_id || '')}" aria-label="View profile">
-              <img class="chat-item-avatar" src="${profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="request avatar">
+              <img class="chat-item-avatar" src="${avatarUrl}" alt="request avatar">
             </a>
             <div class="chat-item-body">
               <div class="chat-item-top">
