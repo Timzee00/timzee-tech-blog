@@ -160,7 +160,12 @@
 
     const card = document.createElement("div");
     card.className = `app-toast ${tone}`;
-    card.innerHTML = `<strong>${title}</strong><span>${String(message || "")}</span>`;
+    const titleEl = document.createElement("strong");
+    const messageEl = document.createElement("span");
+    titleEl.textContent = String(title);
+    messageEl.textContent = String(message || "");
+    card.appendChild(titleEl);
+    card.appendChild(messageEl);
     root.appendChild(card);
 
     const close = () => {
