@@ -86,8 +86,8 @@ export async function fetchStoriesFeed() {
     .order("created_at", { ascending: true });
 
   if (result.error) {
-    console.warn("Failed to load stories:", result.error);
-    return [];
+    console.error("Failed to load stories:", result.error);
+    throw result.error;
   }
 
   const rows = result.data || [];
@@ -98,6 +98,11 @@ export async function fetchStoriesFeed() {
     .from("profiles")
     .select("id, display_name, avatar_url")
     .in("id", userIds);
+  if (profilesResult.error) {
+    console.error("Failed to load story profiles:", profilesResult.error);
+    throw profilesResult.error;
+  }
+
   const profileMap = {};
   (profilesResult.data || []).forEach((profile) => {
     profileMap[profile.id] = profile;
