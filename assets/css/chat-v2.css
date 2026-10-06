@@ -301,8 +301,10 @@ body.modal-open { overflow:hidden; }
   .chat-sidebar { z-index:20; border-right:0; }
   .chat-pane { z-index:30; display:none; }
   .chat-app-shell[data-view="chat"] .chat-sidebar,
+  .chat-app-shell[data-view="auth"] .chat-sidebar,
   .chat-app-shell[data-view="info"] .chat-sidebar { display:none; }
   .chat-app-shell[data-view="chat"] .chat-pane,
+  .chat-app-shell[data-view="auth"] .chat-pane,
   .chat-app-shell[data-view="info"] .chat-pane { display:flex; }
   .chat-mobile-back { display:grid; }
   .chat-info-panel.open { width:min(100%, 440px); }

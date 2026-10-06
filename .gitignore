@@ -44,6 +44,8 @@ yarn-error.log*
 
 # Testing
 coverage/
+test-results/
+playwright-report/
 .nyc_output/
 
 # Temporary files

@@ -9,129 +9,36 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: production-gate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Validate Netlify Functions syntax
-        id: functions
-        shell: bash
-        run: |
-          set +e
-          : > /tmp/netlify-functions.log
-          rc=0
-          while IFS= read -r file; do
-            echo "Checking $file" | tee -a /tmp/netlify-functions.log
-            node --check "$file" >> /tmp/netlify-functions.log 2>&1
-            result=$?
-            if [ "$result" -ne 0 ]; then
-              echo "FAILED: $file" | tee -a /tmp/netlify-functions.log
-              rc=1
-            fi
-          done < <(find netlify/functions -type f -name '*.js' -print | sort)
-          echo "$rc" > /tmp/netlify-functions.rc
-          exit 0
-
-      - name: Validate browser JavaScript modules
-        id: client_js
-        shell: bash
-        run: |
-          set +e
-          : > /tmp/client-js.log
-          rc=0
-          while IFS= read -r file; do
-            echo "Checking $file" | tee -a /tmp/client-js.log
-            node --input-type=module --check < "$file" >> /tmp/client-js.log 2>&1
-            result=$?
-            if [ "$result" -ne 0 ]; then
-              echo "FAILED: $file" | tee -a /tmp/client-js.log
-              rc=1
-            fi
-          done < <(find assets/js -type f -name '*.js' -print | sort)
-          echo "$rc" > /tmp/client-js.rc
-          exit 0
-
-      - name: Validate repository scripts
-        id: scripts
-        shell: bash
-        run: |
-          set +e
-          : > /tmp/repository-scripts.log
-          rc=0
-          while IFS= read -r file; do
-            echo "Checking $file" | tee -a /tmp/repository-scripts.log
-            node --check "$file" >> /tmp/repository-scripts.log 2>&1
-            result=$?
-            if [ "$result" -ne 0 ]; then
-              echo "FAILED: $file" | tee -a /tmp/repository-scripts.log
-              rc=1
-            fi
-          done < <(find scripts -type f -name '*.mjs' -print | sort)
-          echo "$rc" > /tmp/repository-scripts.rc
-          exit 0
-
-      - name: Validate site configuration
-        id: config
-        shell: bash
-        run: |
-          set +e
-          node scripts/validate-production-config.mjs > /tmp/site-config.log 2>&1
-          rc=$?
-          cat /tmp/site-config.log
-          echo "$rc" > /tmp/site-config.rc
-          exit 0
-
-      - name: Upload production gate diagnostics
-        if: always()
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Check source and build public assets
+        run: npm run build
+      - name: Function regressions and PostgreSQL syntax
+        run: npm test
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+      - name: Desktop and mobile browser regressions
+        run: npx playwright test
+      - name: Upload browser diagnostics
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: production-gate-diagnostics
-          path: |
-            /tmp/netlify-functions.log
-            /tmp/netlify-functions.rc
-            /tmp/repository-scripts.log
-            /tmp/repository-scripts.rc
-            /tmp/client-js.log
-            /tmp/client-js.rc
-            /tmp/site-config.log
-            /tmp/site-config.rc
-          if-no-files-found: ignore
+          name: browser-diagnostics
+          path: test-results/
           retention-days: 14
-
-      - name: Fail if any production gate check failed
-        shell: bash
-        run: |
-          set -euo pipefail
-          functions_rc=$(cat /tmp/netlify-functions.rc 2>/dev/null || echo 1)
-          scripts_rc=$(cat /tmp/repository-scripts.rc 2>/dev/null || echo 1)
-          client_js_rc=$(cat /tmp/client-js.rc 2>/dev/null || echo 1)
-          config_rc=$(cat /tmp/site-config.rc 2>/dev/null || echo 1)
-
-          {
-            echo "## Production gate diagnostics"
-            echo ""
-            echo "- Netlify Functions syntax: $([ "$functions_rc" -eq 0 ] && echo PASS || echo FAIL)"
-            echo "- Repository scripts syntax: $([ "$scripts_rc" -eq 0 ] && echo PASS || echo FAIL)"
-            echo "- Browser JS modules syntax: $([ "$client_js_rc" -eq 0 ] && echo PASS || echo FAIL)"
-            echo "- Site configuration: $([ "$config_rc" -eq 0 ] && echo PASS || echo FAIL)"
-            echo ""
-            if [ "$functions_rc" -ne 0 ]; then echo '### Function syntax failures'; grep -B1 -A4 'FAILED:' /tmp/netlify-functions.log || true; fi
-            if [ "$scripts_rc" -ne 0 ]; then echo '### Script syntax failures'; grep -B1 -A4 'FAILED:' /tmp/repository-scripts.log || true; fi
-            if [ "$client_js_rc" -ne 0 ]; then echo '### Browser JS syntax failures'; grep -B1 -A4 'FAILED:' /tmp/client-js.log || true; fi
-            if [ "$config_rc" -ne 0 ]; then echo '### Configuration failure'; cat /tmp/site-config.log || true; fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$functions_rc" -ne 0 ] || [ "$scripts_rc" -ne 0 ] || [ "$client_js_rc" -ne 0 ] || [ "$config_rc" -ne 0 ]; then
-            echo "Production gate failed. See the step summary or the production-gate-diagnostics artifact for exact details."
-            exit 1
-          fi
-          echo "Production gate passed."

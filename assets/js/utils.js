@@ -1,3 +1,5 @@
+import DOMPurify from "../vendor/purify.es.mjs";
+
 export function createId(prefix = "id") {
   const rand = Math.random().toString(36).slice(2, 8);
   return `${prefix}_${Date.now().toString(36)}_${rand}`;
@@ -267,31 +269,11 @@ export function isSafeUrl(url) {
 
 export function sanitizeHTML(html) {
   if (!html) return "";
-  if (typeof DOMPurify !== "undefined" && DOMPurify.sanitize) return DOMPurify.sanitize(String(html));
-  // Fallback: basic DOM-based sanitizer (remove script/style and event handlers)
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(String(html), "text/html");
-    // Remove potentially dangerous elements
-    doc.querySelectorAll("script,style,link").forEach((el) => el.remove());
-    // Remove event handler attributes and javascript: hrefs
-    const all = doc.querySelectorAll("*");
-    all.forEach((el) => {
-      [...el.attributes].forEach((attr) => {
-        const name = attr.name.toLowerCase();
-        const val = attr.value || "";
-        if (name.startsWith("on") || (name === "href" && val.trim().toLowerCase().startsWith("javascript:"))) {
-          el.removeAttribute(attr.name);
-        }
-      });
-    });
-    return doc.body.innerHTML;
-  } catch (e) {
-    // As a last resort, escape HTML
-    const div = document.createElement("div");
-    div.textContent = String(html);
-    return div.innerHTML;
-  }
+  return DOMPurify.sanitize(String(html), {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ["style", "form", "input", "button", "textarea", "select"],
+    FORBID_ATTR: ["style", "srcdoc"]
+  });
 }
 
 // Normalize HTML stored as escaped entities or raw HTML, then sanitize

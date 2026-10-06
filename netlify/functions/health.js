@@ -31,7 +31,7 @@ exports.handler = async () => {
     });
 
     const [{ error: dbError }, { data: job, error: jobError }, legacyMedia] = await Promise.all([
-      supabase.from("profiles").select("id", { head: true, count: "exact" }).limit(1),
+      supabase.from("profiles").select("id", { head: true }).limit(1),
       supabase.from("system_job_status").select("last_succeeded_at,last_failed_at,last_error,run_count").eq("job_name", "automation-maintenance").maybeSingle(),
       supabase
         .from("direct_messages")

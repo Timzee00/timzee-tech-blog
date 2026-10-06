@@ -1,3 +1,4 @@
+const { parseJsonObject } = require("./_lib/request.js");
 const { createClient } = require("@supabase/supabase-js");
 
 const CHAT_BUCKET = "chat-media";
@@ -53,12 +54,9 @@ exports.handler = async (event) => {
     return jsonResponse(401, { error: "Authentication required." });
   }
 
-  let payload;
-  try {
-    payload = JSON.parse(event.body || "{}");
-  } catch (_) {
-    return jsonResponse(400, { error: "Invalid JSON body." });
-  }
+  const parsed = parseJsonObject(event);
+  if (parsed.error) return jsonResponse(parsed.statusCode, { error: parsed.error });
+  const payload = parsed.payload;
 
   const path = normalizePath(payload.path);
   if (!path.startsWith(CHAT_PREFIX)) {
@@ -83,6 +81,9 @@ exports.handler = async (event) => {
       .from("direct_messages")
       .select("thread_id,sender_id,recipient_id")
       .eq("media_path", path)
+      // A client-created message must not confer access to another sender's
+      // storage path merely by referencing it.
+      .eq("sender_id", ownerId)
       .limit(1)
       .maybeSingle();
 

@@ -17,12 +17,14 @@ Timzee Tech Hub is a modern community platform with a tech blog, discussions, pr
 
 ## Local setup
 
-Clone the repository and serve the static site from the repository root:
+Use Node 22, install the locked dependencies, and build the public site:
 
 ```bash
 git clone https://github.com/Timzee00/timzee-tech-blog.git
 cd timzee-tech-blog
-python -m http.server 5173
+npm ci --ignore-scripts
+npm run build
+node scripts/serve-site.mjs
 ```
 
 Then visit `http://localhost:5173`.
@@ -33,7 +35,7 @@ For serverless functions, use a Netlify-compatible local workflow rather than a 
 
 The production database uses tracked migrations under `supabase/migrations/`.
 
-When provisioning a new environment, apply the migration history rather than manually running the old root-level SQL snapshots. Reconcile the remote schema before creating new migrations.
+The tracked history contains incremental patches, not a complete new-environment baseline. Before provisioning or upgrading, reconcile the remote schema and migration ledger and verify a restore in an isolated environment. See the current production review; neither the old root SQL snapshots nor the patch history alone establish a reproducible setup.
 
 Enable Realtime only for the tables that require it, including the discussion and messaging tables used by the application.
 
@@ -74,7 +76,7 @@ Recommended deployment path: **GitHub → Netlify** so both static pages and Net
 Before a production release:
 
 1. Verify GitHub `main` is the intended release commit.
-2. Run `npm run check`.
-3. Confirm the Netlify deployment points to that commit.
+2. Run `npm run build`, `npm test`, and `npm run test:browser` with Chromium installed.
+3. Confirm the Netlify deployment and `/release.json` point to that commit.
 4. Run the public smoke-test URLs and authenticated E2E tests where credentials are available.
 5. Run Supabase security and performance advisors after schema changes.

@@ -1,9 +1,10 @@
+const { parseJsonObject } = require("./_lib/request.js");
 const { createClient } = require("@supabase/supabase-js");
 const { requireRole, roleFromUser } = require("./_lib/auth-role.js");
 
 const jsonResponse = (statusCode, payload) => ({
   statusCode,
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   body: JSON.stringify(payload)
 });
 
@@ -21,18 +22,18 @@ exports.handler = async (event) => {
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
 
-  const authHeader = event.headers.authorization || event.headers.Authorization || "";
+  const authHeader = event.headers?.authorization || event.headers?.Authorization || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const guard = await requireRole(supabase, token, ["super"], "Only super admins can change admin roles.");
   if (guard.error) return jsonResponse(403, { error: guard.error });
 
-  let payload = {};
-  try { payload = JSON.parse(event.body || "{}"); }
-  catch { return jsonResponse(400, { error: "Invalid request body." }); }
+  const parsed = parseJsonObject(event);
+  if (parsed.error) return jsonResponse(parsed.statusCode, { error: parsed.error });
+  const payload = parsed.payload;
 
   const { userId, action } = payload;
-  if (!userId || !action || !ALLOWED_ACTIONS[action]) return jsonResponse(400, { error: "Missing or invalid userId/action." });
+  if (!userId || !action || !Object.hasOwn(ALLOWED_ACTIONS, action)) return jsonResponse(400, { error: "Missing or invalid userId/action." });
   if (userId === guard.user.id && action !== "promote_to_super") return jsonResponse(400, { error: "You cannot change your own admin role. Ask another super admin." });
 
   const nextRole = ALLOWED_ACTIONS[action];
@@ -59,9 +60,10 @@ exports.handler = async (event) => {
   if (error) return jsonResponse(400, { error: error.message });
 
   try {
-    await supabase.auth.admin.updateUserById(userId, {
+    const { error: syncError } = await supabase.auth.admin.updateUserById(userId, {
       app_metadata: { ...(authTarget.user.app_metadata || {}), role: nextRole },
     });
+    if (syncError) throw syncError;
   } catch {
     return jsonResponse(500, { error: "Role changed in profile but auth metadata synchronization failed." });
   }

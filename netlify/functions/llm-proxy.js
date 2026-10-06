@@ -5,6 +5,7 @@
  * so authenticated clients cannot create unbounded provider spend.
  */
 const { createClient } = require("@supabase/supabase-js");
+const { parseJsonObject } = require("./_lib/request.js");
 
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_MESSAGES = 40;
@@ -85,7 +86,7 @@ function requestBodyBytes(event) {
 }
 
 function validateRequest(rawPayload, provider) {
-  if (!ALLOWED_MODELS[provider]) return "Unsupported AI provider.";
+  if (!Object.hasOwn(ALLOWED_MODELS, provider)) return "Unsupported AI provider.";
   if (!Array.isArray(rawPayload.messages)) return "messages must be an array.";
   if (rawPayload.messages.length > MAX_MESSAGES) return `Too many messages. Maximum is ${MAX_MESSAGES}.`;
   if (rawPayload.model && String(rawPayload.model).length > MAX_MODEL_CHARS) return "Model name is too long.";
@@ -108,6 +109,8 @@ exports.handler = async (event) => {
   if (requestBodyBytes(event) > MAX_BODY_BYTES) {
     return jsonResponse({ error: "Request body too large." }, 413);
   }
+  const parsed = parseJsonObject(event, MAX_BODY_BYTES);
+  if (parsed.error) return jsonResponse({ error: parsed.error }, parsed.statusCode);
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -127,10 +130,7 @@ exports.handler = async (event) => {
     return jsonResponse({ error: "Invalid or expired auth token." }, 401);
   }
 
-  const rawPayload = safeJsonParse(event.body || "{}");
-  if (!rawPayload || typeof rawPayload !== "object" || Array.isArray(rawPayload)) {
-    return jsonResponse({ error: "Invalid request body." }, 400);
-  }
+  const rawPayload = parsed.payload;
 
   const provider = String(rawPayload.provider || "groq").toLowerCase();
   const validationError = validateRequest(rawPayload, provider);
@@ -174,7 +174,7 @@ exports.handler = async (event) => {
     p_daily_limit: 100
   });
 
-  if (limitError || !limitData) {
+  if (limitError || typeof limitData?.allowed !== "boolean") {
     console.error("AI rate limit check failed:", limitError);
     return jsonResponse({ error: "AI rate limiting is temporarily unavailable." }, 503);
   }
@@ -201,6 +201,7 @@ exports.handler = async (event) => {
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
+        signal: AbortSignal.timeout(25000),
         headers: {
           "Content-Type": "application/json",
           "x-api-key": apiKey,
@@ -212,7 +213,7 @@ exports.handler = async (event) => {
       const text = await resp.text();
       const data = safeJsonParse(text) || {};
       if (!resp.ok) {
-        return jsonResponse({ error: data.error || text || "Anthropic API error" }, resp.status);
+        return jsonResponse({ error: "AI provider is temporarily unavailable." }, 502);
       }
 
       const content = Array.isArray(data.content)
@@ -240,6 +241,7 @@ exports.handler = async (event) => {
 
     const resp = await fetch(endpoint, {
       method: "POST",
+      signal: AbortSignal.timeout(25000),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`
@@ -250,7 +252,7 @@ exports.handler = async (event) => {
     const text = await resp.text();
     const data = safeJsonParse(text) || {};
     if (!resp.ok) {
-      return jsonResponse({ error: data.error || text || "API error" }, resp.status);
+      return jsonResponse({ error: "AI provider is temporarily unavailable." }, 502);
     }
 
     const message = data.choices?.[0]?.message?.content || data.message || "No response from AI";
@@ -261,6 +263,9 @@ exports.handler = async (event) => {
       usage: data.usage
     });
   } catch (error) {
+    if (error.name === "TimeoutError" || error.name === "AbortError") {
+      return jsonResponse({ error: "AI provider timed out. Please try again." }, 504);
+    }
     console.error("LLM proxy error:", error);
     return jsonResponse({ error: "Failed to process request." }, 500);
   }

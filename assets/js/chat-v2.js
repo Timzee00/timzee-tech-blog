@@ -1,3 +1,4 @@
+import { fetchMessagePage } from "./chat-history.mjs";
 import { supabase, getCurrentUserWithRole, getDisplayName } from "./supabase.js";
 import { uploadMedia } from "./media.js";
 import { escapeHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
@@ -11,6 +12,7 @@ const VIDEO_EXTENSIONS = new Set(["mp4","webm","mov","m4v","mkv","avi","wmv","fl
 const AUDIO_EXTENSIONS = new Set(["mp3","wav","ogg","m4a","aac","flac","opus","webm"]);
 
 const state = {
+  historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false,
   user: null, settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [],
   blockedProfiles: new Map(), groups: [], groupMembers: new Map(), messages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
   channel: null, presence: new Map(), reconnectTimer: null, searchTerm: "", peopleTerm: "", messageSearchTerm: "", mediaFile: null, mediaType: "", previewUrl: "",
@@ -131,7 +133,46 @@ function renderPeopleResults() {
   target.innerHTML=profiles.length?profiles.slice(0,20).map(p=>{const f=state.friendships.find(r=>(r.requester_id===state.user.id&&r.addressee_id===p.id)||(r.addressee_id===state.user.id&&r.requester_id===p.id));const friend=f?.status==='accepted';const pending=f?.status==='pending';const blocked=f?.status==='blocked';return `<div class="chat-request-row"><img src="${escapeHTML(p.avatar_url||DEFAULT_AVATAR)}" alt=""><div><strong>${escapeHTML(p.display_name||p.username||'Member')}</strong><small>${escapeHTML(p.username||p.email||'')}</small></div><button class="btn ghost sm" data-people-action="${friend?'message':'request'}" data-id="${p.id}" ${pending||blocked?'disabled':''}>${friend?'Message':blocked?'Blocked':pending?'Requested':'Add friend'}</button></div>`}).join(''):`<div class="callout">No users found.</div>`;
 }
 
-async function loadMessages(threadId) { const result=await supabase.from('direct_messages').select('*').eq('thread_id',threadId).order('created_at',{ascending:true}); if(result.error)throw result.error; state.messages=result.data||[]; await loadProfiles(state.messages.map(m=>m.sender_id)); renderMessages(); }
+async function loadMessages(threadId) {
+  state.messages = [];
+  state.historyCursor = null;
+  state.hasOlderMessages = false;
+  $("loadOlderMessages").hidden = true;
+  const page = await fetchMessagePage(supabase, threadId);
+  if (state.activeThreadId !== threadId) return;
+  await loadProfiles(page.messages.map(message => message.sender_id));
+  if (state.activeThreadId !== threadId) return;
+  state.messages = page.messages;
+  state.historyCursor = page.cursor;
+  state.hasOlderMessages = page.hasMore;
+  $("loadOlderMessages").hidden = !page.hasMore;
+  renderMessages();
+}
+async function loadOlderMessages() {
+  if (state.loadingHistory || !state.hasOlderMessages) return;
+  const threadId = state.activeThreadId;
+  const button = $("loadOlderMessages");
+  state.loadingHistory = true;
+  button.disabled = true;
+  try {
+    const page = await fetchMessagePage(supabase, threadId, state.historyCursor);
+    await loadProfiles(page.messages.map(message => message.sender_id));
+    if (threadId !== state.activeThreadId) return;
+    const target = $("chatMessages");
+    const offset = target.scrollHeight - target.scrollTop;
+    const existing = new Set(state.messages.map(message => message.id));
+    state.messages = [...page.messages.filter(message => !existing.has(message.id)), ...state.messages];
+    state.historyCursor = page.cursor;
+    state.hasOlderMessages = page.hasMore;
+    button.hidden = !page.hasMore;
+    renderMessages();
+    renderInfoMedia();
+    target.scrollTop = target.scrollHeight - offset;
+  } finally {
+    state.loadingHistory = false;
+    button.disabled = false;
+  }
+}
 function messageMediaHtml(m) { const url=m.media_url&&isSafeUrl(m.media_url)?m.media_url:''; if(!url)return ''; const type=resolveAttachmentType({mediaType:m.media_type,mediaUrl:url}); if(type==='image')return `<img class="message-attachment-image" src="${escapeHTML(url)}" alt="Message attachment" loading="lazy">`; if(type==='video')return `<video class="message-attachment-video" controls preload="metadata" src="${escapeHTML(url)}"></video>`; if(type==='audio')return `<div class="message-voice"><div class="message-voice-mark"><span></span><span></span><span></span><span></span><span></span></div><audio controls preload="metadata" src="${escapeHTML(url)}"></audio></div>`; return `<a class="message-file" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" download><strong>${escapeHTML(getDisplayFileName(url))}</strong><small>${escapeHTML(m.media_type||'File')} · Open or download</small></a>`; }
 function renderMessages() { const target=$("chatMessages"); if(!target)return; const q=state.messageSearchTerm.trim().toLowerCase(); const msgs=q?state.messages.filter(m=>String(m.body||'').toLowerCase().includes(q)):state.messages; if(!msgs.length){target.innerHTML=`<div class="chat-no-messages">${q?'No messages match your search.':'No messages yet. Start the conversation.'}</div>`;return;} target.innerHTML=msgs.map(m=>{const self=m.sender_id===state.user.id;const p=profileFor(m.sender_id)||{};const body=m.body?escapeHTML(m.body).replace(/\n/g,'<br>'):'';return `<article class="chat-message ${self?'self':'received'}" data-message-id="${m.id}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${body?`<div class="chat-message-body">${body}</div>`:''}${messageMediaHtml(m)}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span></div></article>`}).join(''); target.scrollTop=target.scrollHeight; }
 function renderInfoMedia(){const grid=$("infoMediaGrid");if(!grid)return;const items=state.messages.filter(m=>{const t=resolveAttachmentType({mediaType:m.media_type,mediaUrl:m.media_url});return isSafeUrl(m.media_url||'')&&['image','video'].includes(t)}).slice(-18).reverse();grid.innerHTML=items.length?items.map(m=>{const t=resolveAttachmentType({mediaType:m.media_type,mediaUrl:m.media_url});return t==='video'?`<a href="${escapeHTML(m.media_url)}" target="_blank" rel="noopener noreferrer"><video src="${escapeHTML(m.media_url)}" muted preload="metadata"></video></a>`:`<a href="${escapeHTML(m.media_url)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHTML(m.media_url)}" alt="Shared media" loading="lazy"></a>`}).join(''):`<div class="callout">No media shared yet.</div>`;}
@@ -143,7 +184,7 @@ async function selectFriend(id){await unsubscribeRealtime();state.activeFriendId
 async function selectGroup(id){await unsubscribeRealtime();state.activeGroupId=id;state.activeFriendId='';state.activeThreadId=id;const g=activeGroup();if(!g)return;updateHeaderForGroup(g);await loadMessages(id);await loadGroupMembers(id);await subscribeRealtime();setView('chat');setHeaderStatus('Live group chat',true);await renderFriends();renderGroups();renderInfoMedia();}
 async function unsubscribeRealtime(){if(state.channel){try{await supabase.removeChannel(state.channel);}catch(_){}state.channel=null;}state.presence.clear();if(state.reconnectTimer){clearTimeout(state.reconnectTimer);state.reconnectTimer=null;}}
 function scheduleReconnect(){if(!state.activeThreadId||state.reconnectTimer)return;setHeaderStatus('Reconnecting…',false);state.reconnectTimer=setTimeout(async()=>{state.reconnectTimer=null;try{await subscribeRealtime();}catch(_){scheduleReconnect();}},1500);}
-async function subscribeRealtime(){const threadId=state.activeThreadId;if(!threadId)return;const channel=supabase.channel(`timzee-chat-${threadId}-${crypto.randomUUID()}`);state.channel=channel;channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'direct_messages',filter:`thread_id=eq.${threadId}`},async payload=>{const m=payload.new;if(!m||state.messages.some(x=>x.id===m.id))return;state.messages.push(m);await loadProfiles([m.sender_id]);renderMessages();renderInfoMedia();if(m.sender_id!==state.user.id&&state.settings.notifications)window.siteToast?.(`${profileFor(m.sender_id)?.display_name||'New message'}: ${m.body||'Attachment'}`,{type:'info',title:'New message'});}).on('broadcast',{event:'typing'},payload=>{const p=payload.payload||{};if(p.userId!==state.user.id)showTyping(p.name||'Someone',Boolean(p.typing));}).on('presence',{event:'sync'},()=>{const ps=channel.presenceState();state.presence.clear();Object.values(ps).flat().forEach(e=>state.presence.set(e.user_id,e));refreshPresenceText();});const status=await new Promise(resolve=>{let done=false;const timer=setTimeout(()=>{if(!done){done=true;resolve('TIMED_OUT');}},9000);channel.subscribe(v=>{if(['SUBSCRIBED','CHANNEL_ERROR','TIMED_OUT'].includes(v)&&!done){done=true;clearTimeout(timer);resolve(v);}});});if(status!=='SUBSCRIBED'){scheduleReconnect();return;}await channel.track({user_id:state.user.id,name:getDisplayName(state.user),at:Date.now()});setHeaderStatus(state.activeGroupId?'Live group chat':'Live chat',true);}
+async function subscribeRealtime(){const threadId=state.activeThreadId;if(!threadId)return;const channel=supabase.channel(`timzee-chat-${threadId}-${crypto.randomUUID()}`);state.channel=channel;channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'direct_messages',filter:`thread_id=eq.${threadId}`},async payload=>{const m=payload.new;if(state.activeThreadId!==threadId||!m||state.messages.some(x=>x.id===m.id))return;state.messages.push(m);await loadProfiles([m.sender_id]);renderMessages();renderInfoMedia();if(m.sender_id!==state.user.id&&state.settings.notifications)window.siteToast?.(`${profileFor(m.sender_id)?.display_name||'New message'}: ${m.body||'Attachment'}`,{type:'info',title:'New message'});}).on('broadcast',{event:'typing'},payload=>{const p=payload.payload||{};if(p.userId!==state.user.id)showTyping(p.name||'Someone',Boolean(p.typing));}).on('presence',{event:'sync'},()=>{const ps=channel.presenceState();state.presence.clear();Object.values(ps).flat().forEach(e=>state.presence.set(e.user_id,e));refreshPresenceText();});const status=await new Promise(resolve=>{let done=false;const timer=setTimeout(()=>{if(!done){done=true;resolve('TIMED_OUT');}},9000);channel.subscribe(v=>{if(['SUBSCRIBED','CHANNEL_ERROR','TIMED_OUT'].includes(v)&&!done){done=true;clearTimeout(timer);resolve(v);}});});if(status!=='SUBSCRIBED'){scheduleReconnect();return;}await channel.track({user_id:state.user.id,name:getDisplayName(state.user),at:Date.now()});setHeaderStatus(state.activeGroupId?'Live group chat':'Live chat',true);}
 function refreshPresenceText(){if(state.activeGroupId){const online=[...state.presence.keys()].filter(id=>id!==state.user.id).length;setHeaderStatus(online?`${online} online · Live`:'Live group chat',true);}else setHeaderStatus(state.presence.has(state.activeFriendId)?'Online · Live':'Live chat',true);}
 function showTyping(name,active){const box=$("chatTyping");if(!box)return;box.hidden=!active;$("chatTypingName").textContent=name;clearTimeout(box._typingTimer);if(active)box._typingTimer=setTimeout(()=>{box.hidden=true;},2400);}
 function broadcastTyping(typing){if(state.channel)void state.channel.send({type:'broadcast',event:'typing',payload:{userId:state.user.id,name:getDisplayName(state.user),typing}});}
@@ -200,7 +241,37 @@ function stopRecording(save=true){
   try{state.recorder.stop();}catch(_){stopRecorderTracks();}
   state.recorder=null;
 }
-async function sendMessage(){const body=($("chatBody").value||'').trim();if(!state.activeThreadId||(!body&&!state.mediaFile))return;let mediaUrl='';if(state.mediaFile)mediaUrl=await uploadMedia(state.mediaFile,'direct-messages');const payload={id:crypto.randomUUID(),thread_id:state.activeThreadId,sender_id:state.user.id,recipient_id:state.activeFriendId||null,body,media_url:mediaUrl,media_type:state.mediaType||'',created_at:new Date().toISOString()};const result=await supabase.from('direct_messages').insert(payload).select().single();if(result.error)throw result.error;const saved=result.data||payload;if(!state.messages.some(m=>m.id===saved.id))state.messages.push(saved);renderMessages();renderInfoMedia();$("chatBody").value='';$("chatBody").style.height='auto';clearMediaPreview();broadcastTyping(false);await renderFriends();renderGroups();}
+async function sendMessage() {
+  const body = ($("chatBody").value || '').trim();
+  if (state.sending || !state.activeThreadId || (!body && !state.mediaFile)) return;
+  // Capture the recipient before upload: switching chats must never redirect a
+  // pending message or clear the draft in the newly selected conversation.
+  const threadId = state.activeThreadId;
+  const recipientId = state.activeFriendId || null;
+  const file = state.mediaFile;
+  const mediaType = state.mediaType;
+  state.sending = true;
+  try {
+    const mediaUrl = file ? await uploadMedia(file, 'direct-messages') : '';
+    const payload = { id: crypto.randomUUID(), thread_id: threadId, sender_id: state.user.id, recipient_id: recipientId, body, media_url: mediaUrl, media_type: mediaType || '', created_at: new Date().toISOString() };
+    const result = await supabase.from('direct_messages').insert(payload).select().single();
+    if (result.error) throw result.error;
+    const saved = result.data || payload;
+    if (state.activeThreadId === threadId) {
+      if (!state.messages.some(message => message.id === saved.id)) state.messages.push(saved);
+      renderMessages();
+      renderInfoMedia();
+      if ($("chatBody").value.trim() === body) $("chatBody").value = '';
+      $("chatBody").style.height = 'auto';
+      if (state.mediaFile === file) clearMediaPreview();
+      broadcastTyping(false);
+    }
+    await renderFriends();
+    renderGroups();
+  } finally {
+    state.sending = false;
+  }
+}
 function openModal(id){$(id)?.removeAttribute('hidden');document.body.classList.add('modal-open');}
 function closeModal(id){$(id)?.setAttribute('hidden','');document.body.classList.remove('modal-open');}
 function renderGroupPicker(){const target=$("groupMemberPicker");if(!target)return;target.innerHTML=state.friends.map(id=>{const p=profileFor(id)||{};return `<label class="chat-picker-row"><input type="checkbox" value="${id}"><img src="${escapeHTML(p.avatar_url||DEFAULT_AVATAR)}" alt=""><span><strong>${escapeHTML(p.display_name||'Member')}</strong><small>${escapeHTML(p.username||'')}</small></span></label>`}).join('');$("groupPickerEmpty").hidden=state.friends.length!==0;}
@@ -210,6 +281,7 @@ async function editMemberTags(memberId){if(!isOwnerOfActiveGroup())return;const 
 async function toggleChatMemberFlag(kind){const threadId=state.activeThreadId;if(!threadId)return;const existing=await supabase.from('chat_members').select('is_muted,is_pinned').eq('thread_id',threadId).eq('user_id',state.user.id).maybeSingle();if(existing.error)throw existing.error;if(!existing.data){window.siteToast?.('Pin and mute settings are currently available for group memberships.',{type:'info',title:'Chat'});return;}const key=kind==='mute'?'is_muted':'is_pinned';const next=!Boolean(existing.data[key]);const result=await supabase.from('chat_members').update({[key]:next}).eq('thread_id',threadId).eq('user_id',state.user.id);if(result.error)throw result.error;const group=activeGroup();if(group)group[key]=next;renderGroups();window.siteToast?.(`${kind==='mute'?'Notifications':'Chat'} ${next?'updated':'restored'}.`,{type:'info',title:'Chat'});}
 function setupTabs(){const tabs=document.querySelectorAll('.chat-tab'),panels=document.querySelectorAll('.chat-tab-panel');tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(t=>{const a=t===tab;t.classList.toggle('active',a);t.setAttribute('aria-selected',String(a));});panels.forEach(p=>p.hidden=p.dataset.panel!==tab.dataset.tab);$("peopleSearchPanel").hidden=true;}));}
 function setupEvents(){
+  $("loadOlderMessages")?.addEventListener("click", () => loadOlderMessages().catch(error => reportAppError(error, "Unable to load older messages")));
   $("chatSearch")?.addEventListener('input',async e=>{state.searchTerm=e.target.value||'';await renderFriends();renderGroups();}); $("peopleSearch")?.addEventListener('input',e=>{state.peopleTerm=e.target.value||'';renderPeopleResults();});
   $("friendList")?.addEventListener('click',e=>{const r=e.target.closest('[data-friend-id]');if(r)selectFriend(r.dataset.friendId).catch(err=>reportAppError(err,'Chat open failed'));}); $("groupList")?.addEventListener('click',e=>{const r=e.target.closest('[data-group-id]');if(r)selectGroup(r.dataset.groupId).catch(err=>reportAppError(err,'Group open failed'));});
   $("friendRequests")?.addEventListener('click',handleRequests); $("friendRequestsSent")?.addEventListener('click',handleRequests);
@@ -239,5 +311,5 @@ function setupEvents(){
 }
 async function handleRequests(e){const b=e.target.closest('button[data-request]');if(!b)return;const row=state.friendships.find(r=>r.id===b.dataset.id);if(!row)return;if(b.dataset.request==='accept'){const r=await supabase.from('friendships').update({status:'accepted',updated_at:new Date().toISOString()}).eq('id',row.id);if(r.error)throw r.error;}else{const r=await supabase.from('friendships').delete().eq('id',row.id);if(r.error)throw r.error;}await loadAllChatData();renderRequests();renderBlocked();await renderFriends();renderPeopleResults();}
 
-async function boot(){setupTabs();setupEvents();state.settings=readSettings();defaultSettingsUI();state.user=await getCurrentUserWithRole();if(!state.user){$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}await loadAllChatData();await renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('user')&&state.friends.includes(params.get('user')))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
+async function boot(){setupTabs();setupEvents();state.settings=readSettings();defaultSettingsUI();state.user=await getCurrentUserWithRole();if(!state.user){$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}await loadAllChatData();await renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('user')&&state.friends.includes(params.get('user')))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
 boot().catch(err=>{reportAppError(err,'Chat initialization failed');if($("chatMessages"))$("chatMessages").innerHTML=`<div class="chat-no-messages">Unable to load chats right now. ${escapeHTML(err.message||'Please try again.')}</div>`;});

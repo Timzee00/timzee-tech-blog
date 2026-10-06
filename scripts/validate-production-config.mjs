@@ -6,7 +6,7 @@ const read = (file) => readFileSync(join(root, file), "utf8");
 const fail = (message) => { console.error(`Production validation failed: ${message}`); process.exit(1); };
 
 const netlify = read("netlify.toml");
-if (!/publish\s*=\s*["']\.["']/.test(netlify)) fail("Netlify publish directory must be the repository root.");
+if (!/publish\s*=\s*["']dist["']/.test(netlify)) fail("Netlify publish directory must be dist.");
 if (!/functions\s*=\s*["']netlify\/functions["']/.test(netlify)) fail("Netlify functions directory is missing.");
 if (!/from\s*=\s*["']\/sitemap\.xml["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/sitemap["']/.test(netlify)) fail("Dynamic sitemap rewrite is missing.");
 if (!/from\s*=\s*["']\/health["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/health["']/.test(netlify)) fail("Production health rewrite is missing.");
@@ -111,5 +111,6 @@ for (const base of scanRoots) for (const file of await walk(base)) {
   for (const pattern of suspicious) if (pattern.test(text)) fail(`Potential client-side secret, obsolete API-key storage, or retired provider model found in ${relative(root, file)}.`);
 }
 
-if (!existsSync(join(root,"package-lock.json"))) console.warn("Warning: package-lock.json is not committed yet; generate and commit one on a networked development machine.");
+if (!existsSync(join(root,"package-lock.json"))) fail("A committed dependency lockfile is required.");
+if (headers.includes("immutable")) fail("Stable asset filenames must be revalidated, not cached as immutable.");
 console.log("Production configuration validation passed.");

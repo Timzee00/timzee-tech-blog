@@ -6,10 +6,19 @@
     "node": ">=22 <23"
   },
   "scripts": {
-    "check": "node scripts/validate-production-config.mjs"
+    "check": "node scripts/validate-production-config.mjs && node scripts/check-syntax.mjs",
+    "build": "npm run check && node scripts/build-site.mjs",
+    "test": "node --test tests/*.test.cjs",
+    "test:browser": "npm run build && playwright test"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.116.0",
+    "dompurify": "3.4.16",
     "rss-parser": "3.13.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "esbuild": "0.28.2",
+    "pgsql-parser": "18.2.9"
   }
 }
