@@ -30,6 +30,14 @@ await build({
   legalComments: "linked"
 });
 
+// Resolve the CSS import graph at build time instead of making every visitor
+// download two dozen serial stylesheets. Keep the source modules maintainable.
+await build({
+  entryPoints: [resolve(root, "assets/css/styles.css"), resolve(root, "assets/css/admin.css")],
+  bundle: true, minify: true, target: ["chrome110", "safari16.4", "firefox115"],
+  outdir: resolve(output, "assets/css"), legalComments: "none"
+});
+
 async function filesIn(directory) {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {

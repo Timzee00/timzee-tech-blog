@@ -9,6 +9,7 @@
     <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
         <a class="brand" href="index.html">
@@ -64,9 +65,9 @@
           <div class="chat-typing" id="aiTypingIndicator" style="display:none; margin: 0 16px 8px;">
             <span></span><span></span><span></span>
           </div>
-          <form id="aiChatForm" class="chat-input">
+          <form novalidate id="aiChatForm" class="chat-input">
             <div class="chat-input-row">
-              <textarea id="aiChatInput" placeholder="Ask the AI anything..." rows="1" required></textarea>
+              <textarea id="aiChatInput" placeholder="Ask the AI anything..." rows="1" required class="resize-none"></textarea>
               <button type="submit" class="chat-input-icon-btn chat-send-btn" title="Send" aria-label="Send message">&#10148;</button>
             </div>
           </form>
@@ -188,7 +189,7 @@
       async function startNewConversation() {
         const result = await createConversation(state.user.id, "New Chat");
         if (result.error) {
-          alert("Couldn't start a new chat: " + result.error.message);
+          window.appUI.toast("Couldn't start a new chat: " + result.error.message);
           return;
         }
         state.conversations.unshift(result.data);

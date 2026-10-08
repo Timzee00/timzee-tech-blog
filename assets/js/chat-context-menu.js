@@ -85,7 +85,7 @@ async function askAI(messageEl) {
 async function reportMessage(messageEl) {
   const user = await getCurrentUser();
   if (!user?.id) throw new Error("Please sign in to report a message.");
-  const reason = window.prompt("Why are you reporting this message?", "Spam or inappropriate content");
+  const reason = await window.appUI.prompt("Why are you reporting this message?", "Spam or inappropriate content");
   if (!reason) return;
   const id = messageEl.dataset.messageId;
   if (!id) throw new Error("Message identifier is missing.");

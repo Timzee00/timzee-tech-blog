@@ -6,9 +6,6 @@
     <title>Watch - Timzee Tech Hub</title>
     <meta name="description" content="Watch tech videos from the Timzee community">
     <meta name="theme-color" content="#05050a">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <script defer src="assets/js/theme-init.js"></script>
     <style>
@@ -533,7 +530,7 @@
         <button class="comment-drawer-close" id="commentDrawerClose" aria-label="Close comments">&times;</button>
       </div>
       <div class="comment-drawer-list" id="commentDrawerList"></div>
-      <form class="comment-drawer-form" id="commentDrawerForm">
+      <form novalidate class="comment-drawer-form" id="commentDrawerForm">
         <input type="text" id="commentDrawerInput" placeholder="Add a comment..." maxlength="500" autocomplete="off">
         <button type="submit">Post</button>
       </form>
@@ -829,7 +826,7 @@
                 btn.querySelector(".reel-chip-count").textContent = "Share";
               }, 1500);
             } catch (err) {
-              prompt("Copy this link:", url);
+              await window.appUI.prompt("Copy this link:", url);
             }
           });
         });

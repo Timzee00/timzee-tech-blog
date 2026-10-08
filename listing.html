@@ -4,9 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Listing - Timzee Tech Hub</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -76,7 +73,7 @@
             <div>
               <div class="seller-info">
                 <div class="seller-header">
-                  <a class="seller-avatar" id="sellerAvatar" href="#" aria-label="View seller profile"></a>
+                  <a class="seller-avatar" id="sellerAvatar" href="profile.html" aria-label="View seller profile"></a>
                   <div>
                     <div class="seller-name" id="sellerName"></div>
                     <span id="sellerVerifiedBadge"></span>
@@ -114,8 +111,8 @@
 
           <div id="inquiryContainer" class="inquiry-section" style="display: none;">
             <h3>Interested? Send an Inquiry</h3>
-            <form id="inquiryForm" class="inquiry-form">
-              <textarea id="inquiryMessage" placeholder="What would you like to know?" required maxlength="2000" style="min-height: 100px;"></textarea>
+            <form novalidate id="inquiryForm" class="inquiry-form">
+              <textarea id="inquiryMessage" placeholder="What would you like to know?" required maxlength="2000" style="min-height: 100px;" class="resize-none"></textarea>
               <button class="btn" type="submit">Send Inquiry</button>
               <div id="inquiryStatus" role="status" aria-live="polite" style="display: none;"></div>
             </form>
@@ -460,7 +457,7 @@
             window.location.href = `login.html?next=${next}`;
             return;
           }
-          const reason = prompt("Why are you reporting this listing?");
+          const reason = await window.appUI.prompt("Why are you reporting this listing?");
           if (reason === null || !reason.trim()) return;
           try {
             const result = await createContentReport({

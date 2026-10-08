@@ -253,10 +253,10 @@ function renderPost(data, post) {
   if (reportBtn) {
     reportBtn.addEventListener("click", async () => {
       if (!state.user) {
-        alert("Please log in to report.");
+        window.appUI.toast("Please log in to report.");
         return;
       }
-      const reason = prompt("Why are you reporting this post?");
+      const reason = await window.appUI.prompt("Why are you reporting this post?");
       if (reason === null) return;
       const result = await createContentReport({
         reporterId: state.user.id,
@@ -265,9 +265,9 @@ function renderPost(data, post) {
         reason: reason.trim()
       });
       if (result?.error) {
-        alert(result.error.message || "Failed to submit report.");
+        window.appUI.toast(result.error.message || "Failed to submit report.");
       } else {
-        alert("Report submitted. Thank you.");
+        window.appUI.toast("Report submitted. Thank you.");
       }
     });
   }
@@ -549,10 +549,10 @@ function bindCommentReportButtons() {
   list.querySelectorAll(".report-comment-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       if (!state.user) {
-        alert("Please log in to report.");
+        window.appUI.toast("Please log in to report.");
         return;
       }
-      const reason = prompt("Why are you reporting this comment?");
+      const reason = await window.appUI.prompt("Why are you reporting this comment?");
       if (reason === null) return;
       const result = await createContentReport({
         reporterId: state.user.id,
@@ -561,9 +561,9 @@ function bindCommentReportButtons() {
         reason: reason.trim()
       });
       if (result?.error) {
-        alert(result.error.message || "Failed to submit report.");
+        window.appUI.toast(result.error.message || "Failed to submit report.");
       } else {
-        alert("Report submitted. Thank you.");
+        window.appUI.toast("Report submitted. Thank you.");
       }
     });
   });
@@ -614,7 +614,7 @@ function setupLike(post) {
   updateLabel();
   likeBtn.addEventListener("click", async () => {
     if (!state.user) {
-      alert("Please log in to like posts.");
+      window.appUI.toast("Please log in to like posts.");
       window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       return;
     }
@@ -639,7 +639,7 @@ function setupShare(post) {
 
   const requireLogin = () => {
     if (!state.user) {
-      alert("Please log in to share posts.");
+      window.appUI.toast("Please log in to share posts.");
       window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       return false;
     }
@@ -675,7 +675,7 @@ function setupShare(post) {
           console.warn("Share canceled", error);
         }
       } else {
-        alert("Sharing is not supported here. Use copy link instead.");
+        window.appUI.toast("Sharing is not supported here. Use copy link instead.");
       }
     });
   }
@@ -694,7 +694,7 @@ function setupShare(post) {
           copyBtn.textContent = "Copy Link";
         }, 1500);
       } catch (error) {
-        alert("Copy failed. Please copy the URL manually.");
+        window.appUI.toast("Copy failed. Please copy the URL manually.");
       }
     });
   }
@@ -710,7 +710,7 @@ function setupBookmark(post) {
   updateLabel();
   btn.addEventListener("click", async () => {
     if (!state.user) {
-      alert("Please log in to save posts.");
+      window.appUI.toast("Please log in to save posts.");
       window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       return;
     }
@@ -729,7 +729,7 @@ function setupFollowAuthor(post) {
   updateLabel();
   btn.addEventListener("click", async () => {
     if (!state.user) {
-      alert("Please log in to follow authors.");
+      window.appUI.toast("Please log in to follow authors.");
       window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       return;
     }
@@ -1056,7 +1056,8 @@ async function boot() {
       console.warn("⚠️ Post not found for id:", postId, "slug:", slug);
       document.getElementById("postTitle").textContent = "Post not found";
       document.getElementById("postContent").innerHTML =
-        "<p>This post does not exist. Return to the homepage.</p>";
+        '<p>This post is unavailable or may have been removed.</p><a class="btn" href="/index.html">Explore the latest posts</a>';
+      document.querySelectorAll("#commentForm, #comments, .post-actions, .post-review").forEach(node => { node.hidden = true; });
       return;
     }
 

@@ -1,11 +1,4 @@
-/* ==========================================================================
-   marketplace.css — marketplace grid, listing cards, listing detail page
-   Before this file existed, .listing-card/.marketplace-grid/.listing-*
-   and the entire listing.html detail page (.listing-hero/.gallery-*/
-   .seller-*/.inquiry-*/.reviews-*/.similar-*) had NO CSS at all — they
-   rendered as unstyled stacked divs. This file is net-new coverage, not
-   a refinement of existing rules.
-   ========================================================================== */
+/* Marketplace grid, listing cards and listing detail layouts. */
 
 /* --- Category filter pills --- */
 .category-filter {

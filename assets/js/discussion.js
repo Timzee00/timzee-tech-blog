@@ -1,3 +1,4 @@
+import { loadUserPreferences } from "./user-preferences.js";
 import { supabase, getCurrentUser, getCurrentUserWithRole, getDisplayName, signOut } from "./supabase.js";
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
@@ -72,7 +73,7 @@ async function loadVotes(messageIds) {
 
 async function castVote(messageId, value) {
   if (!state.user) {
-    alert("Please log in to vote.");
+    window.appUI.toast("Please log in to vote.");
     return;
   }
   const existing = state.userVotes[messageId];
@@ -517,10 +518,10 @@ function bindMessageActions(container) {
       }
       if (action === "report") {
         if (!state.user) {
-          alert("Please log in to report.");
+          window.appUI.toast("Please log in to report.");
           return;
         }
-        const reason = prompt("Why are you reporting this message?");
+        const reason = await window.appUI.prompt("Why are you reporting this message?");
         if (reason === null) return;
         const result = await createContentReport({
           reporterId: state.user.id,
@@ -529,9 +530,9 @@ function bindMessageActions(container) {
           reason: reason.trim()
         });
         if (result?.error) {
-          alert(result.error.message || "Failed to submit report.");
+          window.appUI.toast(result.error.message || "Failed to submit report.");
         } else {
-          alert("Report submitted. Thank you.");
+          window.appUI.toast("Report submitted. Thank you.");
         }
         return;
       }
@@ -635,6 +636,7 @@ function subscribeToMessages(topicId) {
   if (state.channel) {
     supabase.removeChannel(state.channel);
   }
+  if (state.preferences?.discussion?.showLiveUpdates === false) return;
   state.channel = supabase
     .channel(`topic-${topicId}`)
     .on(
@@ -1127,6 +1129,7 @@ function setupBackButton() {
 async function boot() {
   setupReveal();
   state.user = await getCurrentUserWithRole();
+  state.preferences = await loadUserPreferences(state.user);
   renderAuthActions();
 
   const settings = await fetchSettings();

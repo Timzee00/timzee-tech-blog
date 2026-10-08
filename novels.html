@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Novels - Timzee Tech Hub</title>
     <meta name="description" content="Discover and share tech-inspired novels and serialized stories">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -65,7 +62,7 @@
         <!-- Create Form (logged-in users only) -->
         <div class="novel-form" id="createForm" style="display: none;">
           <h3 style="margin-top: 0;">Create New Novel</h3>
-          <form id="novelForm">
+          <form novalidate id="novelForm">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
               <div class="form-group">
                 <label>Novel Title *</label>
@@ -88,7 +85,7 @@
 
             <div class="form-group">
               <label>Synopsis *</label>
-              <textarea id="novelSynopsis" placeholder="Brief description of your story..." required></textarea>
+              <textarea id="novelSynopsis" placeholder="Brief description of your story..." required class="resize-none"></textarea>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">

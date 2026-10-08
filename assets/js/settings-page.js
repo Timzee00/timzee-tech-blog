@@ -5,7 +5,7 @@ import { reportAppError } from "./utils.js";
 const $ = (id) => document.getElementById(id);
 const statusEl = $("settingsStatus");
 let state = { user: null, preferences: null, profile: null, saving: false, timer: null };
-function setStatus(message,tone=""){if(statusEl){statusEl.textContent=message;statusEl.dataset.tone=tone;}}
+function setStatus(message,tone=""){if(statusEl){statusEl.setAttribute("role","status");statusEl.textContent=message;statusEl.dataset.tone=tone;}}
 function getByPath(object,path,fallback=undefined){return String(path||"").split(".").filter(Boolean).reduce((value,key)=>value==null||!(key in value)?fallback:value[key],object);}
 function setByPath(object,path,value){const parts=String(path||"").split(".").filter(Boolean);if(!parts.length)return;let target=object;parts.slice(0,-1).forEach(part=>{if(!target[part]||typeof target[part]!=="object")target[part]={};target=target[part];});target[parts.at(-1)]=value;}
 function controlValue(input){return input.type==="checkbox"?input.checked:input.value;}
@@ -26,8 +26,30 @@ function applyControls(){
   const profileMap={allow_messages:"allow_messages",allow_requests:"allow_requests",show_email:"show_email"};Object.entries(profileMap).forEach(([key,column])=>{const input=document.querySelector(`[data-profile-setting="${key}"]`);if(input)input.checked=Boolean(state.profile?.[column]);});
 }
 async function loadProfile(){const result=await supabase.from("profiles").select("allow_messages,allow_requests,show_email,notify_messages,notify_replies,notify_follows,notify_mentions").eq("id",state.user.id).maybeSingle();if(result.error)throw result.error;state.profile=result.data||{};const map={messages:"notify_messages",replies:"notify_replies",follows:"notify_follows",mentions:"notify_mentions"};Object.entries(map).forEach(([pref,column])=>{if(typeof state.profile[column]==="boolean")state.preferences.notifications[pref]=state.profile[column];});}
-async function saveAll(){if(!state.user||state.saving)return;state.saving=true;setStatus("Saving…");try{const profileUpdates={};document.querySelectorAll("[data-profile-setting]").forEach(input=>{profileUpdates[input.dataset.profileSetting]=input.checked;});const map={messages:"notify_messages",replies:"notify_replies",follows:"notify_follows",mentions:"notify_mentions"};Object.entries(map).forEach(([pref,column])=>{profileUpdates[column]=Boolean(state.preferences.notifications[pref]);});const profileResult=await supabase.from("profiles").update(profileUpdates).eq("id",state.user.id);if(profileResult.error)throw profileResult.error;await saveUserPreferences(state.user.id,state.preferences);setStatus("Saved","success");}catch(error){setStatus(error?.message||"Could not save settings.","error");reportAppError(error,"Settings save failed");}finally{state.saving=false;}}
-function scheduleSave(){clearTimeout(state.timer);setStatus("Changes pending…");state.timer=window.setTimeout(()=>void saveAll(),500);}
+let dirty = false;
+async function saveAll() {
+  if (!state.user) return;
+  if (state.saving) { dirty = true; return; }
+  state.saving = true; dirty = false; setStatus("Saving…");
+  const preferences = structuredClone(state.preferences);
+  try {
+    const updates = {};
+    document.querySelectorAll("[data-profile-setting]").forEach(input => { updates[input.dataset.profileSetting] = input.checked; });
+    const map = { messages: "notify_messages", replies: "notify_replies", follows: "notify_follows", mentions: "notify_mentions" };
+    Object.entries(map).forEach(([pref, column]) => { updates[column] = Boolean(preferences.notifications[pref]); });
+    const result = await supabase.from("profiles").update(updates).eq("id", state.user.id);
+    if (result.error) throw result.error;
+    await saveUserPreferences(state.user.id, preferences);
+    setStatus(dirty ? "Saving your latest changes…" : "Saved", "success");
+  } catch (error) {
+    console.error("Settings save failed:", error);
+    setStatus("Could not save. Your changes are still here. Change a setting to retry.", "error");
+  } finally {
+    state.saving = false;
+    if (dirty) { clearTimeout(state.timer); void saveAll(); }
+  }
+}
+function scheduleSave(){dirty=true;clearTimeout(state.timer);setStatus("Changes pending…");state.timer=window.setTimeout(()=>void saveAll(),500);}
 
 function wireRecommendationReset(){
   const feedSection=$("feed");if(!feedSection||$("clearRecommendationFeedbackBtn"))return;
@@ -41,10 +63,22 @@ function wireControls(){
   document.querySelectorAll("[data-profile-setting]").forEach(input=>input.addEventListener("change",scheduleSave));
   wireRecommendationReset();
   $("clearLocalDataBtn")?.addEventListener("click",()=>{writeLocalPreferences(state.user.id,mergePreferences());setStatus("Local preferences cleared. Server preferences remain saved.","success");});
-  $("cookieSettingsBtn")?.addEventListener("click",()=>{if(typeof window.openCookieSettings==="function")window.openCookieSettings();else setStatus("Cookie settings are available from the privacy banner on this page.");});
   const nav=$("settingsNav"),links=[...(nav?.querySelectorAll("a")||[])],sections=links.map(link=>document.querySelector(link.getAttribute("href"))).filter(Boolean);
   if(links.length&&"IntersectionObserver"in window){const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{const link=nav.querySelector(`a[href="#${entry.target.id}"]`);if(link&&entry.isIntersecting){links.forEach(item=>item.classList.remove("active"));link.classList.add("active");}}),{rootMargin:"-20% 0px -65% 0px",threshold:0});sections.forEach(section=>observer.observe(section));}
 }
 
-async function boot(){mountExtraSettings();state.user=await getCurrentUser();if(!state.user){setStatus("Sign in to save personal settings.");document.querySelectorAll("input,select,button[data-path]").forEach(control=>{if(!control.closest("#cookies"))control.disabled=true;});return;}state.preferences=mergePreferences(await loadUserPreferences(state.user));await loadProfile();applyControls();wireControls();setStatus("Settings loaded","success");}
+async function boot() {
+  mountExtraSettings();
+  $("cookieSettingsBtn")?.addEventListener("click", () => window.openCookieSettings?.());
+  state.user = await getCurrentUser();
+  if (!state.user) {
+    setStatus("Sign in to save personal settings.");
+    document.querySelectorAll(".settings-content input, .settings-content select, .settings-content button").forEach(control => { if (!control.closest("#cookies")) control.disabled = true; });
+    const link = document.createElement("a"); link.className = "btn"; link.href = "/login.html?next=settings.html"; link.textContent = "Sign in to manage settings";
+    document.querySelector(".settings-hero")?.append(link);
+    return;
+  }
+  state.preferences = mergePreferences(await loadUserPreferences(state.user));
+  await loadProfile(); applyControls(); wireControls(); setStatus("Settings loaded", "success");
+}
 boot().catch(error=>{setStatus(error?.message||"Could not load settings.","error");reportAppError(error,"Settings page load failed");});

@@ -1,6 +1,6 @@
 # Production Readiness
 
-**Current status: code hardening is under review; readiness for millions of users has not been demonstrated.** Read [the 6 October 2026 review](docs/production-review-2026-10-06.md) for verified findings, fixes, deployment drift, and launch blockers. Older completion reports are historical, not evidence of current readiness.
+**Current status: code hardening is under review; readiness for millions of users has not been demonstrated.** Read [the 8 October sitewide review](docs/sitewide-review-2026-10-08.md) for the redesign, repairs, test evidence and current launch blockers, alongside [the initial production assessment](docs/production-review-2026-10-06.md). Older completion reports are historical, not evidence of current readiness.
 
 ## Release gates
 
@@ -20,4 +20,5 @@
 - Server credentials and provider secrets stay in the hosting environment. The browser publishable key is public by design; database grants/RLS enforce access.
 - Privileged endpoint access requires an existing active profile with the correct current role. Role/profile synchronization failures must be repaired rather than treated as success.
 - A preview currently uses the hardcoded production backend unless its frontend configuration is explicitly changed for staging. Do not run mutating E2E/load tests against it by default.
+- Recurring maintenance invokes the automation RPC only. Automatic legacy-media migration and deletion were removed because partial reference scans cannot establish safe deletion. Old public chat media still needs a separately validated migration.
 - No production deployment or database migration is performed by the validation workflow.

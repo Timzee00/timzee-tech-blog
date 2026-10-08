@@ -17,6 +17,7 @@
     "rss-parser": "3.13.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.11.1",
     "@playwright/test": "1.63.0",
     "esbuild": "0.28.2",
     "pgsql-parser": "18.2.9"

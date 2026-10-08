@@ -4,13 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Admin Dashboard - Timzee Tech Hub</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/admin.css">
       <script defer src="../assets/js/theme-init.js"></script>
   </head>
   <body class="admin-shell">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <div class="topbar">
       <div class="container" style="display:flex; align-items:center; justify-content:space-between;">
         <div class="brand">
@@ -24,7 +22,7 @@
       </div>
     </div>
 
-    <main class="container admin-panel" id="adminApp">
+    <main id="main-content" class="container admin-panel" id="adminApp">
       <nav class="admin-nav">
         <button class="active" data-tab="compose">Compose</button>
         <button data-tab="posts">Manage Posts</button>
@@ -42,7 +40,7 @@
 
       <section class="admin-card" data-panel="compose">
         <h2>Create or Update Post</h2>
-        <form id="postForm" class="admin-form">
+        <form novalidate id="postForm" class="admin-form">
           <input type="text" id="postTitle" placeholder="Post title" required>
           <select id="postCategory" required></select>
           <div id="customCategoryWrap" class="hidden">
@@ -87,7 +85,7 @@
             <button type="button" data-action="clear">Clear</button>
           </div>
           <div id="postEditor" class="rich-editor" contenteditable="true" data-placeholder="Write your post..." aria-label="Post editor"></div>
-          <textarea id="postContent" class="hidden" aria-hidden="true"></textarea>
+          <textarea id="postContent" class="resize-none hidden" aria-hidden="true"></textarea>
           <div class="inline-actions">
             <button class="btn" type="submit" id="savePostBtn">Publish</button>
             <button class="btn ghost" type="button" id="reviewPostBtn">Review Post</button>
@@ -148,7 +146,7 @@
 
       <section class="admin-card" data-panel="announcements" style="display:none;">
         <h2>System Announcements</h2>
-        <form id="announcementForm" class="admin-form">
+        <form novalidate id="announcementForm" class="admin-form">
           <input type="text" id="announcementTitle" placeholder="Announcement title" required>
           <select id="announcementType" required>
             <option value="">Select type...</option>
@@ -157,7 +155,7 @@
             <option value="success">✅ Success</option>
             <option value="critical">🔴 Critical</option>
           </select>
-          <textarea id="announcementMessage" placeholder="Announcement message" rows="5" required></textarea>
+          <textarea id="announcementMessage" placeholder="Announcement message" rows="5" required class="resize-none"></textarea>
           <select id="announcementStatus">
             <option value="published">Publish now</option>
             <option value="draft">Save as draft</option>
@@ -189,10 +187,10 @@
       <section class="admin-card" data-panel="faq" style="display:none;">
         <h2>FAQ Manager</h2>
         <p class="hint">Create and update the support FAQ shown on the public Support page.</p>
-        <form id="faqForm" class="admin-form">
+        <form novalidate id="faqForm" class="admin-form">
           <input type="hidden" id="faqId">
           <input type="text" id="faqQuestion" placeholder="Question" required>
-          <textarea id="faqAnswer" placeholder="Answer" rows="4" required></textarea>
+          <textarea id="faqAnswer" placeholder="Answer" rows="4" required class="resize-none"></textarea>
           <input type="text" id="faqCategory" placeholder="Category (optional)">
           <label style="display:block; margin-top:8px;"><input type="checkbox" id="faqPublished" checked> Published</label>
           <div class="inline-actions" style="margin-top:12px;">
@@ -225,11 +223,11 @@
           <h3 style="margin:0;">Add RSS Feed Source</h3>
           <button class="btn btn-ghost" id="importFeedsAdminBtn" style="margin-left:12px;">Import Recommended Feeds</button>
         </div>
-        <form id="curatorSourceForm" class="admin-form">
+        <form novalidate id="curatorSourceForm" class="admin-form">
           <input type="text" id="curatorSourceName" placeholder="Source name (e.g., TechCrunch)" required>
           <input type="url" id="curatorSourceUrl" placeholder="RSS feed URL" required>
           <select id="curatorSourceCategory" required></select>
-          <textarea id="curatorSourceDescription" placeholder="Description of this source" rows="3"></textarea>
+          <textarea id="curatorSourceDescription" placeholder="Description of this source" rows="3" class="resize-none"></textarea>
           <div class="inline-actions">
             <button class="btn" type="submit">Add Source</button>
             <button class="btn ghost" type="button" id="resetCuratorBtn">Reset</button>
@@ -253,7 +251,7 @@
         </div>
 
         <h3 style="margin-top: 30px;">Bot Settings</h3>
-        <form id="botSettingsForm" class="admin-form">
+        <form novalidate id="botSettingsForm" class="admin-form">
           <label class="badge">Check Interval (hours)</label>
           <input type="number" id="botCheckInterval" value="6" min="1" max="24">
           
@@ -333,7 +331,7 @@
 
       <section class="admin-card" data-panel="themes" style="display:none;">
         <h2>Theme Library</h2>
-        <form id="themeForm" class="admin-form">
+        <form novalidate id="themeForm" class="admin-form">
           <input type="text" id="themeName" placeholder="Theme name" required>
           <input type="text" id="themeDescription" placeholder="Short description">
           <label class="badge">Wallpaper</label>
@@ -363,7 +361,7 @@
 
       <section class="admin-card" data-panel="ads" style="display:none;">
         <h2>Ad Manager</h2>
-        <form id="adForm" class="admin-form">
+        <form novalidate id="adForm" class="admin-form">
           <input type="text" id="adTitle" placeholder="Ad title" required>
           <input type="text" id="adBody" placeholder="Short description">
           <input type="url" id="adLink" placeholder="Destination URL" required>

@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Marketplace - Timzee Tech Hub</title>
     <meta name="description" content="Buy and sell tech products and services">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -39,7 +36,7 @@
           <div class="search-box">
             <input type="search" id="marketplaceSearch" placeholder="Search listings...">
           </div>
-          <a class="btn" href="#create" id="createBtnHeader" style="display: none;">Sell Item</a>
+          <a class="btn" href="#createSection" id="createBtnHeader" style="display: none;">Sell Item</a>
           <a class="icon-btn" href="stories.html" data-label="Stories" aria-label="Stories" title="Stories">&#128247;</a>
           <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
@@ -53,18 +50,18 @@
         <p class="tagline">Discover tech products, services, and gear from our community</p>
 
         <div class="category-filter" id="categoryFilter">
-          <button class="filter-btn active" data-category="all">All</button>
-          <button class="filter-btn" data-category="electronics">Electronics</button>
-          <button class="filter-btn" data-category="software">Software</button>
-          <button class="filter-btn" data-category="hardware">Hardware</button>
-          <button class="filter-btn" data-category="services">Services</button>
-          <button class="filter-btn" data-category="other">Other</button>
+          <button class="filter-btn active" aria-pressed="true" data-category="all">All</button>
+          <button class="filter-btn" aria-pressed="false" data-category="electronics">Electronics</button>
+          <button class="filter-btn" aria-pressed="false" data-category="software">Software</button>
+          <button class="filter-btn" aria-pressed="false" data-category="hardware">Hardware</button>
+          <button class="filter-btn" aria-pressed="false" data-category="services">Services</button>
+          <button class="filter-btn" aria-pressed="false" data-category="other">Other</button>
         </div>
 
         <div id="createSection" class="market-panel" style="display: none;">
           <h2>Create Listing</h2>
           <p class="market-help">Your WhatsApp number is used only for marketplace buyer contact and can be updated from your seller profile.</p>
-          <form id="createForm">
+          <form novalidate id="createForm">
             <div class="market-form-row">
               <div>
                 <label for="listingTitle"><strong>Title</strong></label>
@@ -83,7 +80,7 @@
             </div>
 
             <label for="listingDescription"><strong>Description</strong></label>
-            <textarea id="listingDescription" placeholder="Describe your item..." maxlength="5000" style="margin-bottom: 16px;"></textarea>
+            <textarea id="listingDescription" placeholder="Describe your item..." maxlength="5000" style="margin-bottom: 16px;" class="resize-none"></textarea>
 
             <div class="market-form-row">
               <div>
@@ -151,6 +148,8 @@
 
     <script type="module" src="assets/js/nav.js"></script>
     <script type="module">
+      import { icon } from "./assets/js/icons.js";
+      import { bindSearch } from "./assets/js/search-input.js";
       import {
         fetchMarketplaceItems,
         searchMarketplace,
@@ -261,7 +260,6 @@
             await signOut();
             window.location.reload();
           });
-          document.getElementById("createSection").style.display = "block";
           document.getElementById("createBtnHeader").style.display = "inline-flex";
           await loadSellerProfile();
         } else {
@@ -269,42 +267,52 @@
         }
       }
 
+      let listVersion = 0;
+      let loading = false;
       async function loadListings() {
+        const version = ++listVersion;
+        const offset = state.offset;
+        const query = document.getElementById("marketplaceSearch").value.trim();
+        const category = state.category === "all" ? null : state.category;
+        const container = document.getElementById("listingsContainer");
+        const more = document.getElementById("loadMoreBtn");
+        loading = true; more.disabled = true; container.setAttribute("aria-busy", "true");
         try {
-          const listings = await fetchMarketplaceItems({
-            category: state.category === "all" ? null : state.category,
-            limit: state.limit,
-            offset: state.offset,
-            onlyAvailable: true
+          const rows = await (query ? searchMarketplace : fetchMarketplaceItems)({
+            query, category, limit: state.limit, offset,
+            onlyAvailable: true,
           });
-
-          if (state.offset === 0) state.listings = listings;
-          else state.listings.push(...listings);
-
+          if (version !== listVersion || query !== document.getElementById("marketplaceSearch").value.trim()) return;
+          state.listings = offset === 0 ? rows : [...state.listings, ...rows];
           renderListings();
-          document.getElementById("loadMoreBtn").style.display = listings.length === state.limit ? "inline-flex" : "none";
+          more.style.display = rows.length === state.limit ? "inline-flex" : "none";
         } catch (error) {
-          console.error("Load marketplace error:", error);
-          document.getElementById("listingsContainer").innerHTML = `<div class="callout">Failed to load listings. Please try again.</div>`;
+          if (version !== listVersion) return;
+          console.error("Could not load listings:", error);
+          if (offset) state.offset = Math.max(0, offset - state.limit);
+          else container.innerHTML = '<div class="callout" role="status">We couldn’t load listings. <button type="button" class="btn ghost" data-retry-list>Try again</button></div>';
+          container.querySelector("[data-retry-list]")?.addEventListener("click", () => loadListings());
+        } finally {
+          if (version === listVersion) { loading = false; more.disabled = false; container.setAttribute("aria-busy", "false"); }
         }
       }
 
       function renderListings() {
         const container = document.getElementById("listingsContainer");
         if (!state.listings.length) {
-          container.innerHTML = `<div class="callout">No listings in this category</div>`;
+          container.innerHTML = `<div class="callout">No listings here yet. Try another category or come back soon.</div>`;
           return;
         }
 
         container.innerHTML = `<div class="marketplace-grid">${state.listings.map((item) => `
-          <div class="listing-card" data-id="${encodeURIComponent(item.id)}">
+          <article class="listing-card" data-id="${encodeURIComponent(item.id)}">
             <div class="listing-image">
-              ${item.images?.[0] && isSafeUrl(item.images[0]) ? `<img src="${escapeHTML(item.images[0])}" alt="${escapeHTML(item.title || '')}">` : '<div class="listing-image-placeholder" aria-hidden="true">Image</div>'}
+              ${item.images?.[0] && isSafeUrl(item.images[0]) ? `<img src="${escapeHTML(item.images[0])}" alt="${escapeHTML(item.title || '')}">` : `<div class="listing-image-placeholder" aria-hidden="true">${icon("stories")}<span>No photo yet</span></div>`}
               ${item.condition ? `<div class="listing-badge">${escapeHTML(item.condition)}</div>` : ''}
             </div>
             <div class="listing-info">
               <div class="listing-category">${escapeHTML(item.category || '')}</div>
-              <div class="listing-title">${escapeHTML(item.title || '')}</div>
+              <h2 class="listing-title"><a href="listing.html?id=${encodeURIComponent(item.id)}">${escapeHTML(item.title || 'Untitled listing')}</a></h2>
               <div class="listing-price">${escapeHTML(item.currency || "USD")} ${escapeHTML((parseFloat(item.price) || 0).toFixed(2))}</div>
               <div class="listing-meta">
                 <span>Views ${escapeHTML(String(item.view_count || 0))}</span>
@@ -316,50 +324,24 @@
                 ${item.seller_verified ? '<span class="badge-chip verified" title="Verified Seller">Verified Seller</span>' : ''}
               </div>
             </div>
-          </div>
+          </article>
         `).join("")}</div>`;
 
-        container.querySelectorAll(".listing-card").forEach((card) => {
-          card.addEventListener("click", () => {
-            window.location.href = `listing.html?id=${card.dataset.id}`;
-          });
-        });
+
       }
 
       document.getElementById("categoryFilter").addEventListener("click", (event) => {
         const button = event.target.closest(".filter-btn");
         if (!button) return;
-        document.querySelectorAll(".filter-btn").forEach((btn) => btn.classList.remove("active"));
+        document.querySelectorAll(".filter-btn").forEach((btn) => { btn.classList.remove("active"); btn.setAttribute("aria-pressed", "false"); });
         button.classList.add("active");
+        button.setAttribute("aria-pressed", "true");
         state.category = button.dataset.category || "all";
         state.offset = 0;
         loadListings();
       });
 
-      let searchTimer;
-      document.getElementById("marketplaceSearch").addEventListener("input", (event) => {
-        clearTimeout(searchTimer);
-        const term = event.target.value.trim();
-        if (term.length < 2) {
-          state.offset = 0;
-          loadListings();
-          return;
-        }
-        searchTimer = setTimeout(async () => {
-          try {
-            const results = await searchMarketplace({
-              query: term,
-              category: state.category === "all" ? null : state.category,
-              limit: state.limit
-            });
-            state.listings = results;
-            state.offset = 0;
-            renderListings();
-          } catch (error) {
-            console.error("Marketplace search error:", error);
-          }
-        }, 300);
-      });
+      bindSearch(document.getElementById("marketplaceSearch"), () => { state.offset = 0; void loadListings(); });
 
       document.getElementById("listingPhotos").addEventListener("change", (event) => {
         addSelectedPhotos(event.target.files);
@@ -459,6 +441,7 @@
       });
 
       document.getElementById("loadMoreBtn").addEventListener("click", () => {
+        if (loading) return;
         state.offset += state.limit;
         loadListings();
       });

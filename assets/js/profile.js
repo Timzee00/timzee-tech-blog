@@ -617,7 +617,7 @@ async function declineFriendRequest() {
 
 async function removeFriendship() {
   if (!state.friendship) return;
-  if (!confirm("Remove this friend?")) return;
+  if (!await window.appUI.confirm("Remove this friend?")) return;
   await supabase.from("friendships").delete().eq("id", state.friendship.id);
   state.friendship = null;
   renderProfileActions();
@@ -625,7 +625,7 @@ async function removeFriendship() {
 
 async function blockUser() {
   if (!state.user || !state.viewingId) return;
-  if (!confirm("Block this user? You will no longer receive messages.")) return;
+  if (!await window.appUI.confirm("Block this user? You will no longer receive messages.")) return;
   const now = new Date().toISOString();
   if (state.friendship) {
     await supabase

@@ -7,7 +7,7 @@
     <meta name="description" content="View member profiles, activity, and community connections on Timzee Tech Hub.">
     <meta name="keywords" content="Timzee Tech Hub, member profile, tech community, creators">
     <meta name="robots" content="index, follow">
-    <meta name="theme-color" content="#0f766e">
+    <meta name="theme-color" content="#087f73">
     <link rel="canonical" href="https://timzee-tech-blog.netlify.app/profile.html">
     <meta property="og:site_name" content="Timzee Tech Hub">
     <meta property="og:type" content="profile">
@@ -19,9 +19,6 @@
     <meta name="twitter:title" content="Profile - Timzee Tech Hub">
     <meta name="twitter:description" content="View member profiles, activity, and community connections on Timzee Tech Hub.">
     <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -162,12 +159,12 @@
         <div class="discussion-card" id="profileEditor">
           <h3>Profile Settings</h3>
           <div class="settings-grid">
-            <form id="profileForm" class="form-grid">
+            <form novalidate id="profileForm" class="form-grid">
               <h4>Profile Details</h4>
               <input type="text" id="editDisplayName" placeholder="Display name" required>
               <input type="text" id="editUsername" placeholder="Username (unique)">
               <input type="text" id="editHeadline" placeholder="Headline (e.g. Product builder, DevOps)">
-              <textarea id="editBio" placeholder="Short bio"></textarea>
+              <textarea id="editBio" placeholder="Short bio" class="resize-none"></textarea>
               <input type="text" id="editLocation" placeholder="Location">
               <input type="text" id="editWebsite" placeholder="Website URL">
               <input type="text" id="editAvatarUrl" placeholder="Avatar URL (optional)">
@@ -180,7 +177,7 @@
               <div class="callout" id="profileStatus" style="margin-top:12px; display:none;"></div>
             </form>
 
-            <form id="privacyForm" class="form-grid">
+            <form novalidate id="privacyForm" class="form-grid">
               <h4>Privacy & Notifications</h4>
               <label><input type="checkbox" id="toggleMessages"> Allow direct messages</label>
               <label><input type="checkbox" id="toggleRequests"> Allow friend requests</label>
@@ -193,7 +190,7 @@
               <div class="callout" id="privacyStatus" style="margin-top:12px; display:none;"></div>
             </form>
 
-            <form id="securityForm" class="form-grid">
+            <form novalidate id="securityForm" class="form-grid">
               <h4>Account Security</h4>
               <input type="email" id="securityEmail" placeholder="Current email" readonly>
               <input type="email" id="securityNewEmail" placeholder="New email (optional)">
@@ -203,9 +200,9 @@
               <div class="callout" id="securityStatus" style="margin-top:12px; display:none;"></div>
             </form>
 
-            <form id="adminRequestForm" class="form-grid">
+            <form novalidate id="adminRequestForm" class="form-grid">
               <h4>Admin Access</h4>
-              <textarea id="adminRequestMessage" placeholder="Tell us why you want to be an admin"></textarea>
+              <textarea id="adminRequestMessage" placeholder="Tell us why you want to be an admin" class="resize-none"></textarea>
               <button type="submit" class="btn ghost">Request admin access</button>
               <div class="callout" id="adminRequestStatus" style="margin-top:12px; display:none;"></div>
             </form>

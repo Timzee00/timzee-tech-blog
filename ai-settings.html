@@ -6,9 +6,6 @@
     <title>AI Settings - Timzee Tech Hub</title>
     <meta name="robots" content="noindex, nofollow">
     <meta name="description" content="Configure the Timzee AI assistant provider and model.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -84,9 +81,9 @@
           <h3 id="chatHeading">Quick Chat</h3>
           <p>Send a test message without creating a saved conversation.</p>
           <div id="chatPreview" class="ai-quick-chat" aria-live="polite"></div>
-          <form id="quickChatForm" class="ai-quick-chat-form">
+          <form novalidate id="quickChatForm" class="ai-quick-chat-form">
             <label class="sr-only" for="quickChatInput">Message</label>
-            <textarea id="quickChatInput" rows="2" maxlength="4000" placeholder="Ask the AI anything..." required></textarea>
+            <textarea id="quickChatInput" rows="2" maxlength="4000" placeholder="Ask the AI anything..." required class="resize-none"></textarea>
             <button class="btn" type="submit" id="quickChatBtn">Send</button>
           </form>
         </section>

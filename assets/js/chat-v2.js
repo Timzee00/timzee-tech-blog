@@ -1,6 +1,7 @@
 import { fetchMessagePage } from "./chat-history.mjs";
 import { supabase, getCurrentUserWithRole, getDisplayName } from "./supabase.js";
 import { uploadMedia } from "./media.js";
+import { loadUserPreferences, saveUserPreferences } from "./user-preferences.js";
 import { escapeHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
 
 const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
@@ -62,7 +63,33 @@ function readSettings() {
   try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") }; }
   catch (_) { return { ...DEFAULT_SETTINGS }; }
 }
-function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch (_) {} }
+let settingsSaving = false;
+let settingsDirty = false;
+function applySettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch (_) {}
+  document.documentElement.dataset.chatCompact = String(state.settings.compact === true);
+  defaultSettingsUI();
+}
+async function saveSettings() {
+  applySettings(); settingsDirty = true;
+  if (settingsSaving || !state.user) return;
+  settingsSaving = true;
+  const status = $("chatSettingsStatus");
+  try {
+    while (settingsDirty) {
+      settingsDirty = false;
+      if (status) status.textContent = "Saving…";
+      await saveUserPreferences(state.user.id, { chat: { ...state.settings } });
+    }
+    if (status) status.textContent = "Saved";
+  } catch (error) {
+    if (status) status.textContent = "Could not sync. Change a setting to retry.";
+    console.error("Chat settings save failed:", error);
+  } finally {
+    settingsSaving = false;
+    if (settingsDirty) void saveSettings();
+  }
+}
 function defaultSettingsUI() { document.querySelectorAll("[data-chat-setting]").forEach((input) => { input.checked = Boolean(state.settings[input.dataset.chatSetting]); }); }
 function setView(view) {
   if (view !== 'chat' && view !== 'info') { stopRecording(false); clearMediaPreview(); }
@@ -272,12 +299,12 @@ async function sendMessage() {
     state.sending = false;
   }
 }
-function openModal(id){$(id)?.removeAttribute('hidden');document.body.classList.add('modal-open');}
-function closeModal(id){$(id)?.setAttribute('hidden','');document.body.classList.remove('modal-open');}
+function openModal(id){const dialog=$(id);if(!dialog)return;dialog.showModal();document.body.classList.add('modal-open');dialog.addEventListener('close',()=>document.body.classList.remove('modal-open'),{once:true});}
+function closeModal(id){$(id)?.close();document.body.classList.remove('modal-open');}
 function renderGroupPicker(){const target=$("groupMemberPicker");if(!target)return;target.innerHTML=state.friends.map(id=>{const p=profileFor(id)||{};return `<label class="chat-picker-row"><input type="checkbox" value="${id}"><img src="${escapeHTML(p.avatar_url||DEFAULT_AVATAR)}" alt=""><span><strong>${escapeHTML(p.display_name||'Member')}</strong><small>${escapeHTML(p.username||'')}</small></span></label>`}).join('');$("groupPickerEmpty").hidden=state.friends.length!==0;}
 async function createGroup(){const name=($("newGroupName").value||'').trim();const selected=[...document.querySelectorAll('#groupMemberPicker input:checked')].map(i=>i.value);if(!name)throw new Error('Enter a group name.');if(!selected.length)throw new Error('Choose at least one friend.');const id=crypto.randomUUID(),now=new Date().toISOString();const thread=await supabase.from('chat_threads').insert({id,name,is_group:true,created_by:state.user.id,created_at:now,updated_at:now,settings:{}}).select().single();if(thread.error)throw thread.error;const members=[...new Set([state.user.id,...selected])].map(user_id=>({id:crypto.randomUUID(),thread_id:id,user_id,role:user_id===state.user.id?'owner':'member',joined_at:now,tags:[]}));const result=await supabase.from('chat_members').insert(members);if(result.error){await supabase.from('chat_threads').delete().eq('id',id);throw result.error;}closeModal('friendPickerModal');await loadAllChatData();renderGroups();await selectGroup(id);}
 async function editGroup(){const group=activeGroup();if(!group||!isOwnerOfActiveGroup())return;const patch={name:($("groupNameInput").value||'').trim().slice(0,80),description:($("groupDescriptionInput").value||'').trim().slice(0,300),updated_at:new Date().toISOString()};if(!patch.name)throw new Error('Group name is required.');if($("groupAvatarInput")?.files?.[0])patch.avatar_url=await uploadMedia($("groupAvatarInput").files[0],`group-avatars/${state.user.id}`);const result=await supabase.from('chat_threads').update(patch).eq('id',group.id).eq('created_by',state.user.id);if(result.error)throw result.error;Object.assign(group,patch);updateHeaderForGroup(group);renderGroups();$("groupEditor").hidden=true;}
-async function editMemberTags(memberId){if(!isOwnerOfActiveGroup())return;const member=(state.groupMembers.get(state.activeGroupId)||[]).find(m=>m.id===memberId);if(!member)return;const raw=window.prompt('Member tags for this group, separated by commas:',(member.tags||[]).join(', '));if(raw===null)return;const tags=[...new Set(raw.split(',').map(t=>t.trim()).filter(Boolean).slice(0,8))];const result=await supabase.from('chat_members').update({tags}).eq('id',memberId).eq('thread_id',state.activeGroupId);if(result.error)throw result.error;member.tags=tags;renderGroupMembers();}
+async function editMemberTags(memberId){if(!isOwnerOfActiveGroup())return;const member=(state.groupMembers.get(state.activeGroupId)||[]).find(m=>m.id===memberId);if(!member)return;const raw=await window.appUI.prompt('Member tags for this group, separated by commas:',(member.tags||[]).join(', '));if(raw===null)return;const tags=[...new Set(raw.split(',').map(t=>t.trim()).filter(Boolean).slice(0,8))];const result=await supabase.from('chat_members').update({tags}).eq('id',memberId).eq('thread_id',state.activeGroupId);if(result.error)throw result.error;member.tags=tags;renderGroupMembers();}
 async function toggleChatMemberFlag(kind){const threadId=state.activeThreadId;if(!threadId)return;const existing=await supabase.from('chat_members').select('is_muted,is_pinned').eq('thread_id',threadId).eq('user_id',state.user.id).maybeSingle();if(existing.error)throw existing.error;if(!existing.data){window.siteToast?.('Pin and mute settings are currently available for group memberships.',{type:'info',title:'Chat'});return;}const key=kind==='mute'?'is_muted':'is_pinned';const next=!Boolean(existing.data[key]);const result=await supabase.from('chat_members').update({[key]:next}).eq('thread_id',threadId).eq('user_id',state.user.id);if(result.error)throw result.error;const group=activeGroup();if(group)group[key]=next;renderGroups();window.siteToast?.(`${kind==='mute'?'Notifications':'Chat'} ${next?'updated':'restored'}.`,{type:'info',title:'Chat'});}
 function setupTabs(){const tabs=document.querySelectorAll('.chat-tab'),panels=document.querySelectorAll('.chat-tab-panel');tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(t=>{const a=t===tab;t.classList.toggle('active',a);t.setAttribute('aria-selected',String(a));});panels.forEach(p=>p.hidden=p.dataset.panel!==tab.dataset.tab);$("peopleSearchPanel").hidden=true;}));}
 function setupEvents(){
@@ -288,7 +315,7 @@ function setupEvents(){
   $("blockedList")?.addEventListener('click',async e=>{const b=e.target.closest('[data-unblock]');if(!b)return;const row=state.friendships.find(r=>r.status==='blocked'&&r.blocked_by===state.user.id&&(r.requester_id===b.dataset.unblock||r.addressee_id===b.dataset.unblock));if(row)await supabase.from('friendships').delete().eq('id',row.id);await loadAllChatData();renderBlocked();await renderFriends();});
   $("peopleResults")?.addEventListener('click',async e=>{const b=e.target.closest('button[data-people-action]');if(!b||b.disabled)return;if(b.dataset.peopleAction==='message')await selectFriend(b.dataset.id);else{const r=await supabase.from('friendships').insert({id:crypto.randomUUID(),requester_id:state.user.id,requester_name:getDisplayName(state.user),addressee_id:b.dataset.id,status:'pending',created_at:new Date().toISOString()});if(r.error)throw r.error;await loadAllChatData();renderPeopleResults();renderRequests();}});
   $("chatBody")?.addEventListener('input',()=>{const t=$("chatBody");t.style.height='auto';t.style.height=`${Math.min(t.scrollHeight,140)}px`;broadcastTyping(true);clearTimeout(t._typingTimer);t._typingTimer=setTimeout(()=>broadcastTyping(false),900);});
-  $("chatBody")?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&state.settings.enterToSend){e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));}}); $("chatForm")?.addEventListener('submit',e=>{e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));});
+  $("chatBody")?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&state.settings.enterToSend){e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));}}); $("chatForm")?.addEventListener('submit',e=>{e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));});
   $("chatMedia")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)showMediaPreview(f);e.target.value='';});
   $("recordVoiceBtn")?.addEventListener('click',()=>{
     if(state.recorder||state.recordingStarting){stopRecording(false);return;}
@@ -303,7 +330,7 @@ function setupEvents(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$("voiceRecordingSheet")?.hidden){stopRecording(false);clearMediaPreview();}});
   $("chatBackBtn")?.addEventListener('click',async()=>{await unsubscribeRealtime();setView('list');}); $("chatInfoToggle")?.addEventListener('click',()=>{$("chatInfoPanel").classList.add('open');$("chatInfoBackdrop").hidden=false;}); $("chatInfoClose")?.addEventListener('click',()=>{$("chatInfoPanel").classList.remove('open');$("chatInfoBackdrop").hidden=true;}); $("chatInfoBackdrop")?.addEventListener('click',()=>{$("chatInfoPanel").classList.remove('open');$("chatInfoBackdrop").hidden=true;});
   $("chatMenuToggle")?.addEventListener('click',e=>{e.stopPropagation();$("chatHeaderMenu").hidden?openHeaderMenu():closeHeaderMenu();}); document.addEventListener('click',e=>{if(!e.target.closest('.chat-header-actions'))closeHeaderMenu();});
-  $("chatHeaderMenu")?.addEventListener('click',async e=>{const a=e.target.closest('[data-chat-menu]')?.dataset.chatMenu;if(!a)return;closeHeaderMenu();if(a==='search'){state.messageSearchTerm=window.prompt('Search in this chat:',state.messageSearchTerm)||'';renderMessages();}if(a==='settings'){defaultSettingsUI();openModal('chatSettingsModal');}if(a==='mute'||a==='pin')await toggleChatMemberFlag(a);if(a==='report')location.href='contact.html?subject='+encodeURIComponent('Chat report');});
+  $("chatHeaderMenu")?.addEventListener('click',async e=>{const a=e.target.closest('[data-chat-menu]')?.dataset.chatMenu;if(!a)return;closeHeaderMenu();if(a==='search'){state.messageSearchTerm=await window.appUI.prompt('Search in this chat:',state.messageSearchTerm)||'';renderMessages();}if(a==='settings'){defaultSettingsUI();openModal('chatSettingsModal');}if(a==='mute'||a==='pin')await toggleChatMemberFlag(a);if(a==='report')location.href='contact.html?subject='+encodeURIComponent('Chat report');});
   document.querySelectorAll('[data-close-modal]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.closeModal))); document.querySelectorAll('[data-chat-setting]').forEach(i=>i.addEventListener('change',()=>{state.settings[i.dataset.chatSetting]=i.checked;saveSettings();}));
   $("peopleSearchToggle")?.addEventListener('click',()=>{$("peopleSearchPanel").hidden=!$("peopleSearchPanel").hidden;if(!$("peopleSearchPanel").hidden){$("peopleSearch").focus();renderPeopleResults();}}); $("newGroupBtn")?.addEventListener('click',()=>{renderGroupPicker();openModal('friendPickerModal');}); $("friendPickerClose")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCancel")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCreate")?.addEventListener('click',()=>createGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Create group'})));
   $("groupMemberSearch")?.addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#groupMemberPicker .chat-picker-row').forEach(r=>r.hidden=!r.innerText.toLowerCase().includes(q));}); $("editGroupBtn")?.addEventListener('click',()=>{const g=activeGroup();if(g){$("groupAvatarPreview").src=g.avatar_url||DEFAULT_GROUP_AVATAR;$("groupNameInput").value=g.name||'';$("groupDescriptionInput").value=g.description||'';$("groupEditor").hidden=false;}}); $("groupAvatarInput")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)$("groupAvatarPreview").src=URL.createObjectURL(f);}); $("cancelGroupBtn")?.addEventListener('click',()=>{$("groupEditor").hidden=true;}); $("saveGroupBtn")?.addEventListener('click',()=>editGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Group settings'}))); $("infoGroupMembers")?.addEventListener('click',e=>{const b=e.target.closest('[data-edit-member-tags]');if(b)editMemberTags(b.dataset.editMemberTags).catch(err=>window.siteToast?.(err.message,{type:'error',title:'Member tag'}));});
@@ -311,5 +338,5 @@ function setupEvents(){
 }
 async function handleRequests(e){const b=e.target.closest('button[data-request]');if(!b)return;const row=state.friendships.find(r=>r.id===b.dataset.id);if(!row)return;if(b.dataset.request==='accept'){const r=await supabase.from('friendships').update({status:'accepted',updated_at:new Date().toISOString()}).eq('id',row.id);if(r.error)throw r.error;}else{const r=await supabase.from('friendships').delete().eq('id',row.id);if(r.error)throw r.error;}await loadAllChatData();renderRequests();renderBlocked();await renderFriends();renderPeopleResults();}
 
-async function boot(){setupTabs();setupEvents();state.settings=readSettings();defaultSettingsUI();state.user=await getCurrentUserWithRole();if(!state.user){$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}await loadAllChatData();await renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('user')&&state.friends.includes(params.get('user')))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
+async function boot(){setupTabs();setupEvents();state.settings=readSettings();applySettings();state.user=await getCurrentUserWithRole();if(!state.user){$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}const preferences=await loadUserPreferences(state.user);state.settings={...DEFAULT_SETTINGS,...preferences.chat};applySettings();document.documentElement.dataset.groupTags=preferences.groups?.showMemberTags===false?"hidden":"visible";await loadAllChatData();await renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('user')&&state.friends.includes(params.get('user')))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
 boot().catch(err=>{reportAppError(err,'Chat initialization failed');if($("chatMessages"))$("chatMessages").innerHTML=`<div class="chat-no-messages">Unable to load chats right now. ${escapeHTML(err.message||'Please try again.')}</div>`;});

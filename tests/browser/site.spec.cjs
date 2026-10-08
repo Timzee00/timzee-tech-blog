@@ -59,7 +59,8 @@ test("public build excludes server source and identifies the release", async ({ 
   const css = await (await request.get("/assets/css/styles.css")).text();
   expect(html).toContain(`.js?v=${release.asset_version}`);
   expect(module).toContain(`supabase.mjs?v=${release.asset_version}`);
-  expect(css).toContain(`variables.css?v=${release.asset_version}`);
+  expect(css).not.toContain("@import");
+  expect(css).toContain("--color-primary");
 });
 
 test("long chats start with recent messages and load older history", async ({ page }) => {
@@ -74,6 +75,7 @@ test("long chats start with recent messages and load older history", async ({ pa
   }, { user });
   const historyRequests = [];
   const posted = [];
+  const settingWrites = [];
   let releasePost;
   const postGate = new Promise(resolve => { releasePost = resolve; });
   await page.route("https://duvbcwwprkzzyzikmcol.supabase.co/**", async route => {
@@ -84,6 +86,10 @@ test("long chats start with recent messages and load older history", async ({ pa
     else if (table === "profiles") data = { id: userId, role: "user", account_status: "active" };
     else if (table === "public_profiles") data = [{ id: friendId, display_name: "Test Friend" }];
     else if (table === "friendships") data = [{ id: "friendship", requester_id: userId, addressee_id: friendId, status: "accepted" }];
+    else if (table === "user_settings") {
+      data = { preferences: {} };
+      if (route.request().method() === "POST") settingWrites.push(route.request().postDataJSON());
+    }
     else if (table === "direct_messages" && route.request().method() === "POST") {
       data = route.request().postDataJSON();
       posted.push(data);
@@ -122,4 +128,14 @@ test("long chats start with recent messages and load older history", async ({ pa
   expect(posted).toHaveLength(1);
   expect(posted[0].thread_id).toBe(threadId);
   expect(posted[0].recipient_id).toBe(friendId);
+  await page.setViewportSize({ width: 360, height: 640 });
+  await expect.poll(() => page.locator('#chatForm').evaluate(el => el.getBoundingClientRect().bottom <= document.querySelector('.bottom-tab-bar').getBoundingClientRect().top + 1)).toBe(true);
+  await page.getByRole('button', { name: 'Conversation menu' }).click();
+  await page.getByRole('button', { name: 'Chat settings', exact: true }).click();
+  const settingsDialog = page.getByRole('dialog', { name: 'Chat settings', exact: true });
+  await settingsDialog.locator('[data-chat-setting="compact"]').check();
+  await expect(page.locator('#chatSettingsStatus')).toHaveText('Saved');
+  expect(settingWrites.at(-1).preferences.chat.compact).toBe(true);
+  await expect(page.locator('html')).toHaveAttribute('data-chat-compact', 'true');
+  await page.keyboard.press('Escape'); await expect(settingsDialog).toBeHidden();
 });

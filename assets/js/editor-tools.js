@@ -1,3 +1,4 @@
+import { isSafeUrl } from "./utils.js";
 function wrapSelection(textarea, before, after = before) {
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
@@ -25,9 +26,10 @@ function prefixLines(textarea, prefix) {
   textarea.focus();
 }
 
-function insertLink(textarea) {
-  const url = prompt("Enter URL (https://...)");
+async function insertLink(textarea) {
+  const url = await window.appUI.prompt("Enter URL (https://...)");
   if (!url) return;
+  if (!isSafeUrl(url)) { window.appUI.toast("Enter a valid http or https link.", { tone: "warning" }); return; }
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const value = textarea.value;
@@ -68,9 +70,13 @@ function formatBlock(tag) {
   exec("formatBlock", tag);
 }
 
-function createLinkFromSelection() {
-  const url = prompt("Enter URL (https://...)");
+async function createLinkFromSelection() {
+  const selection = window.getSelection();
+  const range = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
+  const url = await window.appUI.prompt("Enter URL (https://...)");
   if (!url) return;
+  if (!isSafeUrl(url)) { window.appUI.toast("Enter a valid http or https link.", { tone: "warning" }); return; }
+  if (range) { selection.removeAllRanges(); selection.addRange(range); }
   exec("createLink", url);
 }
 

@@ -110,17 +110,18 @@ select:focus-visible,
 
 /* Skip link for keyboard users */
 .skip-link {
-  position: absolute;
-  left: 8px;
-  top: -48px;
+  position: fixed;
+  left: 16px;
+  top: 0;
+  transform: translateY(-150%);
   background: var(--color-primary, #0f766e);
-  color: #fff;
+  color: var(--color-text-on-primary);
   padding: 10px 16px;
   border-radius: var(--radius-sm);
-  z-index: var(--z-toast, 110);
-  transition: top var(--duration-base, 200ms) ease;
+  z-index: 110000;
+  transition: transform var(--duration-base, 200ms) ease;
 }
 
 .skip-link:focus {
-  top: 8px;
+  transform: translateY(8px);
 }

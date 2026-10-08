@@ -7,7 +7,7 @@
     <meta name="description" id="metaDescription" content="Read the latest post on Timzee Tech Hub.">
     <meta name="keywords" content="Timzee Tech Hub, tech blog, tech news, build logs, startups, product reviews">
     <meta name="robots" content="index, follow">
-    <meta name="theme-color" content="#0f766e">
+    <meta name="theme-color" content="#087f73">
     <link rel="canonical" id="canonicalLink" href="https://timzee-tech-blog.netlify.app/post.html">
     <meta property="og:site_name" content="Timzee Tech Hub">
     <meta property="og:type" content="article">
@@ -20,9 +20,6 @@
     <meta name="twitter:description" id="twitterDescription" content="Read the latest post on Timzee Tech Hub.">
     <meta name="twitter:image" id="twitterImage" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
     <script type="application/ld+json" id="postSchema">{}</script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -102,10 +99,10 @@
           <section id="comments" style="margin-top: 24px;">
             <h2 class="section-title">Comments</h2>
             <div id="commentList" class="post-list"></div>
-            <form id="commentForm" class="comment-form" data-reveal>
+            <form novalidate id="commentForm" class="comment-form" data-reveal>
               <div class="callout" id="commentAs" style="display:none;"></div>
               <div class="reply-preview hidden" id="commentReplyPreview"></div>
-              <textarea id="commentBody" placeholder="Join the discussion..." required></textarea>
+              <textarea id="commentBody" placeholder="Join the discussion..." required class="resize-none"></textarea>
               <input type="file" id="commentImage" accept="image/*">
               <img id="commentPreview" style="max-height: 160px; border-radius: 12px; display: none;" alt="preview">
               <button type="submit" class="btn">Post Comment</button>

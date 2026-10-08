@@ -35,7 +35,7 @@ class CuratorManager {
 
     const user = await getCurrentUserWithRole();
     if (!user || !["admin", "super"].includes(getUserRole(user))) {
-      this.container.innerHTML = "<p style='color: red;'>Access denied. Admin only.</p>";
+      this.container.innerHTML = "<p style='color: var(--color-danger);'>Access denied. Admin only.</p>";
       return;
     }
     this.currentUser = user;
@@ -80,22 +80,22 @@ class CuratorManager {
             <div class="card">
               <h4>📡 Sources</h4>
               <div class="big-stat" id="sourcesCount">0</div>
-              <p style="font-size: 12px; color: #999;">Total active sources feeding content</p>
+              <p style="font-size: 12px; color: var(--color-text-muted);">Total active sources feeding content</p>
             </div>
             <div class="card">
               <h4>📰 Articles</h4>
               <div class="big-stat" id="articlesCount">0</div>
-              <p style="font-size: 12px; color: #999;">Pending posts awaiting approval</p>
+              <p style="font-size: 12px; color: var(--color-text-muted);">Pending posts awaiting approval</p>
             </div>
             <div class="card">
               <h4>✓ Posted</h4>
               <div class="big-stat" id="postedCount">0</div>
-              <p style="font-size: 12px; color: #999;">Articles published to site</p>
+              <p style="font-size: 12px; color: var(--color-text-muted);">Articles published to site</p>
             </div>
             <div class="card">
               <h4>🔄 Last Sync</h4>
               <div style="padding: 16px 0;">
-                <p id="lastSync" style="margin: 0; color: #666;">Never synced</p>
+                <p id="lastSync" style="margin: 0; color: var(--color-text-muted);">Never synced</p>
                 <button class="btn btn-small" id="syncNowBtn">🔄 Sync Now</button>
               </div>
             </div>
@@ -107,7 +107,7 @@ class CuratorManager {
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div>
               <h3>Content Sources</h3>
-              <p style="color: #666; margin: 0;">RSS feeds and content sources for the bot to monitor</p>
+              <p style="color: var(--color-text-muted); margin: 0;">RSS feeds and content sources for the bot to monitor</p>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
               <button class="btn btn-primary" id="addSourceBtn">+ Add Source</button>
@@ -143,7 +143,7 @@ class CuratorManager {
           </div>
 
           <div class="sources-list" id="sourcesList">
-            <div style="text-align: center; padding: 40px; color: #999;">Loading sources...</div>
+            <div style="text-align: center; padding: 40px; color: var(--color-text-muted);">Loading sources...</div>
           </div>
         </div>
 
@@ -154,7 +154,7 @@ class CuratorManager {
             <p>Review and approve articles before posting</p>
           </div>
           <div id="postsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;">Loading articles...</div>
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--color-text-muted);">Loading articles...</div>
           </div>
         </div>
       </div>
@@ -164,15 +164,15 @@ class CuratorManager {
         .manager-header { display: grid; grid-template-columns: 1fr auto; gap: 30px; align-items: start; margin-bottom: 30px; }
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .stat-card {
-          background: linear-gradient(135deg, #0f766e, #14b8a6);
-          color: white;
+          background: var(--color-primary);
+          color: var(--color-text-on-primary);
           padding: 16px;
           border-radius: 8px;
         }
         .stat-label { font-size: 12px; opacity: 0.9; }
         .stat-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
 
-        .curator-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
+        .curator-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--color-border); }
         .tab-btn {
           padding: 12px 16px;
           border: none;
@@ -180,19 +180,19 @@ class CuratorManager {
           cursor: pointer;
           font-size: 14px;
           font-weight: 600;
-          color: #666;
+          color: var(--color-text-muted);
           border-bottom: 3px solid transparent;
           transition: all 0.2s;
         }
-        .tab-btn:hover { color: #333; }
-        .tab-btn.active { color: #0f766e; border-bottom-color: #0f766e; }
+        .tab-btn:hover { color: var(--color-text); }
+        .tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
 
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-        .card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; }
+        .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 20px; }
         .card h4 { margin: 0 0 12px 0; font-size: 14px; }
-        .big-stat { font-size: 32px; font-weight: 700; color: #0f766e; }
+        .big-stat { font-size: 32px; font-weight: 700; color: var(--color-primary); }
 
-        .form-card { background: #f9fafb; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; }
+        .form-card { background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: 8px; padding: 20px; }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; }
         .form-group input, .form-group textarea, .form-group select {
@@ -206,11 +206,11 @@ class CuratorManager {
 
         .section-header { margin-bottom: 20px; }
         .section-header h3 { margin: 0 0 4px 0; }
-        .section-header p { margin: 0; color: #666; font-size: 14px; }
+        .section-header p { margin: 0; color: var(--color-text-muted); font-size: 14px; }
 
         .source-item {
-          background: white;
-          border: 1px solid #e2e8f0;
+          background: var(--color-surface);
+          border: 1px solid var(--color-border);
           border-radius: 8px;
           padding: 16px;
           margin-bottom: 12px;
@@ -219,20 +219,20 @@ class CuratorManager {
           align-items: center;
         }
         .source-info h4 { margin: 0 0 4px 0; }
-        .source-info p { margin: 2px 0; font-size: 12px; color: #666; }
+        .source-info p { margin: 2px 0; font-size: 12px; color: var(--color-text-muted); }
         .source-actions { display: flex; gap: 8px; }
 
         .btn { padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; font-weight: 600; transition: all 0.2s; font-size: 12px; }
         .btn-small { padding: 6px 10px; font-size: 11px; }
-        .btn-primary { background: #0f766e; color: white; border-color: #0f766e; }
-        .btn-primary:hover { background: #0d5f5a; }
-        .btn-ghost { background: white; color: #333; }
-        .btn-ghost:hover { background: #f9fafb; }
-        .btn-danger { background: #ef4444; color: white; border-color: #ef4444; }
+        .btn-primary { background: var(--color-primary); color: var(--color-text-on-primary); border-color: var(--color-primary); }
+        .btn-primary:hover { background: var(--color-primary-hover); }
+        .btn-ghost { background: var(--color-surface); color: var(--color-text); }
+        .btn-ghost:hover { background: var(--color-surface-muted); }
+        .btn-danger { background: #b42318; color: #fff; border-color: #ef4444; }
 
         .post-card {
-          background: white;
-          border: 1px solid #e2e8f0;
+          background: var(--color-surface);
+          border: 1px solid var(--color-border);
           border-radius: 8px;
           padding: 16px;
           display: flex;
@@ -240,7 +240,7 @@ class CuratorManager {
           gap: 12px;
         }
         .post-title { font-weight: 600; line-height: 1.4; }
-        .post-meta { font-size: 12px; color: #999; }
+        .post-meta { font-size: 12px; color: var(--color-text-muted); }
         .post-actions { display: flex; gap: 8px; }
       </style>
     `;
@@ -256,10 +256,11 @@ class CuratorManager {
     tabBtns.forEach(btn => {
       btn.addEventListener("click", () => {
         const tab = btn.dataset.tab;
-        tabBtns.forEach(b => b.classList.remove("active"));
+        tabBtns.forEach(b => { b.classList.remove("active"); b.setAttribute("aria-pressed", "false"); });
         tabContents.forEach(c => c.style.display = "none");
         btn.classList.add("active");
-        this.container.querySelector(`[data-tab="${tab}"]`).style.display = "block";
+        btn.setAttribute("aria-pressed", "true");
+        this.container.querySelector(`.tab-content[data-tab="${tab}"]`).style.display = "block";
       });
     });
 
@@ -291,11 +292,11 @@ class CuratorManager {
         importBtn.textContent = "Importing...";
         try {
           await this.importRecommendedFeeds();
-          alert("Recommended feeds imported. Check the sources list.");
+          window.appUI.toast("Recommended feeds imported. Check the sources list.");
           await this.load();
         } catch (err) {
           console.error("Import failed:", err);
-          alert("Import failed: " + (err.message || err));
+          window.appUI.toast("Import failed: " + (err.message || err));
         } finally {
           importBtn.disabled = false;
           importBtn.textContent = "Import Recommended Feeds";
@@ -319,7 +320,7 @@ class CuratorManager {
       await this.load();
     } catch (error) {
       if (lastSync) lastSync.textContent = `Sync failed: ${error.message}`;
-      alert(`Sync failed: ${error.message}`);
+      window.appUI.toast(`Sync failed: ${error.message}`);
     } finally {
       btn.disabled = false;
       btn.textContent = originalText;
@@ -353,7 +354,7 @@ class CuratorManager {
   renderSources() {
     const list = this.container.querySelector("#sourcesList");
     if (!this.sources.length) {
-      list.innerHTML = "<div style='text-align: center; padding: 40px; color: #999; grid-column: 1/-1;'>No sources configured. Add your first RSS feed!</div>";
+      list.innerHTML = "<div style='text-align: center; padding: 40px; color: var(--color-text-muted); grid-column: 1/-1;'>No sources configured. Add your first RSS feed!</div>";
       return;
     }
 
@@ -364,7 +365,7 @@ class CuratorManager {
         <div class="source-info">
           <h4>${escapeHTML(source.name || '')}</h4>
           <p>${escapeHTML(source.feed_url || source.query || 'No feed URL')}</p>
-          <p style="font-size: 11px; color: #0f766e;">📡 ${escapeHTML(String(source.source_type || '').toUpperCase())} • 📄 Up to ${escapeHTML(String(source.max_items ?? 30))} articles per sync</p>
+          <p style="font-size: 11px; color: var(--color-primary);">📡 ${escapeHTML(String(source.source_type || '').toUpperCase())} • 📄 Up to ${escapeHTML(String(source.max_items ?? 30))} articles per sync</p>
         </div>
         <div class="source-actions">
           <button class="btn ${active ? "btn-ghost" : "btn-danger"}" data-source-id="${source.id}" data-type="toggle-source">
@@ -385,7 +386,7 @@ class CuratorManager {
   renderPosts() {
     const list = this.container.querySelector("#postsList");
     if (!this.posts.length) {
-      list.innerHTML = "<div style='grid-column: 1/-1; text-align: center; padding: 40px; color: #999;'>No pending articles</div>";
+      list.innerHTML = "<div style='grid-column: 1/-1; text-align: center; padding: 40px; color: var(--color-text-muted);'>No pending articles</div>";
       return;
     }
 
@@ -397,7 +398,7 @@ class CuratorManager {
         <div class="post-meta">
           Source: ${escapeHTML(post.curator_sources?.name || post.source_name || 'Unknown')} • ${escapeHTML(dateText)}
         </div>
-        <p style="font-size: 13px; color: #666; margin: 0;">${escapeHTML(post.excerpt || 'No summary available')}</p>
+        <p style="font-size: 13px; color: var(--color-text-muted); margin: 0;">${escapeHTML(post.excerpt || 'No summary available')}</p>
         <div class="post-actions">
           <button class="btn btn-primary" data-post-id="${post.id}" data-type="post-approve">✓ Approve & Post</button>
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-delete">✕ Reject</button>
@@ -419,7 +420,7 @@ class CuratorManager {
       await toggleCuratorSourceStatus(sourceId, !source.is_active);
       await this.load();
     } else if (type === "delete-source") {
-      if (confirm("Delete this source? This cannot be undone.")) {
+      if (await window.appUI.confirm("Delete this source? This cannot be undone.")) {
         await deleteCuratorSource(sourceId);
         await this.load();
       }
@@ -433,7 +434,7 @@ class CuratorManager {
     if (type === "post-approve") {
       await this.approveCuratorPost(postId, btn);
     } else if (type === "post-delete") {
-      if (confirm("Reject this article?")) {
+      if (await window.appUI.confirm("Reject this article?")) {
         await deleteCuratorPost(postId);
         await this.load();
       }
@@ -443,7 +444,7 @@ class CuratorManager {
   async approveCuratorPost(curatorPostId, btn) {
     const curatorPost = this.posts.find(p => p.id === curatorPostId);
     if (!curatorPost) return;
-    if (!confirm(`Publish "${curatorPost.title}" to the site?`)) return;
+    if (!await window.appUI.confirm(`Publish "${curatorPost.title}" to the site?`)) return;
 
     const originalText = btn.textContent;
     btn.disabled = true;
@@ -478,7 +479,7 @@ class CuratorManager {
       await markCuratorPostAsPosted(curatorPostId);
       await this.load();
     } catch (error) {
-      alert(`Failed to publish: ${error.message}`);
+      window.appUI.toast(`Failed to publish: ${error.message}`);
       btn.disabled = false;
       btn.textContent = originalText;
     }
@@ -491,7 +492,7 @@ class CuratorManager {
     const maxItems = this.container.querySelector("#sourceMaxItems").value;
 
     if (!name || !url) {
-      alert("Please fill in required fields");
+      window.appUI.toast("Please fill in required fields");
       return;
     }
 
@@ -505,11 +506,11 @@ class CuratorManager {
         is_active: isActive
       });
 
-      alert(isActive ? "✓ Source added and activated!" : "⚠️ Source added but couldn't connect. Check the URL.");
+      window.appUI.toast(isActive ? "✓ Source added and activated!" : "⚠️ Source added but couldn't connect. Check the URL.");
       this.resetSourceForm();
       await this.load();
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      window.appUI.toast(`Error: ${error.message}`);
     }
   }
 

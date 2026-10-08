@@ -47,8 +47,10 @@ function applyActiveControls() {
   const label = $("fypModeLabel");
   if (label) label.textContent = state.mode === "following" ? "Following" : "For You";
 }
+let feedVersion = 0;
 async function loadFeed() {
-  const target = $("fypGrid"); if (!target || state.loading) return;
+  const version = ++feedVersion;
+  const target = $("fypGrid"); if (!target) return;
   state.loading = true; target.setAttribute("aria-busy", "true"); target.innerHTML = `<div class="callout">Building your ${state.mode === "following" ? "following" : "personalized"} feed…</div>`;
   try {
     if (state.mode === "for-you" && !state.preferences.feed.showRecommendations) {
@@ -59,12 +61,14 @@ async function loadFeed() {
     }
     const rpcName = state.mode === "following" ? "get_following_feed" : "get_personalized_feed";
     const result = await supabase.rpc(rpcName, { p_limit: 30, p_content_type: state.type === "all" ? "all" : state.type });
+    if (version !== feedVersion) return;
     if (result.error) throw result.error;
     const rows = result.data || [];
     target.innerHTML = rows.length ? rows.map(renderRow).join("") : `<div class="fyp-empty card"><h2>${state.mode === "following" ? "Nothing from followed creators yet" : "No recommendations yet"}</h2><p>${state.mode === "following" ? "Follow creators or communities and their new content will collect here." : "Follow creators and communities, save useful posts, like topics you enjoy, and your feed will learn from those signals."}</p><a class="btn" href="index.html">Explore the community</a></div>`;
   } catch (error) {
+    if (version !== feedVersion) return;
     target.innerHTML = `<div class="callout">Unable to load your feed right now. Please try again.</div>`; reportAppError(error, "Feed loading failed");
-  } finally { state.loading = false; target.setAttribute("aria-busy", "false"); }
+  } finally { if (version === feedVersion) { state.loading = false; target.setAttribute("aria-busy", "false"); } }
 }
 async function markNotInterested(card) {
   if (!state.user || !card) return;

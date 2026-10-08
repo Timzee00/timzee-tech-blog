@@ -4,6 +4,8 @@ Timzee Tech Hub is a modern community platform with a tech blog, discussions, pr
 
 > **Production source of truth:** See `PRODUCTION_READINESS.md` for the current deployment, security, migration, and verification workflow. Older status/report documents are historical snapshots and may contain superseded setup instructions.
 
+The current [sitewide review](docs/sitewide-review-2026-10-08.md) includes redesign evidence, repairs and launch blockers. Shared interface ownership is documented in [DESIGN.md](DESIGN.md) and [UX-CONTRACT.md](UX-CONTRACT.md).
+
 ## Core features
 
 - Tech blog, posts, comments, likes, bookmarks, follows, and notifications
