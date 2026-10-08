@@ -2,6 +2,8 @@
 
 **Current status: code hardening is under review; readiness for millions of users has not been demonstrated.** Read [the 8 October sitewide review](docs/sitewide-review-2026-10-08.md) for the redesign, repairs, test evidence and current launch blockers, alongside [the initial production assessment](docs/production-review-2026-10-06.md). Older completion reports are historical, not evidence of current readiness.
 
+The [chat reliability follow-up](docs/chat-reliability-review-2026-10-08.md) covers conversation races, draft retention, subscription recovery, people discovery, unread counts, and the remaining chat scaling limits.
+
 GitHub Actions currently cannot start a runner because the account is locked for billing (confirmed 8 October 2026). Local checks pass; rerun the hosted gate after resolving that account block. Netlify production remains deliberately locked.
 
 ## Release gates

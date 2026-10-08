@@ -188,12 +188,6 @@ body.chat-page {
 .chat-message-author { margin-bottom: 4px; color: var(--color-primary); font-size: .72rem; font-weight: 700; }
 .chat-message.self .chat-message-author { color: rgba(255,255,255,.8); }
 .chat-message-meta { display: flex; justify-content: flex-end; gap: 7px; margin-top: 5px; font-size: .63rem; opacity: .68; }
-.chat-typing { display: flex; align-items: center; gap: 5px; min-height: 24px; padding: 0 22px 6px; color: var(--color-text-muted); font-size: .72rem; }
-.chat-typing span:not(:last-child) { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: chatTyping .9s infinite ease-in-out; }
-.chat-typing span:nth-child(2) { animation-delay: .12s; }
-.chat-typing span:nth-child(3) { animation-delay: .24s; }
-.chat-typing strong { margin-left: 3px; }
-@keyframes chatTyping { 0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-3px);opacity:1} }
 
 .message-attachment-image,
 .message-attachment-video { display:block; max-width:100%; max-height:360px; margin-top:7px; border-radius:10px; object-fit:contain; }

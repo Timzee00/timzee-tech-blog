@@ -512,14 +512,14 @@ export async function fetchUnreadNotificationCount(userId) {
   if (!userId) return 0;
   const result = await supabase
     .from("notifications")
-    .select("id")
+    .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .is("read_at", null);
   if (result.error) {
     console.warn("Notification count failed", result.error);
     return 0;
   }
-  return (result.data || []).length;
+  return result.count || 0;
 }
 
 export async function fetchProfilesByUsernames(usernames = []) {

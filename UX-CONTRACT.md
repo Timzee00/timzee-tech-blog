@@ -45,6 +45,12 @@ legacy feature overlays are listed in the review as remaining work; do not claim
 that all overlays have been migrated. Native browser select/date pickers are an
 intentional accessibility and maintenance choice.
 
+Chat history belongs to a selection generation; late responses must not replace
+the active conversation. Draft text and attachments stay with their conversation
+while the page is open. Connection labels reflect subscription status, and
+retries retire old channels. People discovery searches public names/usernames
+with the shared debounce policy; the inbox filter uses cached previews.
+
 ## Verification and limits
 
 `npm run build`, `npm test`, and `npm run test:browser` are the repeatable gates.

@@ -28,9 +28,11 @@ if (!media.includes('const CHAT_BUCKET = "chat-media"')) fail("Chat media must u
 if (!media.includes("requestChatSignedUrl")) fail("Chat media signing helper is missing.");
 
 const chat = read("assets/js/chat-v2.js");
-for (const required of ["postgres_changes","broadcast","presence","MediaRecorder","group-avatars","data-edit-member-tags"]) {
+for (const required of ["createChatRealtime","MediaRecorder","group-avatars","data-edit-member-tags"]) {
   if (!chat.includes(required)) fail(`Upgraded chat surface is missing: ${required}`);
 }
+
+if (!read("assets/js/chat-realtime.mjs").includes("postgres_changes")) fail("Chat database subscription is missing.");
 
 const fyp = read("assets/js/fyp.js");
 for (const required of ["get_personalized_feed","user_content_feedback","not-interested"]) {
