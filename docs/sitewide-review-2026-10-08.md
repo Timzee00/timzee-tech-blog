@@ -43,13 +43,15 @@ The screenshots use synthetic local content, not production records. Public bran
 
 Executed on Node **22.23.3**:
 
-- Production configuration and **97 JavaScript/inline-script syntax checks passed**. The final CSS build has no parser warnings.
-- **41 handler/security/SQL tests passed**, including all 21 migration files and the maintenance no-storage regression.
+- Production configuration and **99 JavaScript/inline-script syntax checks passed**. The final CSS build has no parser warnings.
+- **44 handler/security/SQL tests passed**, including all 21 migration files the maintenance no-storage regression and the Netlify ignore gate.
 - **154 Chromium desktop/mobile tests passed**. Every HTML route, selected authenticated flows and the failure cases described below were included.
 - **520 local HTML asset/navigation references** resolve to files in the public build; no missing local targets were found.
 - `npm audit` reported **0 known vulnerabilities** in the installed dependency tree at review time.
 - Visual capture covered 11 representative routes, light/dark themes, and 360px/1440px widths; selected screens are attached. Additional browser assertions cover 320px and 768px widths and a 640px-high chat viewport.
 - `git diff --check` passed.
+- **Hosted CI is blocked by GitHub account billing.** [Run 37782545010](https://github.com/Timzee00/timzee-tech-blog/actions/runs/37782545010) ended before any step ran (runner ID 0). Its failure annotation states: “The job was not started because your account is locked due to a billing issue.” This is distinct from the passing local checks; the hosted gate must run after the account block is resolved.
+- After publishing the review branch, a read-only Netlify check confirmed production deploy `6aac3cddef1b56000836ded5` still points to `4e823e8` and remains **locked**. Changes are in the draft PR and an automatically generated deploy preview, not production.
 
 The repeatable commands are:
 
@@ -70,7 +72,7 @@ The premium design skill's strict static auditor is also run. It reports **237 `
 
 ## Remaining launch blockers, in priority order
 
-1. **Hosting budget and deliberate release.** The Netlify production lock is intentional. No production unlock, paid deploy or database migration was performed. Keep the PR unmerged until staging validation and budget/quotas are ready. Review changes since the old locked release and verify rollback plus `/release.json` for the exact release.
+1. **Hosting/CI budget and deliberate release.** The Netlify production lock is intentional. No production unlock or database migration was performed. Netlify automatically created a [review preview](https://deploy-preview-3--timzee-tech-blog.netlify.app) for commit `7d94bf1` despite its `[skip netlify]` marker; `/release.json` confirmed that commit. The preview uses the existing backend and is not an isolated staging environment. GitHub Actions is also blocked before runner startup by an account billing lock. Keep the PR unmerged until hosted CI, staging validation and budget/quotas are ready. Review changes since the old locked release and verify rollback plus `/release.json` for the exact release.
 2. **The correct Supabase project and schema.** The earlier review could not access project `duvbcwwprkzzyzikmcol` through the available database connector. Confirm the migration ledger and a replayable schema baseline; review exposed grants, RLS, private Storage and privileged functions with multiple user/role identities. Syntax-valid migration patches do not prove deployed policies or a reproducible restore.
 3. **Legacy public chat media.** The recurring deletion risk is removed, but old public objects are not made private by this source change. Plan a separate backed-up migration with a complete inventory, conditional message updates, shared-reference checks and verified private delivery before removing any source object. Confirm the automation RPC itself and its job logs in staging.
 4. **Realtime messaging.** Existing random per-client channels prevent shared typing/presence. Stable channels require private membership authorization first. Test two-user messaging, reconnects, updates/deletes, blocked users, uploads and expiring signed media; verify message cursor indexes and plans.
@@ -78,6 +80,10 @@ The premium design skill's strict static auditor is also run. It reports **237 `
 6. **External integrations and complete workflows.** Exercise actual sign-up/recovery, OAuth/email, user A versus user B access, posting/moderation, uploads, marketplace inquiries, novels/video playback and AI success/failure in an isolated staging backend. A default preview still references the production backend unless explicitly reconfigured.
 7. **Remaining interface coverage.** Shared and selected primary surfaces have automated accessibility checks. Feature-specific story/media/recording/staff overlays, populated large staff tables, all toolbar actions, assistive technology and physical mobile keyboards need focused manual coverage. These were not certified as universally accessible or bug-free.
 8. **Operations.** Verify backups/PITR with a timed restore; define error/latency/job-lag/uptime/cost alerts and owners; perform rollback, load and soak tests against representative data with a fixed cost ceiling. Use the capacity acceptance plan in the earlier review and launch gradually.
+
+## Build cost control
+
+`netlify.toml` now runs `scripts/netlify-ignore-build.mjs` before installing dependencies. For a Git-triggered build it returns 0 (stop) when the commit subject contains `[skip netlify]`, and 1 (continue) otherwise. Missing Git history continues the build; a marker quoted only in a commit body does not suppress an ordinary release. Local regression tests cover these decisions. Netlify build hooks can bypass ignore commands, so the source guard is not a universal hosting spend limit. Review the site's preview/build-hook settings when restoring the budget.
 
 ## Deployment recommendation
 
