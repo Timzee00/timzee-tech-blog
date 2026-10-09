@@ -111,6 +111,8 @@ test("long chats start with recent messages and load older history", async ({ pa
   await expect(page.locator("#chatConversation")).toBeVisible({ timeout: 20000 });
   await expect(page.locator(".chat-message")).toHaveCount(50);
   await expect(page.locator(".chat-message").last()).toContainText("Message 100");
+  expect(await page.locator('#loadOlderMessages').evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(60);
+  expect(await page.locator('#chatMessages').evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThan(100);
   expect(historyRequests[0].searchParams.get("limit")).toBe("50");
   expect(historyRequests[0].searchParams.get("order")).toBe("created_at.desc,id.desc");
   await page.getByRole("button", { name: "Load older messages" }).click();

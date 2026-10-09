@@ -51,6 +51,15 @@ while the page is open. Connection labels reflect subscription status, and
 retries retire old channels. People discovery searches public names/usernames
 with the shared debounce policy; the inbox filter uses cached previews.
 
+Conversation details use a native dialog with populated profile data. A closed
+panel takes no grid space; the history button has its own compact row.
+
+Message actions are owned by `chat-context-menu.js`: visible buttons, menu
+keyboard navigation, Escape/focus return and stale-selection dismissal. Selected
+chat text reaches the assistant through a single-use, user-bound session handoff,
+never a new URL containing the message body. `signed-media-cache.mjs` owns bounded,
+short-lived signing reuse; `media.js` verifies the target source before applying it.
+
 ## Verification and limits
 
 `npm run build`, `npm test`, and `npm run test:browser` are the repeatable gates.

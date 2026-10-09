@@ -6,6 +6,8 @@ Repository: [Timzee00/timzee-tech-blog](https://github.com/Timzee00/timzee-tech-
 
 The [chat reliability follow-up](chat-reliability-review-2026-10-08.md) records the subsequent conversation, subscription, discovery and unread-count repairs and their remaining limitations.
 
+The [9 October follow-up](media-actions-review-2026-10-09.md) covers private-media request limits, keyboard message actions and selected-text privacy. Its release totals supersede the historical totals below.
+
 ## What changed
 
 | Area | Verified problem | Implemented change |

@@ -4,6 +4,8 @@
 
 The [chat reliability follow-up](docs/chat-reliability-review-2026-10-08.md) covers conversation races, draft retention, subscription recovery, people discovery, unread counts, and the remaining chat scaling limits.
 
+The [9 October follow-up](docs/media-actions-review-2026-10-09.md) adds bounded private-media signing, accessible message actions and a private, single-use handoff to the assistant.
+
 GitHub Actions currently cannot start a runner because the account is locked for billing (confirmed 8 October 2026). Local checks pass; rerun the hosted gate after resolving that account block. Netlify production remains deliberately locked.
 
 ## Release gates
