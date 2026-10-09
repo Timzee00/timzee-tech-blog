@@ -4,9 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Novel - Timzee Tech Hub</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -76,14 +73,14 @@
       <section class="container" id="chapterFormSection" style="display: none; margin-top: 30px;">
         <div class="chapter-form">
           <h3 style="margin-top: 0;">Add New Chapter</h3>
-          <form id="chapterForm">
+          <form novalidate id="chapterForm">
             <div class="form-group">
               <label>Chapter Title *</label>
               <input type="text" id="chapterTitle" placeholder="Chapter 1: The Beginning" required>
             </div>
             <div class="form-group">
               <label>Chapter Content *</label>
-              <textarea id="chapterContent" placeholder="Write your chapter here..." required></textarea>
+              <textarea id="chapterContent" placeholder="Write your chapter here..." required class="resize-none"></textarea>
               <div class="char-count"><span id="charCount">0</span> characters</div>
             </div>
             <button type="submit" class="btn-icon primary">Publish Chapter</button>
@@ -109,7 +106,7 @@
         <div id="readerView" style="display: none;">
           <div class="nav-chapters">
             <button class="nav-btn" id="prevBtn">← Previous</button>
-            <a href="#" class="btn-icon ghost" id="backToChapters" style="border: none; background: none; color: #0f766e;">Back to Chapters</a>
+            <button type="button" class="btn-icon ghost" id="backToChapters" style="border: none; background: none; color: #0f766e;">Back to Chapters</button>
             <button class="nav-btn" id="nextBtn">Next →</button>
           </div>
           <div class="reader-content" id="readerContent">Loading...</div>
@@ -121,8 +118,8 @@
           <!-- Comments Section -->
           <div class="container" style="max-width: 800px; margin: 40px auto;">
             <h3>Comments</h3>
-            <form class="comment-form" id="commentForm" style="display: none;">
-              <textarea id="commentBody" placeholder="Share your thoughts..."></textarea>
+            <form novalidate class="comment-form" id="commentForm" style="display: none;">
+              <textarea id="commentBody" placeholder="Share your thoughts..." class="resize-none"></textarea>
               <button type="submit" class="btn-icon primary" style="margin-top: 12px;">Post Comment</button>
               <div id="commentStatus" style="margin-top: 8px; display: none;"></div>
             </form>
@@ -147,14 +144,14 @@
       <div class="modal-content">
         <span class="modal-close" id="closeModal">&times;</span>
         <h2>Edit Novel</h2>
-        <form id="editForm">
+        <form novalidate id="editForm">
           <div class="form-group">
             <label>Title</label>
             <input type="text" id="editTitle">
           </div>
           <div class="form-group">
             <label>Synopsis</label>
-            <textarea id="editSynopsis"></textarea>
+            <textarea id="editSynopsis" class="resize-none"></textarea>
           </div>
           <div class="form-group">
             <label>Status</label>

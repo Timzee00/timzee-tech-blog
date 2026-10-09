@@ -6,15 +6,12 @@
     <title>Stories - Timzee Tech Hub</title>
     <meta name="description" content="Share a public or friends-only story that disappears after 24 hours.">
     <meta name="robots" content="index, follow">
-    <meta name="theme-color" content="#0f766e">
+    <meta name="theme-color" content="#087f73">
     <link rel="canonical" href="https://timzee-tech-blog.netlify.app/stories.html">
     <meta property="og:site_name" content="Timzee Tech Hub">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Stories - Timzee Tech Hub">
     <meta property="og:description" content="Share a public or friends-only story that disappears after 24 hours.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -93,13 +90,13 @@
         <h3>New Story</h3>
         <button class="btn ghost icon-only" id="composerCloseBtn" type="button" aria-label="Close">&times;</button>
       </div>
-      <form id="storyForm">
+      <form novalidate id="storyForm">
         <label class="story-file-drop" for="storyFile">
           <span id="storyFilePreviewLabel">Choose a photo or video</span>
           <div class="story-file-preview" id="storyFilePreview"></div>
         </label>
         <input type="file" id="storyFile" accept="image/*,video/*" hidden required>
-        <textarea id="storyCaption" placeholder="Add a caption (optional)" rows="2" maxlength="200"></textarea>
+        <textarea id="storyCaption" placeholder="Add a caption (optional)" rows="2" maxlength="200" class="resize-none"></textarea>
         <div class="story-visibility-toggle">
           <label>
             <input type="radio" name="storyVisibility" value="public" checked>
@@ -339,10 +336,10 @@
       }
 
       async function handleDelete(storyId) {
-        if (!confirm("Delete this story?")) return;
+        if (!await window.appUI.confirm("Delete this story?")) return;
         const result = await deleteStory(storyId);
         if (result.error) {
-          alert(result.error.message || "Could not delete story.");
+          window.appUI.toast(result.error.message || "Could not delete story.");
           return;
         }
         const group = state.groups[state.activeGroupIndex];

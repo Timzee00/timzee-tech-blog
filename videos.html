@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Videos - Timzee Tech Hub</title>
     <meta name="description" content="Watch tech videos from our community">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -39,7 +36,7 @@
           <div class="search-box">
             <input type="search" id="videoSearch" placeholder="Search videos...">
           </div>
-          <a class="btn" href="#upload" id="uploadBtnHeader" style="display: none;">Upload Video</a>
+          <a class="btn" href="#uploadSection" id="uploadBtnHeader" style="display: none;">Upload Video</a>
           <a class="icon-btn" href="stories.html" data-label="Stories" aria-label="Stories" title="Stories">&#128247;</a>
           <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
@@ -53,25 +50,23 @@
         <p class="tagline">Discover tech tutorials, demos, and community content</p>
 
         <!-- Category Tabs -->
-        <div class="nav-pill" id="categoryTabs" style="margin: 20px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
-          <a href="#all" data-category="all">All</a>
-          <a href="#tutorial" data-category="tutorial">Tutorials</a>
-          <a href="#demo" data-category="demo">Demos</a>
-          <a href="#review" data-category="review">Reviews</a>
-          <a href="#news" data-category="news">News</a>
+        <div class="category-filter" id="categoryTabs" aria-label="Video categories">
+          <button type="button" class="filter-btn active" aria-pressed="true" data-category="all">All</button>
+          <button type="button" class="filter-btn" data-category="tutorial">Tutorials</button>
+          <button type="button" class="filter-btn" data-category="demo">Demos</button>
+          <button type="button" class="filter-btn" data-category="review">Reviews</button>
+          <button type="button" class="filter-btn" data-category="news">News</button>
         </div>
 
         <!-- Upload Section (For Logged In Users) -->
         <div id="uploadSection" style="display: none; margin-bottom: 40px;">
           <h2>Upload Video</h2>
-          <div class="upload-area" id="uploadArea">
-            <div style="font-size: 48px; margin-bottom: 12px;">📹</div>
-            <p><strong>Drag and drop your video here</strong></p>
-            <p style="color: #666; font-size: 12px; margin: 8px 0;">or click to browse (MP4, WebM, OGG)</p>
-            <input type="file" id="videoFile" accept="video/*" style="display: none;">
-          </div>
-          
-          <form id="uploadForm" style="display: none;">
+          <button type="button" class="upload-area" id="uploadArea">
+            <strong>Choose a video</strong><span>Or drag and drop an MP4, WebM or OGG file here</span>
+          </button>
+          <input type="file" id="videoFile" accept="video/*" hidden aria-label="Video file">
+
+          <form novalidate id="uploadForm" style="display: none;">
             <div id="trimEditor" style="display:none; margin-bottom: 16px; padding: 14px; border: 1px solid var(--color-border, rgba(15,23,42,0.12)); border-radius: var(--radius-sm, 12px);">
               <p style="margin: 0 0 8px; font-weight: 600;">Trim &amp; edit your video (optional)</p>
               <div id="editorStage" style="position: relative; width: 100%; max-height: 260px; border-radius: 8px; overflow: hidden; background: #000; touch-action: none;">
@@ -117,7 +112,7 @@
               </p>
             </div>
             <input type="text" id="videoTitle" placeholder="Video title" required>
-            <textarea id="videoDescription" placeholder="Video description" style="margin-top: 8px;"></textarea>
+            <textarea id="videoDescription" placeholder="Video description" style="margin-top: 8px;" class="resize-none"></textarea>
             <select id="videoCategory" style="margin-top: 8px;">
               <option value="tutorial">Tutorial</option>
               <option value="demo">Demo</option>
@@ -161,6 +156,8 @@
 
     <script type="module" src="assets/js/nav.js"></script>
     <script type="module">
+      import { icon } from "./assets/js/icons.js";
+      import { bindSearch } from "./assets/js/search-input.js";
       import { 
         fetchVideos, 
         searchVideos, 
@@ -194,7 +191,8 @@
             await signOut();
             window.location.reload();
           });
-          document.getElementById("uploadSection").style.display = "block";
+          document.getElementById("uploadBtnHeader").addEventListener("click", () => { document.getElementById("uploadSection").style.display = "block"; });
+          if (location.hash === "#uploadSection") document.getElementById("uploadSection").style.display = "block";
           document.getElementById("uploadBtnHeader").style.display = "inline-flex";
         } else {
           authActions.innerHTML = `<a class="btn ghost" href="login.html?next=${encodeURIComponent('videos.html')}">Log In</a>`;
@@ -202,25 +200,33 @@
       }
 
       // Load videos
+      let listVersion = 0;
+      let loading = false;
       async function loadVideos() {
+        const version = ++listVersion;
+        const offset = state.offset;
+        const query = document.getElementById("videoSearch").value.trim();
+        const category = state.category === "all" ? null : state.category;
+        const container = document.getElementById("videosContainer");
+        const more = document.getElementById("loadMoreBtn");
+        loading = true; more.disabled = true; container.setAttribute("aria-busy", "true");
         try {
-          const videos = await fetchVideos({
-            category: state.category === "all" ? null : state.category,
-            limit: state.limit,
-            offset: state.offset
+          const rows = await (query ? searchVideos : fetchVideos)({
+            query, category, limit: state.limit, offset,
+
           });
-
-          if (state.offset === 0) {
-            state.videos = videos;
-          } else {
-            state.videos.push(...videos);
-          }
-
+          if (version !== listVersion || query !== document.getElementById("videoSearch").value.trim()) return;
+          state.videos = offset === 0 ? rows : [...state.videos, ...rows];
           renderVideos();
-          document.getElementById("loadMoreBtn").style.display = videos.length === state.limit ? "inline-flex" : "none";
+          more.style.display = rows.length === state.limit ? "inline-flex" : "none";
         } catch (error) {
-          console.error("Load error:", error);
-          document.getElementById("videosContainer").innerHTML = `<div class="callout">Failed to load videos</div>`;
+          if (version !== listVersion) return;
+          console.error("Could not load videos:", error);
+          if (offset) state.offset = Math.max(0, offset - state.limit);
+          else container.innerHTML = '<div class="callout" role="status">We couldn’t load videos. <button type="button" class="btn ghost" data-retry-list>Try again</button></div>';
+          container.querySelector("[data-retry-list]")?.addEventListener("click", () => loadVideos());
+        } finally {
+          if (version === listVersion) { loading = false; more.disabled = false; container.setAttribute("aria-busy", "false"); }
         }
       }
 
@@ -229,14 +235,14 @@
         const container = document.getElementById("videosContainer");
         
         if (!state.videos.length) {
-          container.innerHTML = `<div class="callout">No videos yet in this category</div>`;
+          container.innerHTML = `<div class="callout">No videos here yet. Try another category or check back soon.</div>`;
           return;
         }
 
         container.innerHTML = `<div class="video-grid">${state.videos.map(v => `
-          <div class="video-card" data-id="${escapeHTML(v.id || '')}">
+          <a class="video-card" href="video.html?id=${encodeURIComponent(v.id)}">
             <div class="video-thumbnail">
-              ${v.thumbnail_url && isSafeUrl(v.thumbnail_url) ? `<img src="${v.thumbnail_url}" alt="${escapeHTML(v.title || '')}">` : '📹'}
+              ${v.thumbnail_url && isSafeUrl(v.thumbnail_url) ? `<img src="${escapeHTML(v.thumbnail_url)}" loading="lazy" alt="${escapeHTML(v.title || '')}">` : icon('videos')}
               <div class="video-duration">${escapeHTML(String(v.duration || 0))}s</div>
             </div>
             <div class="video-info">
@@ -246,50 +252,24 @@
                 <span>❤ ${escapeHTML(String(v.like_count || 0))}</span>
               </div>
             </div>
-          </div>
+          </a>
         `).join("")}</div>`;
 
-        // Add click handlers
-        container.querySelectorAll(".video-card").forEach(card => {
-          card.addEventListener("click", () => {
-            const videoId = card.dataset.id;
-            window.location.href = `video.html?id=${videoId}`;
-          });
-        });
+
       }
 
       // Category tabs
       document.getElementById("categoryTabs").addEventListener("click", (e) => {
         if (e.target.dataset.category) {
+          e.preventDefault();
+          document.querySelectorAll("#categoryTabs [data-category]").forEach(button => { button.classList.toggle("active", button === e.target); button.setAttribute("aria-pressed", String(button === e.target)); });
           state.category = e.target.dataset.category;
           state.offset = 0;
           loadVideos();
         }
       });
 
-      // Search
-      let searchTimer;
-      document.getElementById("videoSearch").addEventListener("input", async (e) => {
-        clearTimeout(searchTimer);
-        const term = e.target.value.trim();
-        
-        if (term.length < 2) {
-          state.offset = 0;
-          loadVideos();
-          return;
-        }
-
-        searchTimer = setTimeout(async () => {
-          try {
-            const results = await searchVideos({ query: term, limit: state.limit });
-            state.videos = results;
-            state.offset = 0;
-            renderVideos();
-          } catch (error) {
-            console.error("Search error:", error);
-          }
-        }, 300);
-      });
+      bindSearch(document.getElementById("videoSearch"), () => { state.offset = 0; void loadVideos(); });
 
       // Upload handlers
       const uploadArea = document.getElementById("uploadArea");
@@ -481,8 +461,8 @@
         });
 
         // ---------------- Text tool ----------------
-        document.getElementById("addTextBtn").addEventListener("click", () => {
-          const text = prompt("Text to add:");
+        document.getElementById("addTextBtn").addEventListener("click", async () => {
+          const text = await window.appUI.prompt("Text to add:");
           if (!text || !text.trim()) return;
           const overlay = { text: text.trim(), xPct: 50, yPct: 50, color: drawColor.value };
           state.textOverlays.push(overlay);
@@ -726,7 +706,7 @@
         e.preventDefault();
         
         if (!state.user) {
-          alert("Please log in to upload");
+          window.appUI.toast("Please log in to upload");
           return;
         }
 
@@ -789,6 +769,7 @@
 
       // Load more
       document.getElementById("loadMoreBtn").addEventListener("click", () => {
+        if (loading) return;
         state.offset += state.limit;
         loadVideos();
       });

@@ -2,37 +2,30 @@
 @import url("avatars.css");
 @import url("animations.css");
 @import url("utilities.css");
+@import url("forms.css");
+@import url("design-system.css");
 
-/* ==========================================================================
-   Admin design tokens
-   The admin/moderator/super/author dashboards use their own fixed dark
-   palette (intentional — this is a control-panel aesthetic, not the
-   site's light/dark toggle, so it does not use variables.css's semantic
-   --color-* tokens). Previously every one of these values was a literal
-   hex/rgba repeated up to 14 times across the file. Centralizing them here
-   is a pure maintainability change — every value below is copied exactly
-   from what it replaces, so nothing renders differently.
-   ========================================================================== */
+/* Staff tokens map to the shared light and dark palette. */
 .admin-shell,
 .login-shell {
-  --admin-bg-1: #0f172a;
-  --admin-bg-2: #111827;
-  --admin-bg-3: #1f2937;
-  --admin-text: #e2e8f0;
-  --admin-text-bright: #f8fafc;
-  --admin-text-muted: #94a3b8;
-  --admin-accent: #38bdf8;
+  --admin-bg-1: var(--color-bg);
+  --admin-bg-2: var(--color-surface);
+  --admin-bg-3: var(--color-surface-muted);
+  --admin-text: var(--color-text);
+  --admin-text-bright: var(--color-text);
+  --admin-text-muted: var(--color-text-muted);
+  --admin-accent: var(--color-primary);
   --admin-accent-soft: #7dd3fc;
   --admin-danger: #fca5a5;
   --admin-border: rgba(148, 163, 184, 0.25);
   --admin-border-soft: rgba(148, 163, 184, 0.2);
   --admin-border-strong: rgba(148, 163, 184, 0.3);
-  --admin-overlay: rgba(15, 23, 42, 0.5);
+  --admin-overlay: var(--color-surface);
 }
 
 .admin-shell,
 .login-shell {
-  font-family: "Sora", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 .hidden {
@@ -104,7 +97,7 @@ select:focus-visible {
 }
 
 .admin-shell .logo {
-  font-family: "Fraunces", "Times New Roman", serif;
+  font-family: var(--font-display);
   font-size: 24px;
   font-weight: 700;
 }
@@ -137,14 +130,14 @@ select:focus-visible {
 }
 
 .admin-nav {
-  background: rgba(15, 23, 42, 0.8);
+  background: var(--color-surface);
   border-radius: 16px;
   padding: 18px;
   display: grid;
   gap: 10px;
   height: fit-content;
   border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.45);
+  box-shadow: 0 18px 40px var(--color-surface);
 }
 
 .admin-nav button {
@@ -165,16 +158,16 @@ select:focus-visible {
 }
 
 .admin-card {
-  background: rgba(15, 23, 42, 0.85);
+  background: var(--color-surface);
   border-radius: 18px;
   padding: 20px;
   border: 1px solid var(--admin-border-soft);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.45);
+  box-shadow: 0 18px 40px var(--color-surface);
 }
 
 .admin-card h2 {
   margin-top: 0;
-  font-family: "Fraunces", "Times New Roman", serif;
+  font-family: var(--font-display);
 }
 
 .admin-form {
@@ -188,16 +181,16 @@ select:focus-visible {
   gap: 8px;
   padding: 10px;
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--color-surface);
   border: 1px solid var(--admin-border);
 }
 
 .word-toolbar {
-  background: rgba(15, 23, 42, 0.75);
+  background: var(--color-surface);
 }
 
 .word-toolbar button {
-  background: rgba(30, 41, 59, 0.7);
+  background: var(--color-surface-muted);
   color: var(--admin-text);
   border: 1px solid var(--admin-border);
   padding: 6px 10px;
@@ -222,7 +215,7 @@ select:focus-visible {
   padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--admin-border);
-  background: rgba(15, 23, 42, 0.65);
+  background: var(--color-surface);
   color: var(--admin-text);
   line-height: 1.7;
   overflow-wrap: anywhere;
@@ -235,7 +228,7 @@ select:focus-visible {
 
 .rich-editor:empty:before {
   content: attr(data-placeholder);
-  color: rgba(226, 232, 240, 0.5);
+  color: var(--color-text-muted);
 }
 
 .post-review {
@@ -243,8 +236,8 @@ select:focus-visible {
   padding: 18px;
   border-radius: 16px;
   border: 1px solid var(--admin-border);
-  background: rgba(15, 23, 42, 0.75);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.45);
+  background: var(--color-surface);
+  box-shadow: 0 18px 40px var(--color-surface);
 }
 
 .review-header {
@@ -273,7 +266,7 @@ select:focus-visible {
 .post-review .post-content h2,
 .post-review .post-content h3 {
   margin-top: 18px;
-  font-family: "Fraunces", "Times New Roman", serif;
+  font-family: var(--font-display);
 }
 
 .post-review .post-content p {
@@ -282,7 +275,7 @@ select:focus-visible {
 
 .editor-toolbar button {
   border: 1px solid var(--admin-border-strong);
-  background: rgba(30, 41, 59, 0.6);
+  background: var(--color-surface-muted);
   color: var(--admin-text);
   padding: 6px 10px;
   border-radius: 999px;
@@ -322,7 +315,7 @@ select:focus-visible {
   color: var(--admin-text-muted);
   font-size: 12px;
   overflow: hidden;
-  background: rgba(15, 23, 42, 0.35);
+  background: var(--color-surface);
 }
 
 .image-preview img {
@@ -371,7 +364,7 @@ select:focus-visible {
 }
 
 .stat-tile {
-  background: rgba(15, 23, 42, 0.7);
+  background: var(--color-surface);
   border-radius: 14px;
   padding: 14px;
   border: 1px solid var(--admin-border-soft);
@@ -424,7 +417,7 @@ select:focus-visible {
   border-radius: 12px;
   padding: 12px;
   border: 1px solid var(--admin-border);
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--color-surface);
   display: grid;
   gap: 8px;
 }
@@ -464,7 +457,7 @@ select:focus-visible {
 }
 
 .admin-table th {
-  color: #93c5fd;
+  color: var(--color-text-muted);
   font-weight: 600;
 }
 
@@ -544,7 +537,7 @@ select:focus-visible {
 
 .status-pill.completed {
   background: rgba(34, 197, 94, 0.2);
-  color: #86efac;
+  color: var(--color-success);
 }
 
 .login-shell {
@@ -556,22 +549,22 @@ select:focus-visible {
 }
 
 .login-card {
-  background: rgba(15, 23, 42, 0.88);
+  background: var(--color-surface);
   padding: 28px;
   border-radius: 18px;
   width: min(420px, 92vw);
   border: 1px solid var(--admin-border);
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.6);
+  box-shadow: 0 20px 40px var(--color-surface);
 }
 
 .login-card h1 {
   margin-top: 0;
-  font-family: "Fraunces", "Times New Roman", serif;
+  font-family: var(--font-display);
 }
 
 .hint {
   font-size: 13px;
-  color: #cbd5f5;
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
@@ -597,7 +590,7 @@ select:focus-visible {
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.4);
+  box-shadow: 0 10px 18px var(--color-surface);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -663,189 +656,21 @@ select:focus-visible {
    THEME TOGGLE + LIGHT MODE OVERRIDES + MOBILE HARDENING
    =================================================================== */
 
-.theme-toggle {
-  position: fixed;
-  right: 12px;
-  bottom: calc(12px + env(safe-area-inset-bottom));
-  z-index: 1200;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(15, 23, 42, 0.92);
-  color: var(--admin-text);
-  padding: 10px 14px;
-  min-height: 42px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 12px 24px rgba(2, 6, 23, 0.45);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  touch-action: none;
-  user-select: none;
-}
 
-.theme-toggle-label {
-  pointer-events: none;
-}
 
-.theme-toggle-collapse-handle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  font-size: 13px;
-  line-height: 1;
-  opacity: 0.6;
-}
 
-.theme-toggle-collapse-handle:hover {
-  opacity: 1;
-}
 
-.theme-toggle.theme-toggle-collapsed {
-  width: 16px;
-  height: 16px;
-  min-height: 0;
-  padding: 0;
-  border-radius: 999px;
-  opacity: 0.35;
-}
 
-.theme-toggle.theme-toggle-collapsed .theme-toggle-label,
-.theme-toggle.theme-toggle-collapsed .theme-toggle-collapse-handle {
-  display: none;
-}
 
-.theme-toggle:hover {
-  transform: translateY(-2px);
-}
 
-.theme-toggle:focus-visible {
-  outline: 2px solid rgba(56, 189, 248, 0.8);
-  outline-offset: 2px;
-}
 
-:root[data-theme="light"] .admin-shell {
-  background: radial-gradient(circle at 12% 10%, rgba(56, 189, 248, 0.14), transparent 38%),
-    linear-gradient(145deg, #f3f7fb 0%, #eaf0f7 45%, var(--admin-text-bright) 100%);
-  color: var(--admin-bg-1);
-}
 
-:root[data-theme="light"] .admin-shell::before,
-:root[data-theme="light"] .admin-shell::after {
-  background: radial-gradient(circle at 30% 30%, rgba(14, 165, 233, 0.22), transparent 64%);
-}
 
-:root[data-theme="light"] .admin-shell .topbar {
-  border-bottom-color: rgba(14, 116, 144, 0.18);
-}
 
-:root[data-theme="light"] .admin-shell .brand,
-:root[data-theme="light"] .admin-shell .logo {
-  color: var(--admin-bg-1);
-}
 
-:root[data-theme="light"] .admin-shell .brand span {
-  color: #0284c7;
-}
 
-:root[data-theme="light"] .admin-shell .tagline {
-  color: #334155;
-}
 
-:root[data-theme="light"] .admin-nav {
-  background: rgba(255, 255, 255, 0.86);
-  border-color: rgba(14, 116, 144, 0.18);
-  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.14);
-}
 
-:root[data-theme="light"] .admin-nav button {
-  color: var(--admin-bg-1);
-  border-color: rgba(14, 116, 144, 0.2);
-}
-
-:root[data-theme="light"] .admin-nav button.active,
-:root[data-theme="light"] .admin-nav button:hover {
-  background: rgba(14, 165, 233, 0.15);
-  border-color: rgba(14, 165, 233, 0.35);
-}
-
-:root[data-theme="light"] .admin-card,
-:root[data-theme="light"] .post-review,
-:root[data-theme="light"] .theme-card,
-:root[data-theme="light"] .stat-tile {
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--admin-bg-2);
-  border-color: rgba(148, 163, 184, 0.28);
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.14);
-}
-
-:root[data-theme="light"] .stat-tile strong,
-:root[data-theme="light"] .post-review .post-content,
-:root[data-theme="light"] .callout {
-  color: var(--admin-bg-1);
-}
-
-:root[data-theme="light"] .hint,
-:root[data-theme="light"] .stat-tile span {
-  color: #475569;
-}
-
-:root[data-theme="light"] .editor-toolbar,
-:root[data-theme="light"] .word-toolbar,
-:root[data-theme="light"] .rich-editor {
-  background: rgba(248, 250, 252, 0.95);
-  color: var(--admin-bg-1);
-  border-color: var(--admin-border-strong);
-}
-
-:root[data-theme="light"] .editor-toolbar button,
-:root[data-theme="light"] .word-toolbar button {
-  background: #ffffff;
-  color: var(--admin-bg-1);
-  border-color: rgba(148, 163, 184, 0.4);
-}
-
-:root[data-theme="light"] .admin-form input,
-:root[data-theme="light"] .admin-form textarea,
-:root[data-theme="light"] .admin-form select,
-:root[data-theme="light"] .inline-actions input[type="text"],
-:root[data-theme="light"] .inline-actions select {
-  background: #ffffff;
-  color: var(--admin-bg-1);
-  border-color: rgba(148, 163, 184, 0.45);
-}
-
-:root[data-theme="light"] .btn.ghost {
-  color: var(--admin-bg-1);
-  border-color: rgba(148, 163, 184, 0.55);
-}
-
-:root[data-theme="light"] .login-shell {
-  background: linear-gradient(135deg, var(--admin-text), #f1f5f9, #dbeafe);
-  color: var(--admin-bg-1);
-}
-
-:root[data-theme="light"] .login-card {
-  background: rgba(255, 255, 255, 0.94);
-  color: var(--admin-bg-1);
-  border-color: var(--admin-border-strong);
-  box-shadow: 0 20px 34px rgba(15, 23, 42, 0.15);
-}
-
-:root[data-theme="light"] .switch-link {
-  color: #0369a1;
-}
-
-:root[data-theme="light"] .theme-toggle {
-  background: #ffffff;
-  color: var(--admin-bg-1);
-  border-color: rgba(14, 116, 144, 0.3);
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.16);
-}
 
 @media (max-width: 900px) {
   .admin-shell .topbar .container {
@@ -888,13 +713,7 @@ select:focus-visible {
     min-width: 460px;
   }
 
-  .theme-toggle {
-    right: 8px;
-    bottom: calc(8px + env(safe-area-inset-bottom));
-    min-height: 40px;
-    padding: 8px 12px;
-    font-size: 13px;
-  }
+
 }
 
 /* .form-card / .form-group were previously an inline <style> block in
@@ -925,3 +744,31 @@ select:focus-visible {
   font-family: inherit;
   font-size: var(--text-sm, 14px);
 }
+
+/* Staff screens use the same surfaces and controls as the public product. */
+.admin-shell, .login-shell { background: var(--color-bg); color: var(--color-text); }
+.admin-shell::before, .admin-shell::after, .login-shell::before, .login-shell::after { content: none; }
+.login-shell { display: grid; place-items: center; padding: 24px; margin: 0; min-height: 100dvh; }
+.login-card { width: min(460px, 100%); padding: 32px; border: 1px solid var(--color-border); border-radius: 16px; box-shadow: none; background: var(--color-surface); }
+.login-card h1 { font-family: var(--font-display); font-size: 32px; letter-spacing: -.04em; }
+.login-card .hint { color: var(--color-text-muted); font-size: 14px; }
+.login-card input { box-sizing: border-box; width: 100%; }
+.login-card .btn { background: var(--color-primary); color: var(--color-text-on-primary); border-radius: 9px; box-shadow: none; }
+.admin-card { border: 1px solid var(--color-border); background: var(--color-surface); box-shadow: none; }
+.admin-nav { gap: 8px; padding-block: 12px; scrollbar-width: thin; }
+.admin-nav button { min-height: 42px; border-radius: 8px; }
+.admin-nav button.active { background: var(--color-primary); color: var(--color-text-on-primary); }
+@media (max-width: 600px) { .login-card { padding: 24px; } .admin-card { padding: 20px; } }
+
+.admin-form input, .admin-form textarea, .admin-form select { color: var(--color-text); background: var(--color-surface); }
+.admin-form input::placeholder, .admin-form textarea::placeholder { color: var(--color-text-muted); opacity: 1; }
+* { box-sizing: border-box; }
+.admin-shell, .login-shell { --admin-accent-soft: var(--color-primary); --admin-overlay: var(--color-surface-muted); --admin-danger: var(--color-danger); }
+.admin-shell .logo, .admin-shell .brand, .admin-card, .admin-card p { color: var(--color-text); }
+.admin-shell .btn { background: var(--color-primary); color: var(--color-text-on-primary); box-shadow: none; border-radius: 9px; }
+.admin-shell .btn.ghost { background: transparent; color: var(--color-text); border: 1px solid var(--color-border-strong); }
+.admin-nav { background: var(--color-surface); border: 1px solid var(--color-border); box-shadow: none; }
+.team-overview { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.team-overview h2 { margin-top: 0; }
+.admin-panel table { max-width: 100%; }
+@media (max-width: 700px) { .team-overview { display: block; } .team-overview > div:last-child { text-align: left !important; } .admin-shell .topbar .container { width: calc(100% - 32px); } }

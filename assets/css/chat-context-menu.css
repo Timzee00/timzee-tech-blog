@@ -2,3 +2,6 @@
 .chat-message-context-menu[hidden]{display:none;}
 .chat-message-context-menu button{display:block;width:100%;border:0;background:transparent;color:var(--color-text,#16181d);padding:9px 10px;border-radius:7px;text-align:left;font:600 .8rem var(--font-body,Inter,system-ui,sans-serif);cursor:pointer;}
 .chat-message-context-menu button:hover,.chat-message-context-menu button:focus-visible{background:var(--color-surface-muted,#f3f5f7);color:var(--color-primary,#0f766e);}
+
+.chat-message-actions{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;font:700 1rem var(--font-body,system-ui);cursor:pointer;}
+.chat-message-actions:hover{background:var(--color-surface-muted);color:var(--color-text);}

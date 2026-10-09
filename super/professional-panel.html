@@ -4,18 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Super Admin Control - Timzee Tech Hub</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/admin.css">
       <script defer src="../assets/js/theme-init.js"></script>
   </head>
   <body class="admin-shell">
+    <a class="skip-link" href="#superApp">Skip to main content</a>
     <div class="topbar">
       <div class="container" style="display:flex; align-items:center; justify-content:space-between;">
         <div class="brand">
           <div class="logo">Timzee <span>Tech</span> Control Panel</div>
-          <div class="tagline">👑 Super Admin - Full System Control</div>
+          <div class="tagline">Super administrator workspace</div>
         </div>
         <div class="inline-actions">
           <a class="btn" href="../admin/dashboard.html">📊 Admin Dashboard</a>
@@ -39,14 +37,13 @@
       </nav>
 
       <section class="admin-card" data-panel="team">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+        <div class="team-overview">
           <div>
             <h2>👥 Team Management</h2>
             <p>Promote and manage moderators, authors, and admins</p>
           </div>
           <div style="text-align: right;">
-            <a class="btn" href="https://www.notion.so" style="margin: 8px;">📖 View Guide</a>
-            <button class="btn ghost" onclick="alert('Quick tips:\n✅ Start with trusted community members\n✅ Document their roles\n✅ Review monthly\n✅ Keep backup list')">💡 Tips</button>
+            <button class="btn ghost" onclick="window.appUI.toast('Quick tips:\n✅ Start with trusted community members\n✅ Document their roles\n✅ Review monthly\n✅ Keep backup list')">💡 Tips</button>
           </div>
         </div>
 
@@ -68,7 +65,7 @@
       <!-- Curator Bot Management -->
       <section class="admin-card" data-panel="curator">
         <h2>🤖 Curator + Scout Bot</h2>
-        <p style="color: #666; margin-bottom: 16px;">
+        <p style="color: var(--color-text-muted); margin-bottom: 16px;">
           Manage feed sources and run Scout manually from one unified workspace.
         </p>
 
@@ -99,8 +96,8 @@
       <!-- All Posts -->
       <section class="admin-card" data-panel="posts">
         <h2>📰 All Posts</h2>
-        <p style="color: #666; margin-bottom: 20px;">View and manage all content on the site</p>
-        <div id="allPostsContainer" style="text-align: center; padding: 40px; color: #999;">Loading posts...</div>
+        <p style="color: var(--color-text-muted); margin-bottom: 20px;">View and manage all content on the site</p>
+        <div id="allPostsContainer" style="text-align: center; padding: 40px; color: var(--color-text-muted);">Loading posts...</div>
       </section>
 
       <!-- Site Analysis -->
@@ -113,16 +110,16 @@
       <!-- Users -->
       <section class="admin-card" data-panel="users">
         <h2>👤 Users</h2>
-        <p style="color: #666; margin-bottom: 20px;">View and manage user accounts</p>
-        <div id="allUsersContainer" style="text-align: center; padding: 40px; color: #999;">Loading users...</div>
+        <p style="color: var(--color-text-muted); margin-bottom: 20px;">View and manage user accounts</p>
+        <div id="allUsersContainer" style="text-align: center; padding: 40px; color: var(--color-text-muted);">Loading users...</div>
       </section>
 
       <!-- Site Settings -->
       <section class="admin-card" data-panel="settings">
         <h2>⚙️ Site Settings</h2>
-        <p style="color: #666; margin-bottom: 20px;">Configure global site settings</p>
+        <p style="color: var(--color-text-muted); margin-bottom: 20px;">Configure global site settings</p>
         <div class="form-card">
-          <form id="siteSettingsForm">
+          <form novalidate id="siteSettingsForm">
             <div class="form-group">
               <label>Site Name</label>
               <input type="text" id="siteName" placeholder="Timzee Tech Hub">
@@ -144,7 +141,7 @@
       <!-- Ad Settings -->
       <section class="admin-card" data-panel="ads" style="display:none;">
         <h2>💰 AdSense Settings</h2>
-        <form id="adsForm" class="admin-form">
+        <form novalidate id="adsForm" class="admin-form">
           <input type="text" id="publisherIdInput" placeholder="Publisher ID (ca-pub-xxxxxxxxxxxx)">
           <input type="text" id="homeTopSlotInput" placeholder="Home Top Slot ID">
           <input type="text" id="sidebarSlotInput" placeholder="Sidebar Slot ID">
@@ -157,21 +154,21 @@
 
       <!-- Danger Zone -->
       <section class="admin-card" data-panel="danger">
-        <h2 style="color: #ef4444;">⚠️ DANGER ZONE</h2>
-        <p style="color: #666; margin-bottom: 20px;">Irreversible actions. Use with extreme caution.</p>
+        <h2 style="color: var(--color-danger);">⚠️ DANGER ZONE</h2>
+        <p style="color: var(--color-text-muted); margin-bottom: 20px;">Irreversible actions. Use with extreme caution.</p>
         
-        <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-          <h3 style="margin: 0 0 12px 0; color: #ef4444;">🗑️ Reset Database</h3>
-          <p style="margin: 0 0 12px 0; color: #666;">Delete ALL content, posts, comments, and discussions. Users remain.</p>
-          <button class="btn" id="deleteAllContentBtn" style="background: #ef4444; color: white; border-color: #ef4444;">Delete All Content</button>
+        <div style="background: var(--color-surface-muted); border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin: 0 0 12px 0; color: var(--color-danger);">🗑️ Reset Database</h3>
+          <p style="margin: 0 0 12px 0; color: var(--color-text-muted);">Delete ALL content, posts, comments, and discussions. Users remain.</p>
+          <button class="btn" id="deleteAllContentBtn" style="background: #b42318; color: white; border-color: var(--color-danger);">Delete All Content</button>
           <div id="deleteAllContentStatus" style="margin-top:10px; font-size:13px;"></div>
         </div>
 
-        <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px;">
-          <h3 style="margin: 0 0 12px 0; color: #ef4444;">👤 Delete User</h3>
-          <p style="margin: 0 0 12px 0; color: #666;">Permanently delete a user account and all their data.</p>
+        <div style="background: var(--color-surface-muted); border: 2px solid #ef4444; border-radius: 8px; padding: 20px;">
+          <h3 style="margin: 0 0 12px 0; color: var(--color-danger);">👤 Delete User</h3>
+          <p style="margin: 0 0 12px 0; color: var(--color-text-muted);">Permanently delete a user account and all their data.</p>
           <input type="text" id="deleteUserId" placeholder="User ID or Email" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px;">
-          <button class="btn" id="deleteUserBtn" style="background: #ef4444; color: white; border-color: #ef4444;">Delete User</button>
+          <button class="btn" id="deleteUserBtn" style="background: #b42318; color: white; border-color: var(--color-danger);">Delete User</button>
           <div id="deleteUserStatus" style="margin-top:10px; font-size:13px;"></div>
         </div>
       </section>
@@ -230,7 +227,7 @@
         const showPanelError = (containerId, message) => {
           const el = document.getElementById(containerId);
           if (!el) return;
-          el.innerHTML = `<div class="callout" style="border-left-color:#ef4444;">${message}</div>`;
+          el.innerHTML = `<div class="callout" style="border-left-color:var(--color-danger);">${escapeHTML(message)}</div>`;
         };
 
         // Initialize moderator manager
@@ -288,14 +285,14 @@
           const { runStatus } = scoutElements();
           if (!runStatus) return;
           runStatus.textContent = message || "";
-          runStatus.style.color = tone === "error" ? "#b91c1c" : tone === "success" ? "#0f766e" : "#666";
+          runStatus.style.color = tone === "error" ? "#b91c1c" : tone === "success" ? "#0f766e" : "var(--color-text-muted)";
         };
 
         const setScoutSettingsStatus = (message, tone = "info") => {
           const { settingsStatus } = scoutElements();
           if (!settingsStatus) return;
           settingsStatus.textContent = message || "";
-          settingsStatus.style.color = tone === "error" ? "#b91c1c" : tone === "success" ? "#0f766e" : "#666";
+          settingsStatus.style.color = tone === "error" ? "#b91c1c" : tone === "success" ? "#0f766e" : "var(--color-text-muted)";
         };
 
         const clampScoutInterval = (value) => {
@@ -480,12 +477,12 @@
             const cards = (data.admins || []).map((admin) => `
               <div class="form-card" style="margin-bottom:12px;" data-admin-id="${admin.id}">
                 <strong>${escapeHTML(admin.display_name || admin.email || "Admin")}</strong>
-                <div style="color:#666;font-size:12px;">${escapeHTML(admin.email || "—")} • ${escapeHTML(admin.role || "admin")}</div>
-                <div style="color:#666;font-size:12px;">Posts: ${admin.post_count || 0}</div>
+                <div style="color:var(--color-text-muted);font-size:12px;">${escapeHTML(admin.email || "—")} • ${escapeHTML(admin.role || "admin")}</div>
+                <div style="color:var(--color-text-muted);font-size:12px;">Posts: ${admin.post_count || 0}</div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                   ${admin.role !== "super" ? `<button class="btn ghost" data-admin-action="promote_to_super" data-admin-id="${admin.id}">Promote to Super</button>` : ""}
                   ${admin.role === "super" ? `<button class="btn ghost" data-admin-action="demote_to_admin" data-admin-id="${admin.id}">Demote to Admin</button>` : ""}
-                  <button class="btn ghost" style="color:#ef4444;" data-admin-action="remove_admin" data-admin-id="${admin.id}">Remove Admin Access</button>
+                  <button class="btn ghost" style="color:var(--color-danger);" data-admin-action="remove_admin" data-admin-id="${admin.id}">Remove Admin Access</button>
                 </div>
               </div>
             `);
@@ -495,11 +492,11 @@
               btn.addEventListener("click", async () => {
                 const action = btn.dataset.adminAction;
                 const label = action === "remove_admin" ? "remove admin access from" : "change the role of";
-                if (!confirm(`Are you sure you want to ${label} this user?`)) return;
+                if (!await window.appUI.confirm(`Are you sure you want to ${label} this user?`)) return;
                 btn.disabled = true;
                 const result = await changeAdminRole(btn.dataset.adminId, action);
                 if (result.error) {
-                  alert(result.error);
+                  window.appUI.toast(result.error);
                   btn.disabled = false;
                   return;
                 }
@@ -520,12 +517,12 @@
             const cards = (data || []).map((admin) => `
               <div class="form-card" style="margin-bottom:12px;" data-admin-id="${admin.id}">
                 <strong>${escapeHTML(admin.display_name || admin.username || "Admin")}</strong>
-                <div style="color:#666;font-size:12px;">${escapeHTML(admin.email || admin.username || "—")} • ${escapeHTML(admin.role || "admin")}</div>
-                <div style="color:#666;font-size:12px;">Joined: ${admin.created_at ? new Date(admin.created_at).toLocaleDateString() : "—"}</div>
+                <div style="color:var(--color-text-muted);font-size:12px;">${escapeHTML(admin.email || admin.username || "—")} • ${escapeHTML(admin.role || "admin")}</div>
+                <div style="color:var(--color-text-muted);font-size:12px;">Joined: ${admin.created_at ? new Date(admin.created_at).toLocaleDateString() : "—"}</div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                   ${admin.role !== "super" ? `<button class="btn ghost" data-admin-action="promote_to_super" data-admin-id="${admin.id}">Promote to Super</button>` : ""}
                   ${admin.role === "super" ? `<button class="btn ghost" data-admin-action="demote_to_admin" data-admin-id="${admin.id}">Demote to Admin</button>` : ""}
-                  <button class="btn ghost" style="color:#ef4444;" data-admin-action="remove_admin" data-admin-id="${admin.id}">Remove Admin Access</button>
+                  <button class="btn ghost" style="color:var(--color-danger);" data-admin-action="remove_admin" data-admin-id="${admin.id}">Remove Admin Access</button>
                 </div>
               </div>
             `);
@@ -534,11 +531,11 @@
               btn.addEventListener("click", async () => {
                 const action = btn.dataset.adminAction;
                 const label = action === "remove_admin" ? "remove admin access from" : "change the role of";
-                if (!confirm(`Are you sure you want to ${label} this user?`)) return;
+                if (!await window.appUI.confirm(`Are you sure you want to ${label} this user?`)) return;
                 btn.disabled = true;
                 const result = await changeAdminRole(btn.dataset.adminId, action);
                 if (result.error) {
-                  alert(result.error);
+                  window.appUI.toast(result.error);
                   btn.disabled = false;
                   return;
                 }
@@ -576,8 +573,8 @@
             const cards = (data.users || []).map((user) => `
               <div class="form-card" style="margin-bottom:12px;" data-user-id="${user.id}">
                 <strong>${escapeHTML(user.display_name || user.email || "Member")}</strong>
-                <div style="color:#666;font-size:12px;">${escapeHTML(user.email || "—")} • ${escapeHTML(user.role || "user")}</div>
-                <div style="color:#666;font-size:12px;">Status: ${user.account_status || "active"} ${user.is_verified ? "• Verified" : ""} ${user.is_staff_pick ? "• Staff Pick" : ""} ${user.is_featured ? "• Featured" : ""}</div>
+                <div style="color:var(--color-text-muted);font-size:12px;">${escapeHTML(user.email || "—")} • ${escapeHTML(user.role || "user")}</div>
+                <div style="color:var(--color-text-muted);font-size:12px;">Status: ${user.account_status || "active"} ${user.is_verified ? "• Verified" : ""} ${user.is_staff_pick ? "• Staff Pick" : ""} ${user.is_featured ? "• Featured" : ""}</div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                   <button class="btn ghost" data-user-action="${user.is_verified ? "unverify" : "verify"}" data-user-id="${user.id}">${user.is_verified ? "Unverify" : "Verify"}</button>
                   <button class="btn ghost" data-user-action="${user.account_status === "suspended" ? "activate" : "suspend"}" data-user-id="${user.id}">${user.account_status === "suspended" ? "Activate" : "Suspend"}</button>
@@ -594,7 +591,7 @@
                 const action = btn.dataset.userAction;
                 const result = await updateUserAction(btn.dataset.userId, action);
                 if (result.error) {
-                  alert(result.error);
+                  window.appUI.toast(result.error);
                   btn.disabled = false;
                   return;
                 }
@@ -615,8 +612,8 @@
             const cards = (data || []).map((user) => `
               <div class="form-card" style="margin-bottom:12px;">
                 <strong>${escapeHTML(user.display_name || user.username || "Member")}</strong>
-                <div style="color:#666;font-size:12px;">${escapeHTML(user.username || "—")} • ${escapeHTML(user.role || "user")}</div>
-                <div style="color:#666;font-size:12px;">Status: ${user.status || "active"}</div>
+                <div style="color:var(--color-text-muted);font-size:12px;">${escapeHTML(user.username || "—")} • ${escapeHTML(user.role || "user")}</div>
+                <div style="color:var(--color-text-muted);font-size:12px;">Status: ${escapeHTML(user.status || "active")}</div>
               </div>
             `);
             renderList("allUsersContainer", cards, "No users found.");
@@ -633,7 +630,7 @@
             .order("created_at", { ascending: false })
             .limit(50);
           if (error) {
-            container.innerHTML = `<div class="callout" style="border-left-color:#ef4444;">${escapeHTML(error.message || "Unable to load posts.")}</div>`;
+            container.innerHTML = `<div class="callout" style="border-left-color:var(--color-danger);">${escapeHTML(error.message || "Unable to load posts.")}</div>`;
             return;
           }
           if (!data || !data.length) {
@@ -645,10 +642,10 @@
               (post) => `
                 <div class="form-card" style="margin-bottom:12px;" data-post-id="${post.id}">
                   <strong>${escapeHTML(post.title || "Untitled")}</strong>
-                  <div style="color:#666;font-size:12px;">${escapeHTML(post.author_name || "Unknown")} • ${escapeHTML(post.status || "draft")}</div>
+                  <div style="color:var(--color-text-muted);font-size:12px;">${escapeHTML(post.author_name || "Unknown")} • ${escapeHTML(post.status || "draft")}</div>
                   <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                     <button class="btn ghost" data-post-action="${post.status === "published" ? "unpublish" : "publish"}" data-post-id="${post.id}">${post.status === "published" ? "Unpublish" : "Publish"}</button>
-                    <button class="btn ghost" style="color:#ef4444;" data-post-action="delete" data-post-id="${post.id}">Delete</button>
+                    <button class="btn ghost" style="color:var(--color-danger);" data-post-action="delete" data-post-id="${post.id}">Delete</button>
                   </div>
                 </div>`
             )
@@ -659,11 +656,11 @@
               const postId = btn.dataset.postId;
               const action = btn.dataset.postAction;
               if (action === "delete") {
-                if (!confirm("Delete this post permanently? This cannot be undone.")) return;
+                if (!await window.appUI.confirm("Delete this post permanently? This cannot be undone.")) return;
                 btn.disabled = true;
                 const { error: delError } = await supabase.from("posts").delete().eq("id", postId);
                 if (delError) {
-                  alert(delError.message);
+                  window.appUI.toast(delError.message);
                   btn.disabled = false;
                   return;
                 }
@@ -674,7 +671,7 @@
               btn.disabled = true;
               const { error: updError } = await supabase.from("posts").update({ status: newStatus }).eq("id", postId);
               if (updError) {
-                alert(updError.message);
+                window.appUI.toast(updError.message);
                 btn.disabled = false;
                 return;
               }
@@ -708,7 +705,7 @@
             .order("views", { ascending: false })
             .limit(5);
           if (!topPosts.error && topPosts.data?.length) {
-            topEl.innerHTML = `Top posts: ${topPosts.data.map((p) => p.title).join(", ")}`;
+            topEl.textContent = `Top posts: ${topPosts.data.map((p) => p.title).join(", ")}`;
           } else {
             topEl.textContent = "No top posts yet.";
           }
@@ -799,7 +796,7 @@
               status.style.color = "red";
               status.textContent = `Failed to update ads settings: ${err.message}`;
             } else {
-              alert(`Failed to update ads settings: ${err.message}`);
+              window.appUI.toast(`Failed to update ads settings: ${err.message}`);
             }
           }
         });
@@ -862,7 +859,7 @@
               deleteUserStatus.textContent = "You cannot delete your own account this way.";
               return;
             }
-            const typed = prompt('Type DELETE to permanently remove this user and all their data. This cannot be undone.');
+            const typed = await window.appUI.prompt('Type DELETE to permanently remove this user and all their data. This cannot be undone.');
             if (typed !== "DELETE") {
               deleteUserStatus.textContent = "Cancelled — confirmation text didn't match.";
               return;
@@ -891,7 +888,7 @@
         const deleteAllContentStatus = document.getElementById("deleteAllContentStatus");
         if (deleteAllContentBtn) {
           deleteAllContentBtn.addEventListener("click", async () => {
-            const typed = prompt('This deletes ALL posts, comments, and discussion content site-wide. Users are not affected. Type "DELETE ALL" (exactly) to confirm.');
+            const typed = await window.appUI.prompt('This deletes ALL posts, comments, and discussion content site-wide. Users are not affected. Type "DELETE ALL" (exactly) to confirm.');
             if (typed !== "DELETE ALL") {
               deleteAllContentStatus.textContent = "Cancelled — confirmation text didn't match.";
               return;

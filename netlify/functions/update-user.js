@@ -1,7 +1,8 @@
+const { parseJsonObject } = require("./_lib/request.js");
 const { createClient } = require("@supabase/supabase-js");
 const { requireRole, roleFromUser } = require("./_lib/auth-role.js");
 
-const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(payload) });
 const allowedTiers = new Set(["standard", "pro", "elite"]);
 
 exports.handler = async (event) => {
@@ -10,15 +11,15 @@ exports.handler = async (event) => {
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
 
-  const authHeader = event.headers.authorization || event.headers.Authorization || "";
+  const authHeader = event.headers?.authorization || event.headers?.Authorization || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const guard = await requireRole(supabase, token, ["admin", "super"], "Only admins can access this.");
   if (guard.error) return jsonResponse(guard.error === "Missing auth token." || guard.error === "Invalid auth token." ? 401 : 403, { error: guard.error });
 
-  let payload = {};
-  try { payload = JSON.parse(event.body || "{}"); }
-  catch { return jsonResponse(400, { error: "Invalid request body." }); }
+  const parsed = parseJsonObject(event);
+  if (parsed.error) return jsonResponse(parsed.statusCode, { error: parsed.error });
+  const payload = parsed.payload;
 
   const userId = payload.userId;
   const action = payload.action;

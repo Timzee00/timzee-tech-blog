@@ -7,7 +7,7 @@
     <meta name="description" content="Log in or create your Timzee Tech Hub account to join discussions, comment, and connect.">
     <meta name="keywords" content="Timzee Tech Hub login, sign up, tech community account">
     <meta name="robots" content="index, follow">
-    <meta name="theme-color" content="#0f766e">
+    <meta name="theme-color" content="#087f73">
     <link rel="canonical" href="https://timzee-tech-blog.netlify.app/login.html">
     <meta property="og:site_name" content="Timzee Tech Hub">
     <meta property="og:type" content="website">
@@ -19,9 +19,6 @@
     <meta name="twitter:title" content="Log In - Timzee Tech Hub">
     <meta name="twitter:description" content="Log in or create your Timzee Tech Hub account to join discussions, comment, and connect.">
     <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <script defer src="assets/js/theme-init.js"></script>
     <style>
@@ -72,8 +69,8 @@
         <section class="auth-hero" data-reveal>
           <div class="auth-hero-card">
             <span class="chip">Welcome back</span>
-            <h1>Sign in to your newsroom</h1>
-            <p class="tagline">A creator-first space for tech stories, community debate, and creator tools.</p>
+            <h1>Good ideas start<br>with a conversation.</h1>
+            <p class="tagline">A place to learn, share what you know, and find people who share your curiosity.</p>
             <div class="auth-highlights">
               <div class="auth-highlight">
                 <strong>Creator Studio</strong>
@@ -95,16 +92,16 @@
           <div class="auth-switcher" data-view="login" data-reveal>
             <div class="auth-card auth-panel auth-panel-login">
               <h2>Log In</h2>
-              <p class="tagline">Welcome back, you’ve been missed.</p>
-              <form id="loginForm" class="form-grid auth-form">
+              <p class="tagline">Sign in to pick up where you left off.</p>
+              <form novalidate id="loginForm" class="form-grid auth-form">
                 <div class="auth-input-group">
                   <label for="loginEmail">Email</label>
-                  <input type="email" id="loginEmail" placeholder="you@example.com" required>
+                  <input type="email" id="loginEmail" autocomplete="username" placeholder="you@example.com" required>
                 </div>
                 <div class="auth-input-group">
                   <label for="loginPassword">Password</label>
                   <div class="password-field">
-                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                    <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••" required>
                     <button type="button" class="password-toggle" data-password-toggle="loginPassword" aria-label="Show password" title="Show password">
                       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
@@ -139,20 +136,20 @@
 
             <div class="auth-card auth-panel auth-panel-signup secondary-card">
               <h2>Create Account</h2>
-              <p class="tagline">Join the community and publish your first story.</p>
-              <form id="signupForm" class="form-grid auth-form">
+              <p class="tagline">Join the conversation and make yourself at home.</p>
+              <form novalidate id="signupForm" class="form-grid auth-form">
                 <div class="auth-input-group">
                   <label for="signupName">Display name</label>
-                  <input type="text" id="signupName" placeholder="Jane Doe" required>
+                  <input type="text" id="signupName" autocomplete="nickname" placeholder="Jane Doe" required>
                 </div>
                 <div class="auth-input-group">
                   <label for="signupEmail">Email</label>
-                  <input type="email" id="signupEmail" placeholder="you@example.com" required>
+                  <input type="email" id="signupEmail" autocomplete="email" placeholder="you@example.com" required>
                 </div>
                 <div class="auth-input-group">
                   <label for="signupPassword">Password</label>
                   <div class="password-field">
-                    <input type="password" id="signupPassword" placeholder="Create a strong password" required>
+                    <input type="password" id="signupPassword" autocomplete="new-password" minlength="8" placeholder="Create a strong password" required>
                     <button type="button" class="password-toggle" data-password-toggle="signupPassword" aria-label="Show password" title="Show password">
                       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
@@ -168,9 +165,9 @@
             <div class="auth-card auth-panel auth-panel-reset secondary-card">
               <h2>Reset Password</h2>
               <p class="tagline">Create a new password for your account.</p>
-              <form id="resetForm" class="form-grid auth-form">
-                <div class="auth-input-group"><label for="resetPassword">New password</label><input type="password" id="resetPassword" placeholder="Enter a new password" required></div>
-                <div class="auth-input-group"><label for="resetPasswordConfirm">Confirm password</label><input type="password" id="resetPasswordConfirm" placeholder="Confirm new password" required></div>
+              <form novalidate id="resetForm" class="form-grid auth-form">
+                <div class="auth-input-group"><label for="resetPassword">New password</label><input type="password" id="resetPassword" autocomplete="new-password" minlength="8" placeholder="Enter a new password" required></div>
+                <div class="auth-input-group"><label for="resetPasswordConfirm">Confirm password</label><input type="password" id="resetPasswordConfirm" autocomplete="new-password" minlength="8" placeholder="Confirm new password" required></div>
                 <button class="btn secondary" type="submit">Update Password</button>
               </form>
               <p class="callout" id="resetMessage" style="display:none; margin-top:14px;"></p>

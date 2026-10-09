@@ -156,12 +156,12 @@ export async function fetchVideos({ category = null, limit = 20, offset = 0, use
     const result = await query;
     if (result && result.error) {
       console.error("fetchVideos error:", result.error);
-      return [];
+      throw result.error;
     }
     return result.data || [];
   } catch (err) {
     console.error("fetchVideos exception:", err);
-    return [];
+    throw err;
   }
 }
 
@@ -183,10 +183,10 @@ export async function fetchVideoById(videoId) {
   }
 }
 
-export async function searchVideos({ query, limit = 20, offset = 0 } = {}) {
+export async function searchVideos({ query, category = null, limit = 20, offset = 0 } = {}) {
   if (!query) return [];
   try {
-    const result = await supabase
+    let request = supabase
       .from("videos")
       .select("*")
       .textSearch("search_vector", query, { type: "websearch", config: "english" })
@@ -194,14 +194,16 @@ export async function searchVideos({ query, limit = 20, offset = 0 } = {}) {
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
+    if (category) request = request.eq("category", category);
+    const result = await request;
     if (result && result.error) {
       console.error("searchVideos error:", result.error);
-      return [];
+      throw result.error;
     }
     return result.data || [];
   } catch (err) {
     console.error("searchVideos exception:", err);
-    return [];
+    throw err;
   }
 }
 
@@ -398,14 +400,14 @@ export async function fetchMarketplaceItems({
     const result = await query;
     if (result && result.error) {
       console.error("fetchMarketplaceItems error:", result.error);
-      return [];
+      throw result.error;
     }
     const items = result.data || [];
     await attachSellerVerification(items);
     return items;
   } catch (err) {
     console.error("fetchMarketplaceItems exception:", err);
-    return [];
+    throw err;
   }
 }
 
@@ -451,12 +453,12 @@ export async function searchMarketplace({ query, category = null, limit = 20, of
     const result = await request;
     if (result && result.error) {
       console.error("searchMarketplace error:", result.error);
-      return [];
+      throw result.error;
     }
     return result.data || [];
   } catch (err) {
     console.error("searchMarketplace exception:", err);
-    return [];
+    throw err;
   }
 }
 

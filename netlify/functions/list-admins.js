@@ -3,7 +3,7 @@ const { requireRole, roleFromUser } = require("./_lib/auth-role.js");
 
 const jsonResponse = (statusCode, payload) => ({
   statusCode,
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   body: JSON.stringify(payload)
 });
 
@@ -14,15 +14,15 @@ exports.handler = async (event) => {
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
 
-  const authHeader = event.headers.authorization || event.headers.Authorization || "";
+  const authHeader = event.headers?.authorization || event.headers?.Authorization || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const guard = await requireRole(supabase, token, ["super"], "Only super admins can access this.");
   if (guard.error) return jsonResponse(403, { error: guard.error });
 
   const params = event.queryStringParameters || {};
-  const perPage = Math.min(Number.parseInt(params.perPage || "200", 10) || 200, 200);
-  const maxPages = Math.min(Number.parseInt(params.maxPages || "5", 10) || 5, 10);
+  const perPage = Math.max(1, Math.min(Number.parseInt(params.perPage || "200", 10) || 200, 200));
+  const maxPages = Math.max(1, Math.min(Number.parseInt(params.maxPages || "5", 10) || 5, 10));
   const requestedPage = Number.parseInt(params.page || "0", 10);
 
   let users = [];

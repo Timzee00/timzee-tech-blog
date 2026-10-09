@@ -5,16 +5,16 @@
   display: none !important;
 }
 
+.chat-page .chat-main { padding: 0; min-height: 0; }
+.chat-page .chat-app-shell {
+  width: 100%;
+  height: calc(100dvh - var(--site-header-height, 84px) - var(--bottom-nav-height, 0px));
+  min-height: 0;
+  overflow: hidden;
+}
+html[data-chat-compact="true"] .chat-message { padding: 6px 10px; }
+html[data-chat-compact="true"] .chat-messages { gap: 5px; }
 @media (max-width: 760px) {
-  .chat-page .chat-main {
-    min-height: calc(100dvh - 74px);
-  }
-  .chat-page .chat-app-shell {
-    width: 100%;
-    height: calc(100dvh - 74px);
-    min-height: 520px;
-    overflow: hidden;
-  }
   .chat-page .chat-sidebar {
     width: 100%;
     min-height: 0;
@@ -24,6 +24,6 @@
     min-height: 0;
   }
   .chat-page .chat-list {
-    padding-bottom: 90px;
+    padding-bottom: 12px;
   }
 }

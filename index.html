@@ -7,7 +7,7 @@
     <meta name="description" content="Timzee Tech Hub: a tech blog, live discussion forum, marketplace, video hub, and novel platform in one community — with an AI assistant built in.">
     <meta name="keywords" content="Timzee Tech Hub, tech blog, tech news, live discussion, tech forum, tech marketplace, tech videos, novels, AI assistant, developer community">
     <meta name="robots" content="index, follow">
-    <meta name="theme-color" content="#0f766e">
+    <meta name="theme-color" content="#087f73">
     <link rel="canonical" href="https://timzee-tech-blog.netlify.app/">
     <meta property="og:site_name" content="Timzee Tech Hub">
     <meta property="og:type" content="website">
@@ -34,9 +34,6 @@
         }
       }
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -77,68 +74,23 @@
     </header>
 
     <main id="main-content">
-      <section class="hero">
-        <div class="container hero-grid">
-          <div class="hero-card" data-reveal style="--delay: 0s;">
-            <div class="chip" style="margin-bottom: 14px;">
-              <span class="signal-bar" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span>
-              Live community
-            </div>
-            <h1 id="heroTitle">Where builders read, talk, trade, and watch tech.</h1>
-            <p id="heroIntro">Timzee Tech Hub is a tech blog with a live discussion forum, a marketplace, a video hub, and a novel platform built in — plus an AI assistant to help you find your way around.</p>
-            <div class="hero-pillars" id="heroPillars">
-              <a class="hero-pillar" href="#latest">
-                <span class="hero-pillar-icon">📰</span>
-                <span class="hero-pillar-label">Read tech news</span>
-              </a>
-              <a class="hero-pillar" href="discussion.html">
-                <span class="hero-pillar-icon">💬</span>
-                <span class="hero-pillar-label">Join live discussion</span>
-              </a>
-              <a class="hero-pillar" href="marketplace.html">
-                <span class="hero-pillar-icon">🛒</span>
-                <span class="hero-pillar-label">Buy &amp; sell tech</span>
-              </a>
-              <a class="hero-pillar" href="videos.html">
-                <span class="hero-pillar-icon">🎬</span>
-                <span class="hero-pillar-label">Watch videos</span>
-              </a>
-              <a class="hero-pillar" href="novels.html">
-                <span class="hero-pillar-icon">📚</span>
-                <span class="hero-pillar-label">Read novels</span>
-              </a>
-              <a class="hero-pillar" href="ai-chat.html">
-                <span class="hero-pillar-icon">🤖</span>
-                <span class="hero-pillar-label">Ask the AI</span>
-              </a>
-              <a class="hero-pillar" href="stories.html">
-                <span class="hero-pillar-icon">📸</span>
-                <span class="hero-pillar-label">Post a story</span>
-              </a>
-              <a class="hero-pillar" href="chat.html">
-                <span class="hero-pillar-icon">💬</span>
-                <span class="hero-pillar-label">Direct message</span>
-              </a>
-            </div>
-            <div class="cta">
-              <a class="btn" href="#latest">Explore Latest</a>
-              <a class="btn ghost" href="#categories">Browse Categories</a>
-            </div>
-            <div class="callout" style="margin-top:16px;">
-              Tip: admins can post from the dashboard; the super admin controls ads, roles, and site settings.
-            </div>
+      <section class="hero home-intro">
+        <div class="container home-intro-grid">
+          <div class="home-intro-copy">
+            <p class="eyebrow"><span aria-hidden="true"></span> The curious belong here</p>
+            <h1 id="heroTitle">Stay curious.<br>Build what’s next.</h1>
+            <p id="heroIntro">Fresh perspectives on tech. Conversations worth having. A community to explore it all with.</p>
+            <div class="cta"><a class="btn" href="#latest">Explore the latest <span aria-hidden="true">→</span></a><a class="btn ghost" href="discussion.html">Join a discussion</a></div>
+            <a class="intro-note" href="login.html?view=signup">Find your people. Create an account <span aria-hidden="true">→</span></a>
           </div>
-          <div class="hero-card" data-reveal style="--delay: 0.1s;">
-            <h2 class="section-title">Trending Now</h2>
-            <div id="trendingList" class="post-list"></div>
-          </div>
-          <div class="stats-card" id="statsCard" data-reveal style="--delay: 0.2s;">
-            <h2>Community Pulse</h2>
-            <div class="stats-list" id="statsList"></div>
-            <div class="callout" style="margin-top:14px; background: rgba(255,255,255,0.12); color: #e2e8f0;">
-              Real-time likes, views, and replies update as you post.
-            </div>
-          </div>
+          <nav class="explore-panel" aria-label="Explore Timzee">
+            <div class="explore-heading"><span class="eyebrow">Your next discovery</span><span class="explore-mark" aria-hidden="true">t.</span></div>
+            <a href="discussion.html"><span class="explore-number">01</span><span><strong>Exchange ideas</strong><small>Questions, perspectives, conversations</small></span><span aria-hidden="true">→</span></a>
+            <a href="marketplace.html"><span class="explore-number">02</span><span><strong>Find your next tool</strong><small>Tech & services from the community</small></span><span aria-hidden="true">→</span></a>
+            <a href="videos.html"><span class="explore-number">03</span><span><strong>See something new</strong><small>Videos from people who make things</small></span><span aria-hidden="true">→</span></a>
+            <a href="novels.html"><span class="explore-number">04</span><span><strong>Get lost in a story</strong><small>Original fiction, one chapter at a time</small></span><span aria-hidden="true">→</span></a>
+            <div class="explore-footer"><a href="stories.html">Community stories →</a><a href="ai-chat.html">Ask the assistant →</a></div>
+          </nav>
         </div>
       </section>
 
@@ -152,95 +104,10 @@
         <div class="people-rail" id="suggestedPeopleRail"></div>
       </section>
 
-      <section class="container popular-section" id="popular">
-        <div class="popular-top" data-reveal>
-          <div class="popular-header">
-            <h2 class="section-title">Popular Posts</h2>
-            <p class="tagline">Top stories people are reading right now. Scroll to explore up to 5.</p>
-          </div>
-          <div class="popular-controls">
-            <button class="popular-btn" id="popularPrev" aria-label="Scroll popular posts left">‹</button>
-            <button class="popular-btn" id="popularNext" aria-label="Scroll popular posts right">›</button>
-          </div>
-        </div>
-        <div class="popular-track" id="popularTrack" data-reveal></div>
-      </section>
-
-      <section class="container popular-section" id="popularTopics">
-        <div class="popular-top" data-reveal>
-          <div class="popular-header">
-            <h2 class="section-title">Popular Discussions</h2>
-            <p class="tagline">Hot topics people are debating right now.</p>
-          </div>
-          <div class="popular-controls">
-            <button class="popular-btn" id="topicPrev" aria-label="Scroll popular topics left">‹</button>
-            <button class="popular-btn" id="topicNext" aria-label="Scroll popular topics right">›</button>
-          </div>
-        </div>
-        <div class="popular-track topic-track" id="popularTopicsTrack" data-reveal></div>
-      </section>
-
-      <section class="container feature-band" id="features">
-        <div class="feature-header" data-reveal>
-          <span class="chip">New capabilities</span>
-          <h2 class="section-title">One community, eight ways in</h2>
-          <p class="tagline">Not just a blog — a place to read, argue, trade, and build with people who care about the same stuff you do.</p>
-        </div>
-        <div class="feature-grid">
-          <article class="feature-card" data-reveal>
-            <div class="feature-icon">📰</div>
-            <h3>Tech blog</h3>
-            <p>News, build logs, and reviews from the community and from admins — filterable by tag, sorted by what's trending right now.</p>
-          </article>
-          <article class="feature-card" data-reveal>
-            <div class="feature-icon">💬</div>
-            <h3>Live discussion</h3>
-            <p>Real forum threads with live replies, reactions, pinned messages, and topic themes — not a comment section, an actual conversation.</p>
-          </article>
-          <article class="feature-card" data-reveal>
-            <div class="feature-icon">🛒</div>
-            <h3>Marketplace</h3>
-            <p>Buy and sell tech directly with other members — listings, seller profiles, and inquiries handled right on the site.</p>
-          </article>
-          <article class="feature-card" data-reveal>
-            <div class="feature-icon">🎬</div>
-            <h3>Video hub</h3>
-            <p>Upload and watch tech videos from the community, organized and searchable alongside everything else.</p>
-          </article>
-          <article class="feature-card" data-reveal>
-            <div class="feature-icon">📚</div>
-            <h3>Novels</h3>
-            <p>Serialized tech-inspired fiction, chapter by chapter, from writers in the community.</p>
-          </article>
-          <article class="feature-card" data-reveal>
-            <div class="feature-icon">🤖</div>
-            <h3>AI assistant</h3>
-            <p>Built-in AI chat to help you find what you're looking for, or just talk through an idea.</p>
-          </article>
-          <article class="feature-card" data-reveal>
-            <div class="feature-icon">📸</div>
-            <h3>Stories</h3>
-            <p>Post a public or friends-only story that disappears after 24 hours — like a quick pulse from the community.</p>
-          </article>
-          <article class="feature-card" data-reveal>
-            <div class="feature-icon">💬</div>
-            <h3>Direct messages</h3>
-            <p>Private one-on-one and group chats, separate from the public discussion boards.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="container" id="categories">
-        <h2 class="section-title">Forum Boards</h2>
-        <div class="board" data-reveal>
-          <div id="categoryGrid" class="category-grid"></div>
-        </div>
-      </section>
-
       <section class="container" id="latest">
         <div class="content-grid">
           <div>
-            <h2 class="section-title">Latest Posts</h2>
+            <h2 class="section-title">The latest from Timzee</h2>
             <nav class="nav-pill category-filter-pill" id="categoryNav" aria-label="Filter by category"></nav>
             <div class="filter-bar">
               <div class="filter-group">
@@ -257,15 +124,51 @@
           </div>
           <aside class="side-card" data-reveal>
             <h3>Hot This Week</h3>
-            <div id="hotList" class="post-list"></div>
+            <div id="trendingList" class="post-list"></div>
             <h3 style="margin-top:16px;">Top Members</h3>
             <div id="leaderboardList" class="leaderboard-list"></div>
-            <div class="ad-slot" id="homeTopAd">Ad slot: Home Top Banner</div>
-            <div class="ad-slot" id="homeSidebarAd">Ad slot: Sidebar Rectangle</div>
+            <div class="ad-slot" id="homeTopAd" hidden></div>
+            <div class="ad-slot" id="homeSidebarAd" hidden></div>
             <div class="callout">Share posts to boost visibility and reactions.</div>
           </aside>
         </div>
       </section>
+
+      <section class="container popular-section" id="popular">
+        <div class="popular-top" data-reveal>
+          <div class="popular-header">
+            <h2 class="section-title">Worth a read</h2>
+            <p class="tagline">Explore stories the community is spending time with.</p>
+          </div>
+          <div class="popular-controls">
+            <button class="popular-btn" id="popularPrev" aria-label="Scroll popular posts left">‹</button>
+            <button class="popular-btn" id="popularNext" aria-label="Scroll popular posts right">›</button>
+          </div>
+        </div>
+        <div class="popular-track" id="popularTrack" data-reveal></div>
+      </section>
+
+      <section class="container popular-section" id="popularTopics">
+        <div class="popular-top" data-reveal>
+          <div class="popular-header">
+            <h2 class="section-title">In the conversation</h2>
+            <p class="tagline">Discover a question or share a different perspective.</p>
+          </div>
+          <div class="popular-controls">
+            <button class="popular-btn" id="topicPrev" aria-label="Scroll popular topics left">‹</button>
+            <button class="popular-btn" id="topicNext" aria-label="Scroll popular topics right">›</button>
+          </div>
+        </div>
+        <div class="popular-track topic-track" id="popularTopicsTrack" data-reveal></div>
+      </section>
+
+      <section class="container" id="categories">
+        <h2 class="section-title">Browse topics</h2>
+        <div class="board" data-reveal>
+          <div id="categoryGrid" class="category-grid"></div>
+        </div>
+      </section>
+
     </main>
 
     <footer class="footer">

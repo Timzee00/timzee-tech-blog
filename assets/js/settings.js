@@ -5,9 +5,9 @@ const SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 export const DEFAULT_SETTINGS = {
   siteName: "Timzee Tech Hub",
   tagline: "Tech news, live discussion, marketplace, videos, and novels — all in one community.",
-  heroTitle: "Where builders read, talk, trade, and watch tech.",
+  heroTitle: "Stay curious. Build what’s next.",
   heroIntro:
-    "Timzee Tech Hub is a tech blog with a live discussion forum, a marketplace, a video hub, and a novel platform built in — plus an AI assistant to help you find your way around.",
+    "Fresh perspectives on tech. Conversations worth having. A community to explore it all with.",
   rules: "Respect each other, share sources, and keep posts useful. No spam or hate speech.",
   themeAccent: "#0f766e",
   features: {

@@ -12,15 +12,15 @@ function ensureDiscoveryMount() {
   wrapper.className = "discussion-discovery container";
   wrapper.innerHTML = `
     <div class="discussion-discovery-head">
-      <div><span class="discussion-discovery-kicker">Discovery</span><h1>Find the conversation worth joining.</h1><p>Trending measures recent acceleration. Popular measures sustained community activity. New and unanswered give you different ways in.</p></div>
+      <div><span class="discussion-discovery-kicker">Discovery</span><h1>Find the conversation worth joining.</h1><p>Find a topic, ask a question, or share what you’ve learned. New and unanswered give you different ways in.</p></div>
       <a class="btn ghost" href="settings.html#discussion">Discussion settings</a>
     </div>
-    <div class="discussion-discovery-tabs" role="tablist" aria-label="Discussion discovery">
-      <button class="discussion-discovery-tab active" type="button" data-discovery-mode="trending">Trending</button>
-      <button class="discussion-discovery-tab" type="button" data-discovery-mode="popular">Popular</button>
-      <button class="discussion-discovery-tab" type="button" data-discovery-mode="new">New</button>
-      <button class="discussion-discovery-tab" type="button" data-discovery-mode="active">Most active</button>
-      <button class="discussion-discovery-tab" type="button" data-discovery-mode="unanswered">Unanswered</button>
+    <div class="discussion-discovery-tabs" role="group" aria-label="Discussion discovery">
+      <button class="discussion-discovery-tab active" aria-pressed="true" type="button" data-discovery-mode="trending">Trending</button>
+      <button class="discussion-discovery-tab" aria-pressed="false" type="button" data-discovery-mode="popular">Popular</button>
+      <button class="discussion-discovery-tab" aria-pressed="false" type="button" data-discovery-mode="new">New</button>
+      <button class="discussion-discovery-tab" aria-pressed="false" type="button" data-discovery-mode="active">Most active</button>
+      <button class="discussion-discovery-tab" aria-pressed="false" type="button" data-discovery-mode="unanswered">Unanswered</button>
     </div>
     <div id="discussionDiscoveryGrid" class="discussion-discovery-grid" aria-live="polite"></div>
   `;
@@ -71,17 +71,22 @@ async function queryMode(mode) {
   return result.data || [];
 }
 
+let requestVersion = 0;
 async function load(mode = state.mode) {
+  const version = ++requestVersion;
   const grid = $("discussionDiscoveryGrid");
   if (!grid) return;
   state.mode = mode;
   grid.innerHTML = `<div class="callout">Loading ${escapeHTML(mode)} discussions…</div>`;
   try {
-    state.topics = await queryMode(mode);
+    const topics = await queryMode(mode);
+    if (version !== requestVersion) return;
+    state.topics = topics;
     grid.innerHTML = state.topics.length
       ? state.topics.map(topicCard).join("")
       : `<div class="callout">No ${escapeHTML(mode)} discussions to show yet.</div>`;
   } catch (error) {
+    if (version !== requestVersion) return;
     grid.innerHTML = `<div class="callout">Unable to load discussion discovery right now.</div>`;
     reportAppError(error, "Discussion discovery failed");
   }
@@ -101,7 +106,7 @@ function wire(wrapper) {
   wrapper.addEventListener("click", (event) => {
     const modeButton = event.target.closest("[data-discovery-mode]");
     if (modeButton) {
-      document.querySelectorAll("[data-discovery-mode]").forEach((button) => button.classList.toggle("active", button === modeButton));
+      document.querySelectorAll("[data-discovery-mode]").forEach((button) => { button.classList.toggle("active", button === modeButton); button.setAttribute("aria-pressed", String(button === modeButton)); });
       void load(modeButton.dataset.discoveryMode || "trending");
       return;
     }

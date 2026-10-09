@@ -5,7 +5,6 @@
 @import url("buttons.css");
 @import url("forms.css");
 @import url("avatars.css");
-@import url("design-system.css");
 @import url("chat.css");
 @import url("chat-context-menu.css");
 @import url("profile.css");
@@ -21,7 +20,7 @@
 @import url("animations.css");
 @import url("utilities.css");
 @import url("responsive.css");
-@import url("site-ux-fixes.css");
+@import url("design-system.css");
 
 html[data-reader-font="small"] .reader-content{font-size:.95rem;}
 html[data-reader-font="medium"] .reader-content{font-size:1.05rem;}

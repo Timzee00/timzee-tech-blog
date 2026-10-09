@@ -7,7 +7,7 @@
     <meta name="description" content="Join real-time tech discussions, share ideas, and connect with builders on Timzee Tech Hub.">
     <meta name="keywords" content="Timzee Tech Hub, tech discussion, community forum, tech chat, builders">
     <meta name="robots" content="index, follow">
-    <meta name="theme-color" content="#0f766e">
+    <meta name="theme-color" content="#087f73">
     <link rel="canonical" href="https://timzee-tech-blog.netlify.app/discussion.html">
     <meta property="og:site_name" content="Timzee Tech Hub">
     <meta property="og:type" content="website">
@@ -19,9 +19,6 @@
     <meta name="twitter:title" content="Discussion - Timzee Tech Hub">
     <meta name="twitter:description" content="Join real-time tech discussions, share ideas, and connect with builders.">
     <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -73,7 +70,7 @@
 
           <div class="discussion-card" data-reveal>
             <h3>Start a Community</h3>
-            <form id="topicForm" class="form-grid">
+            <form novalidate id="topicForm" class="form-grid">
               <input type="text" id="topicTitle" placeholder="Community name" required>
               <div class="editor-toolbar" id="topicToolbar">
                 <button type="button" data-action="h2">H2</button>
@@ -85,7 +82,7 @@
                 <button type="button" data-action="ol">1-2-3</button>
                 <button type="button" data-action="link">Link</button>
               </div>
-              <textarea id="topicDescription" placeholder="Short description" required></textarea>
+              <textarea id="topicDescription" placeholder="Short description" required class="resize-none"></textarea>
               <select id="topicThemeSelect">
                 <option value="">Default theme</option>
               </select>
@@ -115,9 +112,9 @@
             <div id="topicMedia" class="topic-media"></div>
             <div class="pinned-list" id="pinnedList"></div>
             <div class="message-list" id="messageList"></div>
-            <form id="messageForm" class="comment-form">
+            <form novalidate id="messageForm" class="comment-form">
               <div class="reply-preview hidden" id="replyPreview"></div>
-              <textarea id="messageBody" placeholder="Write a post..." required></textarea>
+              <textarea id="messageBody" placeholder="Write a post..." required class="resize-none"></textarea>
               <div class="message-tools">
                 <input type="file" id="messageMedia" accept="image/*,video/*">
                 <select id="messageMediaType">
@@ -142,7 +139,7 @@
                 <option value="mask">Mask banned words</option>
               </select>
               <label class="badge">Banned words (comma separated)</label>
-              <textarea id="topicBannedWords" placeholder="spam, scam, hate"></textarea>
+              <textarea id="topicBannedWords" placeholder="spam, scam, hate" class="resize-none"></textarea>
               <button class="btn" id="saveTopicRules" type="button">Save Rules</button>
             </div>
             <div class="callout" id="topicRulesStatus" style="margin-top:12px; display:none;"></div>

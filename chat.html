@@ -7,9 +7,6 @@
     <meta name="description" content="Private, real-time messaging for the Timzee Tech Hub community.">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://timzee-tech-blog.netlify.app/chat.html">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="assets/css/chat-v2.css">
     <link rel="stylesheet" href="assets/css/chat-fixes.css">
@@ -81,7 +78,7 @@
           <div class="chat-tab-panel" data-panel="blocked" hidden><div class="chat-list" id="blockedList"></div></div>
           <div class="chat-people-search" id="peopleSearchPanel" hidden>
             <div class="chat-section-label">Find people</div>
-            <div class="chat-search-shell"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input type="search" id="peopleSearch" placeholder="Name, username or email"></div>
+            <div class="chat-search-shell"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input type="search" id="peopleSearch" placeholder="Name or username"></div>
             <div class="chat-list" id="peopleResults"></div>
           </div>
         </aside>
@@ -114,15 +111,16 @@
               </div>
             </header>
 
+            <button class="btn ghost" id="loadOlderMessages" type="button" hidden>Load older messages</button>
             <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
-            <div class="chat-typing" id="chatTyping" hidden><span></span><span></span><span></span><strong id="chatTypingName">Someone</strong><span>is typing</span></div>
 
-            <form id="chatForm" class="chat-composer">
+
+            <form novalidate id="chatForm" class="chat-composer">
               <div class="chat-attachment-preview" id="chatMediaPreview"></div>
               <div class="chat-composer-row">
                 <label class="chat-composer-btn" for="chatMedia" title="Attach file" aria-label="Attach file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 6.7-6.7a3.2 3.2 0 0 1 4.5 4.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></label>
                 <input type="file" id="chatMedia" accept="*/*" hidden>
-                <textarea id="chatBody" rows="1" placeholder="Write a message…" autocomplete="off"></textarea>
+                <textarea id="chatBody" rows="1" placeholder="Write a message…" autocomplete="off" class="resize-none"></textarea>
                 <button class="chat-composer-btn" id="recordVoiceBtn" type="button" title="Record voice" aria-label="Record voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="3" width="7" height="12" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 11.5a7 7 0 0 0 14 0M12 18.5v3M8.5 21.5h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
                 <button class="chat-send-btn" type="submit" title="Send message" aria-label="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5 20 12 4 19.5l3-7.5-3-7.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
               </div>
@@ -131,7 +129,7 @@
           </div>
         </section>
 
-        <aside class="chat-info-panel" id="chatInfoPanel" aria-hidden="true">
+        <dialog class="chat-info-panel" id="chatInfoPanel" aria-labelledby="infoPanelTitle">
           <div class="chat-info-header">
             <div><span class="chat-page-kicker">Conversation</span><h2 id="infoPanelTitle">Details</h2></div>
             <button class="chat-icon-btn" id="chatInfoClose" type="button" aria-label="Close details"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
@@ -143,16 +141,14 @@
               <div id="infoStatus" class="chat-info-status">—</div>
             </div>
             <div class="chat-info-actions" id="directInfoActions">
-              <a class="btn ghost" id="chatProfileBtn" href="#">View profile</a>
-              <button class="btn ghost" id="chatRemoveBtn" type="button">Remove</button>
-              <button class="btn ghost" id="chatBlockBtn" type="button">Block</button>
+              <a class="btn ghost" id="chatProfileBtn" href="profile.html">View profile</a>
             </div>
             <section id="groupInfoSection" class="chat-info-section" hidden>
               <div class="chat-info-section-head"><h3>Group</h3><button class="btn ghost sm" id="editGroupBtn" type="button">Edit</button></div>
               <div class="group-profile-editor" id="groupEditor" hidden>
                 <label class="group-avatar-upload"><img id="groupAvatarPreview" alt="Group photo"><input id="groupAvatarInput" type="file" accept="image/*" hidden><span>Change photo</span></label>
                 <input id="groupNameInput" class="input" type="text" maxlength="80" placeholder="Group name">
-                <textarea id="groupDescriptionInput" class="input" rows="3" maxlength="300" placeholder="Group description"></textarea>
+                <textarea id="groupDescriptionInput" class="resize-none input" rows="3" maxlength="300" placeholder="Group description"></textarea>
                 <div class="inline-actions"><button class="btn" id="saveGroupBtn" type="button">Save group</button><button class="btn ghost" id="cancelGroupBtn" type="button">Cancel</button></div>
               </div>
             </section>
@@ -161,15 +157,14 @@
               <div class="chat-member-list" id="infoGroupMembers"></div>
             </section>
             <section class="chat-info-section">
-              <div class="chat-info-section-head"><h3>Shared media</h3><button class="btn ghost sm" id="viewAllMediaBtn" type="button">View all</button></div>
+              <div class="chat-info-section-head"><h3>Recent shared media</h3></div>
               <div class="chat-info-media-grid" id="infoMediaGrid"><div class="callout">No media shared yet.</div></div>
             </section>
           </div>
-        </aside>
-        <div class="chat-info-backdrop" id="chatInfoBackdrop" hidden></div>
+        </dialog>
 
-        <div class="chat-modal-overlay" id="friendPickerModal" hidden>
-          <div class="chat-modal" role="dialog" aria-modal="true" aria-labelledby="friendPickerTitle">
+        <dialog class="chat-modal-overlay" id="friendPickerModal" aria-labelledby="friendPickerTitle">
+          <div class="chat-modal" aria-labelledby="friendPickerTitle">
             <div class="chat-modal-head"><div><span class="chat-page-kicker">New conversation</span><h2 id="friendPickerTitle">Create group</h2></div><button class="chat-icon-btn" id="friendPickerClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
             <div class="chat-modal-body">
               <input id="newGroupName" class="input" type="text" maxlength="80" placeholder="Group name">
@@ -179,19 +174,19 @@
             </div>
             <div class="chat-modal-foot"><button class="btn ghost" id="friendPickerCancel" type="button">Cancel</button><button class="btn" id="friendPickerCreate" type="button">Create group</button></div>
           </div>
-        </div>
+        </dialog>
 
-        <div class="chat-modal-overlay" id="chatSettingsModal" hidden>
-          <div class="chat-modal compact" role="dialog" aria-modal="true" aria-labelledby="chatSettingsTitle">
+        <dialog class="chat-modal-overlay" id="chatSettingsModal" aria-labelledby="chatSettingsTitle">
+          <div class="chat-modal compact" aria-labelledby="chatSettingsTitle">
             <div class="chat-modal-head"><div><span class="chat-page-kicker">Preferences</span><h2 id="chatSettingsTitle">Chat settings</h2></div><button class="chat-icon-btn" data-close-modal="chatSettingsModal" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
+            <p id="chatSettingsStatus" role="status" aria-live="polite">Changes save automatically.</p>
             <div class="chat-settings-list">
               <label class="chat-setting-row"><span><strong>Message notifications</strong><small>Keep new-message alerts visible.</small></span><input type="checkbox" data-chat-setting="notifications"></label>
-              <label class="chat-setting-row"><span><strong>Message sounds</strong><small>Play a subtle sound for new messages.</small></span><input type="checkbox" data-chat-setting="sounds"></label>
               <label class="chat-setting-row"><span><strong>Enter to send</strong><small>Use Enter to send and Shift+Enter for a new line.</small></span><input type="checkbox" data-chat-setting="enterToSend"></label>
               <label class="chat-setting-row"><span><strong>Compact messages</strong><small>Reduce bubble spacing for busy conversations.</small></span><input type="checkbox" data-chat-setting="compact"></label>
             </div>
           </div>
-        </div>
+        </dialog>
 
         <div class="voice-recording-sheet" id="voiceRecordingSheet" hidden>
           <div class="voice-recording-card">

@@ -1,3 +1,4 @@
+import { icon } from "./icons.js";
 import { extractErrorMessage, reportAppError } from "./utils.js";
 
 function setupGlobalErrorHandlers() {
@@ -10,37 +11,6 @@ function setupGlobalErrorHandlers() {
   window.addEventListener("unhandledrejection", (event) => {
     const message = extractErrorMessage(event?.reason, "Unhandled backend error.");
     reportAppError(message, "Backend error");
-  });
-}
-
-const NAV_ICON_MAP = {
-  "index.html": "&#127968;",
-  "discussion.html": "&#128172;",
-  "marketplace.html": "&#128722;",
-  "videos.html": "&#127916;",
-  "novels.html": "&#128214;",
-  "announcements.html": "&#128226;",
-  "ads.html": "&#128200;",
-  "newsletter.html": "&#128231;",
-  "contact.html": "&#9993;",
-  "support.html": "&#128172;",
-  "chat.html": "&#128172;",
-  "stories.html": "&#128247;",
-  "ai-chat.html": "&#129302;",
-  "profile.html": "&#128100;"
-};
-
-function applyNavIcons(menu) {
-  menu.querySelectorAll(".nav-pill > a, .nav-more-menu a").forEach((link) => {
-    if (link.querySelector(".nav-link-icon")) return;
-    const href = (link.getAttribute("href") || "").split(/[?#]/)[0];
-    const icon = NAV_ICON_MAP[href];
-    if (!icon) return;
-    const iconSpan = document.createElement("span");
-    iconSpan.className = "nav-link-icon";
-    iconSpan.innerHTML = icon;
-    iconSpan.setAttribute("aria-hidden", "true");
-    link.insertBefore(iconSpan, link.firstChild);
   });
 }
 
@@ -69,7 +39,7 @@ function setupMobileMenu() {
     if (nav) menu.appendChild(nav);
     if (actions) menu.appendChild(actions);
 
-    applyNavIcons(menu);
+
 
     const footer = document.createElement("div");
     footer.className = "site-menu-footer";
@@ -91,7 +61,7 @@ function setupMobileMenu() {
 
     const themeChip = footer.querySelector("#siteMenuThemeChip");
     themeChip.addEventListener("click", () => {
-      document.getElementById("themeToggle")?.click();
+      window.appUI.toggleTheme();
     });
   }
 
@@ -141,8 +111,30 @@ function setupMobileMenu() {
     document.body.classList.toggle("nav-open", open);
     toggle.classList.toggle("active", open);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    if (window.innerWidth <= 960) {
+      menu.inert = !open;
+      menu.setAttribute("role", "dialog");
+      menu.setAttribute("aria-label", "Site navigation");
+      menu.setAttribute("aria-modal", String(open));
+      [...document.body.children].filter(node => node !== menu && node !== backdrop && !node.matches("script, style, dialog")).forEach(node => {
+        if (open) { node.dataset.navInert = String(node.inert); node.inert = true; }
+        else if (node.hasAttribute("data-nav-inert")) { node.inert = node.dataset.navInert === "true"; delete node.dataset.navInert; }
+      });
+      if (open) menu.querySelector("button")?.focus(); else toggle.focus();
+    } else {
+      menu.inert = false; menu.removeAttribute("role"); menu.removeAttribute("aria-modal");
+      document.querySelectorAll("[data-nav-inert]").forEach(node => { node.inert = node.dataset.navInert === "true"; delete node.dataset.navInert; });
+    }
   };
 
+  menu.inert = window.innerWidth <= 960;
+  menu.addEventListener("keydown", event => {
+    if (event.key !== "Tab" || !document.body.classList.contains("nav-open")) return;
+    const nodes = [...menu.querySelectorAll('a[href], button, input, select, textarea')].filter(el => !el.disabled && el.getClientRects().length);
+    const first = nodes[0], last = nodes[nodes.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  });
   toggle.addEventListener("click", () => {
     const next = !document.body.classList.contains("nav-open");
     setOpen(next);
@@ -162,7 +154,7 @@ function setupMobileMenu() {
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") setOpen(false);
+    if (event.key === "Escape" && document.body.classList.contains("nav-open")) setOpen(false);
   });
 
   document.addEventListener("click", (event) => {
@@ -173,6 +165,7 @@ function setupMobileMenu() {
 
   window.addEventListener("resize", () => {
     if (window.innerWidth > 960) setOpen(false);
+    else if (!document.body.classList.contains("nav-open")) menu.inert = true;
   });
 }
 
@@ -187,6 +180,7 @@ function setupActiveNavLink() {
     const hrefPage = href.split("?")[0].split("/").pop();
     if (hrefPage === current || (current === "index.html" && hrefPage === "")) {
       link.classList.add("active");
+      link.setAttribute("aria-current", "page");
       if (link.closest(".nav-more")) {
         const toggle = link.closest(".nav-more").querySelector(".nav-more-toggle");
         if (toggle) toggle.classList.add("active-parent");
@@ -204,29 +198,42 @@ function setupMoreDropdown() {
     toggle.addEventListener("click", (event) => {
       event.stopPropagation();
       const isOpen = wrap.classList.contains("open");
-      document.querySelectorAll(".nav-more.open").forEach((el) => el.classList.remove("open"));
+      document.querySelectorAll(".nav-more.open").forEach((el) => { el.classList.remove("open"); el.querySelector("button")?.setAttribute("aria-expanded", "false"); });
       wrap.classList.toggle("open", !isOpen);
       toggle.setAttribute("aria-expanded", (!isOpen).toString());
     });
   });
   document.addEventListener("click", () => {
-    document.querySelectorAll(".nav-more.open").forEach((el) => el.classList.remove("open"));
+    document.querySelectorAll(".nav-more.open").forEach((el) => { el.classList.remove("open"); el.querySelector("button")?.setAttribute("aria-expanded", "false"); });
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
-      document.querySelectorAll(".nav-more.open").forEach((el) => el.classList.remove("open"));
+      document.querySelectorAll(".nav-more.open").forEach((el) => { el.classList.remove("open"); el.querySelector("button")?.setAttribute("aria-expanded", "false"); });
     }
   });
 }
 
 setupGlobalErrorHandlers();
 setupMobileMenu();
+document.querySelectorAll(".header-actions .icon-btn").forEach(link => {
+  const name = new URL(link.href).pathname.split("/").pop().replace(".html", "");
+  link.innerHTML = icon(name);
+});
 setupActiveNavLink();
 setupMoreDropdown();
+setupBottomTabBar(false);
+// Workspace routes need the actual chrome height, including wrapped tablet
+// navigation and the safe-area inset, to keep their composer on screen.
+const chromeObserver = new ResizeObserver(() => {
+  for (const [selector, name] of [[".site-header", "--site-header-height"], [".bottom-tab-bar", "--bottom-nav-height"]]) {
+    const height = document.querySelector(selector)?.getBoundingClientRect().height || 0;
+    document.documentElement.style.setProperty(name, `${height}px`);
+  }
+});
+document.querySelectorAll(".site-header, .bottom-tab-bar").forEach(element => chromeObserver.observe(element));
 
 // Everything below this line depends on the Supabase client, which is
-// loaded from an external CDN inside supabase.js. That single external
-// network dependency previously sat at the TOP of this file as a static
+// bundled locally inside supabase.js. That dependency previously sat at the TOP of this file as a static
 // import — and a static import failure (CDN blocked, slow, or down)
 // silently fails this entire module's execution, taking the menu code
 // above down with it even though the menu itself needs no network access
@@ -245,7 +252,6 @@ setupMoreDropdown();
 
     startPresence(window.location.pathname);
     await setupNotificationBadge(supabase, getCurrentUser, fetchUnreadNotificationCount);
-    await setupWelcomePrompt(getCurrentUser);
     const settings = await fetchSettings();
     applySiteBranding(settings);
     const user = await getCurrentUser();
@@ -265,7 +271,7 @@ function populateDrawerFooter(user, signOut) {
     userCard.hidden = true;
     authChip.textContent = "";
     authChip.innerHTML = "&#128274; Log In";
-    authChip.setAttribute("href", "login.html");
+    authChip.setAttribute("href", "/login.html");
     return;
   }
 
@@ -293,13 +299,14 @@ function populateDrawerFooter(user, signOut) {
 // unaffected (hidden via CSS above 960px); the existing hamburger drawer
 // stays exactly as-is alongside this, it isn't replaced.
 function setupBottomTabBar(isLoggedIn) {
-  if (document.getElementById("bottomTabBar")) return;
+  if (!document.querySelector(".site-header")) return;
+  document.getElementById("bottomTabBar")?.remove();
   const path = window.location.pathname.split("/").pop() || "index.html";
 
   const tabs = [
     { href: "index.html", icon: "&#127968;", label: "Home", match: ["index.html", ""] },
-    { href: "discussion.html", icon: "&#128269;", label: "Search", match: ["discussion.html"] },
-    { href: "discussion.html", icon: "&#10133;", label: "Post", match: [], isCreate: true },
+    { href: "discussion.html", icon: "&#128172;", label: "Discuss", match: ["discussion.html"] },
+    { href: "marketplace.html", icon: "&#128722;", label: "Market", match: ["marketplace.html", "listing.html"] },
     { href: "chat.html", icon: "&#128172;", label: "Chat", match: ["chat.html"] },
     {
       href: isLoggedIn ? "profile.html" : "login.html",
@@ -319,8 +326,8 @@ function setupBottomTabBar(isLoggedIn) {
       const classes = ["bottom-tab"];
       if (active) classes.push("active");
       if (tab.isCreate) classes.push("bottom-tab-create");
-      return `<a class="${classes.join(" ")}" href="${tab.href}" aria-label="${tab.label}">
-        <span class="bottom-tab-icon">${tab.icon}</span>
+      return `<a class="${classes.join(" ")}" href="/${tab.href}" aria-label="${tab.label}" ${active ? 'aria-current="page"' : ""}>
+        <span class="bottom-tab-icon">${icon(tab.href.replace(".html", "").replace("index", "home").replace("login", "profile"))}</span>
         <span class="bottom-tab-label">${tab.label}</span>
       </a>`;
     })
@@ -384,11 +391,12 @@ async function setupNotificationBadge(supabase, getCurrentUser, fetchUnreadNotif
       notifLink = document.createElement("a");
       notifLink.id = "notificationLink";
       notifLink.className = "btn ghost";
-      notifLink.href = "profile.html?tab=notifications";
+      notifLink.setAttribute("aria-label", "Notifications");
+      notifLink.href = "/profile.html?tab=notifications";
       notifLink.style.position = "relative";
 
       const bellIcon = document.createElement("span");
-      bellIcon.innerHTML = "🔔";
+      bellIcon.innerHTML = icon("bell");
       bellIcon.style.fontSize = "1.2em";
 
       const badge = document.createElement("span");
@@ -478,57 +486,4 @@ async function setupNotificationBadge(supabase, getCurrentUser, fetchUnreadNotif
       )
       .subscribe();
   }
-}
-
-
-async function setupWelcomePrompt(getCurrentUser) {
-  const path = window.location.pathname || "";
-  if (
-    path.includes("login") ||
-    path.includes("admin") ||
-    path.includes("super") ||
-    document.body.classList.contains("admin-shell")
-  ) {
-    return;
-  }
-  let dismissed = false;
-  try {
-    dismissed = localStorage.getItem("welcome_prompt_seen") === "true";
-  } catch (error) {
-    dismissed = false;
-  }
-  if (dismissed) return;
-  const user = await getCurrentUser();
-  if (user) return;
-
-  const overlay = document.createElement("div");
-  overlay.className = "welcome-modal";
-  overlay.innerHTML = `
-    <div class="welcome-card">
-      <span class="chip">Welcome</span>
-      <h2>Join Timzee Tech Hub</h2>
-      <p>Sign up to follow creators, save posts, and join discussions.</p>
-      <div class="welcome-actions">
-        <a class="btn" href="login.html?view=signup">Create account</a>
-        <a class="btn ghost" href="login.html">Sign in</a>
-      </div>
-      <button class="btn ghost welcome-close" type="button">Maybe later</button>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  const close = overlay.querySelector(".welcome-close");
-  const dismiss = () => {
-    overlay.remove();
-    try {
-      localStorage.setItem("welcome_prompt_seen", "true");
-    } catch (error) {
-      // Ignore storage failures.
-    }
-  };
-  if (close) {
-    close.addEventListener("click", dismiss);
-  }
-  overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) dismiss();
-  });
 }

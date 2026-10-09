@@ -3,8 +3,23 @@
    ========================================================================== */
 
 :root {
+  --bg: #f5f8f8;
+  --bg-deep: #eaf1f0;
+  --ink: #172b32;
+  --muted: #536970;
+  --accent: #076f64;
+  --accent-strong: #087f73;
+  --accent-cool: #2368a2;
+  --card: #ffffff;
+  --card-solid: #ffffff;
+  --shadow: 0 16px 48px rgba(23, 43, 50, .12);
+  --shadow-soft: 0 4px 16px rgba(23, 43, 50, .05);
+  --radius: 16px;
+  --wallpaper-image: none;
+  --wallpaper-overlay: linear-gradient(var(--bg), var(--bg));
+
   --color-primary: var(--accent, #0f766e);
-  --color-primary-hover: #0c5f58;
+  --color-primary-hover: #05675d;
   --color-secondary: var(--accent-cool, #0ea5e9);
   --color-success: #16a34a;
   --color-warning: #d97706;
@@ -13,12 +28,12 @@
 
   --color-bg: var(--bg, #f6f1ea);
   --color-surface: var(--card-solid, #ffffff);
-  --color-surface-muted: #f3f1ec;
+  --color-surface-muted: #eaf1f0;
   --color-border: rgba(15, 23, 42, 0.1);
   --color-border-strong: rgba(15, 23, 42, 0.18);
   --color-text: var(--ink, #131417);
   --color-text-muted: var(--muted, #5b6573);
-  --color-text-subtle: #6b7280;
+  --color-text-subtle: #536970;
   --color-text-on-primary: #ffffff;
   --color-text-on-danger: #ffffff;
 
@@ -46,8 +61,8 @@
   --space-12: 48px;
   --space-16: 64px;
 
-  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
-  --font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Space Grotesk", "Aptos Display", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
 
   --text-xs: 0.75rem;
@@ -90,42 +105,24 @@
 :root[data-theme="dark"],
 :root.dark-mode,
 :root.theme-dark {
-  --color-bg: #0f1115;
-  --color-surface: #171a21;
-  --color-surface-muted: #1d2128;
+  --bg: #101e24;
+  --bg-deep: #172b32;
+  --ink: #edf5f4;
+  --muted: #adc0c5;
+  --accent: #69d3c1;
+  --accent-cool: #89bce9;
+  --card: #182a32;
+  --card-solid: #182a32;
+
+  --color-bg: #101e24;
+  --color-surface: #182a32;
+  --color-surface-muted: #213740;
   --color-border: rgba(255, 255, 255, 0.1);
   --color-border-strong: rgba(255, 255, 255, 0.18);
   --color-text: #f1f3f6;
   --color-text-muted: #a7afbd;
-  --color-text-subtle: #78808f;
-  --color-text-on-primary: #ffffff;
+  --color-text-subtle: #adc0c5;
+  --color-text-on-primary: #102a27;
   --color-text-on-danger: #ffffff;
-  --color-primary-hover: #14b8a6;
-}
-
-/*
-   Light-theme contrast safety
-   ---------------------------
-   Some of the admin/control-panel components intentionally use bright text
-   tokens for the dark palette. The light theme must replace those tokens as
-   well; otherwise a component can inherit near-white text while its panel is
-   light, making the copy effectively disappear. These scoped overrides use
-   !important only on the custom properties so component rules can continue to
-   reference the same semantic tokens without rewriting every selector.
-*/
-:root[data-theme="light"] .admin-shell,
-:root[data-theme="light"] .login-shell {
-  --admin-bg-1: #f8fafc !important;
-  --admin-bg-2: #eef2f7 !important;
-  --admin-bg-3: #e2e8f0 !important;
-  --admin-text: #0f172a !important;
-  --admin-text-bright: #0f172a !important;
-  --admin-text-muted: #475569 !important;
-  --admin-accent: #0284c7 !important;
-  --admin-accent-soft: #0369a1 !important;
-  --admin-danger: #b91c1c !important;
-  --admin-border: rgba(15, 23, 42, 0.18) !important;
-  --admin-border-soft: rgba(15, 23, 42, 0.12) !important;
-  --admin-border-strong: rgba(15, 23, 42, 0.24) !important;
-  --admin-overlay: rgba(255, 255, 255, 0.78) !important;
+  --color-primary-hover: #87e2d2;
 }

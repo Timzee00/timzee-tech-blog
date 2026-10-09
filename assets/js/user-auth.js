@@ -50,6 +50,7 @@ function setupPasswordToggles() {
       const label = visible ? "Hide password" : "Show password";
       toggle.setAttribute("aria-label", label);
       toggle.setAttribute("title", label);
+      toggle.setAttribute("aria-pressed", String(visible));
     };
 
     toggle.addEventListener("click", () => {
@@ -83,10 +84,10 @@ function normalizeAuthError(error, context = "generic") {
 
   if (context === "oauth") {
     if (lower.includes("provider is not enabled")) {
-      return "This sign-in provider is not enabled in Supabase yet. Enable it under Authentication → Providers.";
+      return "This sign-in option is unavailable. Please use your email and password.";
     }
     if (lower.includes("redirect")) {
-      return "The sign-in redirect URL is not configured correctly in Supabase. Check Authentication → URL Configuration.";
+      return "This sign-in option is unavailable. Please use your email and password.";
     }
     if (lower.includes("access_denied") || lower.includes("cancel")) {
       return "Sign-in was cancelled. You can try again whenever you're ready.";
@@ -318,6 +319,9 @@ async function boot() {
     if (loginPanel) loginPanel.setAttribute("aria-hidden", view !== "login");
     if (signupPanel) signupPanel.setAttribute("aria-hidden", view !== "signup");
     if (resetPanel) resetPanel.setAttribute("aria-hidden", view !== "reset");
+    [loginPanel, signupPanel, resetPanel].forEach(panel => { if (panel) panel.inert = panel.getAttribute("aria-hidden") === "true"; });
+    const currentPanel = switcher.querySelector(`.auth-panel-${view}`);
+    if (document.activeElement?.closest(".auth-switcher")) currentPanel?.querySelector("input")?.focus();
   };
 
   const hashParams = getHashParams();

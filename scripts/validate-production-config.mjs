@@ -6,7 +6,7 @@ const read = (file) => readFileSync(join(root, file), "utf8");
 const fail = (message) => { console.error(`Production validation failed: ${message}`); process.exit(1); };
 
 const netlify = read("netlify.toml");
-if (!/publish\s*=\s*["']\.["']/.test(netlify)) fail("Netlify publish directory must be the repository root.");
+if (!/publish\s*=\s*["']dist["']/.test(netlify)) fail("Netlify publish directory must be dist.");
 if (!/functions\s*=\s*["']netlify\/functions["']/.test(netlify)) fail("Netlify functions directory is missing.");
 if (!/from\s*=\s*["']\/sitemap\.xml["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/sitemap["']/.test(netlify)) fail("Dynamic sitemap rewrite is missing.");
 if (!/from\s*=\s*["']\/health["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/functions\/health["']/.test(netlify)) fail("Production health rewrite is missing.");
@@ -14,7 +14,7 @@ if (!/from\s*=\s*["']\/health["']/.test(netlify) || !/to\s*=\s*["']\/\.netlify\/
 for (const file of [
   "netlify/functions/sitemap.js","netlify/functions/health.js","netlify/functions/automation-maintenance.js","netlify/functions/chat-media-sign.js",
   "action-result.html","offline.html","maintenance.html","privacy.html","terms.html","refund-policy.html","cookies.html","accessibility.html",
-  "settings.html","fyp.html","assets/js/action-result.js","assets/js/notification-popup.js","assets/js/site-shell.js","assets/js/boot-loader.js","assets/js/privacy-consent.js",
+  "settings.html","fyp.html","assets/js/action-result.js","assets/js/notification-popup.js","assets/js/site-shell.js","assets/js/ui-controls.js","assets/js/privacy-consent.js",
   "assets/js/form-consent.js","assets/js/user-preferences.js","assets/js/settings-page.js","assets/js/fyp.js","assets/js/popularity-engine.js","assets/js/trending-engine.js",
   "assets/js/discussion-discovery.js","assets/js/chat-v2.js","assets/js/chat-context-menu.js","assets/js/ai-context.js","assets/js/experience-preferences.js","assets/js/media.js",
   "assets/css/design-system.css","assets/css/chat-v2.css","assets/css/chat-context-menu.css","assets/css/fyp.css","assets/css/settings.css","assets/css/discussion-enhancements.css",
@@ -28,9 +28,11 @@ if (!media.includes('const CHAT_BUCKET = "chat-media"')) fail("Chat media must u
 if (!media.includes("requestChatSignedUrl")) fail("Chat media signing helper is missing.");
 
 const chat = read("assets/js/chat-v2.js");
-for (const required of ["postgres_changes","broadcast","presence","MediaRecorder","group-avatars","data-edit-member-tags"]) {
+for (const required of ["createChatRealtime","MediaRecorder","group-avatars","data-edit-member-tags"]) {
   if (!chat.includes(required)) fail(`Upgraded chat surface is missing: ${required}`);
 }
+
+if (!read("assets/js/chat-realtime.mjs").includes("postgres_changes")) fail("Chat database subscription is missing.");
 
 const fyp = read("assets/js/fyp.js");
 for (const required of ["get_personalized_feed","user_content_feedback","not-interested"]) {
@@ -77,18 +79,12 @@ for (const file of ["privacy.html","terms.html","refund-policy.html","cookies.ht
 const popularity = read("assets/js/popularity-engine.js");
 if (!popularity.includes("get_popular_posts")) fail("Homepage popular posts must use the automated database ranking.");
 const shell = read("assets/js/site-shell.js");
-for (const required of ["fyp.html","settings.html","discussion-discovery.js","chat-context-menu.js","ai-context.js","experience-preferences.js","trending-engine.js"]) {
+for (const required of ["fyp.html","settings.html","discussion-discovery.js","chat-context-menu.js","ai-context.js","experience-preferences.js"]) {
   if (!shell.includes(required)) fail(`Shared site shell is not aware of ${required}.`);
 }
-const loader = read("assets/js/boot-loader.js");
-for (const required of ["TIMZEE TECH HUB","Powered by Timzee Corp","tz-loader-progress","prefers-reduced-motion","MAX_SHOW_MS"]) {
-  if (!loader.includes(required)) fail(`Cinematic site loader is missing: ${required}`);
-}
-
 const automation = read("netlify/functions/automation-maintenance.js");
-for (const required of ["migrateLegacyChatMedia","chat-media","storage.from(\"media\").download","storage.from(CHAT_BUCKET).upload"]) {
-  if (!automation.includes(required)) fail(`Scheduled legacy private-chat media migration is missing: ${required}`);
-}
+if (!automation.includes('rpc("process_automation_tick")')) fail("Scheduled publishing automation is missing.");
+if (automation.includes('.from("storage.objects")') || automation.includes('.remove(')) fail("Recurring maintenance must not infer orphaned media or delete storage objects.");
 const health = read("netlify/functions/health.js");
 for (const required of ["legacy_public_chat_media_count","legacy_public_objects_pending"]) {
   if (!health.includes(required)) fail(`Production health is not checking legacy chat media cleanup: ${required}`);
@@ -111,5 +107,6 @@ for (const base of scanRoots) for (const file of await walk(base)) {
   for (const pattern of suspicious) if (pattern.test(text)) fail(`Potential client-side secret, obsolete API-key storage, or retired provider model found in ${relative(root, file)}.`);
 }
 
-if (!existsSync(join(root,"package-lock.json"))) console.warn("Warning: package-lock.json is not committed yet; generate and commit one on a networked development machine.");
+if (!existsSync(join(root,"package-lock.json"))) fail("A committed dependency lockfile is required.");
+if (headers.includes("immutable")) fail("Stable asset filenames must be revalidated, not cached as immutable.");
 console.log("Production configuration validation passed.");

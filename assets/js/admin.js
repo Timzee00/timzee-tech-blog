@@ -1,4 +1,5 @@
-import { login, requireRole, logout, getDisplayName, getUserRole, getSession } from "./auth.js";
+import { bindStaffLogin } from "./staff-auth.js";
+import { requireRole, logout, getDisplayName, getUserRole, getSession } from "./auth.js";
 import { supabase as supabaseClient } from "./supabase.js";
 import {
   fetchCategories,
@@ -304,7 +305,7 @@ function setupImageInputs() {
   if (clearBtn) {
     clearBtn.addEventListener("click", async () => {
       if (editingPostId && existingPostMedia.length) {
-        if (!confirm("Remove all gallery media for this post?")) return;
+        if (!await window.appUI.confirm("Remove all gallery media for this post?")) return;
         await Promise.all(existingPostMedia.map((item) => deletePostMedia(item.id)));
         existingPostMedia = [];
       }
@@ -325,28 +326,7 @@ function setupScheduleToggle() {
 }
 
 function handleLogin() {
-  const form = document.getElementById("adminLoginForm");
-  if (!form) return false;
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const email = document.getElementById("username")?.value.trim();
-    const password = document.getElementById("password")?.value.trim();
-    const message = document.getElementById("loginMessage");
-    try {
-      const result = await login(email, password, ["admin", "super"]);
-      if (!result.ok) {
-        if (message) message.textContent = result.message;
-        return;
-      }
-      window.location.href = "dashboard.html";
-    } catch (error) {
-      reportAppError(error, "Admin login failed");
-      if (message) {
-        message.textContent = extractErrorMessage(error, "Login failed.");
-      }
-    }
-  });
-  return true;
+  return bindStaffLogin({ formId: "adminLoginForm", roles: ["admin", "super"], destination: "dashboard.html" });
 }
 
 function setupTabs() {
@@ -384,7 +364,7 @@ async function setupAnnouncementForm() {
     const publishAt = document.getElementById("announcementPublishAt").value;
 
     if (!title || !type || !message) {
-      alert("Please fill all required fields");
+      window.appUI.toast("Please fill all required fields");
       return;
     }
 
@@ -403,13 +383,13 @@ async function setupAnnouncementForm() {
       const result = await supabase.from("announcements").insert(payload);
       if (result.error) throw result.error;
       
-      alert("Announcement published successfully!");
+      window.appUI.toast("Announcement published successfully!");
       form.reset();
       document.getElementById("announcementPublishAt").value = "";
       await renderAnnouncementsTable();
     } catch (error) {
       console.error("Announcement error:", error);
-      alert("Failed to publish announcement: " + error.message);
+      window.appUI.toast("Failed to publish announcement: " + error.message);
     }
   });
 }
@@ -455,10 +435,10 @@ async function renderAnnouncementsTable() {
         if (!announcement) return;
 
         if (action === "delete") {
-          if (!confirm("Delete this announcement?")) return;
+          if (!await window.appUI.confirm("Delete this announcement?")) return;
           const result = await supabase.from("announcements").delete().eq("id", announcementId);
           if (result.error) {
-            alert("Delete failed: " + result.error.message);
+            window.appUI.toast("Delete failed: " + result.error.message);
             return;
           }
           await renderAnnouncementsTable();
@@ -499,7 +479,7 @@ async function setupCuratorBot() {
       const description = document.getElementById("curatorSourceDescription").value.trim();
 
       if (!name || !url || !categoryId) {
-        alert("Please fill all required fields");
+        window.appUI.toast("Please fill all required fields");
         return;
       }
 
@@ -518,12 +498,12 @@ async function setupCuratorBot() {
         const result = await supabase.from("curator_sources").insert(payload);
         if (result.error) throw result.error;
         
-        alert("Feed source added successfully!");
+        window.appUI.toast("Feed source added successfully!");
         sourceForm.reset();
         await renderCuratorSources();
       } catch (error) {
         console.error("Curator source error:", error);
-        alert("Failed to add source: " + error.message);
+        window.appUI.toast("Failed to add source: " + error.message);
       }
     });
   }
@@ -532,7 +512,7 @@ async function setupCuratorBot() {
   const importAdminBtn = document.getElementById("importFeedsAdminBtn");
   if (importAdminBtn) {
     importAdminBtn.addEventListener("click", async () => {
-      if (!confirm("Import recommended tech RSS feeds? This will add multiple sources.")) return;
+      if (!await window.appUI.confirm("Import recommended tech RSS feeds? This will add multiple sources.")) return;
       importAdminBtn.disabled = true;
       importAdminBtn.textContent = "Importing...";
       try {
@@ -555,11 +535,11 @@ async function setupCuratorBot() {
           };
           await supabase.from("curator_sources").insert(payload);
         }
-        alert("Recommended feeds imported. Refreshing list.");
+        window.appUI.toast("Recommended feeds imported. Refreshing list.");
         await renderCuratorSources();
       } catch (error) {
         console.error("Import feeds failed:", error);
-        alert("Import failed: " + (error.message || error));
+        window.appUI.toast("Import failed: " + (error.message || error));
       } finally {
         importAdminBtn.disabled = false;
         importAdminBtn.textContent = "Import Recommended Feeds";
@@ -603,10 +583,10 @@ async function setupCuratorBot() {
           result = await supabase.from("curator_settings").insert(updates);
         }
         if (result.error) throw result.error;
-        alert("Bot settings saved successfully!");
+        window.appUI.toast("Bot settings saved successfully!");
       } catch (error) {
         console.error("Settings error:", error);
-        alert("Failed to save settings: " + (error.message || error));
+        window.appUI.toast("Failed to save settings: " + (error.message || error));
       }
     });
   }
@@ -665,17 +645,17 @@ async function renderCuratorSources() {
             .update({ is_active: !source.is_active })
             .eq("id", sourceId);
           if (result.error) {
-            alert("Update failed: " + result.error.message);
+            window.appUI.toast("Update failed: " + result.error.message);
             return;
           }
           await renderCuratorSources();
         }
 
         if (action === "delete") {
-          if (!confirm("Delete this feed source?")) return;
+          if (!await window.appUI.confirm("Delete this feed source?")) return;
           const result = await supabase.from("curator_sources").delete().eq("id", sourceId);
           if (result.error) {
-            alert("Delete failed: " + result.error.message);
+            window.appUI.toast("Delete failed: " + result.error.message);
             return;
           }
           await renderCuratorSources();
@@ -726,11 +706,11 @@ async function setupFaq() {
             const action = btn.dataset.action;
             const id = btn.dataset.id;
             if (action === 'toggle') {
-              if (!confirm('Continue?')) return;
+              if (!await window.appUI.confirm('Continue?')) return;
               await toggleAuthorStatus(id, !authors.find(x => x.user_id === id).is_active);
               await renderAuthors();
             } else if (action === 'demote') {
-              if (!confirm('Remove author privileges?')) return;
+              if (!await window.appUI.confirm('Remove author privileges?')) return;
               await demoteAuthor(id);
               await renderAuthors();
             }
@@ -776,12 +756,12 @@ async function setupFaq() {
                   email: user.email || '',
                   avatar_url: user.avatar_url || ''
                 });
-                alert('User promoted to author');
+                window.appUI.toast('User promoted to author');
                 resultsDiv.style.display = 'none';
                 searchInput.value = '';
                 await renderAuthors();
               } catch (err) {
-                alert('Promotion failed: ' + (err.message || err));
+                window.appUI.toast('Promotion failed: ' + (err.message || err));
               }
             });
           });
@@ -833,10 +813,10 @@ async function setupFaq() {
             document.getElementById('faqPublished').checked = !!item.is_published;
             window.scrollTo({ top: 0, behavior: 'smooth' });
           } else if (action === 'delete') {
-            if (!confirm('Delete this FAQ?')) return;
+            if (!await window.appUI.confirm('Delete this FAQ?')) return;
             await deleteFaq(id);
             await renderFaqs();
-            alert('FAQ deleted');
+            window.appUI.toast('FAQ deleted');
           }
         });
       });
@@ -854,20 +834,20 @@ async function setupFaq() {
       const answer = document.getElementById('faqAnswer').value.trim();
       const category = document.getElementById('faqCategory').value.trim();
       const is_published = document.getElementById('faqPublished').checked;
-      if (!question || !answer) { alert('Please fill question and answer'); return; }
+      if (!question || !answer) { window.appUI.toast('Please fill question and answer'); return; }
       try {
         if (id) {
           await updateFaq(id, { question, answer, category, is_published });
-          alert('FAQ updated');
+          window.appUI.toast('FAQ updated');
         } else {
           await createFaq({ question, answer, category, is_published });
-          alert('FAQ created');
+          window.appUI.toast('FAQ created');
         }
         faqForm.reset();
         await renderFaqs();
       } catch (err) {
         console.error('FAQ save error', err);
-        alert('Failed to save FAQ: ' + (err.message || err));
+        window.appUI.toast('Failed to save FAQ: ' + (err.message || err));
       }
     });
 
@@ -1167,7 +1147,7 @@ function renderPostsTable() {
         renderPostsTable();
       }
       if (action === "delete") {
-        if (!confirm("Delete this post?")) return;
+        if (!await window.appUI.confirm("Delete this post?")) return;
         await deletePost(post.id);
         await refreshData();
         renderPostsTable();
@@ -1334,11 +1314,11 @@ function renderUsersTable(users) {
       const action = btn.dataset.action;
       const userId = btn.dataset.id;
       if (!userId || !action) return;
-      if (action === "suspend" && !confirm("Suspend this account?")) return;
-      if (action === "activate" && !confirm("Reactivate this account?")) return;
+      if (action === "suspend" && !await window.appUI.confirm("Suspend this account?")) return;
+      if (action === "activate" && !await window.appUI.confirm("Reactivate this account?")) return;
       const result = await updateUserAction(userId, action);
       if (result.error) {
-        alert(result.error);
+        window.appUI.toast(result.error);
         return;
       }
       await loadUsers(state.userSearch);
@@ -1352,7 +1332,7 @@ function renderUsersTable(users) {
       const tier = select.value;
       const result = await updateUserAction(userId, "set_tier", tier);
       if (result.error) {
-        alert(result.error);
+        window.appUI.toast(result.error);
         return;
       }
       await loadUsers(state.userSearch);
@@ -1507,7 +1487,7 @@ function renderAdsTable() {
         await updateAd(ad.id, { status: nextStatus });
       }
       if (btn.dataset.action === "delete") {
-        if (!confirm("Delete this ad?")) return;
+        if (!await window.appUI.confirm("Delete this ad?")) return;
         await deleteAd(ad.id);
       }
       await refreshData();
@@ -1548,7 +1528,7 @@ function attachRequestHandlers(table, kind, updater) {
       const nextStatus = action === "complete" ? "completed" : "open";
       const result = await updater(id, nextStatus);
       if (result.error) {
-        alert(result.error.message || "Update failed.");
+        window.appUI.toast(result.error.message || "Update failed.");
         return;
       }
       await refreshData();

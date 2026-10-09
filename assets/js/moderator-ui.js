@@ -17,6 +17,8 @@ import {
   getUserForPromotion
 } from "./moderator.js";
 
+import { escapeHTML } from "./utils.js";
+import { bindSearch } from "./search-input.js";
 import { getCurrentUserWithRole, getUserRole } from "./supabase.js";
 
 class ModeratorManager {
@@ -32,7 +34,7 @@ class ModeratorManager {
 
     this.currentUser = await getCurrentUserWithRole();
     if (!this.currentUser || getUserRole(this.currentUser) !== "super") {
-      this.container.innerHTML = "<p style='color: red;'>Access denied. Super admin only.</p>";
+      this.container.innerHTML = "<p style='color: var(--color-danger);'>Access denied. Super admin only.</p>";
       return;
     }
 
@@ -62,7 +64,7 @@ class ModeratorManager {
             <p>Team members who manage content and authors</p>
           </div>
           <div class="moderators-list" id="moderatorsList">
-            <div style="text-align: center; padding: 20px; color: #999;">Loading...</div>
+            <div style="text-align: center; padding: 20px; color: var(--color-text-muted);">Loading...</div>
           </div>
         </div>
 
@@ -73,7 +75,7 @@ class ModeratorManager {
             <p>Users with permission to create and publish posts</p>
           </div>
           <div class="authors-list" id="authorsList">
-            <div style="text-align: center; padding: 20px; color: #999;">Loading...</div>
+            <div style="text-align: center; padding: 20px; color: var(--color-text-muted);">Loading...</div>
           </div>
         </div>
 
@@ -120,7 +122,7 @@ class ModeratorManager {
 
       <style>
         .moderator-manager { margin: 20px 0; }
-        .manager-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
+        .manager-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--color-border); }
         .tab-btn {
           padding: 12px 16px;
           border: none;
@@ -128,22 +130,22 @@ class ModeratorManager {
           cursor: pointer;
           font-size: 14px;
           font-weight: 600;
-          color: #666;
+          color: var(--color-text-muted);
           border-bottom: 3px solid transparent;
           transition: all 0.2s;
         }
-        .tab-btn:hover { color: #333; }
+        .tab-btn:hover { color: var(--color-text); }
         .tab-btn.active {
-          color: #0f766e;
-          border-bottom-color: #0f766e;
+          color: var(--color-primary);
+          border-bottom-color: var(--color-primary);
         }
         .section-header { margin-bottom: 20px; }
         .section-header h3 { margin: 0 0 4px 0; }
-        .section-header p { margin: 0; color: #666; font-size: 14px; }
+        .section-header p { margin: 0; color: var(--color-text-muted); font-size: 14px; }
 
         .user-card {
-          background: white;
-          border: 1px solid #e2e8f0;
+          background: var(--color-surface);
+          border: 1px solid var(--color-border);
           border-radius: 8px;
           padding: 16px;
           margin-bottom: 12px;
@@ -158,26 +160,26 @@ class ModeratorManager {
           width: 40px;
           height: 40px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #0f766e, #14b8a6);
+          background: var(--color-primary);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
+          color: var(--color-text-on-primary);
           font-weight: 600;
         }
         .user-details h4 { margin: 0; font-size: 14px; }
-        .user-details p { margin: 2px 0 0 0; font-size: 12px; color: #999; }
+        .user-details p { margin: 2px 0 0 0; font-size: 12px; color: var(--color-text-muted); }
         .user-actions { display: flex; gap: 8px; }
 
         .btn { padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; font-weight: 600; transition: all 0.2s; font-size: 12px; }
-        .btn-primary { background: #0f766e; color: white; border-color: #0f766e; }
-        .btn-primary:hover { background: #0d5f5a; }
-        .btn-ghost { background: white; color: #333; }
-        .btn-ghost:hover { background: #f9fafb; }
-        .btn-danger { background: #ef4444; color: white; border-color: #ef4444; }
+        .btn-primary { background: var(--color-primary); color: var(--color-text-on-primary); border-color: var(--color-primary); }
+        .btn-primary:hover { background: var(--color-primary-hover); }
+        .btn-ghost { background: var(--color-surface); color: var(--color-text); }
+        .btn-ghost:hover { background: var(--color-surface-muted); }
+        .btn-danger { background: #b42318; color: #fff; border-color: #ef4444; }
         .btn-danger:hover { background: #dc2626; }
         .btn-toggle { background: #fbbf24; color: #111; border-color: #fbbf24; }
-        .btn-toggle.off { background: #e5e7eb; color: #666; }
+        .btn-toggle.off { background: var(--color-surface-muted); color: var(--color-text-muted); }
 
         .search-box { position: relative; }
         .search-box input {
@@ -193,7 +195,7 @@ class ModeratorManager {
           top: 100%;
           left: 0;
           right: 0;
-          background: white;
+          background: var(--color-surface);
           border: 1px solid #ddd;
           border-top: none;
           border-radius: 0 0 8px 8px;
@@ -209,11 +211,11 @@ class ModeratorManager {
           align-items: center;
           gap: 12px;
         }
-        .search-result:hover { background: #f9fafb; }
+        .search-result:hover { background: var(--color-surface-muted); }
 
         .user-preview {
-          background: #f9fafb;
-          border: 1px solid #e2e8f0;
+          background: var(--color-surface-muted);
+          border: 1px solid var(--color-border);
           border-radius: 8px;
           padding: 16px;
           display: flex;
@@ -224,15 +226,15 @@ class ModeratorManager {
           width: 48px;
           height: 48px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #0f766e, #14b8a6);
+          background: var(--color-primary);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
+          color: var(--color-text-on-primary);
           font-size: 20px;
         }
         .user-preview-info h4 { margin: 0 0 4px 0; }
-        .user-preview-info p { margin: 0; font-size: 12px; color: #666; }
+        .user-preview-info p { margin: 0; font-size: 12px; color: var(--color-text-muted); }
 
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; }
@@ -250,17 +252,18 @@ class ModeratorManager {
     tabBtns.forEach(btn => {
       btn.addEventListener("click", () => {
         const tab = btn.dataset.tab;
-        tabBtns.forEach(b => b.classList.remove("active"));
+        tabBtns.forEach(b => { b.classList.remove("active"); b.setAttribute("aria-pressed", "false"); });
         tabContents.forEach(c => c.style.display = "none");
         btn.classList.add("active");
-        this.container.querySelector(`[data-tab="${tab}"]`).style.display = "block";
+        btn.setAttribute("aria-pressed", "true");
+        this.container.querySelector(`.tab-content[data-tab="${tab}"]`).style.display = "block";
       });
     });
 
     // Search for promotion
     const searchInput = this.container.querySelector("#promoteSearch");
     if (searchInput) {
-      searchInput.addEventListener("input", (e) => this.handlePromoteSearch(e.target.value));
+      bindSearch(searchInput, query => { void this.handlePromoteSearch(query).catch(() => window.appUI.toast("Could not search members. Please try again.", { type: "error" })); });
     }
   }
 
@@ -274,33 +277,33 @@ class ModeratorManager {
       const message = error?.message || "Failed to load team data.";
       const modList = this.container.querySelector("#moderatorsList");
       const authorList = this.container.querySelector("#authorsList");
-      if (modList) modList.innerHTML = `<div style='text-align:center; padding:40px; color:#ef4444;'>${message}</div>`;
-      if (authorList) authorList.innerHTML = `<div style='text-align:center; padding:40px; color:#ef4444;'>${message}</div>`;
+      if (modList) modList.innerHTML = `<div style='text-align:center; padding:40px; color:var(--color-danger);'>${escapeHTML(message)}</div>`;
+      if (authorList) authorList.innerHTML = `<div style='text-align:center; padding:40px; color:var(--color-danger);'>${escapeHTML(message)}</div>`;
     }
   }
 
   renderModerators() {
     const list = this.container.querySelector("#moderatorsList");
     if (!this.moderators.length) {
-      list.innerHTML = "<div style='text-align: center; padding: 40px; color: #999;'>No moderators yet</div>";
+      list.innerHTML = "<div style='text-align: center; padding: 40px; color: var(--color-text-muted);'>No moderators yet</div>";
       return;
     }
 
     list.innerHTML = this.moderators.map(mod => `
       <div class="user-card">
         <div class="user-info">
-          <a class="user-avatar" href="profile.html?id=${encodeURIComponent(mod.user_id || '')}" aria-label="View profile">${(mod.full_name || mod.username || "M").charAt(0).toUpperCase()}</a>
+          <a class="user-avatar" href="/profile.html?id=${encodeURIComponent(mod.user_id || '')}" aria-label="View profile">${escapeHTML((mod.full_name || mod.username || "M").charAt(0).toUpperCase())}</a>
           <div class="user-details">
-            <h4>${mod.full_name || mod.username}</h4>
-            <p>${mod.email}</p>
-            <p style="color: #0f766e; font-size: 11px;">Promoted ${new Date(mod.promoted_at).toLocaleDateString()}</p>
+            <h4>${escapeHTML(mod.full_name || mod.username)}</h4>
+            <p>${escapeHTML(mod.email)}</p>
+            <p style="color: var(--color-primary); font-size: 11px;">Promoted ${new Date(mod.promoted_at).toLocaleDateString()}</p>
           </div>
         </div>
         <div class="user-actions">
-          <button class="btn btn-toggle${mod.is_active ? "" : " off"}" data-user-id="${mod.user_id}" data-type="moderator-toggle">
+          <button class="btn btn-toggle${mod.is_active ? "" : " off"}" data-user-id="${escapeHTML(mod.user_id)}" data-type="moderator-toggle">
             ${mod.is_active ? "🟢 Active" : "⚪ Inactive"}
           </button>
-          <button class="btn btn-danger" data-user-id="${mod.user_id}" data-type="moderator-demote">
+          <button class="btn btn-danger" data-user-id="${escapeHTML(mod.user_id)}" data-type="moderator-demote">
             ✕ Demote
           </button>
         </div>
@@ -316,25 +319,25 @@ class ModeratorManager {
   renderAuthors() {
     const list = this.container.querySelector("#authorsList");
     if (!this.authors.length) {
-      list.innerHTML = "<div style='text-align: center; padding: 40px; color: #999;'>No authors yet</div>";
+      list.innerHTML = "<div style='text-align: center; padding: 40px; color: var(--color-text-muted);'>No authors yet</div>";
       return;
     }
 
     list.innerHTML = this.authors.map(author => `
       <div class="user-card">
         <div class="user-info">
-          <a class="user-avatar" href="profile.html?id=${encodeURIComponent(author.user_id || '')}" aria-label="View profile">${(author.full_name || author.username || "A").charAt(0).toUpperCase()}</a>
+          <a class="user-avatar" href="/profile.html?id=${encodeURIComponent(author.user_id || '')}" aria-label="View profile">${escapeHTML((author.full_name || author.username || "A").charAt(0).toUpperCase())}</a>
           <div class="user-details">
-            <h4>${author.full_name || author.username}</h4>
-            <p>${author.email}</p>
-            <p style="color: #0f766e; font-size: 11px;">${author.post_count || 0} posts</p>
+            <h4>${escapeHTML(author.full_name || author.username)}</h4>
+            <p>${escapeHTML(author.email)}</p>
+            <p style="color: var(--color-primary); font-size: 11px;">${escapeHTML(author.post_count || 0)} posts</p>
           </div>
         </div>
         <div class="user-actions">
-          <button class="btn btn-toggle${author.is_active ? "" : " off"}" data-user-id="${author.user_id}" data-type="author-toggle">
+          <button class="btn btn-toggle${author.is_active ? "" : " off"}" data-user-id="${escapeHTML(author.user_id)}" data-type="author-toggle">
             ${author.is_active ? "🟢 Active" : "⚪ Inactive"}
           </button>
-          <button class="btn btn-danger" data-user-id="${author.user_id}" data-type="author-demote">
+          <button class="btn btn-danger" data-user-id="${escapeHTML(author.user_id)}" data-type="author-demote">
             ✕ Demote
           </button>
         </div>
@@ -353,13 +356,13 @@ class ModeratorManager {
 
     if (type === "moderator-toggle") {
       const mod = this.moderators.find(m => m.user_id === userId);
-      if (confirm(`${mod.is_active ? "Deactivate" : "Activate"} this moderator?`)) {
+      if (await window.appUI.confirm(`${mod.is_active ? "Deactivate" : "Activate"} this moderator?`)) {
         await toggleModeratorStatus(userId, !mod.is_active);
         await this.load();
       }
     } else if (type === "moderator-demote") {
       const mod = this.moderators.find(m => m.user_id === userId);
-      if (confirm(`Remove ${mod.full_name || mod.username} as moderator?`)) {
+      if (await window.appUI.confirm(`Remove ${mod.full_name || mod.username} as moderator?`)) {
         await demoteModerator(userId);
         await this.load();
       }
@@ -372,13 +375,13 @@ class ModeratorManager {
 
     if (type === "author-toggle") {
       const author = this.authors.find(a => a.user_id === userId);
-      if (confirm(`${author.is_active ? "Deactivate" : "Activate"} this author?`)) {
+      if (await window.appUI.confirm(`${author.is_active ? "Deactivate" : "Activate"} this author?`)) {
         await toggleAuthorStatus(userId, !author.is_active);
         await this.load();
       }
     } else if (type === "author-demote") {
       const author = this.authors.find(a => a.user_id === userId);
-      if (confirm(`Remove ${author.full_name || author.username} as author?`)) {
+      if (await window.appUI.confirm(`Remove ${author.full_name || author.username} as author?`)) {
         await demoteAuthor(userId);
         await this.load();
       }
@@ -386,30 +389,32 @@ class ModeratorManager {
   }
 
   async handlePromoteSearch(query) {
+    const version = this.searchVersion = (this.searchVersion || 0) + 1;
     if (query.length < 2) {
       this.container.querySelector("#promoteResults").style.display = "none";
       return;
     }
 
     const results = await searchUsersForPromotion(query);
+    if (version !== this.searchVersion) return;
     const resultsDiv = this.container.querySelector("#promoteResults");
 
     if (!results.length) {
-      resultsDiv.innerHTML = "<div style='padding: 12px; color: #999; text-align: center;'>No users found</div>";
+      resultsDiv.innerHTML = "<div style='padding: 12px; color: var(--color-text-muted); text-align: center;'>No users found</div>";
       resultsDiv.style.display = "block";
       return;
     }
 
     resultsDiv.innerHTML = results.map(user => `
-      <div class="search-result" data-user-id="${user.id}">
-        <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0f766e, #14b8a6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">
-          ${(user.display_name || user.username || "U").charAt(0).toUpperCase()}
+      <button type="button" class="search-result" data-user-id="${escapeHTML(user.id)}">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-primary); display: flex; align-items: center; justify-content: center; color: var(--color-text-on-primary); font-weight: 600;">
+          ${escapeHTML((user.display_name || user.username || "U").charAt(0).toUpperCase())}
         </div>
         <div>
-          <div style="font-weight: 600; font-size: 14px;">${user.display_name || user.username}</div>
-          <div style="font-size: 12px; color: #999;">${user.email}</div>
+          <div style="font-weight: 600; font-size: 14px;">${escapeHTML(user.display_name || user.username)}</div>
+          <div style="font-size: 12px; color: var(--color-text-muted);">${escapeHTML(user.email)}</div>
         </div>
-      </div>
+      </button>
     `).join("");
     resultsDiv.style.display = "block";
 
@@ -429,11 +434,11 @@ class ModeratorManager {
     const preview = this.container.querySelector("#userPreview");
 
     preview.innerHTML = `
-      <div class="user-preview-avatar">${(user.display_name || user.username || "U").charAt(0).toUpperCase()}</div>
+      <div class="user-preview-avatar">${escapeHTML((user.display_name || user.username || "U").charAt(0).toUpperCase())}</div>
       <div class="user-preview-info">
-        <h4>${user.display_name || user.username}</h4>
-        <p>Email: ${user.email}</p>
-        <p>Username: @${user.username}</p>
+        <h4>${escapeHTML(user.display_name || user.username)}</h4>
+        <p>Email: ${escapeHTML(user.email)}</p>
+        <p>Username: @${escapeHTML(user.username)}</p>
       </div>
     `;
 
@@ -471,12 +476,12 @@ class ModeratorManager {
           });
         }
 
-        alert(`✓ User promoted to ${role}!`);
+        window.appUI.toast(`✓ User promoted to ${role}!`);
         searchInput.value = "";
         form.style.display = "none";
         await this.load();
       } catch (error) {
-        alert(`Error: ${error.message}`);
+        window.appUI.toast(`Error: ${error.message}`);
       }
     };
 
