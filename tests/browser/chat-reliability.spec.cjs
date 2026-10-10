@@ -189,7 +189,7 @@ test('new private attachment saves its permanent path for recipient renewal', as
     return route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({
-        signedUrl: 'https://duvbcwwprkzzyzikmcol.supabase.co/storage/v1/object/sign/chat-media/' + storagePath + '?token=test-signed-token',
+        signedUrl: 'https://duvbcwwprkzzyzikmcol.supabase.co/storage/v1/object/sign/chat-media/' + storagePath + '?token=e30.' + Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url') + '.test',
         path: storagePath, expiresIn: 3600
       })
     });
