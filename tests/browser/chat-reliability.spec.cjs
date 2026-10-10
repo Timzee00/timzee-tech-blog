@@ -172,3 +172,33 @@ test('failed send keeps the draft and permits a deliberate retry', async ({ page
   await page.locator('#chatBody').press('Enter'); await expect(page.locator('#chatBody')).toHaveValue('');
   expect(attempts).toBe(2); await expect(page.locator('.chat-message').last()).toContainText('Keep on failure');
 });
+
+
+test('new private attachment saves its permanent path for recipient renewal', async ({ page }) => {
+  let sent;
+  await fixture(page, async ({ table, request }) => {
+    if (table === 'direct_messages' && request.method() === 'POST') {
+      sent = request.postDataJSON();
+      return sent;
+    }
+  });
+  await page.route('**/storage/v1/object/chat-media/**', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ Key: 'chat-media/test-file' }) }));
+  await page.route('**/.netlify/functions/chat-media-sign', route => {
+    const storagePath = route.request().postDataJSON().path;
+    return route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        signedUrl: 'https://duvbcwwprkzzyzikmcol.supabase.co/storage/v1/object/sign/chat-media/' + storagePath + '?token=test-signed-token',
+        path: storagePath, expiresIn: 3600
+      })
+    });
+  });
+  await open(page, A);
+  await page.locator('#chatMedia').setInputFiles({ name: 'demo.txt', mimeType: 'text/plain', buffer: Buffer.from('private attachment') });
+  await page.locator('#chatBody').fill('Attached file');
+  await page.locator('#chatBody').press('Enter');
+  await expect.poll(() => sent?.media_path || '').toMatch(/^direct-messages\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.txt$/);
+  expect(sent.recipient_id).toBe(A);
+  expect(sent.media_url).toContain('/storage/v1/object/sign/chat-media/' + sent.media_path);
+});
