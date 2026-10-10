@@ -38,3 +38,30 @@ Public read-only preview: https://deploy-preview-3--timzee-tech-blog.netlify.app
 | Quality and operations | Phone/tablet/desktop accessibility, automated tests, real RLS/Storage audits, staging integration, backups, rollback and capacity budgets |
 
 The source/browser suites can use synthetic accounts and intercepted APIs, but those results cannot certify external provider delivery or production RLS. No live messages, users, media, announcements or database policies were changed. Netlify commits include `[skip netlify] [skip ci]` to protect constrained build/CI budgets.
+
+
+## Follow-up: authentication, announcements and chat media
+
+The continuation now deduplicates **concurrent** `getCurrentUser()` calls without caching results after completion, removes the legacy announcement-loader import, and rejects stale announcement refresh responses. Three focused Node 22 single-flight tests passed.
+
+### Confirmed chat attachment defect and source fix
+
+The existing `chat-media-sign` endpoint authorizes recipient renewal by finding an actual message with a matching `direct_messages.media_path`, with the sender matching the path owner. Yet `chat-v2.js` previously inserted only `media_url` (a temporary signed URL). A recipient could therefore lose access when the URL expired. New sends now include both `media_url` and the durable, validated `media_path` in the same message INSERT. The validator rejects public-bucket URLs and unexpected private paths.
+
+Two focused Node 22 path-extraction tests passed; a Playwright regression was added to assert the outgoing message's `media_path`, but the full browser suite and live two-account renewal are **not yet run**. Old messages missing `media_path` need a separately verified backfill, not guesses based on expired URLs.
+
+### Read-only production storage and RLS observations (10 October 2026)
+
+- `chat-media` is **private**, with 25 objects.
+- `media` is **public**, with 120 objects; 11 use the old `direct-messages/` folder.
+- `direct_messages` has 88 rows; 25 have `media_path`. The currently checked URL pattern for old public links matched zero rows; this does **not** prove those 11 objects are unused.
+- Storage RLS policies `auth_upload_comments` and `auth_upload_user_media` still explicitly allow `direct-messages` under the public `media` bucket. These policies must be revised in a reviewed staging migration to prohibit future private uploads into the public bucket while preserving the other allowed public folders.
+- No live objects, records, policies, grants or migrations were changed.
+
+**Do not delete the 11 public objects** before a backed-up reference inventory spanning messages and any other content tables, a tested transfer/URL update, access verification for both sender and recipient, and a rollback method. Once staging exists, verify that nonparticipants cannot sign private chat paths and that neither nonowners nor guests can upload into others' private chat prefixes.
+
+### Regression gate status
+
+- Focused standalone tests run locally: 5 passed (3 authentication coalescing, 2 private-media-path extraction).
+- Added browser test for durable-path writes but not executed against a complete local build yet.
+- Full source build, authenticated staging, browser suite, hosted CI, and the currently unpublished branch are **not certified**.
