@@ -36,6 +36,8 @@ function getAnnouncements() {
 }
 
 function renderAnnouncementBanner(announcement) {
+  // Retire an older announcement presentation when both site scripts load.
+  document.getElementById("timzee-announcement-banner")?.remove();
   const existing = document.getElementById("siteAnnouncementBanner");
   if (existing) existing.remove();
   if (!announcement) return;

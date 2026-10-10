@@ -21,6 +21,21 @@ function buildCard(post) {
     </article>`;
 }
 
+function installMediaFallbacks(track) {
+  track.querySelectorAll(".popular-media img").forEach((image) => {
+    image.addEventListener("error", () => {
+      const fallback = document.createElement("div");
+      fallback.className = "popular-media-fallback";
+      const label = document.createElement("span");
+      label.textContent = "Article";
+      fallback.appendChild(label);
+      image.replaceWith(fallback);
+    }, { once: true });
+    // Cached failed image responses may have completed before we attached a listener.
+    if (image.complete && image.naturalWidth === 0) image.dispatchEvent(new Event("error"));
+  });
+}
+
 export async function renderPopular(categoryId = null) {
   const track = document.getElementById(TRACK_ID);
   if (!track) return;
@@ -34,6 +49,7 @@ export async function renderPopular(categoryId = null) {
     if (result.error) throw result.error;
     const rows = result.data || [];
     track.innerHTML = rows.length ? rows.map(buildCard).join("") : `<div class="callout">No published posts have enough activity to surface yet.</div>`;
+    installMediaFallbacks(track);
   } catch (error) {
     if (version !== requestVersion) return;
     track.innerHTML = `<div class="callout">This section is unavailable right now. Try refreshing the page.</div>`;

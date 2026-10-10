@@ -6,6 +6,9 @@ function setupGlobalErrorHandlers() {
   window.__timzeeErrorHandlersReady = true;
   window.addEventListener("error", (event) => {
     const message = event?.error || event?.message || "Unexpected website error.";
+    // Browsers can emit this nonfatal diagnostic while settling layout. Do not
+    // turn it into an alarming application-failure toast.
+    if (/ResizeObserver loop (completed with undelivered notifications|limit exceeded)/i.test(String(event?.message || message))) return;
     reportAppError(message, "Website error");
   });
   window.addEventListener("unhandledrejection", (event) => {
@@ -224,13 +227,25 @@ setupMoreDropdown();
 setupBottomTabBar(false);
 // Workspace routes need the actual chrome height, including wrapped tablet
 // navigation and the safe-area inset, to keep their composer on screen.
-const chromeObserver = new ResizeObserver(() => {
+let chromeMeasureScheduled = false;
+const measureChrome = () => {
+  chromeMeasureScheduled = false;
   for (const [selector, name] of [[".site-header", "--site-header-height"], [".bottom-tab-bar", "--bottom-nav-height"]]) {
-    const height = document.querySelector(selector)?.getBoundingClientRect().height || 0;
-    document.documentElement.style.setProperty(name, `${height}px`);
+    const height = Math.round(document.querySelector(selector)?.getBoundingClientRect().height || 0);
+    const value = `${height}px`;
+    if (document.documentElement.style.getPropertyValue(name) !== value) {
+      document.documentElement.style.setProperty(name, value);
+    }
   }
-});
+};
+const scheduleChromeMeasurement = () => {
+  if (chromeMeasureScheduled) return;
+  chromeMeasureScheduled = true;
+  window.requestAnimationFrame(measureChrome);
+};
+const chromeObserver = new ResizeObserver(scheduleChromeMeasurement);
 document.querySelectorAll(".site-header, .bottom-tab-bar").forEach(element => chromeObserver.observe(element));
+scheduleChromeMeasurement();
 
 // Everything below this line depends on the Supabase client, which is
 // bundled locally inside supabase.js. That dependency previously sat at the TOP of this file as a static
