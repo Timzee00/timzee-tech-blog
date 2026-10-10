@@ -30,3 +30,16 @@ test("anonymous chat and stories never start with empty avatar URLs", async ({ p
   await page.goto("/stories.html");
   await expect(page.locator("#ownStoryAvatar")).toHaveAttribute("src", "/assets/img/avatar-placeholder.svg");
 });
+
+
+test("nonfatal ResizeObserver diagnostics do not display an app failure", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/chat.html");
+  await page.evaluate(() => {
+    document.getElementById("appToastRoot")?.replaceChildren();
+    window.dispatchEvent(new ErrorEvent("error", {
+      message: "ResizeObserver loop completed with undelivered notifications."
+    }));
+  });
+  await expect(page.locator("#appToastRoot .app-toast.error")).toHaveCount(0);
+});

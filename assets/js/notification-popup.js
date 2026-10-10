@@ -1,21 +1,9 @@
-import { supabase, getCurrentUser } from "./supabase.js";
+import { supabase } from "./supabase.js";
 
 const BANNER_KEY = "timzee_last_dismissed_announcement";
 let announcementChannel = null;
-let notificationChannel = null;
 let announcementRequest = 0;
 let displayedAnnouncementId = null;
-
-function safeRelativeUrl(value) {
-  try {
-    const url = new URL(String(value || ""), window.location.origin);
-    if (url.origin !== window.location.origin) return "";
-    if (!["http:", "https:"].includes(url.protocol)) return "";
-    return url.pathname + url.search + url.hash;
-  } catch {
-    return "";
-  }
-}
 
 function getAnnouncementBody(announcement) {
   return String(announcement?.body ?? announcement?.message ?? "").trim();
@@ -117,42 +105,6 @@ async function refreshAnnouncementBanner({ announceNew = false } = {}) {
   }
 }
 
-async function setupRealtimeNotificationPopups(user) {
-  if (!user || notificationChannel) return;
-  notificationChannel = supabase
-    .channel(`notification-popups-${user.id}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "notifications",
-        filter: `user_id=eq.${user.id}`
-      },
-      (payload) => {
-        const item = payload.new || {};
-        const link = safeRelativeUrl(item.link_url || item.link);
-        const message = String(item.body || item.title || "You have a new notification.").trim();
-        const toast = window.siteToast?.(message, {
-          type: "info",
-          title: item.title || "New notification",
-          duration: 7000
-        });
-        if (toast && link) {
-          const content = toast.querySelector(".site-toast-content");
-          if (content && !content.querySelector("a")) {
-            const action = document.createElement("a");
-            action.href = link;
-            action.textContent = "Open";
-            action.style.cssText = "display:inline-block;margin-top:8px;font-size:.88rem;font-weight:700;color:inherit;text-decoration:underline;";
-            content.appendChild(action);
-          }
-        }
-      }
-    )
-    .subscribe();
-}
-
 function setupRealtimeAnnouncements() {
   if (announcementChannel) return;
   announcementChannel = supabase
@@ -218,6 +170,4 @@ export async function initSiteNotifications() {
   installStyles();
   await refreshAnnouncementBanner();
   setupRealtimeAnnouncements();
-  const user = await getCurrentUser();
-  await setupRealtimeNotificationPopups(user);
 }
