@@ -57,17 +57,17 @@ const state = {
 };
 
 function formatBrandName(name) {
-  const parts = name.split(" ").filter(Boolean);
-  if (parts.length < 2) return name;
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return escapeHTML(parts.join(" "));
   const techIndex = parts.findIndex((part) => part.toLowerCase() === "tech");
   if (techIndex !== -1) {
     const highlighted = parts[techIndex];
     const before = parts.slice(0, techIndex).join(" ");
     const after = parts.slice(techIndex + 1).join(" ");
-    return `${before ? `${before} ` : ""}<span>${highlighted}</span>${after ? ` ${after}` : ""}`;
+    return `${before ? `${escapeHTML(before)} ` : ""}<span>${escapeHTML(highlighted)}</span>${after ? ` ${escapeHTML(after)}` : ""}`;
   }
   const last = parts.pop();
-  return `${parts.join(" ")} <span>${last}</span>`;
+  return `${escapeHTML(parts.join(" "))} <span>${escapeHTML(last)}</span>`;
 }
 
 function applyTheme(settings) {
