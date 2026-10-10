@@ -65,3 +65,12 @@ Two focused Node 22 path-extraction tests passed; a Playwright regression was ad
 - Focused standalone tests run locally: 5 passed (3 authentication coalescing, 2 private-media-path extraction).
 - Added browser test for durable-path writes but not executed against a complete local build yet.
 - Full source build, authenticated staging, browser suite, hosted CI, and the currently unpublished branch are **not certified**.
+
+
+## Site-wide follow-up: error feedback, notifications and marketplace
+
+- The global error-toast owner is `assets/js/theme-init.js`. Previously suppressing the nonfatal ResizeObserver diagnostic in `nav.js` was ineffective because `theme-init.js` registered the global handler first. The toast owner now explicitly ignores that browser diagnostic; a browser regression verifies the behavior.
+- `notifications-ui.js` and `notification-popup.js` both subscribed to `notifications` INSERT events and could show two popups for one notification. The latter now owns **announcements only**, while `notifications-ui.js` is the sole notification toast subscriber. A source-level regression guards ownership.
+- Marketplace used a hidden `currency = "USD"` default, so every created listing appeared in USD even though sellers had no currency control. The create form now offers NGN, USD, GBP, EUR, GHS, KES, ZAR and TZS, defaults to NGN, and persists the selected code. The feed and listing detail both use `formatMarketplacePrice` for consistent localized formatting. Existing USD data is not converted or rewritten.
+- An isolated Node 22 harness passed **eight focused tests**: three auth single-flight, two private-media-path, and three marketplace-formatting checks. These are not a substitute for the full repo suites; newly added browser tests for cookie/mobile shell, the global warning suppression and currency persistence remain unexecuted against the new commits.
+- Commits retain `[skip netlify]` to avoid unexpected builds. There was no production deploy or live data migration.
