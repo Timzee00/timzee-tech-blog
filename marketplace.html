@@ -86,6 +86,17 @@
               <div>
                 <label for="listingPrice"><strong>Price</strong></label>
                 <input type="number" id="listingPrice" placeholder="0.00" step="0.01" min="0" required>
+                <label for="listingCurrency"><strong>Currency</strong></label>
+                <select id="listingCurrency" required>
+                  <option value="NGN" selected>NGN — Nigerian naira (₦)</option>
+                  <option value="USD">USD — US dollar ($)</option>
+                  <option value="GBP">GBP — British pound (£)</option>
+                  <option value="EUR">EUR — Euro (€)</option>
+                  <option value="GHS">GHS — Ghanaian cedi (₵)</option>
+                  <option value="KES">KES — Kenyan shilling</option>
+                  <option value="ZAR">ZAR — South African rand (R)</option>
+                  <option value="TZS">TZS — Tanzanian shilling</option>
+                </select>
               </div>
               <div>
                 <label for="listingCondition"><strong>Condition</strong></label>
@@ -158,6 +169,7 @@
       import { getCurrentUser, signOut, supabase, getDisplayName } from "./assets/js/supabase.js";
       import { uploadMedia } from "./assets/js/media.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+      import { formatMarketplacePrice } from "./assets/js/marketplace-currency.mjs";
 
       const MAX_PHOTOS = 8;
       const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -313,7 +325,7 @@
             <div class="listing-info">
               <div class="listing-category">${escapeHTML(item.category || '')}</div>
               <h2 class="listing-title"><a href="listing.html?id=${encodeURIComponent(item.id)}">${escapeHTML(item.title || 'Untitled listing')}</a></h2>
-              <div class="listing-price">${escapeHTML(item.currency || "USD")} ${escapeHTML((parseFloat(item.price) || 0).toFixed(2))}</div>
+              <div class="listing-price">${escapeHTML(formatMarketplacePrice(item.price, item.currency))}</div>
               <div class="listing-meta">
                 <span>Views ${escapeHTML(String(item.view_count || 0))}</span>
                 <span>${escapeHTML(item.location || 'Online')}</span>
@@ -402,6 +414,7 @@
             description: document.getElementById("listingDescription").value.trim(),
             category: document.getElementById("listingCategory").value,
             price,
+            currency: document.getElementById("listingCurrency").value,
             condition: document.getElementById("listingCondition").value,
             location: document.getElementById("listingLocation").value.trim(),
             images
