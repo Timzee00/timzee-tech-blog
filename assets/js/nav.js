@@ -1,11 +1,15 @@
 import { icon } from "./icons.js";
-import { extractErrorMessage, reportAppError } from "./utils.js";
+import { extractErrorMessage, reportAppError, isSafeUrl } from "./utils.js";
+import { pageFileName } from "./route-page.mjs";
 
 function setupGlobalErrorHandlers() {
   if (typeof window === "undefined" || window.__timzeeErrorHandlersReady) return;
   window.__timzeeErrorHandlersReady = true;
   window.addEventListener("error", (event) => {
     const message = event?.error || event?.message || "Unexpected website error.";
+    // Browsers can emit this nonfatal diagnostic while settling layout. Do not
+    // turn it into an alarming application-failure toast.
+    if (/ResizeObserver loop (completed with undelivered notifications|limit exceeded)/i.test(String(event?.message || message))) return;
     reportAppError(message, "Website error");
   });
   window.addEventListener("unhandledrejection", (event) => {
@@ -173,7 +177,7 @@ function setupMobileMenu() {
 // page shares the exact same header markup instead of each page hardcoding
 // which link is "current" (which is how pages drifted out of sync before).
 function setupActiveNavLink() {
-  const current = (window.location.pathname.split("/").pop() || "index.html").toLowerCase();
+  const current = pageFileName(window.location.pathname);
   document.querySelectorAll(".nav-pill a, .nav-more-menu a").forEach((link) => {
     const href = (link.getAttribute("href") || "").toLowerCase();
     if (!href || href.startsWith("#")) return;
@@ -224,13 +228,25 @@ setupMoreDropdown();
 setupBottomTabBar(false);
 // Workspace routes need the actual chrome height, including wrapped tablet
 // navigation and the safe-area inset, to keep their composer on screen.
-const chromeObserver = new ResizeObserver(() => {
+let chromeMeasureScheduled = false;
+const measureChrome = () => {
+  chromeMeasureScheduled = false;
   for (const [selector, name] of [[".site-header", "--site-header-height"], [".bottom-tab-bar", "--bottom-nav-height"]]) {
-    const height = document.querySelector(selector)?.getBoundingClientRect().height || 0;
-    document.documentElement.style.setProperty(name, `${height}px`);
+    const height = Math.round(document.querySelector(selector)?.getBoundingClientRect().height || 0);
+    const value = `${height}px`;
+    if (document.documentElement.style.getPropertyValue(name) !== value) {
+      document.documentElement.style.setProperty(name, value);
+    }
   }
-});
+};
+const scheduleChromeMeasurement = () => {
+  if (chromeMeasureScheduled) return;
+  chromeMeasureScheduled = true;
+  window.requestAnimationFrame(measureChrome);
+};
+const chromeObserver = new ResizeObserver(scheduleChromeMeasurement);
 document.querySelectorAll(".site-header, .bottom-tab-bar").forEach(element => chromeObserver.observe(element));
+scheduleChromeMeasurement();
 
 // Everything below this line depends on the Supabase client, which is
 // bundled locally inside supabase.js. That dependency previously sat at the TOP of this file as a static
@@ -277,9 +293,8 @@ function populateDrawerFooter(user, signOut) {
 
   userCard.hidden = false;
   const name = user.user_metadata?.display_name || user.email || "Member";
-  const avatarUrl =
-    user.user_metadata?.avatar_url ||
-    "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+  const candidateAvatar = user.user_metadata?.avatar_url || "";
+  const avatarUrl = isSafeUrl(candidateAvatar) ? candidateAvatar : "/assets/img/avatar-placeholder.svg";
   document.getElementById("siteMenuUserAvatar").src = avatarUrl;
   document.getElementById("siteMenuUserName").textContent = name;
   document.getElementById("siteMenuUserHandle").textContent = user.email || "";
@@ -301,7 +316,7 @@ function populateDrawerFooter(user, signOut) {
 function setupBottomTabBar(isLoggedIn) {
   if (!document.querySelector(".site-header")) return;
   document.getElementById("bottomTabBar")?.remove();
-  const path = window.location.pathname.split("/").pop() || "index.html";
+  const path = pageFileName(window.location.pathname);
 
   const tabs = [
     { href: "index.html", icon: "&#127968;", label: "Home", match: ["index.html", ""] },
@@ -312,7 +327,7 @@ function setupBottomTabBar(isLoggedIn) {
       href: isLoggedIn ? "profile.html" : "login.html",
       icon: "&#128100;",
       label: isLoggedIn ? "Profile" : "Log In",
-      match: ["profile.html"]
+      match: ["profile.html", "login.html"]
     }
   ];
 

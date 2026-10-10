@@ -1,19 +1,9 @@
-import { supabase, getCurrentUser } from "./supabase.js";
+import { supabase } from "./supabase.js";
 
 const BANNER_KEY = "timzee_last_dismissed_announcement";
 let announcementChannel = null;
-let notificationChannel = null;
-
-function safeRelativeUrl(value) {
-  try {
-    const url = new URL(String(value || ""), window.location.origin);
-    if (url.origin !== window.location.origin) return "";
-    if (!["http:", "https:"].includes(url.protocol)) return "";
-    return url.pathname + url.search + url.hash;
-  } catch {
-    return "";
-  }
-}
+let announcementRequest = 0;
+let displayedAnnouncementId = null;
 
 function getAnnouncementBody(announcement) {
   return String(announcement?.body ?? announcement?.message ?? "").trim();
@@ -30,17 +20,21 @@ function isPublishedAnnouncement(announcement, now = Date.now()) {
 function getAnnouncements() {
   return supabase
     .from("announcements")
-    .select("*")
+    .select("id,title,body,message,status,publish_at,created_at")
     .order("created_at", { ascending: false })
     .limit(12);
 }
 
 function renderAnnouncementBanner(announcement) {
+  // Retire an older announcement presentation when both site scripts load.
+  document.getElementById("timzee-announcement-banner")?.remove();
   const existing = document.getElementById("siteAnnouncementBanner");
   if (existing) existing.remove();
+  displayedAnnouncementId = announcement?.id ? String(announcement.id) : null;
   if (!announcement) return;
 
-  const dismissedId = localStorage.getItem(BANNER_KEY);
+  let dismissedId = "";
+  try { dismissedId = localStorage.getItem(BANNER_KEY) || ""; } catch (_) { /* private mode */ }
   if (dismissedId === String(announcement.id)) return;
 
   const banner = document.createElement("aside");
@@ -78,7 +72,7 @@ function renderAnnouncementBanner(announcement) {
   dismiss.className = "site-announcement-dismiss";
   dismiss.textContent = "Dismiss";
   dismiss.addEventListener("click", () => {
-    localStorage.setItem(BANNER_KEY, String(announcement.id));
+    try { localStorage.setItem(BANNER_KEY, String(announcement.id)); } catch (_) { /* private mode */ }
     banner.remove();
   });
 
@@ -88,13 +82,18 @@ function renderAnnouncementBanner(announcement) {
 }
 
 async function refreshAnnouncementBanner({ announceNew = false } = {}) {
+  const request = ++announcementRequest;
   try {
     const { data, error } = await getAnnouncements();
+    if (request !== announcementRequest) return; // Ignore older realtime responses.
     if (error) throw error;
     const now = Date.now();
     const latest = (data || []).find((item) => isPublishedAnnouncement(item, now) && getAnnouncementBody(item));
+    const previousId = displayedAnnouncementId;
     renderAnnouncementBanner(latest || null);
-    if (announceNew && latest) {
+    // Future/draft events should not repeat a toast about an older item.
+    if (announceNew && latest && previousId && previousId !== String(latest.id) &&
+        document.getElementById("siteAnnouncementBanner")) {
       window.siteToast?.(getAnnouncementBody(latest), {
         type: "info",
         title: latest.title || "New announcement",
@@ -102,44 +101,8 @@ async function refreshAnnouncementBanner({ announceNew = false } = {}) {
       });
     }
   } catch (error) {
-    console.warn("Site announcement banner unavailable:", error);
+    if (request === announcementRequest) console.warn("Site announcement banner unavailable:", error);
   }
-}
-
-async function setupRealtimeNotificationPopups(user) {
-  if (!user || notificationChannel) return;
-  notificationChannel = supabase
-    .channel(`notification-popups-${user.id}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "notifications",
-        filter: `user_id=eq.${user.id}`
-      },
-      (payload) => {
-        const item = payload.new || {};
-        const link = safeRelativeUrl(item.link_url || item.link);
-        const message = String(item.body || item.title || "You have a new notification.").trim();
-        const toast = window.siteToast?.(message, {
-          type: "info",
-          title: item.title || "New notification",
-          duration: 7000
-        });
-        if (toast && link) {
-          const content = toast.querySelector(".site-toast-content");
-          if (content && !content.querySelector("a")) {
-            const action = document.createElement("a");
-            action.href = link;
-            action.textContent = "Open";
-            action.style.cssText = "display:inline-block;margin-top:8px;font-size:.88rem;font-weight:700;color:inherit;text-decoration:underline;";
-            content.appendChild(action);
-          }
-        }
-      }
-    )
-    .subscribe();
 }
 
 function setupRealtimeAnnouncements() {
@@ -207,6 +170,4 @@ export async function initSiteNotifications() {
   installStyles();
   await refreshAnnouncementBanner();
   setupRealtimeAnnouncements();
-  const user = await getCurrentUser();
-  await setupRealtimeNotificationPopups(user);
 }

@@ -146,6 +146,7 @@
       import { incrementMarketplaceView, createMarketplaceInquiry, getSellerRating } from "./assets/js/videos-marketplace.js";
       import { createContentReport } from "./assets/js/data.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+      import { formatMarketplacePrice as formatCurrency } from "./assets/js/marketplace-currency.mjs";
 
       const state = {
         user: null,
@@ -160,24 +161,6 @@
       const canLoadListing = !!state.itemId;
       if (!canLoadListing) {
         document.getElementById("loadingState").textContent = "No listing ID provided";
-      }
-
-      const currencySymbols = {
-        NGN: "₦",
-        USD: "$",
-        GBP: "£",
-        EUR: "€",
-        GHS: "₵",
-        KES: "KSh "
-      };
-
-      function formatCurrency(price, currencyCode) {
-        const currency = String(currencyCode || "USD").toUpperCase();
-        const symbol = currencySymbols[currency] || `${currency} `;
-        const amount = Number(price);
-        return Number.isFinite(amount)
-          ? `${symbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : "Price unavailable";
       }
 
       function setInquiryStatus(message, tone = "muted") {

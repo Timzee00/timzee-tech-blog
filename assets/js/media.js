@@ -1,4 +1,5 @@
 import { createSignedMediaCache } from "./signed-media-cache.mjs";
+import { getChatMediaPath } from "./chat-media-path.mjs";
 import { supabase, getCurrentUser } from "./supabase.js";
 
 const PUBLIC_BUCKET = "media";
@@ -18,18 +19,6 @@ function isChatMediaUrl(value = "") {
     return url.pathname.includes(`/storage/v1/object/sign/${CHAT_BUCKET}/`);
   } catch (_) {
     return false;
-  }
-}
-
-function getChatMediaPath(value = "") {
-  try {
-    const url = new URL(value, window.location.origin);
-    const marker = `/storage/v1/object/sign/${CHAT_BUCKET}/`;
-    const index = url.pathname.indexOf(marker);
-    if (index === -1) return "";
-    return decodeURIComponent(url.pathname.slice(index + marker.length));
-  } catch (_) {
-    return "";
   }
 }
 

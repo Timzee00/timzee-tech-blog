@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { build } from "esbuild";
+import { injectSiteShell } from "./inject-site-shell.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const output = resolve(root, "dist");
@@ -47,6 +48,14 @@ async function filesIn(directory) {
   return files.sort();
 }
 const files = await filesIn(output);
+// Ensure every public page receives the same design chrome, working cookie
+// preferences and shared controls, including routes with inline page scripts.
+// Staff workspaces have separate layouts and are intentionally excluded.
+for (const file of files.filter(path => path.endsWith(".html"))) {
+  const original = await readFile(file, "utf8");
+  const enhanced = injectSiteShell(original);
+  if (enhanced !== original) await writeFile(file, enhanced);
+}
 const hash = createHash("sha256");
 for (const file of files) hash.update(await readFile(file));
 const assetVersion = hash.digest("hex").slice(0, 16);

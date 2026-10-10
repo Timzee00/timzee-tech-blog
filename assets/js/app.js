@@ -57,17 +57,17 @@ const state = {
 };
 
 function formatBrandName(name) {
-  const parts = name.split(" ").filter(Boolean);
-  if (parts.length < 2) return name;
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return escapeHTML(parts.join(" "));
   const techIndex = parts.findIndex((part) => part.toLowerCase() === "tech");
   if (techIndex !== -1) {
     const highlighted = parts[techIndex];
     const before = parts.slice(0, techIndex).join(" ");
     const after = parts.slice(techIndex + 1).join(" ");
-    return `${before ? `${before} ` : ""}<span>${highlighted}</span>${after ? ` ${after}` : ""}`;
+    return `${before ? `${escapeHTML(before)} ` : ""}<span>${escapeHTML(highlighted)}</span>${after ? ` ${escapeHTML(after)}` : ""}`;
   }
   const last = parts.pop();
-  return `${parts.join(" ")} <span>${last}</span>`;
+  return `${escapeHTML(parts.join(" "))} <span>${escapeHTML(last)}</span>`;
 }
 
 function applyTheme(settings) {
@@ -870,25 +870,30 @@ function renderAds(settings) {
 
 async function boot() {
   showLoadingPlaceholders();
-  state.user = await getCurrentUserWithRole();
-  state.settings = await fetchSettings();
+  // Authentication and global settings are independent; avoid serial network
+  // waits before rendering the public homepage.
+  [state.user, state.settings] = await Promise.all([getCurrentUserWithRole(), fetchSettings()]);
   applyTheme(state.settings);
   if (state.settings.themeId) {
     const theme = await fetchThemeById(state.settings.themeId);
     if (theme) applyThemeVariables(theme);
   }
 
-  const softTimeout = (promise, fallback, label, ms = 2800) =>
-    Promise.race([
-      Promise.resolve(promise),
-      new Promise((resolve) => window.setTimeout(() => {
+  const softTimeout = (promise, fallback, label, ms = 2800) => {
+    let timer;
+    const timeout = new Promise((resolve) => {
+      timer = window.setTimeout(() => {
         console.warn(`Homepage data timed out: ${label}`);
         resolve(fallback);
-      }, ms))
-    ]).catch((error) => {
-      console.warn(`Homepage data failed: ${label}`, error);
-      return fallback;
+      }, ms);
     });
+    return Promise.race([Promise.resolve(promise), timeout])
+      .catch((error) => {
+        console.warn(`Homepage data failed: ${label}`, error);
+        return fallback;
+      })
+      .finally(() => window.clearTimeout(timer));
+  };
 
   const [
     categories,

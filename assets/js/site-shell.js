@@ -1,9 +1,10 @@
 import "./ui-controls.js";
 import "./nav.js";
+import { pageFileName } from "./route-page.mjs";
 
 const BRAND_TEXT="Powered by Timzee Corp";
 const LEGAL_LINKS=[["Privacy","privacy.html"],["Terms","terms.html"],["Refund Policy","refund-policy.html"],["Cookies","cookies.html"],["Accessibility","accessibility.html"]];
-function currentSitePath(){return window.location.pathname||"";}
+function currentSitePath(){return pageFileName(window.location.pathname||"");}
 function ensureProductNavigation(){const menu=document.querySelector(".nav-more-menu");if(!menu)return;const addLink=(href,label)=>{if(menu.querySelector(`a[href="${href}"]`))return;const link=document.createElement("a");link.href=new URL(href,location.origin+"/").href;link.textContent=label;menu.insertBefore(link,menu.firstChild);};addLink("fyp.html","For You");addLink("settings.html","Settings");}
 export function ensureSiteFooter() {
   const footer = document.querySelector("footer.footer");
@@ -16,6 +17,6 @@ export function ensureSiteFooter() {
   container.append(legal);
   const brand = document.createElement("small"); brand.className = "footer-brand"; brand.textContent = BRAND_TEXT; container.append(brand);
 }
-async function loadPageEnhancements(){const path=currentSitePath().toLowerCase();const imports=[import("./experience-preferences.js")];if(path.endsWith("/discussion.html"))imports.push(import("./discussion-discovery.js"));if(path.endsWith("/chat.html"))imports.push(import("./chat-context-menu.js"));if(path.endsWith("/ai-chat.html"))imports.push(import("./ai-context.js"));if(imports.length)await Promise.allSettled(imports);}
+async function loadPageEnhancements(){const path=currentSitePath();const imports=[import("./experience-preferences.js")];if(path==="discussion.html")imports.push(import("./discussion-discovery.js"));if(path==="chat.html")imports.push(import("./chat-context-menu.js"));if(path==="ai-chat.html")imports.push(import("./ai-context.js"));if(imports.length)await Promise.allSettled(imports);}
 function scheduleIdle(task){if(typeof window.requestIdleCallback==="function")window.requestIdleCallback(task,{timeout:900});else window.setTimeout(task,220);}
 if(typeof window!=="undefined"){const start=()=>{ensureProductNavigation();ensureSiteFooter();void import("./privacy-consent.js");scheduleIdle(()=>void loadPageEnhancements());};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();}

@@ -94,6 +94,10 @@
 
   let lastError = 0;
   const handleError = error => {
+    const message = String(error?.message || error || "");
+    // This browser layout warning is nonfatal. It must not claim that the
+    // application failed or frighten someone away from using chat.
+    if (/^ResizeObserver loop (completed with undelivered notifications|limit exceeded)/i.test(message)) return;
     console.error("Timzee client error:", error);
     if (Date.now() - lastError < 20000) return;
     lastError = Date.now();

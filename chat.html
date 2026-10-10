@@ -93,7 +93,7 @@
           <div class="chat-conversation" id="chatConversation" hidden>
             <header class="chat-conversation-header">
               <button class="chat-mobile-back" id="chatBackBtn" type="button" aria-label="Back to chats"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-              <img id="chatAvatar" class="chat-header-avatar" alt="" src="">
+              <img id="chatAvatar" class="chat-header-avatar" alt="" src="/assets/img/avatar-placeholder.svg">
               <div class="chat-header-copy">
                 <div class="chat-header-name" id="chatName">Conversation</div>
                 <div class="chat-header-status-row"><span class="chat-live-dot" id="chatLiveDot"></span><span id="chatStatusText">Connecting…</span></div>
@@ -136,7 +136,7 @@
           </div>
           <div class="chat-info-body">
             <div class="chat-info-profile">
-              <img id="infoAvatar" class="chat-info-avatar" alt="" src="">
+              <img id="infoAvatar" class="chat-info-avatar" alt="" src="/assets/img/avatar-placeholder.svg">
               <div id="infoName" class="chat-info-name">—</div>
               <div id="infoStatus" class="chat-info-status">—</div>
             </div>
@@ -146,7 +146,7 @@
             <section id="groupInfoSection" class="chat-info-section" hidden>
               <div class="chat-info-section-head"><h3>Group</h3><button class="btn ghost sm" id="editGroupBtn" type="button">Edit</button></div>
               <div class="group-profile-editor" id="groupEditor" hidden>
-                <label class="group-avatar-upload"><img id="groupAvatarPreview" alt="Group photo"><input id="groupAvatarInput" type="file" accept="image/*" hidden><span>Change photo</span></label>
+                <label class="group-avatar-upload"><img id="groupAvatarPreview" alt="Group photo" src="/assets/img/group-placeholder.svg"><input id="groupAvatarInput" type="file" accept="image/*" hidden><span>Change photo</span></label>
                 <input id="groupNameInput" class="input" type="text" maxlength="80" placeholder="Group name">
                 <textarea id="groupDescriptionInput" class="resize-none input" rows="3" maxlength="300" placeholder="Group description"></textarea>
                 <div class="inline-actions"><button class="btn" id="saveGroupBtn" type="button">Save group</button><button class="btn ghost" id="cancelGroupBtn" type="button">Cancel</button></div>
