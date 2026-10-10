@@ -1,4 +1,5 @@
 import { createClient } from "../vendor/supabase.mjs";
+import { singleFlight } from "./single-flight.mjs";
 import "./app-hardening.js";
 import "./site-shell.js";
 import "./privacy-consent.js";
@@ -73,9 +74,6 @@ if (typeof window !== "undefined" && !window.supabase) {
 if (typeof window !== "undefined") {
   import("./notifications-ui.js").catch((error) => {
     console.warn("Realtime notification UI failed to load:", error);
-  });
-  import("./announcement-banner.js").catch((error) => {
-    console.warn("Announcement banner failed to load:", error);
   });
 }
 
@@ -183,7 +181,9 @@ async function resolveTrustedRole(user) {
   return role;
 }
 
-export async function getCurrentUser() {
+// Share simultaneous UI auth lookups without caching identity across requests.
+// Authorization always remains enforced by Supabase/RLS and privileged APIs.
+const fetchCurrentUserOnce = singleFlight(async () => {
   await authCallbackPromise;
   const { data, error } = await supabase.auth.getUser();
   if (error) {
@@ -191,10 +191,17 @@ export async function getCurrentUser() {
     return null;
   }
   const user = data.user;
-  if (!user) return null;
+  if (!user) {
+    if (typeof window !== "undefined") delete window.__timzeeCurrentUserId;
+    return null;
+  }
   if (typeof window !== "undefined") window.__timzeeCurrentUserId = user.id;
   await resolveTrustedRole(user);
   return user;
+});
+
+export function getCurrentUser() {
+  return fetchCurrentUserOnce();
 }
 
 export async function signIn(email, password) {
