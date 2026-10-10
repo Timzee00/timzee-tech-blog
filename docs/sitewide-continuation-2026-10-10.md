@@ -74,3 +74,16 @@ Two focused Node 22 path-extraction tests passed; a Playwright regression was ad
 - Marketplace used a hidden `currency = "USD"` default, so every created listing appeared in USD even though sellers had no currency control. The create form now offers NGN, USD, GBP, EUR, GHS, KES, ZAR and TZS, defaults to NGN, and persists the selected code. The feed and listing detail both use `formatMarketplacePrice` for consistent localized formatting. Existing USD data is not converted or rewritten.
 - An isolated Node 22 harness passed **eight focused tests**: three auth single-flight, two private-media-path, and three marketplace-formatting checks. These are not a substitute for the full repo suites; newly added browser tests for cookie/mobile shell, the global warning suppression and currency persistence remain unexecuted against the new commits.
 - Commits retain `[skip netlify]` to avoid unexpected builds. There was no production deploy or live data migration.
+
+
+## Clean-URL route and navigation consistency
+
+The public site supports both legacy `/chat.html` and clean `/chat` links. Previously `site-shell.js` imported chat, AI and discussion enhancements **only** when `pathname` literally ended in `.html`. The main and mobile nav likewise compared a clean route to a `.html` file, preventing accurate active states. Both now use `pageFileName()`, including correct active login tab behavior. The mobile drawer uses a local avatar placeholder instead of an unspecific external portrait.
+
+An isolated Node 22 test harness verified the updated path utility. As of this update, **10 focused utility tests pass** across authentication coalescing, private chat-media paths, marketplace currency display and route normalization. These do not validate the entire project, and neither the CI browser suite nor new deploy preview has been run for these changes.
+
+## Verified source changes in this continuation
+
+- `3821d05` fixes misleading global error reporting and the duplicate notification listener.
+- `d00b28c` adds genuine currency selection on listings, with consistent localized price formatting.
+- `189fc54` normalizes clean URLs across shared navigation and page enhancements.
