@@ -3,6 +3,7 @@ import { bindSearch } from "./search-input.js";
 import { fetchMessagePage } from "./chat-history.mjs";
 import { supabase, getCurrentUserWithRole, getDisplayName } from "./supabase.js";
 import { uploadMedia } from "./media.js";
+import { getChatMediaPath } from "./chat-media-path.mjs";
 import { loadUserPreferences, saveUserPreferences } from "./user-preferences.js";
 import { escapeHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
 
@@ -403,7 +404,11 @@ async function sendMessage() {
   state.sending = true; updateComposer();
   try {
     const mediaUrl = file ? await uploadMedia(file, 'direct-messages') : '';
-    const payload = { id: crypto.randomUUID(), thread_id: threadId, sender_id: state.user.id, recipient_id: recipientId, body, media_url: mediaUrl, media_type: mediaType || '', created_at: new Date().toISOString() };
+    // Signed links expire. Persist the private path so the authorization
+    // function can renew access for the recipient after expiry.
+    const mediaPath = file ? getChatMediaPath(mediaUrl) : null;
+    if (file && !mediaPath) throw new Error('Uploaded chat attachment has no valid private path.');
+    const payload = { id: crypto.randomUUID(), thread_id: threadId, sender_id: state.user.id, recipient_id: recipientId, body, media_url: mediaUrl, media_path: mediaPath, media_type: mediaType || '', created_at: new Date().toISOString() };
     const result = await supabase.from('direct_messages').insert(payload).select().single();
     if (result.error) throw result.error;
     const saved = result.data || payload;
