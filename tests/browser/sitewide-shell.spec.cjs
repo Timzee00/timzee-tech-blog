@@ -43,3 +43,30 @@ test("nonfatal ResizeObserver diagnostics do not display an app failure", async 
   });
   await expect(page.locator("#appToastRoot .app-toast.error")).toHaveCount(0);
 });
+
+
+test("new marketplace listing keeps the currency the seller selected", async ({ page }) => {
+  await mockSite(page, { role: "user" });
+  let created = null;
+  await page.route("**/rest/v1/marketplace_items*", route => {
+    if (route.request().method() !== "POST") return route.fallback();
+    created = route.request().postDataJSON();
+    return route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify(created),
+      headers: { "access-control-allow-origin": "*" }
+    });
+  });
+  await page.goto("/marketplace.html");
+  await page.locator("#createSection").evaluate(element => { element.style.display = "block"; });
+  await expect(page.locator("#listingCurrency")).toHaveValue("NGN");
+  await page.locator("#listingTitle").fill("Test keyboard");
+  await page.locator("#listingPrice").fill("15000");
+  await page.locator("#listingCurrency").selectOption("NGN");
+  await page.locator("#marketplaceWhatsapp").fill("+2348012345678");
+  await page.locator("#createForm button[type=submit]").click();
+  await expect.poll(() => created?.currency || "").toBe("NGN");
+  await expect.poll(() => created?.price).toBe(15000);
+  await expect(page.locator("#createStatus")).toContainText("Listing created successfully.");
+});
