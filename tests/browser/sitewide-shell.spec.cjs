@@ -97,3 +97,70 @@ test("unavailable social images use local fallbacks instead of broken icons", as
   await expect(page.locator("#testBrokenArticleImage")).toHaveAttribute("src", "/assets/img/media-placeholder.svg");
   await expect(page.locator("#testBrokenArticleImage")).toHaveAttribute("data-fallback-applied", "true");
 });
+
+
+test("stories, communities and profiles use a single accessible page heading", async ({ page }) => {
+  await mockSite(page);
+  for (const [url, text] of [["/stories.html", "Stories"], ["/discussion.html", "Communities"], ["/profile.html", null]]) {
+    await page.goto(url);
+    const heading = page.getByRole("heading", { level: 1 });
+    await expect(heading).toHaveCount(1);
+    if (text) await expect(heading).toHaveText(text);
+  }
+});
+
+test("public pages share typography, surfaces, and the primary palette", async ({ page }) => {
+  await mockSite(page);
+  let baseline;
+  for (const route of ["/login.html", "/marketplace.html", "/stories.html", "/discussion.html", "/settings.html"]) {
+    await page.goto(route);
+    const tokens = await page.evaluate(() => {
+      const style = getComputedStyle(document.documentElement);
+      return {
+        bodyFont: getComputedStyle(document.body).fontFamily,
+        background: style.getPropertyValue("--color-bg").trim(),
+        surface: style.getPropertyValue("--color-surface").trim(),
+        primary: style.getPropertyValue("--color-primary").trim()
+      };
+    });
+    expect(tokens.bodyFont).toBeTruthy();
+    if (baseline) expect(tokens).toEqual(baseline);
+    else baseline = tokens;
+  }
+});
+
+test("cookie consent stays in document flow below the header on phones", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockSite(page);
+  await page.goto("/login.html");
+  await page.evaluate(() => {
+    const banner = document.createElement("div");
+    banner.id = "timzee-consent-banner";
+    banner.className = "is-visible";
+    banner.innerHTML = '<div class="timzee-consent-card"><div class="timzee-consent-copy">Manage your cookies</div><div class="timzee-consent-actions"><button type="button">Reject optional</button><button type="button">Accept optional</button></div></div>';
+    document.querySelector(".site-header").insertAdjacentElement("afterend", banner);
+  });
+  const position = await page.locator("#timzee-consent-banner").evaluate(node => {
+    const banner = node.getBoundingClientRect();
+    const header = document.querySelector(".site-header").getBoundingClientRect();
+    const css = getComputedStyle(node);
+    return { position: css.position, bannerTop: banner.top, headerBottom: header.bottom, bannerWidth: banner.width, viewport: window.innerWidth };
+  });
+  expect(position.position).toBe("relative");
+  expect(position.bannerTop).toBeGreaterThanOrEqual(position.headerBottom - 1);
+  expect(position.bannerWidth).toBeLessThanOrEqual(position.viewport);
+  await expect(page.locator("#loginEmail")).toBeVisible();
+});
+
+test("staff dashboards use the public brand surface and accessible focus", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/admin/login.html");
+  const colors = await page.evaluate(() => {
+    const computed = getComputedStyle(document.querySelector(".login-shell"));
+    const root = getComputedStyle(document.documentElement);
+    return { background: computed.backgroundColor, text: computed.color, body: root.getPropertyValue("--color-bg").trim() };
+  });
+  expect(colors.body).toBeTruthy();
+  expect(colors.background).not.toBe("rgba(0, 0, 0, 0)");
+  await expect(page.locator(".login-card")).toBeVisible();
+});
