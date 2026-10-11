@@ -1,5 +1,6 @@
 import { createClient } from "../vendor/supabase.mjs";
 import { singleFlight } from "./single-flight.mjs";
+import { getAuthRedirectOrigin, makeAuthRedirect } from "./auth-redirects.mjs";
 import "./app-hardening.js";
 import "./site-shell.js";
 import "./privacy-consent.js";
@@ -223,7 +224,7 @@ export async function signInWithProvider(provider, redirectTo) {
     return await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: redirectTo || `${SITE_URL}/login.html`
+        redirectTo: redirectTo || makeAuthRedirect(getAuthRedirectOrigin(window.location?.origin, SITE_URL))
       }
     });
   } catch (error) {
@@ -248,7 +249,7 @@ export async function signUp(email, password, displayName = "") {
           display_name: displayName,
           username: displayName ? displayName.toLowerCase().replace(/\s+/g, "") : fallbackUsername
         },
-        emailRedirectTo: SITE_URL ? `${SITE_URL}/login.html` : undefined
+        emailRedirectTo: makeAuthRedirect(getAuthRedirectOrigin(window.location?.origin, SITE_URL))
       }
     });
   } catch (error) {
@@ -292,7 +293,7 @@ export function hasRole(user, roles = []) {
 
 export async function resetPassword(email, redirectTo) {
   if (!email) return { error: { message: "Email is required." } };
-  const target = redirectTo || (SITE_URL ? `${SITE_URL}/login.html` : "");
+  const target = redirectTo || makeAuthRedirect(getAuthRedirectOrigin(window.location?.origin, SITE_URL));
   const options = target ? { redirectTo: target } : undefined;
   return supabase.auth.resetPasswordForEmail(email, options);
 }

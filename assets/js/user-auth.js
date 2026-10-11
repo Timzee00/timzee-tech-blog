@@ -14,6 +14,7 @@ import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import { setupReveal } from "./reveal.js";
 import { extractErrorMessage, reportAppError } from "./utils.js";
 import "./nav.js";
+import { getAuthRedirectOrigin, safeAuthNext, makeAuthRedirect } from "./auth-redirects.mjs";
 
 function setMessage(target, message, show = true) {
   if (!target) return;
@@ -141,23 +142,11 @@ function clearHash() {
 }
 
 function getSafeNextUrl(rawNext) {
-  if (!rawNext) return "index.html";
-  try {
-    const siteOrigin = new URL(SITE_URL).origin;
-    const candidate = new URL(rawNext, `${SITE_URL}/`);
-    if (candidate.origin !== siteOrigin) return "index.html";
-    if (candidate.protocol !== "https:" && candidate.protocol !== "http:") return "index.html";
-    const path = `${candidate.pathname}${candidate.search}${candidate.hash}`;
-    return path.startsWith("/") ? path.slice(1) || "index.html" : path || "index.html";
-  } catch {
-    return "index.html";
-  }
+  return safeAuthNext(rawNext, window.location.origin);
 }
 
 function buildOAuthRedirect(nextUrl) {
-  const target = new URL(`${SITE_URL}/login.html`);
-  if (nextUrl && nextUrl !== "index.html") target.searchParams.set("next", nextUrl);
-  return target.toString();
+  return makeAuthRedirect(getAuthRedirectOrigin(window.location.origin, SITE_URL), nextUrl);
 }
 
 function isOAuthCallback() {
@@ -308,7 +297,7 @@ async function boot() {
   const resetMessage = document.getElementById("resetMessage");
   const googleSignIn = document.getElementById("googleSignIn");
   const appleSignIn = document.getElementById("appleSignIn");
-  const redirectTo = SITE_URL ? `${SITE_URL}/login.html` : undefined;
+  const redirectTo = makeAuthRedirect(getAuthRedirectOrigin(window.location.origin, SITE_URL));
 
   const setView = (view) => {
     if (!switcher) return;
