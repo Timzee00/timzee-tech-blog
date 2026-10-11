@@ -1,4 +1,5 @@
 import "./ui-controls.js";
+import "./image-fallback.js";
 import "./nav.js";
 import { pageFileName } from "./route-page.mjs";
 

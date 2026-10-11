@@ -82,3 +82,18 @@ test("anonymous pages do not trigger a missing-session server-user lookup", asyn
   await page.waitForTimeout(300);
   expect(userLookups).toBe(0);
 });
+
+
+test("unavailable social images use local fallbacks instead of broken icons", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/");
+  await page.evaluate(() => {
+    const img = document.createElement("img");
+    img.id = "testBrokenArticleImage";
+    img.src = "/missing-image-for-regression-test.png";
+    img.alt = "Article cover";
+    document.body.append(img);
+  });
+  await expect(page.locator("#testBrokenArticleImage")).toHaveAttribute("src", "/assets/img/media-placeholder.svg");
+  await expect(page.locator("#testBrokenArticleImage")).toHaveAttribute("data-fallback-applied", "true");
+});
