@@ -99,6 +99,11 @@ const authCallbackPromise = (() => {
   });
 })();
 
+export async function getAuthCallbackError() {
+  const result = await authCallbackPromise;
+  return result?.error || null;
+}
+
 export async function getSession() {
   await authCallbackPromise;
   const { data, error } = await supabase.auth.getSession();
@@ -186,6 +191,15 @@ async function resolveTrustedRole(user) {
 // Authorization always remains enforced by Supabase/RLS and privileged APIs.
 const fetchCurrentUserOnce = singleFlight(async () => {
   await authCallbackPromise;
+  // Avoid a needless /auth/v1/user request (and misleading session warning)
+  // on anonymous public pages. Session presence is NOT proof of identity:
+  // authenticated users are still verified by getUser() and server RLS.
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData?.session) {
+    if (sessionError) console.warn("Session lookup failed:", sessionError);
+    if (typeof window !== "undefined") delete window.__timzeeCurrentUserId;
+    return null;
+  }
   const { data, error } = await supabase.auth.getUser();
   if (error) {
     console.warn("User fetch failed", error);

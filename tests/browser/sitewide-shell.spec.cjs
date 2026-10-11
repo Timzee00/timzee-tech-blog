@@ -70,3 +70,15 @@ test("new marketplace listing keeps the currency the seller selected", async ({ 
   await expect.poll(() => created?.price).toBe(15000);
   await expect(page.locator("#createStatus")).toContainText("Listing created successfully.");
 });
+
+
+test("anonymous pages do not trigger a missing-session server-user lookup", async ({ page }) => {
+  await mockSite(page);
+  let userLookups = 0;
+  page.on("request", request => {
+    if (request.url().includes(".supabase.co/auth/v1/user")) userLookups++;
+  });
+  await page.goto("/");
+  await page.waitForTimeout(300);
+  expect(userLookups).toBe(0);
+});

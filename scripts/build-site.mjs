@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { build } from "esbuild";
 import { injectSiteShell } from "./inject-site-shell.mjs";
+import { previewIndexingHeaders } from "./preview-indexing.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const output = resolve(root, "dist");
@@ -48,6 +49,13 @@ async function filesIn(directory) {
   return files.sort();
 }
 const files = await filesIn(output);
+// Netlify deploy-preview/branch-deploy share CDN routes but should not compete
+// with production in search results. Production and local builds are unchanged.
+const previewHeaders = previewIndexingHeaders(process.env.CONTEXT);
+if (previewHeaders) {
+  await writeFile(resolve(output, "_headers"), (await readFile(resolve(output, "_headers"), "utf8")) + previewHeaders);
+  await writeFile(resolve(output, "robots.txt"), "User-agent: *\\nDisallow: /\\n");
+}
 // Ensure every public page receives the same design chrome, working cookie
 // preferences and shared controls, including routes with inline page scripts.
 // Staff workspaces have separate layouts and are intentionally excluded.

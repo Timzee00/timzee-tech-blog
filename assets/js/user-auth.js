@@ -2,6 +2,7 @@ import {
   supabase,
   SITE_URL,
   getCurrentUser,
+  getAuthCallbackError,
   signIn,
   signInWithProvider,
   signUp,
@@ -274,6 +275,9 @@ async function handleOAuthSignIn(provider, button, loginMessage, nextUrl) {
 }
 
 async function boot() {
+  // Capture the callback before any awaited settings request: the Supabase
+  // PKCE exchange may remove ?code= from the URL while settings are loading.
+  const startedWithOAuthCallback = isOAuthCallback();
   setupReveal();
   setupPasswordToggles();
   const settings = await fetchSettings();
@@ -319,7 +323,8 @@ async function boot() {
   const accessToken = hashParams.get("access_token");
   const refreshToken = hashParams.get("refresh_token");
   const isRecovery = recoveryType === "recovery" || recoveryType === "password_recovery";
-  const oauthCallback = isOAuthCallback() && !isRecovery;
+  const oauthCallback = startedWithOAuthCallback && !isRecovery;
+  const callbackExchangeError = await getAuthCallbackError();
 
   let initialView = switcher?.dataset.view || "login";
   if (isRecovery) {
@@ -341,8 +346,8 @@ async function boot() {
     hashParams.get("error") ||
     queryParams.get("error_description") ||
     queryParams.get("error");
-  if (callbackError) {
-    setMessage(loginMessage, normalizeAuthError({ message: callbackError }, "oauth"));
+  if (callbackError || callbackExchangeError) {
+    setMessage(loginMessage, normalizeAuthError(callbackExchangeError || { message: callbackError }, "oauth"));
     clearHash();
     if (window.location.search.includes("error")) {
       const clean = new URL(window.location.href);
@@ -359,7 +364,7 @@ async function boot() {
     if (profileCheck?.blocked) {
       await signOut();
       setMessage(loginMessage, profileCheck.message || "Account access is restricted.");
-    } else if (oauthCallback) {
+    } else if (oauthCallback && !callbackError && !callbackExchangeError) {
       clearHash();
       window.location.replace(nextUrl);
       return;
