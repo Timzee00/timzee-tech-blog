@@ -19,7 +19,7 @@ export function safeAuthNext(rawNext, currentOrigin) {
     if (raw.startsWith("//") || raw.startsWith("\\\\") || /[\\\u0000-\u001f]/.test(raw)) return "index.html";
     // Only fully qualified HTTP(S) URLs are allowed; reject malformed or
     // encoded schemes such as https:%2f%2fexample before URL normalization.
-    if (/^[a-z][a-z0-9+.-]*:/i.test(raw) && !/^https?:\\/\\//i.test(raw)) return "index.html";
+    if (/^[a-z][a-z0-9+.-]*:/i.test(raw) && !["https://", "http://"].some(prefix => raw.toLowerCase().startsWith(prefix))) return "index.html";
     const candidate = new URL(raw, origin + "/");
     if (candidate.origin !== origin || !["http:","https:"].includes(candidate.protocol)) return "index.html";
     const path = candidate.pathname + candidate.search + candidate.hash;
