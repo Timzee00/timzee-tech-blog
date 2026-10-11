@@ -359,6 +359,12 @@ function setupBottomTabBar(isLoggedIn) {
 function applySiteBranding(settings) {
   if (!settings || !settings.siteName) return;
 
+  const brandName = settings.siteName.trim();
+  window.__timzeeSiteBrandName = brandName;
+  document.dispatchEvent(new CustomEvent("timzee:branding-updated", {
+    detail: { siteName: brandName }
+  }));
+
   const logoEl = document.getElementById("siteName");
   if (logoEl) {
     // Preserve the "<first word> <span>rest</span>" split styling only when

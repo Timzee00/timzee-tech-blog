@@ -164,3 +164,16 @@ test("staff dashboards use the public brand surface and accessible focus", async
   expect(colors.background).not.toBe("rgba(0, 0, 0, 0)");
   await expect(page.locator(".login-card")).toBeVisible();
 });
+
+
+test("settings and For You links show active navigation, and dynamic brand reaches the footer", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/settings.html");
+  await expect(page.locator(".nav-more-menu a[href$='settings.html']")).toHaveAttribute("aria-current", "page");
+  const footer = page.locator(".footer-wordmark");
+  await expect(footer).toBeVisible();
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent("timzee:branding-updated", { detail: { siteName: "Example Tech Community" } })));
+  await expect(footer).toHaveText("Example Tech Community");
+  await page.goto("/fyp.html");
+  await expect(page.locator(".nav-more-menu a[href$='fyp.html']")).toHaveAttribute("aria-current", "page");
+});
