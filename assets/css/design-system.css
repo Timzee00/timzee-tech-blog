@@ -133,7 +133,7 @@ label { font-weight: 600; font-size: 14px; }
 .app-toast strong { display: block; font-size: 14px; margin-bottom: 4px; }
 .toast-close { min-height: 32px; width: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; font-size: 22px; cursor: pointer; }
 .site-connectivity-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 110000; padding: 12px; background: var(--color-text); color: var(--color-bg); text-align: center; font-size: 13px; }
-#timzee-consent-banner { bottom: 20px !important; z-index: 110000 !important; }
+#timzee-consent-banner { bottom: 20px !important; z-index: var(--z-overlay, 90) !important; }
 .timzee-consent-card { padding: 18px 24px !important; box-shadow: var(--elevation-3) !important; }
 #timzee-cookie-settings-modal { z-index: 110001 !important; }
 .timzee-cookie-modal-card { max-height: 85dvh; overflow-y: auto; }
@@ -150,10 +150,15 @@ label { font-weight: 600; font-size: 14px; }
   .content-grid { grid-template-columns: minmax(0, 1fr) 250px; gap: 24px; }
   .auth-layout { gap: 32px; }
   .app-toast-root { bottom: calc(80px + env(safe-area-inset-bottom)); right: 16px; }
-  #timzee-consent-banner { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+  /* The notice is inserted after the header on narrow screens: it must
+     consume space, not float over chat, login, or the mobile tab bar. */
+  #timzee-consent-banner { position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; margin: 12px auto !important; width: min(980px, calc(100% - 32px)) !important; }
 }
 @media (max-width: 700px) {
   .container { width: calc(100% - 32px); padding: 0; }
+  .page-heading { margin-bottom: 22px; }
+  .page-heading h1 { font-size: clamp(30px, 8vw, 40px); }
+  .page-heading p { font-size: 15px; }
   .page-shell { padding: 32px 0 48px; }
   .home-intro { padding: 36px 0 40px; }
   .home-intro-grid, .content-grid, .auth-layout { grid-template-columns: minmax(0, 1fr); gap: 32px; }
@@ -237,3 +242,35 @@ label { font-weight: 600; font-size: 14px; }
 .listing-image-placeholder span { font-size: 13px; }
 .listing-image-placeholder svg, .video-thumbnail > svg { width: 40px; height: 40px; }
 @media (max-width: 700px) { .discussion-discovery.container { padding: 18px; } }
+
+
+/* Canonical public page introduction: shared on content, community and story
+   routes. Feature pages retain their own specialized workspace layouts. */
+html { font-size: 16px; }
+.page-heading { max-width: 780px; margin-bottom: 28px; }
+.page-heading h1 { margin: 0 0 8px; font: 750 clamp(32px, 4vw, 48px)/1.14 var(--font-display); letter-spacing: -.035em; color: var(--color-text); }
+.page-heading p { max-width: 64ch; margin: 0; font-size: 16px; line-height: 1.6; color: var(--color-text-muted); }
+:where(.discussion-card,.listing-card,.settings-card,.profile-card,.market-panel,.auth-card) {
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+:where(.discussion-card,.listing-card,.settings-card,.profile-card,.market-panel) h2,
+:where(.discussion-card,.listing-card,.settings-card,.profile-card,.market-panel) h3 { color: var(--color-text); }
+:where(.btn,.filter-btn,.nav-pill a,.nav-more-toggle,.footer-cookie-settings):focus-visible {
+  outline: 3px solid var(--color-secondary);
+  outline-offset: 3px;
+}
+:where(.btn,.filter-btn) { font-family: var(--font-body); }
+:where(.btn,.filter-btn):disabled { opacity: .55; cursor: not-allowed; transform: none; }
+:where(.callout,.field-hint,.market-status,.settings-save-state) { overflow-wrap: anywhere; }
+@media (max-width: 960px) {
+  #timzee-consent-banner .timzee-consent-card { display: flex; flex-direction: column; align-items: stretch; gap: 12px; max-width: 100%; }
+  #timzee-consent-banner .timzee-consent-actions { display: flex; width: 100%; flex-wrap: wrap; gap: 8px; }
+  #timzee-consent-banner .timzee-consent-actions button { flex: 1 1 150px; min-width: 0; min-height: 44px; white-space: normal; }
+}
+@media (max-width: 700px) {
+  .page-heading { margin-bottom: 22px; }
+  .page-heading h1 { font-size: clamp(30px, 8vw, 40px); }
+  .page-heading p { font-size: 15px; }
+  .app-toast-root { max-width: calc(100vw - 32px); }
+}

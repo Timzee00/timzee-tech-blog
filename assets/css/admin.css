@@ -772,3 +772,54 @@ select:focus-visible {
 .team-overview h2 { margin-top: 0; }
 .admin-panel table { max-width: 100%; }
 @media (max-width: 700px) { .team-overview { display: block; } .team-overview > div:last-child { text-align: left !important; } .admin-shell .topbar .container { width: calc(100% - 32px); } }
+
+
+/* Staff and editorial workspaces share the public product's semantic palette
+   and control shapes. Keep workflow layout separate, not a second visual brand. */
+.admin-shell, .login-shell {
+  --admin-border: var(--color-border);
+  --admin-border-soft: var(--color-border);
+  --admin-border-strong: var(--color-border-strong);
+  --admin-text: var(--color-text);
+  --admin-text-muted: var(--color-text-muted);
+  --admin-text-bright: var(--color-text);
+  --admin-accent: var(--color-primary);
+  --admin-accent-soft: var(--color-primary);
+  --admin-overlay: var(--color-surface);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.admin-shell :where(.admin-card,.admin-nav,.stat-tile,.post-review,.login-card),
+.login-shell .login-card { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: none; }
+.admin-shell :where(h1,h2,h3,h4), .login-shell :where(h1,h2,h3,h4) { color: var(--color-text); font-family: var(--font-display); letter-spacing: -.035em; }
+.admin-shell :where(.admin-nav button,.btn,.inline-actions button), .login-shell .btn {
+  font-family: var(--font-body); min-height: 42px; border-radius: 9px;
+  transition: background 160ms ease, border-color 160ms ease;
+  transform: none;
+}
+.admin-shell .btn:not(.ghost):not(.danger), .login-shell .btn:not(.ghost):not(.danger) {
+  background: var(--color-primary); color: var(--color-text-on-primary); border: 1px solid transparent; box-shadow: none;
+}
+.admin-shell .btn.ghost, .login-shell .btn.ghost { color: var(--color-text); background: transparent; border: 1px solid var(--color-border-strong); box-shadow: none; }
+.admin-shell .btn:hover, .login-shell .btn:hover { transform: none; box-shadow: none; filter: none; }
+.admin-shell .admin-nav button { background: transparent; color: var(--color-text); border: 1px solid transparent; }
+.admin-shell .admin-nav button:hover { background: var(--color-surface-muted); color: var(--color-primary); border-color: var(--color-border); }
+.admin-shell .admin-nav button.active { color: var(--color-text-on-primary); background: var(--color-primary); border-color: var(--color-primary); }
+.admin-shell :where(.badge,.status-pill) { background: var(--color-surface-muted); color: var(--color-text); border: 1px solid var(--color-border); }
+.admin-shell .status-pill.suspended { color: var(--color-danger); border-color: var(--color-danger); background: var(--color-surface); }
+.admin-shell .status-pill.completed { color: var(--color-success); border-color: var(--color-border); background: var(--color-surface); }
+.admin-shell :where(input,textarea,select), .login-shell :where(input,textarea,select) { min-width: 0; max-width: 100%; font-size: 16px; background: var(--color-surface); color: var(--color-text); }
+.admin-shell :where(a,button,input,textarea,select):focus-visible, .login-shell :where(a,button,input,textarea,select):focus-visible {
+  outline: 3px solid var(--color-secondary); outline-offset: 3px;
+}
+.admin-shell .admin-table th { background: var(--color-surface-muted); color: var(--color-text); }
+.admin-shell .admin-table td { color: var(--color-text); }
+.admin-shell .callout { background: var(--color-surface-muted); color: var(--color-text-muted); }
+@media (max-width: 700px) {
+  .admin-shell .admin-panel { gap: 16px; padding: 16px 0 48px; }
+  .admin-shell .admin-card { padding: 18px; }
+  .admin-shell .admin-nav { gap: 6px; padding: 8px; }
+  .admin-shell .admin-nav button { flex: 0 0 auto; min-height: 44px; }
+}

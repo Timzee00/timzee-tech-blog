@@ -48,6 +48,10 @@
 
     <main id="main-content" class="page-shell">
       <div class="container">
+        <div class="page-heading">
+          <h1>Stories</h1>
+          <p>Moments, ideas and updates from the Timzee community.</p>
+        </div>
         <div class="stories-rail" id="storiesRail">
           <div class="story-avatar story-avatar-add" id="addStoryBtn" role="button" tabindex="0">
             <div class="story-ring story-ring-add">
@@ -130,8 +134,7 @@
       import { escapeHTML, isSafeUrl, timeAgo } from "./assets/js/utils.js";
       import "./assets/js/nav.js";
 
-      const DEFAULT_AVATAR =
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+      const DEFAULT_AVATAR = "/assets/img/avatar-placeholder.svg";
 
       const state = {
         user: null,
