@@ -53,7 +53,11 @@ const files = await filesIn(output);
 // with production in search results. Production and local builds are unchanged.
 const previewHeaders = previewIndexingHeaders(process.env.CONTEXT);
 if (previewHeaders) {
-  await writeFile(resolve(output, "_headers"), (await readFile(resolve(output, "_headers"), "utf8")) + previewHeaders);
+  const existingHeaders = await readFile(resolve(output, "_headers"), "utf8");
+  if (!/^\/\*\r?\n/m.test(existingHeaders)) throw new Error("Site-wide security headers were not found.");
+  // Add to the EXISTING site-wide header block, rather than competing with a
+  // duplicate /* rule that may behave differently across hosting adapters.
+  await writeFile(resolve(output, "_headers"), existingHeaders.replace(/^\/\*\r?\n/m, matched => matched + previewHeaders));
   await writeFile(resolve(output, "robots.txt"), "User-agent: *\nDisallow: /\n");
 }
 // Ensure every public page receives the same design chrome, working cookie

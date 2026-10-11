@@ -3,6 +3,7 @@ import {
   SITE_URL,
   getCurrentUser,
   getAuthCallbackError,
+  hadOAuthCallback,
   signIn,
   signInWithProvider,
   signUp,
@@ -277,7 +278,7 @@ async function handleOAuthSignIn(provider, button, loginMessage, nextUrl) {
 async function boot() {
   // Capture the callback before any awaited settings request: the Supabase
   // PKCE exchange may remove ?code= from the URL while settings are loading.
-  const startedWithOAuthCallback = isOAuthCallback();
+  const startedWithOAuthCallback = hadOAuthCallback || isOAuthCallback();
   setupReveal();
   setupPasswordToggles();
   const settings = await fetchSettings();

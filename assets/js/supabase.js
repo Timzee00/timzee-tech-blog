@@ -78,6 +78,9 @@ if (typeof window !== "undefined") {
   });
 }
 
+// Preserve the callback intent before asynchronous PKCE exchange strips ?code=.
+export const hadOAuthCallback = typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).has("code");
 const authCallbackPromise = (() => {
   if (typeof window === "undefined") return Promise.resolve(null);
   const code = new URLSearchParams(window.location.search).get("code");
