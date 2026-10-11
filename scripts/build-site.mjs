@@ -54,7 +54,7 @@ const files = await filesIn(output);
 const previewHeaders = previewIndexingHeaders(process.env.CONTEXT);
 if (previewHeaders) {
   await writeFile(resolve(output, "_headers"), (await readFile(resolve(output, "_headers"), "utf8")) + previewHeaders);
-  await writeFile(resolve(output, "robots.txt"), "User-agent: *\\nDisallow: /\\n");
+  await writeFile(resolve(output, "robots.txt"), "User-agent: *\nDisallow: /\n");
 }
 // Ensure every public page receives the same design chrome, working cookie
 // preferences and shared controls, including routes with inline page scripts.
