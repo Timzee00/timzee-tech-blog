@@ -47,3 +47,14 @@ This continuation addresses issues identified in source review, **not** a fresh 
 The changed JavaScript modules and several inline page scripts were parsed in a sandboxed JavaScript syntax check and produced no syntax errors. This **is not a replacement** for `npm run build`, the whole Node test suite, Playwright, live Supabase RLS/Storage tests, or a new Netlify preview. All changes remain in draft PR #4, targeting Codex's existing PR #3; nothing was deployed or migrated.
 
 The next required action for release acceptance is a clean Node 22 `npm ci && npm run build && npm test && npm run test:browser` on an isolated staging setup, followed by evidence-based fixes for whatever fails. GitHub Actions billing and Netlify build-budget constraints remain important release blockers until verified resolved.
+
+
+## October 12 evening: functional UX and regression gate
+
+The shared footer formerly replaced *every* legacy footer with only generic community links, silently removing page-specific destinations (for example, `listing.html`: "Back to Marketplace" and "Report Problem"). `ensureSiteFooter` now collects safe, same-origin contextual links before replacing the old markup and preserves them in a visually consistent `Page actions` navigation section. Calling it again is idempotent: no duplicate branding or controls. The Cookie Settings button awaits the lazy preferences module and displays an actionable inline error if loading fails, rather than doing nothing.
+
+The Story viewer previously started video progress only after `loadedmetadata`, with no `error` or stalled-media path. A missing video or delayed metadata response could leave the viewer stuck indefinitely. The viewer now provides native playback controls (including manual playback and unmute), starts progress when playback begins, clamps finite durations, times out initial metadata loading, and displays a recoverable error with automatic advancement when media is unavailable. Repeated progress timers are cleared. The Story stylesheet and bundled stylesheet remain canonical.
+
+New Playwright regressions cover footer contextual actions, footer idempotency, Cookie Settings, and failed Story video playback. The in-repository browser runner has **not been run** for these changes. A read-only source inspection confirmed the code paths and inline Story script parsed successfully. No release has been built from PR #4; GitHub had no workflow runs for the latest commit, and production and Supabase data remain unchanged.
+
+The next non-negotiable acceptance step is a controlled, isolated staging build and full automated/browser tests (including mobile and both themes), followed by fixing observed failures rather than treating source-only evidence as release certification.
