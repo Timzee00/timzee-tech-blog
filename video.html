@@ -519,15 +519,19 @@
     </style>
   </head>
   <body class="reel-mode">
+    <a class="skip-link" href="#main-content">Skip to videos</a>
     <script type="module" src="assets/js/nav.js"></script>
 
-    <div id="reelRoot"></div>
+    <main id="main-content" aria-label="Timzee Reels">
+      <h1 class="visually-hidden">Timzee Reels</h1>
+      <div id="reelRoot"></div>
+    </main>
 
     <div class="drawer-backdrop" id="drawerBackdrop"></div>
     <div class="comment-drawer" id="commentDrawer" aria-hidden="true">
       <div class="comment-drawer-header">
         <h3>Comments</h3>
-        <button class="comment-drawer-close" id="commentDrawerClose" aria-label="Close comments">&times;</button>
+        <button type="button" class="comment-drawer-close" id="commentDrawerClose" aria-label="Close comments">&times;</button>
       </div>
       <div class="comment-drawer-list" id="commentDrawerList"></div>
       <form novalidate class="comment-drawer-form" id="commentDrawerForm">
@@ -608,7 +612,7 @@
             <div class="reel-progress" id="progresstrack-${index}"><div class="reel-progress-fill" id="progress-${index}"></div></div>
             <div class="reel-scrub-time" id="scrubtime-${index}">0:00</div>
             <div class="reel-buffer-spinner" id="spinner-${index}"></div>
-            <video class="reel-video" id="video-${index}" ${poster ? `poster="${poster}"` : ""} src="${src}"
+            <video class="reel-video" id="video-${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} src="${escapeHTML(src)}"
               playsinline loop preload="metadata"></video>
             <div class="reel-vignette"></div>
             <div class="reel-tapzone" data-tap="${index}"></div>
@@ -617,7 +621,7 @@
             <div class="reel-topbar">
               <a class="reel-back" href="videos.html" aria-label="Back to videos">←</a>
               <div class="reel-wordmark">Timzee <span>Reels</span></div>
-              <button class="reel-mute" id="mute-${index}" aria-label="Toggle sound">🔊</button>
+              <button type="button" class="reel-mute" id="mute-${index}" aria-label="Toggle sound">🔊</button>
             </div>
 
             <div class="reel-bottom">
@@ -631,19 +635,19 @@
                 <div class="reel-tags">${tags}</div>
               </div>
               <div class="reel-rail">
-                <button class="reel-chip" data-action="like" data-id="${escapeHTML(video.id)}" data-index="${index}">
+                <button type="button" aria-label="Like video" class="reel-chip" data-action="like" data-id="${escapeHTML(video.id)}" data-index="${index}">
                   <div class="reel-chip-icon">♥</div>
                   <span class="reel-chip-count" id="likecount-${index}">${video.like_count ?? 0}</span>
                 </button>
-                <button class="reel-chip" data-action="comment" data-id="${escapeHTML(video.id)}">
+                <button type="button" aria-label="View video comments" class="reel-chip" data-action="comment" data-id="${escapeHTML(video.id)}">
                   <div class="reel-chip-icon">💬</div>
                   <span class="reel-chip-count" id="commentcount-${index}">${video.comment_count ?? ""}</span>
                 </button>
-                <button class="reel-chip" data-action="share" data-id="${escapeHTML(video.id)}">
+                <button type="button" aria-label="Share video" class="reel-chip" data-action="share" data-id="${escapeHTML(video.id)}">
                   <div class="reel-chip-icon">↗</div>
                   <span class="reel-chip-count">Share</span>
                 </button>
-                <button class="reel-chip" data-action="download" data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(video.video_url || '')}" data-title="${escapeHTML(video.title || 'video')}">
+                <button type="button" aria-label="Save video" class="reel-chip" data-action="download" data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(video.video_url || '')}" data-title="${escapeHTML(video.title || 'video')}">
                   <div class="reel-chip-icon">⬇</div>
                   <span class="reel-chip-count">Save</span>
                 </button>
