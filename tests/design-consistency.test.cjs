@@ -49,13 +49,13 @@ test("Stories creator is a real button and story author data cannot inject HTML 
   assert.match(html, /const el = document\.createElement\("button"\)/);
   assert.match(html, /label\.textContent = name/);
   assert.match(html, /image\.src = isSafeUrl/);
-  assert.doesNotMatch(html, /<img src="\\$\{isSafeUrl\(profile/);
+  assert.ok(!html.includes('<img src="${isSafeUrl(profile'));
   assert.doesNotMatch(script, /ensureStoryCreationUI/);
 });
 
 test("immersive video player escapes external media attributes and names its actions", () => {
   const html = read("video.html");
-  assert.match(html, /poster="\\$\{escapeHTML\(poster\)\}"/);
+  assert.ok(html.includes('poster="${escapeHTML(poster)}"'));
   assert.match(html, /src="\\$\{escapeHTML\(src\)\}"/);
   for (const action of ["like", "comment", "share", "download"]) {
     assert.match(html, new RegExp('aria-label="[^"]+" class="reel-chip" data-action="' + action + '"'));
