@@ -49,11 +49,65 @@ export function ensureSiteFooter() {
   const footer = document.querySelector("footer.footer");
   if (!footer) return;
   const container = footer.querySelector(".container") || footer;
+  if (footer.dataset.timzeeShellReady === "true") {
+    updateFooterBrand(window.__timzeeSiteBrandName || document.getElementById("siteName")?.textContent || "Timzee Tech Hub");
+    return;
+  }
+  // Preserve feature-specific destinations such as "Back to Marketplace" or
+  // "Report Problem" before replacing legacy link markup with common chrome.
+  const standardLabels = new Set(["discussion", "newsletter", "contact", "contact us", "support", "advertise"]);
+  const contextualLinks = [];
+  const seen = new Set();
+  for (const link of footer.querySelectorAll(".footer-links a[href]")) {
+    const label = link.textContent.trim();
+    if (!label || standardLabels.has(label.toLowerCase())) continue;
+    try {
+      const destination = new URL(link.getAttribute("href"), document.baseURI);
+      if (destination.origin !== location.origin || !["https:", "http:"].includes(destination.protocol)) continue;
+      const key = label.toLowerCase() + "|" + destination.href;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      contextualLinks.push({ label, href: destination.href });
+    } catch { /* Ignore malformed footer links. */ }
+    if (contextualLinks.length >= 8) break;
+  }
   container.innerHTML = `<div class="footer-top"><a class="footer-wordmark" href="/index.html">Timzee <span>Tech Hub</span></a><p>A place for curious minds. Built around community.</p></div><nav class="footer-links" aria-label="Community links"><a href="/discussion.html">Discussion</a><a href="/newsletter.html">Newsletter</a><a href="/contact.html">Contact</a><a href="/support.html">Support</a></nav>`;
+  footer.dataset.timzeeShellReady = "true";
   updateFooterBrand(window.__timzeeSiteBrandName || document.getElementById("siteName")?.textContent || "Timzee Tech Hub");
+  if (contextualLinks.length) {
+    const contextual = document.createElement("nav");
+    contextual.className = "footer-context-links";
+    contextual.setAttribute("aria-label", "Page actions");
+    for (const { href, label } of contextualLinks) {
+      const link = document.createElement("a");
+      link.href = href;
+      link.textContent = label;
+      contextual.appendChild(link);
+    }
+    container.append(contextual);
+  }
   const legal = document.createElement("nav"); legal.className = "footer-legal-links"; legal.setAttribute("aria-label", "Legal and accessibility information");
   LEGAL_LINKS.forEach(([label, path]) => { const link = document.createElement("a"); link.href = "/" + path; link.textContent = label; legal.append(link); });
-  const cookies = document.createElement("button"); cookies.type = "button"; cookies.className = "footer-cookie-settings"; cookies.textContent = "Cookie settings"; cookies.addEventListener("click", () => window.openCookieSettings?.()); legal.append(cookies);
+  const cookies = document.createElement("button");
+  cookies.type = "button";
+  cookies.className = "footer-cookie-settings";
+  cookies.textContent = "Cookie settings";
+  cookies.addEventListener("click", async () => {
+    // Dynamic module loading must complete before attempting to open the modal.
+    try {
+      await import("./privacy-consent.js");
+      if (typeof window.openCookieSettings !== "function") throw Error("Consent controls unavailable");
+      window.openCookieSettings();
+    } catch (error) {
+      console.warn("Cookie preferences could not load:", error);
+      const status = document.createElement("span");
+      status.className = "footer-cookie-error";
+      status.setAttribute("role", "status");
+      status.textContent = "Cookie settings are unavailable. Reload this page to try again.";
+      cookies.after(status);
+    }
+  });
+  legal.append(cookies);
   container.append(legal);
   const brand = document.createElement("small"); brand.className = "footer-brand"; brand.textContent = BRAND_TEXT; container.append(brand);
 }

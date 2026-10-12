@@ -251,3 +251,23 @@ test("AI assistant and immersive reels have primary headings and meaningful land
   await expect(page.getByRole("heading", { level: 1, name: "Timzee Reels" })).toHaveCount(1);
   await expect(page.getByRole("link", { name: "Skip to videos" })).toHaveCount(1);
 });
+
+test("shared footer keeps listing-specific actions without duplicating the brand", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/listing.html");
+  const footer = page.locator("footer.footer");
+  await expect(footer.locator(".footer-context-links a", { hasText: "Back to Marketplace" })).toHaveAttribute("href", /marketplace\.html$/);
+  await expect(footer.locator(".footer-context-links a", { hasText: "Report Problem" })).toHaveAttribute("href", /contact\.html$/);
+  await expect(footer.locator(".footer-brand")).toHaveCount(1);
+  await expect(footer.getByRole("button", { name: "Cookie settings" })).toHaveCount(1);
+  await page.evaluate(() => import("/assets/js/site-shell.js").then(mod => mod.ensureSiteFooter()));
+  await expect(footer.locator(".footer-brand")).toHaveCount(1);
+  await expect(footer.locator(".footer-context-links a")).toHaveCount(2);
+});
+
+test("footer cookie preferences remain actionable during lazy module loading", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/listing.html");
+  await page.locator(".footer-cookie-settings").click();
+  await expect(page.getByRole("dialog", { name: "Cookie preferences" })).toBeVisible();
+});
