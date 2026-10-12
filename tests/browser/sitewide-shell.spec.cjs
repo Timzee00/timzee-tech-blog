@@ -200,3 +200,31 @@ test("authenticated story creation buttons open the same composer", async ({ pag
   await page.keyboard.press("Space");
   await expect(page.locator("#storyComposer")).toBeVisible();
 });
+
+test("story tiles use safe text and the same order as the viewer", async ({ page }) => {
+  await mockSite(page);
+  await page.route("**/rest/v1/stories*", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify([
+      { id: "33333333-3333-4333-8333-333333333331", user_id: "11111111-1111-4111-8111-111111111111", media_url: "/assets/img/avatar-placeholder.svg", media_type: "image", created_at: new Date().toISOString() },
+      { id: "33333333-3333-4333-8333-333333333332", user_id: "22222222-2222-4222-8222-222222222222", media_url: "/assets/img/avatar-placeholder.svg", media_type: "image", created_at: new Date().toISOString() }
+    ])
+  }));
+  await page.route("**/rest/v1/public_profiles*", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify([
+      {id:"11111111-1111-4111-8111-111111111111",display_name:"First author",avatar_url:"/assets/img/avatar-placeholder.svg"},
+      {id:"22222222-2222-4222-8222-222222222222",display_name:'<img src=x onerror=alert(1)>',avatar_url:'https://example.org/" onerror="alert(1)'}
+    ])
+  }));
+  await page.goto("/stories.html");
+  const tiles = page.locator("#storiesRail button.story-avatar:not(.story-avatar-add)");
+  await expect(tiles).toHaveCount(2);
+  await expect(tiles.nth(0)).toContainText("First author");
+  await expect(tiles.nth(1)).toContainText("<img src=x onerror=alert(1)>");
+  await expect(tiles.nth(1).locator("img")).toHaveAttribute("src", /example.org/);
+  await expect(page.locator('#storiesRail img[onerror]')).toHaveCount(0);
+  await tiles.nth(0).click();
+  await expect(page.getByRole("dialog", { name: "Story viewer" })).toBeVisible();
+  await expect(page.locator("#viewerName")).toHaveText("First author");
+});
