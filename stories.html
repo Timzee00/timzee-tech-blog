@@ -525,7 +525,7 @@
             renderRail();
           } catch (error) {
             console.warn("Story posted, but refreshing stories failed:", error);
-            window.appUI?.toast("Your story was posted, but the feed could not refresh. Reload to see it.", {
+            window.appUI?.toast?.("Your story was posted, but the feed could not refresh. Reload to see it.", {
               type: "warning"
             });
           }
