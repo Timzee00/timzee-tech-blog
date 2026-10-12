@@ -52,14 +52,21 @@
           <h1>Stories</h1>
           <p>Moments, ideas and updates from the Timzee community.</p>
         </div>
+        <button type="button" id="createStatusAction" class="story-create-action" hidden aria-label="Create a new story">
+          <span class="story-create-action-icon" aria-hidden="true">+</span>
+          <span class="story-create-action-copy">
+            <strong>Create story</strong>
+            <small>Photo or video · visible for 24 hours</small>
+          </span>
+        </button>
         <div class="stories-rail" id="storiesRail">
-          <div class="story-avatar story-avatar-add" id="addStoryBtn" role="button" tabindex="0">
+          <button type="button" class="story-avatar story-avatar-add" id="addStoryBtn" aria-label="Add your story">
             <div class="story-ring story-ring-add">
               <img id="ownStoryAvatar" alt="Your avatar" src="/assets/img/avatar-placeholder.svg">
               <span class="story-add-badge">+</span>
             </div>
             <span class="story-avatar-label">Your Story</span>
-          </div>
+          </button>
           <div class="callout" id="storiesEmpty">No active stories yet — be the first!</div>
         </div>
 
@@ -148,16 +155,19 @@
         state.user = await getCurrentUser();
         const loginNotice = document.getElementById("storiesLoginNotice");
         const addBtn = document.getElementById("addStoryBtn");
+        const createAction = document.getElementById("createStatusAction");
         if (!state.user) {
           if (loginNotice) loginNotice.style.display = "block";
           if (addBtn) addBtn.style.display = "none";
         } else {
           const ownAvatar = document.getElementById("ownStoryAvatar");
           if (ownAvatar) ownAvatar.src = DEFAULT_AVATAR;
-          addBtn.addEventListener("click", () => openComposer());
-          addBtn.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" || event.key === " ") openComposer();
-          });
+          // Native buttons support keyboard activation; no duplicate custom handlers.
+          if (createAction) {
+            createAction.hidden = false;
+            createAction.addEventListener("click", openComposer);
+          }
+          addBtn.addEventListener("click", openComposer);
         }
 
         try {

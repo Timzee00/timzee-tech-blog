@@ -177,3 +177,26 @@ test("settings and For You links show active navigation, and dynamic brand reach
   await page.goto("/fyp.html");
   await expect(page.locator(".nav-more-menu a[href$='fyp.html']")).toHaveAttribute("aria-current", "page");
 });
+
+test("story creation is keyboard-accessible and guests have no dead action", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/stories.html");
+  await expect(page.getByRole("heading", { level: 1, name: "Stories" })).toBeVisible();
+  await expect(page.locator("#createStatusAction")).toBeHidden();
+  await expect(page.locator("#addStoryBtn")).toBeHidden();
+  await expect(page.locator("#storiesLoginNotice")).toBeVisible();
+});
+
+test("authenticated story creation buttons open the same composer", async ({ page }) => {
+  await mockSite(page, { role: "user" });
+  await page.goto("/stories.html");
+  const create = page.getByRole("button", { name: "Create a new story" });
+  await expect(create).toBeVisible();
+  await create.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#storyComposer")).toBeVisible();
+  await page.locator("#composerCloseBtn").click();
+  await page.locator("#addStoryBtn").focus();
+  await page.keyboard.press("Space");
+  await expect(page.locator("#storyComposer")).toBeVisible();
+});
