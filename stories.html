@@ -229,7 +229,34 @@
       // ------------------------------------------------------------------
       // Viewer
       // ------------------------------------------------------------------
+      let viewerOpener = null;
+      let composerOpener = null;
+      let composerBodyOverflow = "";
+
+      function trapDialogFocus(dialog, event) {
+        if (event.key !== "Tab") return;
+        const focusable = [...dialog.querySelectorAll("button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),a[href]")].filter(el => !el.hidden && el.getClientRects().length);
+        if (!focusable.length) return;
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        } else if (!dialog.contains(document.activeElement)) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+
+      function restoreStoryFocus(opener) {
+        if (opener?.isConnected && !opener.hidden) opener.focus();
+        else document.getElementById("createStatusAction")?.focus();
+      }
+
       function openViewer(groupIndex) {
+        if (document.getElementById("storyViewer").hidden) viewerOpener = document.activeElement;
         state.activeGroupIndex = groupIndex;
         state.activeStoryIndex = 0;
         const viewer = document.getElementById("storyViewer");
@@ -238,6 +265,7 @@
         document.body.style.overflow = "hidden";
         renderProgressBars();
         renderActiveStory();
+        document.getElementById("viewerCloseBtn").focus();
       }
 
       function closeViewer() {
@@ -247,6 +275,8 @@
         viewer.setAttribute("aria-hidden", "true");
         document.body.style.overflow = "";
         document.getElementById("storyViewerMedia").innerHTML = "";
+        restoreStoryFocus(viewerOpener);
+        viewerOpener = null;
       }
 
       function clearTimer() {
@@ -379,11 +409,18 @@
         document.getElementById("storyNextZone").addEventListener("click", () => advance(1));
         document.getElementById("viewerCloseBtn").addEventListener("click", closeViewer);
         document.addEventListener("keydown", (event) => {
+          const composer = document.getElementById("storyComposer");
+          if (!composer.hidden) {
+            if (event.key === "Escape") { event.preventDefault(); closeComposer(); }
+            else trapDialogFocus(composer, event);
+            return;
+          }
           const viewer = document.getElementById("storyViewer");
           if (viewer.hidden) return;
-          if (event.key === "Escape") closeViewer();
-          if (event.key === "ArrowLeft") advance(-1);
-          if (event.key === "ArrowRight") advance(1);
+          if (event.key === "Escape") { event.preventDefault(); closeViewer(); }
+          else if (event.key === "ArrowLeft") { event.preventDefault(); advance(-1); }
+          else if (event.key === "ArrowRight") { event.preventDefault(); advance(1); }
+          else trapDialogFocus(viewer, event);
         });
       }
 
@@ -391,10 +428,15 @@
       // Composer
       // ------------------------------------------------------------------
       function openComposer() {
-        document.getElementById("composerBackdrop").hidden = false;
         const composer = document.getElementById("storyComposer");
+        if (!composer.hidden) return;
+        composerOpener = document.activeElement;
+        composerBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        document.getElementById("composerBackdrop").hidden = false;
         composer.hidden = false;
         composer.setAttribute("aria-hidden", "false");
+        document.getElementById("composerCloseBtn").focus();
       }
 
       function closeComposer() {
@@ -405,6 +447,9 @@
         document.getElementById("storyForm").reset();
         document.getElementById("storyFilePreview").innerHTML = "";
         document.getElementById("storyFilePreviewLabel").textContent = "Choose a photo or video";
+        document.body.style.overflow = composerBodyOverflow;
+        restoreStoryFocus(composerOpener);
+        composerOpener = null;
       }
 
       function setupComposer() {

@@ -228,3 +228,16 @@ test("story tiles use safe text and the same order as the viewer", async ({ page
   await expect(page.getByRole("dialog", { name: "Story viewer" })).toBeVisible();
   await expect(page.locator("#viewerName")).toHaveText("First author");
 });
+
+test("Story viewer and composer manage keyboard focus and Escape", async ({ page }) => {
+  await mockSite(page, { role: "user" });
+  await page.goto("/stories.html");
+  const create = page.getByRole("button", { name: "Create a new story" });
+  await create.click();
+  await expect(page.locator("#composerCloseBtn")).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.locator("#storySubmitBtn")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#storyComposer")).toBeHidden();
+  await expect(create).toBeFocused();
+});
