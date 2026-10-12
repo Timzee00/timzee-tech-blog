@@ -29,3 +29,35 @@ test("community, stories and profile each provide a meaningful primary heading",
   assert.match(read("discussion.html"), /<h1>Communities<\/h1>/);
   assert.match(read("profile.html"), /<h1 id="profileName">/);
 });
+
+
+test("all public pages expose one primary heading and a skip-to-main link", () => {
+  const publicPages = fs.readdirSync(root).filter(file => file.endsWith(".html"));
+  for (const file of publicPages) {
+    const html = read(file);
+    assert.equal((html.match(/<h1\b/gi) || []).length, 1, file + " should have one H1");
+    assert.match(html, /class="skip-link"\s+href="#main-content"/i, file);
+    assert.match(html, /<main\b[^>]*\bid="main-content"/i, file);
+  }
+});
+
+test("Stories creator is a real button and story author data cannot inject HTML attributes", () => {
+  const html = read("stories.html");
+  const script = read("assets/js/stories.js");
+  assert.match(html, /<button[^>]+id="addStoryBtn"/);
+  assert.match(html, /<button[^>]+id="createStatusAction"[^>]*hidden/);
+  assert.match(html, /const el = document\.createElement\("button"\)/);
+  assert.match(html, /label\.textContent = name/);
+  assert.match(html, /image\.src = isSafeUrl/);
+  assert.doesNotMatch(html, /<img src="\\$\{isSafeUrl\(profile/);
+  assert.doesNotMatch(script, /ensureStoryCreationUI/);
+});
+
+test("immersive video player escapes external media attributes and names its actions", () => {
+  const html = read("video.html");
+  assert.match(html, /poster="\\$\{escapeHTML\(poster\)\}"/);
+  assert.match(html, /src="\\$\{escapeHTML\(src\)\}"/);
+  for (const action of ["like", "comment", "share", "download"]) {
+    assert.match(html, new RegExp('aria-label="[^"]+" class="reel-chip" data-action="' + action + '"'));
+  }
+});
