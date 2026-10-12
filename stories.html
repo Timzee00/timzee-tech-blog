@@ -232,6 +232,13 @@
       let viewerOpener = null;
       let composerOpener = null;
       let composerBodyOverflow = "";
+      let storyPreviewObjectUrl = null;
+      function revokeStoryPreview() {
+        if (storyPreviewObjectUrl) {
+          URL.revokeObjectURL(storyPreviewObjectUrl);
+          storyPreviewObjectUrl = null;
+        }
+      }
 
       function trapDialogFocus(dialog, event) {
         if (event.key !== "Tab") return;
@@ -446,6 +453,7 @@
         composer.setAttribute("aria-hidden", "true");
         document.getElementById("storyForm").reset();
         document.getElementById("storyFilePreview").innerHTML = "";
+        revokeStoryPreview();
         document.getElementById("storyFilePreviewLabel").textContent = "Choose a photo or video";
         document.body.style.overflow = composerBodyOverflow;
         restoreStoryFocus(composerOpener);
@@ -462,9 +470,14 @@
           const preview = document.getElementById("storyFilePreview");
           const label = document.getElementById("storyFilePreviewLabel");
           preview.innerHTML = "";
-          if (!file) return;
+          revokeStoryPreview();
+          if (!file) {
+            label.textContent = "Choose a photo or video";
+            return;
+          }
           label.textContent = file.name;
           const url = URL.createObjectURL(file);
+          storyPreviewObjectUrl = url;
           if (file.type.startsWith("video")) {
             const video = document.createElement("video");
             video.src = url;
@@ -507,8 +520,15 @@
           }
 
           closeComposer();
-          state.groups = await fetchStoriesFeed();
-          renderRail();
+          try {
+            state.groups = await fetchStoriesFeed();
+            renderRail();
+          } catch (error) {
+            console.warn("Story posted, but refreshing stories failed:", error);
+            window.appUI?.toast("Your story was posted, but the feed could not refresh. Reload to see it.", {
+              type: "warning"
+            });
+          }
         });
       }
 
