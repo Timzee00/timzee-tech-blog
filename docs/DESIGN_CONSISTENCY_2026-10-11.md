@@ -30,3 +30,20 @@ Run the exact future preview branch build on independent staging with synthetic 
 - Verify media fallback for failed remote images and compare component geometry and colors across page captures. Address any inconsistent legacy inline styles after inspecting actual screenshots.
 
 **Do not advertise production completeness yet:** the current public preview is older, still indexes publicly, and shares the live Supabase backend. Full build, the browser suite, authorized multi-account tests, security checks and release matching remain pending. Release and sale-readiness criteria remain in `docs/BUYER_READINESS_GATE.md`.
+
+
+## October 12 continuation — functionality and accessibility
+
+This continuation addresses issues identified in source review, **not** a fresh deployment:
+
+- **Stories:** replaced the handlerless guest-visible "Create status" widget with a single static, styled button that appears only for authenticated users. The avatar tile itself is a native button; both controls open the same composer without custom keyboard handlers. CSS lives in the shared stylesheet rather than runtime-injected styles.
+- **Story author safety and ordering:** author tiles are assembled via DOM APIs with `textContent` for names and `img.src` property assignment rather than unescaped `innerHTML`. Tiles follow the same order as the groups in state and the viewer; the old repeated `insertAdjacentElement("afterend")` reversed the order.
+- **Story viewer/composer:** dialog roles, labels, Escape handling, keyboard focus cycle, return focus to opener, and basic background scroll handling. Object URLs for local Story previews are revoked when replaced or closed; a successful post followed by a feed-refresh failure is communicated without claiming posting failed.
+- **AI Chat and Reels:** the two public routes without a first-level heading now have a visually hidden `h1`; the fullscreen reel now has a main landmark and skip link. Untrusted video thumbnail/video URLs are HTML-attribute escaped in the reel template, and its action buttons have accessible names.
+- **Regression coverage:** Playwright checks were added for Story creation by guests and members, Story display order, malicious profile name/URL handling, modal focus, and AI/Reels headings. The Node source tests also require exactly one public `h1`, a skip link to main, and safe video attribute rendering.
+
+### Verification limits
+
+The changed JavaScript modules and several inline page scripts were parsed in a sandboxed JavaScript syntax check and produced no syntax errors. This **is not a replacement** for `npm run build`, the whole Node test suite, Playwright, live Supabase RLS/Storage tests, or a new Netlify preview. All changes remain in draft PR #4, targeting Codex's existing PR #3; nothing was deployed or migrated.
+
+The next required action for release acceptance is a clean Node 22 `npm ci && npm run build && npm test && npm run test:browser` on an isolated staging setup, followed by evidence-based fixes for whatever fails. GitHub Actions billing and Netlify build-budget constraints remain important release blockers until verified resolved.
