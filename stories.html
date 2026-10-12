@@ -291,6 +291,10 @@
           clearTimeout(state.timerId);
           state.timerId = null;
         }
+        if (state.mediaWatchdog) {
+          clearTimeout(state.mediaWatchdog);
+          state.mediaWatchdog = null;
+        }
       }
 
       function renderProgressBars() {
@@ -324,24 +328,58 @@
         const media = document.getElementById("storyViewerMedia");
         media.innerHTML = "";
         const url = isSafeUrl(story.media_url) ? story.media_url : "";
-        let durationMs = 5000;
-        if (story.media_type === "video") {
+        const mediaError = message => {
+          clearTimer();
+          if (!document.getElementById("storyViewer").hidden) {
+            media.replaceChildren();
+            const notice = document.createElement("p");
+            notice.className = "story-media-error";
+            notice.setAttribute("role", "status");
+            notice.textContent = message;
+            media.appendChild(notice);
+            startProgress(4500);
+          }
+        };
+        if (!url) {
+          mediaError("This story's media is unavailable. Moving to the next story.");
+        } else if (story.media_type === "video") {
           const video = document.createElement("video");
           video.src = url;
           video.autoplay = true;
+          video.muted = true; // Browsers block autoplay with sound.
           video.playsInline = true;
-          video.controls = false;
-          media.appendChild(video);
+          video.controls = true; // Let the user unmute, pause or resume.
+          video.preload = "metadata";
+          const fail = () => { if (media.contains(video)) mediaError("This video cannot be played. Moving to the next story."); };
+          video.addEventListener("error", fail, { once: true });
           video.addEventListener("loadedmetadata", () => {
-            durationMs = Math.min(Math.max(video.duration * 1000, 2000), 30000);
-            startProgress(durationMs);
-          });
+            if (!media.contains(video)) return;
+            const length = video.duration * 1000;
+            const duration = Number.isFinite(length) && length > 0
+              ? Math.min(Math.max(length, 2000), 30000)
+              : 5000;
+            // Match the progress bar to real playback rather than a stalled
+            // autoplay attempt. A manual play starts it too.
+            video.addEventListener("playing", () => startProgress(duration), { once: true });
+            if (video.readyState >= 1) {
+              clearTimeout(state.mediaWatchdog);
+              state.mediaWatchdog = null;
+            }
+          }, { once: true });
           video.addEventListener("ended", () => advance(1));
+          media.appendChild(video);
+          state.mediaWatchdog = setTimeout(() => {
+            if (media.contains(video) && video.readyState < 1) fail();
+          }, 12000);
+          void video.play().catch(() => {
+            // Native controls provide a manual Play action when autoplay fails.
+          });
         } else {
           const img = document.createElement("img");
           img.src = url;
+          img.alt = story.caption || "Story photo";
           media.appendChild(img);
-          startProgress(durationMs);
+          startProgress(5000);
         }
 
         // Update progress bar fill states (completed / active / upcoming)
@@ -354,6 +392,7 @@
       }
 
       function startProgress(durationMs) {
+        if (state.timerId) clearTimeout(state.timerId);
         const tracks = document.querySelectorAll("#storyProgressRow .story-progress-track");
         const fill = tracks[state.activeStoryIndex]?.querySelector(".story-progress-fill");
         if (fill) {

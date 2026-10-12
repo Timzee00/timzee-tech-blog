@@ -292,3 +292,17 @@
 .story-create-action-copy strong, .story-create-action-copy small { display: block; }
 .story-create-action-copy small { margin-top: 2px; color: var(--color-text-muted); font-size: 13px; }
 .story-avatar:focus-visible, .story-create-action:focus-visible { outline: 3px solid var(--color-secondary); outline-offset: 3px; }
+
+/* Readable failure state for missing/unplayable story media. */
+.story-media-error {
+  max-width: 34ch;
+  margin: 24px;
+  padding: 18px 22px;
+  color: #fff;
+  background: rgba(18, 25, 35, .9);
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 12px;
+  text-align: center;
+  line-height: 1.6;
+}
+.story-viewer-media video { background: #080b10; }

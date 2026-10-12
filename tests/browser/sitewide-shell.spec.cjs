@@ -260,7 +260,8 @@ test("shared footer keeps listing-specific actions without duplicating the brand
   await expect(footer.locator(".footer-context-links a", { hasText: "Report Problem" })).toHaveAttribute("href", /contact\.html$/);
   await expect(footer.locator(".footer-brand")).toHaveCount(1);
   await expect(footer.getByRole("button", { name: "Cookie settings" })).toHaveCount(1);
-  await page.evaluate(() => import("/assets/js/site-shell.js").then(mod => mod.ensureSiteFooter()));
+  const script = await page.locator('script[src*="site-shell.js"]').getAttribute("src");
+  await page.evaluate(async src => { (await import(src)).ensureSiteFooter(); }, script);
   await expect(footer.locator(".footer-brand")).toHaveCount(1);
   await expect(footer.locator(".footer-context-links a")).toHaveCount(2);
 });
@@ -270,4 +271,22 @@ test("footer cookie preferences remain actionable during lazy module loading", a
   await page.goto("/listing.html");
   await page.locator(".footer-cookie-settings").click();
   await expect(page.getByRole("dialog", { name: "Cookie preferences" })).toBeVisible();
+});
+
+test("failed Story video displays recoverable media feedback instead of hanging", async ({ page }) => {
+  await mockSite(page);
+  await page.route("**/rest/v1/stories*", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify([{
+      id: "33333333-3333-4333-8333-333333333331",
+      user_id: "11111111-1111-4111-8111-111111111111",
+      media_url: "/nonexistent-story-video.webm",
+      media_type: "video",
+      created_at: new Date().toISOString()
+    }])
+  }));
+  await page.goto("/stories.html");
+  await page.locator("#storiesRail button.story-avatar:not(.story-avatar-add)").first().click();
+  await expect(page.locator(".story-media-error")).toContainText("cannot be played");
+  await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
 });
