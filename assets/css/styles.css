@@ -34,3 +34,4 @@ html[data-reduce-motion="true"] *,html[data-reduce-motion="true"] *::before,html
 html[data-high-contrast="true"]{filter:contrast(1.08);}
 html[data-high-contrast="true"] :where(button,a,input,select,textarea){border-color:var(--color-text,#16181d);}
 html[data-high-contrast="true"] :where(.card,.post-card,.popular-card,.feature-card,.side-card,.post-shell,.board,.hero-card,.stats-card,.category-card){border-color:var(--color-text,#16181d);}
+\n@import url("mobile-acceptance-fixes.css");\n

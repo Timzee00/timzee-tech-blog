@@ -1,0 +1,74 @@
+
+/* Mobile defect fixes from real-device acceptance screenshots (Oct 2026).
+   Scoped tightly so marketplace/chat and the shared shell do not regress. */
+.post-article .post-content,
+.post-article #postContent {
+  color: var(--color-text) !important;
+  font-size: clamp(1rem, 1.5vw, 1.12rem);
+  line-height: 1.8;
+  overflow-wrap: break-word;
+}
+.post-article #postContent :where(p,li,h2,h3,h4,blockquote,strong,em,a,span) {
+  color: inherit;
+}
+.post-article #postContent a { color: var(--color-secondary); text-decoration: underline; }
+.post-article .post-highlights,
+.post-article .author-profile-card { color: var(--color-text); }
+.post-article .post-highlights li { color: var(--color-text) !important; line-height: 1.65; }
+.post-article .post-highlights h3 { color: var(--color-text); }
+html[data-theme="dark"] .post-article :where(.post-dek,.post-meta,.post-date) {
+  color: var(--color-text-muted);
+}
+/* The AI page shares classic chat classes, but needs its own fluid sizing. */
+#aiChatLayout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 16px;
+  max-width: 1200px;
+  min-width: 0;
+}
+#aiChatLayout > :where(.chat-sidebar,.chat-pane) { min-width: 0; width: 100%; }
+#aiChatLayout .chat-sidebar { overflow: hidden; padding: 16px; }
+#aiChatLayout #conversationList { width: 100%; min-width: 0; }
+#aiChatLayout .chat-item { width: 100%; min-width: 0; display: block; }
+#aiChatLayout .chat-item-body, #aiChatLayout .chat-item-top { min-width: 0; width: 100%; }
+#aiChatLayout .chat-item-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
+#aiChatLayout .chat-item-top > span:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+#aiChatLayout .chat-item-time { flex: 0 0 auto; white-space: nowrap; word-break: normal; }
+#aiChatLayout .chat-pane { min-width: 0; overflow: hidden; }
+#aiChatLayout .chat-messages { min-width: 0; overflow-x: hidden; }
+#aiChatLayout .chat-bubble { max-width: min(90%, 640px); overflow-wrap: anywhere; }
+#aiChatLayout .chat-input-row { display: flex; max-width: 100%; min-width: 0; }
+#aiChatLayout #aiChatInput { flex: 1 1 0; min-width: 0; width: auto; }
+#aiChatLayout .chat-send-btn { flex: 0 0 42px; }
+@media (max-width: 760px) {
+  #aiChatLayout { display: block; width: min(100%, 620px); }
+  #aiChatLayout[data-view="list"] .chat-pane { display: none; }
+  #aiChatLayout[data-view="chat"] .chat-sidebar { display: none; }
+  #aiChatLayout .chat-sidebar, #aiChatLayout .chat-pane { width: 100%; }
+  #aiChatLayout .chat-item-top { flex-wrap: nowrap; }
+  #aiChatLayout .chat-item-top > span:first-child { max-width: 100%; }
+  #aiChatLayout .chat-input-row textarea { font-size: 16px; }
+}
+/* Ensure floating menus stay reachable on narrow screens. */
+@media(max-width:960px){
+  .site-menu { max-height: 100dvh; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; }
+  .site-menu .nav-pill, .site-menu .header-actions { min-width:0; max-width:100%; }
+  .site-menu .search-box { display:flex; align-items:center; width:100%; min-width:0; }
+  .site-menu .search-box input { min-width:0; width:100%; flex:1 1 auto; }
+  .site-menu .search-box > button { flex:0 0 auto; white-space:nowrap; }
+}
