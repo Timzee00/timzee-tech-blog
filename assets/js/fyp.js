@@ -142,7 +142,7 @@ async function markNotInterested(card) {
         feedCache.clear();
         notice.textContent = "Preference restored.";
         void loadFeed({ force: true });
-      }, { once: true });
+      });
       notice.append(undo);
     }
   } catch (error) {
