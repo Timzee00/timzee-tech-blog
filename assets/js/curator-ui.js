@@ -391,13 +391,22 @@ class CuratorManager {
     }
 
     list.innerHTML = this.sources.map(source => {
-      const active = (typeof source.is_active !== "undefined") ? source.is_active : source.enabled;
+      const active = typeof source.enabled === "boolean" ? source.enabled : source.is_active === true;
+      const failures = Math.max(0, Number(source.failure_count) || 0);
+      const checkedAt = source.last_fetched_at
+        ? new Date(source.last_fetched_at).toLocaleString() : "Never checked";
+      // Source failure details are escaped, and only displayed to staff.
+      const lastError = source.last_error
+        ? `<p class="curator-source-error" role="status">Last error: ${escapeHTML(String(source.last_error).slice(0, 250))}</p>`
+        : "";
       return `
       <div class="source-item">
         <div class="source-info">
           <h4>${escapeHTML(source.name || '')}</h4>
           <p>${escapeHTML(source.feed_url || source.query || 'No feed URL')}</p>
           <p style="font-size: 11px; color: var(--color-primary);">📡 ${escapeHTML(String(source.source_type || '').toUpperCase())} • 📄 Up to ${escapeHTML(String(source.max_items ?? 30))} articles per sync</p>
+          <p style="font-size:12px;color:var(--color-text-muted);">Last checked: ${escapeHTML(checkedAt)} · ${failures} failure${failures === 1 ? "" : "s"}</p>
+          ${lastError}
         </div>
         <div class="source-actions">
           <button class="btn ${active ? "btn-ghost" : "btn-danger"}" data-source-id="${source.id}" data-type="toggle-source">
@@ -449,7 +458,9 @@ class CuratorManager {
 
     if (type === "toggle-source") {
       const source = this.sources.find(s => s.id === sourceId);
-      await toggleCuratorSourceStatus(sourceId, !source.is_active);
+      if (!source) return;
+      const currentlyEnabled = typeof source.enabled === "boolean" ? source.enabled : source.is_active === true;
+      await toggleCuratorSourceStatus(sourceId, !currentlyEnabled);
       await this.load();
     } else if (type === "delete-source") {
       if (await window.appUI.confirm("Delete this source? This cannot be undone.")) {
