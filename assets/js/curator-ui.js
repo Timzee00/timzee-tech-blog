@@ -433,6 +433,10 @@ class CuratorManager {
 
     list.innerHTML = this.posts.map(post => {
       const dateText = post.published_at ? new Date(post.published_at).toLocaleDateString() : "Unknown date";
+      const wordCount = String(post.content || "").replace(/<[^>]*>/g, " ").trim().split(/\s+/).filter(Boolean).length;
+      const editorialStatus = wordCount < 240
+        ? "Source brief — expand and fact-check before publishing."
+        : "Article draft · " + wordCount + " words · Fact-check before publishing.";
       return `
       <div class="post-card">
         <div class="post-title">${escapeHTML(post.title || '')}</div>
@@ -441,7 +445,7 @@ class CuratorManager {
         </div>
         <p style="font-size: 13px; color: var(--color-text-muted); margin: 0;">${escapeHTML(post.excerpt || 'No summary available')}</p>
         <p class="curator-source-ref">Source: <a href="${isSafeUrl(post.source_url || '') ? escapeHTML(post.source_url) : '#'}" target="_blank" rel="noopener noreferrer">Original report ↗</a></p>
-        <p class="curator-editorial-state" data-editorial-state="${post.id}" role="status">Source brief — expand and fact-check before publishing.</p>
+        <p class="curator-editorial-state" data-editorial-state="${post.id}" role="status">${escapeHTML(editorialStatus)}</p>
         <div class="post-actions">
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-expand">Expand with AI</button>
           <button class="btn btn-primary" data-post-id="${post.id}" data-type="post-approve">✓ Approve & Post</button>
