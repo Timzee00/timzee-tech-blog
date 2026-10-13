@@ -16,6 +16,18 @@
 .post-article .author-profile-card { color: var(--color-text); }
 .post-article .post-highlights li { color: var(--color-text) !important; line-height: 1.65; }
 .post-article .post-highlights h3 { color: var(--color-text); }
+.post-article #postContent :where(p,li,h2,h3,h4,strong,em,blockquote,span) {
+  color: var(--color-text) !important;
+}
+.post-article #postContent a { color: var(--color-secondary) !important; }
+.post-article .author-profile-card {
+  background: var(--color-surface-muted) !important;
+  border: 1px solid var(--color-border);
+  color: var(--color-text) !important;
+}
+.post-article .author-profile-card :where(h2,h3,h4,p,span,small,a,strong) {
+  color: var(--color-text) !important;
+}
 html[data-theme="dark"] .post-article :where(.post-dek,.post-meta,.post-date) {
   color: var(--color-text-muted);
 }
