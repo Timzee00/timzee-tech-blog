@@ -20,8 +20,11 @@ export async function fetchPosts({ status, contentType, limit = null, offset = 0
   if (status) {
     normalized = String(status).toLowerCase();
     if (normalized === "published") {
-      // Treat NULL status as published for legacy/manual inserts.
-      query = query.or("status.is.null,status.ilike.published,status.ilike.scheduled");
+      // Filter future scheduled posts *on the server*, before range/limit:
+      // otherwise one page of future drafts can crowd out published articles.
+      // publish_at is stored as a UTC timestamp without timezone.
+      const nowUtc = new Date().toISOString().slice(0, 19);
+      query = query.or(`status.is.null,status.ilike.published,and(status.ilike.scheduled,publish_at.lte.${nowUtc})`);
     } else {
       query = query.eq("status", status);
     }
@@ -41,8 +44,9 @@ export async function fetchPosts({ status, contentType, limit = null, offset = 0
   if (normalized === "published") {
     const now = Date.now();
     rows = rows.filter((post) => {
-      if (!post.status || post.status === "published") return true;
-      if (post.status === "scheduled") {
+      const status = String(post.status || "").toLowerCase();
+      if (!status || status === "published") return true;
+      if (status === "scheduled") {
         if (!post.publish_at) return false;
         return new Date(post.publish_at).getTime() <= now;
       }
