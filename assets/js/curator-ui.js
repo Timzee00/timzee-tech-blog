@@ -17,7 +17,7 @@ import {
   triggerScoutSync
 } from "./curator.js";
 
-import { getCurrentUserWithRole, getUserRole } from "./supabase.js";
+import { supabase, getCurrentUserWithRole, getUserRole } from "./supabase.js";
 import { escapeHTML, slugify } from "./utils.js";
 import { createPost } from "./data.js";
 
@@ -39,9 +39,11 @@ class CuratorManager {
       return;
     }
     this.currentUser = user;
+    this.canRunScout = getUserRole(user) === "super";
 
     this.render();
     await this.load();
+    if (this.canRunScout) void this.loadScoutHealth();
   }
 
   render() {
@@ -95,8 +97,9 @@ class CuratorManager {
             <div class="card">
               <h4>🔄 Last Sync</h4>
               <div style="padding: 16px 0;">
-                <p id="lastSync" style="margin: 0; color: var(--color-text-muted);">Never synced</p>
-                <button class="btn btn-small" id="syncNowBtn">🔄 Sync Now</button>
+                <p id="lastSync" style="margin: 0; color: var(--color-text-muted);">Checking scout status…</p>
+                <p id="scoutBackendStatus" role="status" style="margin:8px 0 12px;font-size:13px;color:var(--color-text-muted);"></p>
+                <button class="btn btn-small" id="syncNowBtn" ${this.canRunScout ? "" : "disabled title=\"Only Super Admins can run the Scout manually\""}>🔄 Sync Now</button>
               </div>
             </div>
           </div>
@@ -319,12 +322,40 @@ class CuratorManager {
         lastSync.textContent = `Sync ${status} at ${new Date().toLocaleTimeString()} — ${count} new draft${count === 1 ? "" : "s"}${errorCount ? `, ${errorCount} source error${errorCount === 1 ? "" : "s"}` : ""}`;
       }
       await this.load();
+      void this.loadScoutHealth();
     } catch (error) {
       if (lastSync) lastSync.textContent = `Sync failed: ${error.message}`;
       window.appUI.toast(`Sync failed: ${error.message}`);
     } finally {
       btn.disabled = false;
       btn.textContent = originalText;
+    }
+  }
+
+  async loadScoutHealth() {
+    const status = this.container.querySelector("#scoutBackendStatus");
+    const lastSync = this.container.querySelector("#lastSync");
+    if (!this.canRunScout) return;
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data?.session?.access_token;
+      if (!token) throw Error("Sign in again to inspect the Scout.");
+      const response = await fetch("/.netlify/functions/scout-news-status", {
+        method: "GET", headers: { Authorization: "Bearer " + token }, cache: "no-store"
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw Error(payload.error || "Scout diagnostics unavailable on this deployment.");
+      if (lastSync) {
+        const date = payload.lastRunAt ? new Date(payload.lastRunAt).toLocaleString() : "Never";
+        lastSync.textContent = `Last run: ${date} — ${payload.lastStatus}`;
+      }
+      if (status) {
+        status.textContent = `${payload.activeSources} enabled sources · ${payload.importedArticles} imported articles. ` +
+          (payload.lastRunFailed ? "Last run failed; check source failures in Netlify logs." :
+          payload.enabled ? "Scout enabled." : "Scout disabled in settings.");
+      }
+    } catch (error) {
+      if (status) status.textContent = error.message || "Could not inspect scout status.";
     }
   }
 
