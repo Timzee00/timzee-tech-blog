@@ -220,10 +220,14 @@
         const more = document.getElementById("loadMoreBtn");
         loading = true; more.disabled = true; container.setAttribute("aria-busy", "true");
         try {
+          if(state.mode==="following" && !state.user){
+            container.innerHTML='<div class="callout">Sign in to discover videos from followed creators. <a href="login.html?next=videos.html%3Fmode%3Dfollowing">Log in</a></div>';
+            more.style.display="none";return;
+          }
           const rows = query || category || state.mode==="latest"
             ? await (query ? searchVideos : fetchVideos)({ query, category, limit: state.limit, offset })
             : await fetchVideoDiscoveryPage(supabase,{
-                mode:state.mode,limit:state.limit,offset
+                mode:state.mode,userId:state.user?.id,limit:state.limit,offset
               });
           if (version !== listVersion || query !== document.getElementById("videoSearch").value.trim()) return;
           state.videos = offset === 0 ? rows : [...state.videos, ...rows];

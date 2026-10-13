@@ -6,12 +6,12 @@ const MAX_CANDIDATES = 50;
 const TTL_MS = 45000;
 const cache = new Map();
 export async function fetchVideoDiscoveryPage(supabase, {
-  mode = "for-you", offset = 0, limit = 12, force = false
+  mode = "for-you", userId = null, offset = 0, limit = 12, force = false
 } = {}) {
   if (!["for-you","following"].includes(mode)) throw Error("Unknown video feed mode");
   const start = Math.max(0,Math.trunc(Number(offset)||0));
   const size = Math.max(1,Math.min(25,Math.trunc(Number(limit)||12)));
-  const key = mode;
+  const key = mode + ":" + (userId || "guest");
   let entry = cache.get(key);
   if (force || !entry || Date.now()-entry.time >= TTL_MS) {
     const functionName = mode === "following" ? "get_following_feed" : "get_personalized_feed";

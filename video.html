@@ -603,7 +603,7 @@
       }
       async function fetchModePage(offset) {
         return fetchVideoDiscoveryPage(supabase,{
-          mode: state.mode, offset, limit: state.limit
+          mode: state.mode, userId: state.user?.id, offset, limit: state.limit
         });
       }
       document.querySelectorAll("[data-reel-mode]").forEach(button => button.addEventListener("click",async () => {
@@ -1238,6 +1238,10 @@
       async function bootFeed(includeStartingVideo = false) {
         const version=++state.generation;
         renderLoading();
+        if (state.mode==="following" && !state.user) {
+          root.innerHTML='<div class="reel-empty"><div>Sign in to see creators you follow. <a class="btn" href="login.html?next=video.html%3Fmode%3Dfollowing">Log in</a></div></div>';
+          return;
+        }
         try {
           let initial=[];
           if (includeStartingVideo && startId) {
