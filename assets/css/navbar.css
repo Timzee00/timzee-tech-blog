@@ -69,3 +69,25 @@
   .bottom-tab-label { font-size: 10px; font-weight: 650; }
   body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 }
+
+/* Keep desktop popovers on-screen and mobile panels inside the viewport.
+   Menus scroll internally rather than expanding beyond the device edges. */
+@media (min-width:961px){
+  .nav-more-menu{
+    width:max-content;max-width:min(320px,calc(100vw - 24px));
+    max-height:min(65dvh,480px);overflow-y:auto;overscroll-behavior:contain;
+    right:0;left:auto;scrollbar-width:thin;
+  }
+  .nav-more-menu a{min-height:42px;white-space:normal;overflow-wrap:anywhere;}
+}
+@media(max-width:960px){
+  .site-menu{
+    box-sizing:border-box;width:min(360px,100vw);max-width:100vw;
+    padding:calc(20px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
+    overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
+  }
+  .site-menu :where(.nav-pill,.header-actions,.nav-more,.nav-more-menu){max-width:100%;min-width:0;}
+  .site-menu .nav-more-menu{grid-template-columns:repeat(2,minmax(0,1fr));overflow-wrap:anywhere;}
+  .site-menu .nav-more-menu a{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;}
+  .site-menu :where(a,button,input){scroll-margin:24px;}
+}

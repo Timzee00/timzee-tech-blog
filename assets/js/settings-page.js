@@ -69,7 +69,16 @@ function wireControls(){
 
 async function boot() {
   mountExtraSettings();
-  $("cookieSettingsBtn")?.addEventListener("click", () => window.openCookieSettings?.());
+  $("cookieSettingsBtn")?.addEventListener("click", async () => {
+    try {
+      await import("./privacy-consent.js");
+      if (!window.openCookieSettings) throw Error("Consent controls are unavailable");
+      window.openCookieSettings();
+    } catch(error) {
+      setStatus("Cookie preferences could not open. Reload this page and retry.", "error");
+      console.warn("Cookie preferences failed:",error);
+    }
+  });
   state.user = await getCurrentUser();
   if (!state.user) {
     setStatus("Sign in to save personal settings.");

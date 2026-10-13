@@ -570,6 +570,7 @@
         incrementVideoView
       } from "./assets/js/videos-marketplace.js";
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
+      import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
       import { fetchVideoDiscoveryPage } from "./assets/js/video-discovery.mjs";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
@@ -580,6 +581,7 @@
 
       const state = {
         user: null,
+        preferences: mergePreferences(),
         videos: [],
         offset: 0,
         limit: 6,
@@ -660,7 +662,7 @@
             <div class="reel-scrub-time" id="scrubtime-${index}">0:00</div>
             <div class="reel-buffer-spinner" id="spinner-${index}"></div>
             <video class="reel-video" id="video-${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} src="${escapeHTML(src)}"
-              playsinline loop preload="metadata"></video>
+              playsinline loop preload="${state.preferences.videos.dataSaver ? "none" : "metadata"}"></video>
             <div class="reel-vignette"></div>
             <div class="reel-tapzone" data-tap="${index}"></div>
             <div class="reel-pause-flash" id="pauseflash-${index}">▶</div>
@@ -723,7 +725,9 @@
       // the page. We try unmuted first (since that's the better experience),
       // and only fall back to muted playback if the browser actually rejects it —
       // rather than defaulting every video to muted regardless.
-      function playWithSoundFallback(vid, idx) {
+      function playWithSoundFallback(vid, idx, { explicit = false } = {}) {
+        if (!explicit && state.preferences.videos.autoplay === false) return;
+        if (!explicit) vid.muted = state.preferences.videos.mutedByDefault === true;
         const attempt = vid.play();
         if (attempt && typeof attempt.catch === "function") {
           attempt.catch(() => {
@@ -1253,6 +1257,7 @@
       }
       async function boot() {
         state.user=await getCurrentUser();
+        state.preferences=mergePreferences(await loadUserPreferences(state.user));
         await bootFeed(true);
       }
       boot();
