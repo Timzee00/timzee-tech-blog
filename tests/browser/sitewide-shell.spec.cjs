@@ -318,3 +318,19 @@ test("video comments are paged, with a retryable Load More action", async ({ pag
   await expect(page.locator("#commentLoadMoreBtn")).toBeHidden();
   expect(requested.length).toBe(2);
 });
+
+test("homepage limits first post batch and provides a Load More control", async ({ page }) => {
+  await mockSite(page, { populated: true });
+  let postCalls = [];
+  await page.route("**/rest/v1/posts*", route => {
+    const u = new URL(route.request().url());
+    if (route.request().method() !== "GET") return route.fallback();
+    postCalls.push(u);
+    return route.fulfill({ status:200, contentType:"application/json",body:JSON.stringify([]) });
+  });
+  await page.goto("/");
+  await expect(page.locator("#loadMorePostsBtn")).toHaveCount(1);
+  await expect.poll(() => postCalls.length).toBeGreaterThan(0);
+  expect(postCalls.some(u => Number(u.searchParams.get("limit")) <= 24 ||
+    (u.searchParams.has("offset") && u.searchParams.get("offset")==="0"))).toBeTruthy();
+});

@@ -35,11 +35,15 @@ import {
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 
+const POSTS_PAGE_SIZE = 24;
 const state = {
   activeCategory: "all",
   searchTerm: "",
   categories: [],
   posts: [],
+  postsOffset: 0,
+  hasMorePosts: false,
+  loadingMorePosts: false,
   filteredPosts: null,
   comments: [],
   likes: [],
@@ -363,7 +367,7 @@ function renderCategories() {
         <a class="category-card" href="#latest" data-category="${escapeHTML(cat.id)}" data-reveal>
           <h3>${escapeHTML(cat.name)}</h3>
           <div>${escapeHTML(cat.description || "")}</div>
-          <div class="category-meta"><span>${postCount} posts</span><span>Browse posts →</span></div>
+          <div class="category-meta"><span>${postCount} recent posts</span><span>Browse posts →</span></div>
         </a>
       `;
     })
@@ -409,7 +413,33 @@ function renderLists() {
     }
   }
   setupReveal(latestTarget);
+  const loadMoreBtn = document.getElementById("loadMorePostsBtn");
+  if (loadMoreBtn) loadMoreBtn.hidden = !state.hasMorePosts || Boolean(state.filteredPosts);
+}
 
+async function loadMoreHomePosts() {
+  const button = document.getElementById("loadMorePostsBtn");
+  const status = document.getElementById("loadMorePostsStatus");
+  if (state.loadingMorePosts || !state.hasMorePosts) return;
+  state.loadingMorePosts = true;
+  if (button) { button.disabled = true; button.textContent = "Loading more posts…"; }
+  if (status) status.textContent = "";
+  try {
+    const page = await fetchPosts({ status: "published", limit: POSTS_PAGE_SIZE, offset: state.postsOffset });
+    state.postsOffset += page.length;
+    state.hasMorePosts = page.length === POSTS_PAGE_SIZE;
+    const seen = new Set(state.posts.map(post => post.id));
+    for (const post of page) if (!seen.has(post.id)) { state.posts.push(post); seen.add(post.id); }
+    renderTagFilters();
+    renderCategories();
+    renderLists();
+  } catch (error) {
+    if (status) status.textContent = "Could not load more posts. Please retry.";
+    console.warn("Additional posts failed:", error);
+  } finally {
+    state.loadingMorePosts = false;
+    if (button) { button.disabled = false; button.textContent = "Load more posts"; }
+  }
 }
 
 function updateLikeDisplays(postId) {
@@ -907,7 +937,7 @@ async function boot() {
     suggestedPeople
   ] = await Promise.all([
     softTimeout(fetchCategories(), [], "categories"),
-    softTimeout(fetchPosts({ status: "published" }), [], "posts"),
+    softTimeout(fetchPosts({ status: "published", limit: POSTS_PAGE_SIZE }), [], "posts"),
     softTimeout(fetchComments({ status: "approved" }), [], "comments"),
     softTimeout(fetchPostLikes(), [], "likes"),
     softTimeout(fetchAds({ status: "active" }), [], "ads"),
@@ -919,6 +949,8 @@ async function boot() {
 
   state.categories = categories;
   state.posts = posts;
+  state.postsOffset = posts.length;
+  state.hasMorePosts = posts.length === POSTS_PAGE_SIZE;
   state.comments = comments;
   state.likes = likes;
   state.ads = ads;
@@ -936,6 +968,7 @@ async function boot() {
   renderPopularTopics();
   renderCategories();
   renderLists();
+  document.getElementById("loadMorePostsBtn")?.addEventListener("click", () => void loadMoreHomePosts());
   renderTagFilters();
   setupTagFilters();
   renderLeaderboard();

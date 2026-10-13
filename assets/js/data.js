@@ -14,7 +14,7 @@ export async function fetchCategories() {
   return normalizeResponse(result);
 }
 
-export async function fetchPosts({ status, contentType } = {}) {
+export async function fetchPosts({ status, contentType, limit = null, offset = 0 } = {}) {
   let query = supabase.from("posts").select("*").order("created_at", { ascending: false });
   let normalized = "";
   if (status) {
@@ -28,6 +28,13 @@ export async function fetchPosts({ status, contentType } = {}) {
   }
   if (contentType) {
     query = query.eq("content_type", contentType);
+  }
+  // A public home feed must not download every full-length post ever written.
+  // Other privileged callers retain their existing behavior until migrated.
+  if (limit !== null && limit !== undefined) {
+    const pageSize = Math.max(1, Math.min(50, Math.trunc(Number(limit) || 24)));
+    const start = Math.max(0, Math.trunc(Number(offset) || 0));
+    query = query.range(start, start + pageSize - 1);
   }
   const result = await query;
   let rows = normalizeResponse(result);
