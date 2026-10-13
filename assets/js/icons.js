@@ -1,4 +1,6 @@
 const paths = {
+  fyp: '<path d="M12 2l2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5L12 2Z"/><path d="m19 18 .8 1.8L22 20.5l-2.2.7L19 23l-.8-1.8-2.2-.7 2.2-.7L19 18Z"/>',
+  video: '<rect x="4" y="5" width="16" height="14" rx="3"/><path d="m10 9 5 3-5 3Z"/>',
   home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/>',
   discussion: '<path d="M21 11a8 8 0 0 1-8 8H7l-5 3 2-6a8 8 0 1 1 17-5Z"/><path d="M8 10h8M8 14h5"/>',
   marketplace: '<path d="M3 8h18l-2-5H5ZM4 8v12h16V8M9 20v-7h6v7"/>',

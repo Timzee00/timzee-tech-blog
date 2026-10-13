@@ -71,7 +71,7 @@ export function ensureSiteFooter() {
     } catch { /* Ignore malformed footer links. */ }
     if (contextualLinks.length >= 8) break;
   }
-  container.innerHTML = `<div class="footer-top"><a class="footer-wordmark" href="/index.html">Timzee <span>Tech Hub</span></a><p>A place for curious minds. Built around community.</p></div><nav class="footer-links" aria-label="Community links"><a href="/discussion.html">Discussion</a><a href="/newsletter.html">Newsletter</a><a href="/contact.html">Contact</a><a href="/support.html">Support</a></nav>`;
+  container.innerHTML = `<div class="footer-top"><a class="footer-wordmark" href="/index.html">Timzee <span>Tech Hub</span></a><p>A place for curious minds. Built around community.</p></div><nav class="footer-links" aria-label="Community links"><a href="/fyp.html">For You</a><a href="/video.html">Reels</a><a href="/discussion.html">Discussion</a><a href="/marketplace.html">Marketplace</a><a href="/newsletter.html">Newsletter</a><a href="/contact.html">Contact</a><a href="/support.html">Support</a></nav>`;
   footer.dataset.timzeeShellReady = "true";
   updateFooterBrand(window.__timzeeSiteBrandName || document.getElementById("siteName")?.textContent || "Timzee Tech Hub");
   if (contextualLinks.length) {

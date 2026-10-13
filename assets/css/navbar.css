@@ -91,3 +91,13 @@
   .site-menu .nav-more-menu a{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;}
   .site-menu :where(a,button,input){scroll-margin:24px;}
 }
+
+/* Six compact, accessible mobile destinations including dedicated discovery.
+   Never hide Marketplace/Chat solely to mimic another social app. */
+@media(max-width:960px){
+  .bottom-tab-bar{grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;padding-inline:4px;}
+  .bottom-tab{min-width:0;min-height:52px;gap:2px;padding:4px 1px;}
+  .bottom-tab-label{font-size:clamp(8px,2.4vw,11px);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;}
+  .bottom-tab-icon svg{width:21px;height:21px;}
+  .bottom-tab:focus-visible{outline:3px solid var(--color-secondary);outline-offset:2px;}
+}

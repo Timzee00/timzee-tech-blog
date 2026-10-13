@@ -319,13 +319,13 @@ function setupBottomTabBar(isLoggedIn) {
   const path = pageFileName(window.location.pathname);
 
   const tabs = [
-    { href: "index.html", icon: "&#127968;", label: "Home", match: ["index.html", ""] },
-    { href: "discussion.html", icon: "&#128172;", label: "Discuss", match: ["discussion.html"] },
-    { href: "marketplace.html", icon: "&#128722;", label: "Market", match: ["marketplace.html", "listing.html"] },
-    { href: "chat.html", icon: "&#128172;", label: "Chat", match: ["chat.html"] },
+    { href: "index.html", label: "Home", match: ["index.html", ""] },
+    { href: "fyp.html", label: "For You", match: ["fyp.html"] },
+    { href: "video.html", label: "Reels", match: ["video.html","videos.html"] },
+    { href: "marketplace.html", label: "Market", match: ["marketplace.html","listing.html"] },
+    { href: "chat.html", label: "Chat", match: ["chat.html"] },
     {
       href: isLoggedIn ? "profile.html" : "login.html",
-      icon: "&#128100;",
       label: isLoggedIn ? "Profile" : "Log In",
       match: ["profile.html", "login.html"]
     }
