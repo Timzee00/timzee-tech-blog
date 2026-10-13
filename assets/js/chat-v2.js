@@ -1,6 +1,7 @@
 import { createChatRealtime } from "./chat-realtime.mjs";
 import { bindSearch } from "./search-input.js";
 import { fetchMessagePage } from "./chat-history.mjs";
+import { loadLatestThreadPreviews } from "./chat-previews.mjs";
 import { supabase, getCurrentUserWithRole, getDisplayName } from "./supabase.js";
 import { uploadMedia } from "./media.js";
 import { getChatMediaPath } from "./chat-media-path.mjs";
@@ -127,16 +128,8 @@ async function loadAllChatData() {
   state.previews = await loadThreadPreviews(state.friends.map(threadForFriend));
 }
 async function loadThreadPreviews(threadIds = []) {
-  const unique=[...new Set(threadIds.filter(Boolean))];
-  if(!unique.length)return new Map();
-  const result=await supabase.from("direct_messages")
-    .select("id,thread_id,body,media_type,created_at,sender_id")
-    .in("thread_id",unique)
-    .order("created_at",{ascending:false});
-  if(result.error)throw result.error;
-  const previews=new Map();
-  (result.data||[]).forEach(row=>{if(!previews.has(row.thread_id))previews.set(row.thread_id,row);});
-  return previews;
+  // One preview per thread, never an unbounded download of complete histories.
+  return loadLatestThreadPreviews(supabase, threadIds);
 }
 
 function renderFriends() {
