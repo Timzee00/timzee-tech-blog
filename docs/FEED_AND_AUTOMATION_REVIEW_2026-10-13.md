@@ -41,3 +41,22 @@
 6. Implement a global announcement inbox and private realtime broadcasts rather than an insert storm for each global message; stage rollout and data compatibility first.
 
 **Buyer-review disclosure:** The personalization is a rule-based SQL ranker plus a frontend diversity layer—not a trained TikTok-style ML recommender. The opt-in precompute hook and proposed SQL remain disabled/unapplied. Neither recommendation quality nor 100k-user throughput is independently validated.
+
+
+## October 13: traced Scout and video-discovery blockers
+
+- **Observed live DB (read-only):** one enabled curator settings row, eight enabled RSS sources, zero curated posts, and most recent legacy scout status = failed on 2026-10-12 21:57:30 (database timestamp). The eight source rows have no successful fetch timestamp. These findings prove imports were unsuccessful, but are not a Netlify stack trace.
+- **Deployment mismatch:** Netlify deployment `6acd53ca0128bd66b2f9f70c` (PR #4 preview, built 2026-10-12, commit `403d628e58711ce356a32292124d077336f9d218`) has the old scheduled `scout-news`, but its available functions do NOT include the later `scout-news-manual` or `scout-news-status` endpoints. The new web UI cannot work on that older deployment yet. Netlify scheduled functions do not run automatically on Deploy Previews and cannot be directly called via URL; only a *published* deployment runs the hourly schedule. Netlify's Functions **Run now** UI can invoke a scheduled function for debugging without publishing.
+- **Confirmed source insert schema mismatch:** `curator_sources.url` is NOT NULL; the curator UI's Add Source wrote `feed_url` but omitted `url`. Creating a source would fail. Source edits also updated only `feed_url`. Both now write both fields consistently, with runtime fixture tests.
+- **New secured diagnosis:** `netlify/functions/scout-news-status.js` uses service-role Supabase server access only after validating a signed-in account has the current trusted Super Admin role. It reports source counts, imported drafts, last run/status and enable flags without sending feed URLs, provider keys or access tokens. The curator page now displays this status and each source's last error and failures; ordinary Admins cannot invoke manual Scout Now.
+- **Scout enabled semantics:** Scheduled/manual scanner honors both `enabled` and `scout_enabled`, not just one flag.
+- **Video reliability:** `assets/js/video-discovery.mjs` now caches even empty candidate sets and uses latest visible public videos as the cold-start fallback for For You only. An empty/denied Following feed is never replaced by public Latest results. The fallback remains subject to Supabase RLS and public-only filtering.
+- Five targeted mock-function logic checks passed for video cold-start/privacy and scout summary; two additional runtime fixture checks passed for source create/update URL contract. Full repository tests, Netlify function execution, API key scope, Brevo SMTP delivery and live import have NOT been verified.
+
+### Safe operational next checks (no production writes yet)
+
+1. Check Netlify published deploy's **Functions → scout-news** scheduled badge, recent executions and logs. Separately check the PR preview, which **will not** run an hourly schedule by itself.
+2. Confirm the published deployment has `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (or the fallback `SERVICE_ROLE_KEY`) available at **Functions runtime**. Never share the key in chat. An old deployment may not have recent environment changes.
+3. When an isolated staging backend and verified new preview exist, use the new Super Admin Scout Status display and Sync Now. Inspect per-source error details and verify at least one **draft** is persisted and viewable in the curation queue. Do not automatically publish third-party content.
+4. If no RSS sources are fetched, inspect the precise host/network/parser error; a healthy HTTP 200 on the general site health route does not prove scout execution.
+5. Confirm that Netlify previews contain the exact Git SHA under test, AI proxy sees the provider key scoped to Functions, and Supabase Auth SMTP uses a Brevo **SMTP credential**, not Netlify's AI key.
