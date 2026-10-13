@@ -124,16 +124,19 @@ exports.handler = async (event) => {
 
     let insertedCount = 0;
     let duplicates = 0;
+    let unusableArticles = 0;
+    let inspectedArticles = 0;
     const insertErrors = [];
     for (const item of items.slice(0, SCOUT_LIMITS.MAX_ARTICLES_INSPECTED)) {
       if (Date.now() >= deadline) break;
+      inspectedArticles++;
       if (insertedCount >= perSource) break;
-      if (!item.title || !item.link) continue;
+      if (!item.title || !item.link) { unusableArticles++; continue; }
       const articleUrl = normalizeScoutArticleUrl(item.link);
-      if (!articleUrl) continue;
+      if (!articleUrl) { unusableArticles++; continue; }
       const title = String(item.title).trim();
       const slug = slugify(title);
-      if (!slug) continue;
+      if (!slug) { unusableArticles++; continue; }
       const summary = stripHTML(item.summary || "");
       const payload = {
         id: randomUUID(),
@@ -176,7 +179,9 @@ exports.handler = async (event) => {
       fetched: true, inserts: insertedCount, duplicates, errors: insertErrors
     });
     sourceOutcomes.push({
-      source: source.name, status: outcome, imported: insertedCount, duplicates,
+      source: source.name, status: outcome, fetched_items: items.length,
+      inspected_items: inspectedArticles, unusable_items: unusableArticles,
+      imported: insertedCount, duplicates,
       ...(insertErrors.length ? { error: insertErrors[0] } : {})
     });
     if (outcome === "failed") sourcesFailed++;
