@@ -2,6 +2,7 @@ const Parser = require("rss-parser");
 const { createClient } = require("@supabase/supabase-js");
 const { requireRole } = require("./_lib/auth-role.js");
 const { randomUUID } = require("crypto");
+const { isScheduledInvocation } = require("./_lib/scheduled-event.cjs");
 const { clampScoutItems, scheduleScoutSources, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
 
 const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(payload) });
@@ -37,7 +38,7 @@ exports.handler = async (event) => {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const headers = event.headers || {};
-  const isScheduled = headers["x-nf-event"] === "schedule" || headers["X-Nf-Event"] === "schedule";
+  const isScheduled = isScheduledInvocation(event);
   if (!isScheduled) {
     const authHeader = headers.authorization || headers.Authorization || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");

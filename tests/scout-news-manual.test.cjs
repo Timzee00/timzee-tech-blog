@@ -10,3 +10,8 @@ test("manual curator entry point denies GET without invoking backend", async () 
   const result = await handler({httpMethod:"GET",headers:{"x-nf-event":"schedule"}});
   assert.equal(result.statusCode,405);
 });
+
+test("manual gateway strips forged next_run schedule payloads",() => {
+ const event=manualEvent({httpMethod:"POST",headers:{"x-nf-event":"schedule"},body:JSON.stringify({next_run:"2026-10-13T10:00:00Z"})});
+ assert.equal(event.body,"{}");
+});
