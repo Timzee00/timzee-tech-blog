@@ -62,6 +62,61 @@ async function isUsernameAvailable(username, currentId) {
 }
 
 let setActiveProfileSection = null;
+const VIDEO_PAGE = 24;
+let profileVideoOffset = 0;
+let profileVideosLoaded = false;
+let profileVideosLoading = false;
+async function loadProfileVideos({ append = false } = {}) {
+  const target=document.getElementById("profileVideoGallery");
+  const more=document.getElementById("profileVideoMore");
+  if(!target || profileVideosLoading || !state.viewingId) return;
+  profileVideosLoading=true;
+  if(more)more.disabled=true;
+  const offset=append?profileVideoOffset:0;
+  try {
+    const {data,error}=await supabase.from("videos")
+      .select("id,title,thumbnail_url,view_count,created_at")
+      .eq("user_id",state.viewingId).eq("is_public",true)
+      .order("created_at",{ascending:false})
+      .range(offset,offset+VIDEO_PAGE-1);
+    if(error)throw error;
+    const rows=data||[];
+    if(!append)target.replaceChildren();
+    if(!append && !rows.length) {
+      const empty=document.createElement("div");empty.className="callout";
+      empty.textContent="No public videos yet.";
+      target.append(empty);
+    }
+    for(const video of rows) {
+      const link=document.createElement("a");
+      link.className="profile-video-tile";
+      link.href="video.html?id="+encodeURIComponent(video.id);
+      const media=document.createElement("div");media.className="profile-video-tile-media";
+      if(video.thumbnail_url && isSafeUrl(video.thumbnail_url)){
+        const img=document.createElement("img");img.src=video.thumbnail_url;
+        img.alt="";img.loading="lazy";media.append(img);
+      } else {
+        const fallback=document.createElement("span");fallback.textContent="Video";media.append(fallback);
+      }
+      const views=document.createElement("span");views.className="profile-video-tile-views";
+      views.textContent="▶ "+Number(video.view_count||0).toLocaleString();
+      media.append(views);
+      const title=document.createElement("span");title.className="profile-video-tile-title";
+      title.textContent=video.title||"Untitled video";
+      link.append(media,title);target.append(link);
+    }
+    profileVideoOffset=offset+rows.length;
+    profileVideosLoaded=true;
+    if(more)more.hidden=rows.length<VIDEO_PAGE;
+  }catch(error){
+    console.warn("Profile videos could not be loaded:",error);
+    const note=document.createElement("div");note.className="callout";note.textContent="Videos could not load. Try again.";
+    if(!append)target.replaceChildren(note);else target.append(note);
+    if(more)more.hidden=false;
+  }finally {profileVideosLoading=false;if(more)more.disabled=false;}
+}
+document.getElementById("profileVideoMore")?.addEventListener("click",()=>void loadProfileVideos({append:true}));
+
 
 function renderAuthActions() {
   const actions = document.getElementById("authActions");
@@ -355,7 +410,12 @@ function setupProfileTabs() {
     if (!isSelf && ["settings", "bookmarks", "notifications"].includes(tabId)) {
       tabId = "overview";
     }
-    tabs.forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tabId));
+    tabs.forEach((btn) => {
+      const active=btn.dataset.tab===tabId;
+      btn.classList.toggle("active",active);
+      btn.setAttribute("aria-pressed",String(active));
+    });
+    if(tabId==="videos" && !profileVideosLoaded) void loadProfileVideos();
     sections.forEach((section) => {
       section.classList.toggle("active", section.dataset.profileSection === tabId);
     });
@@ -691,6 +751,9 @@ function renderProfileActions() {
     chat.textContent = "Open Chat";
     actions.appendChild(edit);
     actions.appendChild(chat);
+    const videosLink=document.createElement("a");videosLink.href="profile.html?tab=videos";
+    videosLink.className="btn ghost";videosLink.textContent="My videos";
+    actions.appendChild(videosLink);
     return;
   }
 
@@ -1159,6 +1222,7 @@ async function boot() {
   renderActivity();
   renderBookmarks();
   renderNotifications();
+  document.getElementById("profileVideoUpload").hidden = !state.user || state.user.id !== state.viewingId;
   setupProfileTabs();
   setupNotificationTabs();
   renderProfileActions();

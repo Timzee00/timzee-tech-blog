@@ -58,6 +58,7 @@
       <div class="container">
         <div class="profile-tabs" id="profileTabs">
           <button class="active" data-tab="overview" type="button">Overview</button>
+          <button data-tab="videos" type="button">Videos</button>
           <button data-tab="activity" type="button">Activity</button>
           <button data-tab="bookmarks" type="button">Saved</button>
           <button data-tab="notifications" type="button">Notifications</button>
@@ -105,6 +106,14 @@
         </aside>
       </section>
 
+      <section class="container profile-video-section" data-profile-section="videos">
+        <div class="profile-section-title"><h2>Videos</h2>
+          <a class="btn ghost sm" href="videos.html#uploadSection" id="profileVideoUpload" hidden>Upload video</a></div>
+        <div id="profileVideoGallery" class="profile-video-gallery" aria-live="polite">
+          <div class="callout">Open Videos to view this creator's uploads.</div>
+        </div>
+        <div class="profile-video-more-row"><button id="profileVideoMore" class="btn ghost" type="button" hidden>Load more videos</button></div>
+      </section>
       <section class="container profile-activity" data-profile-section="activity">
         <section class="discussion-card profile-card" data-reveal>
           <div class="profile-section-title">
