@@ -7,6 +7,7 @@
  * RPC and server-side maintenance and run without an admin opening the site.
  */
 const { createClient } = require("@supabase/supabase-js");
+const { maybeRefreshFeedCandidates } = require("./_lib/feed-refresh.cjs");
 
 // One-time media migration and orphan deletion do not belong in this recurring
 // publishing job. A truncated reference scan cannot prove an object is unused.
@@ -32,6 +33,15 @@ exports.handler = async () => {
   }
 
   console.log("Production automation tick completed:", { automation: data });
+  // Expensive shared ranking snapshots are opt-in until the database function
+  // and consumption path have passed isolated staging tests.
+  try {
+    const ranking = await maybeRefreshFeedCandidates(supabase, process.env);
+    if (!ranking.skipped) console.log("Feed candidate refresh completed:", ranking);
+  } catch (error) {
+    console.error("Feed candidate refresh failed:", error);
+    throw error; // Scheduled function logs/alerts must reveal genuine failures.
+  }
 };
 
 exports.config = {
