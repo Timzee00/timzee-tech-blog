@@ -15,10 +15,36 @@ function mountExtraSettings(){
   const addNav=(id,label)=>{const a=document.createElement("a");a.href=`#${id}`;a.textContent=label;nav.insertBefore(a,nav.querySelector('a[href="#cookies"]')||null);};
   addNav("appearance","Appearance & accessibility");addNav("security","Account security");
   const appearance=document.createElement("section");appearance.id="appearance";appearance.className="settings-card card";appearance.innerHTML=`<div class="settings-card-head"><div><span class="settings-kicker">Accessibility</span><h2>Appearance & accessibility</h2></div></div><div class="settings-stack"><label class="toggle-row"><span><strong>Reduce motion</strong><small>Reduce transitions and animations across Timzee.</small></span><input type="checkbox" data-path="appearance.reduceMotion"></label><label class="toggle-row"><span><strong>High contrast</strong><small>Strengthen boundaries and contrast for easier reading.</small></span><input type="checkbox" data-path="appearance.highContrast"></label></div>`;
-  const security=document.createElement("section");security.id="security";security.className="settings-card card";security.innerHTML=`<div class="settings-card-head"><div><span class="settings-kicker">Security</span><h2>Account security</h2></div></div><div class="settings-stack"><div class="setting-row static"><div><strong>Password</strong><small>Request a secure password-reset email for this account.</small></div><button class="btn ghost sm" id="resetPasswordBtn" type="button">Reset password</button></div><div class="setting-row static"><div><strong>Current session</strong><small>Sign out this device immediately.</small></div><button class="btn ghost sm" id="signOutSettingsBtn" type="button">Sign out</button></div></div>`;
+  const security=document.createElement("section");security.id="security";security.className="settings-card card";security.innerHTML=`<div class="settings-card-head"><div><span class="settings-kicker">Security</span><h2>Account security</h2></div></div><div class="settings-stack"><div class="setting-row static"><div><strong>Password</strong><small>Request a secure password-reset email for this account.</small></div><button class="btn ghost sm" id="resetPasswordBtn" type="button">Reset password</button></div><div class="setting-row static"><div><strong>Current session</strong><small>Sign out this device immediately.</small></div><button class="btn ghost sm" id="signOutSettingsBtn" type="button">Sign out</button></div><div class="setting-row static"><div><strong>Change password</strong><small>Update your password securely without sending it to Timzee servers.</small></div><button class="btn ghost sm" id="changePasswordBtn" type="button">Change password</button></div><div class="setting-row static"><div><strong>All sessions</strong><small>Revoke other sessions and sign out this device.</small></div><button class="btn ghost sm" id="signOutAllBtn" type="button">Sign out everywhere</button></div><div class="setting-row static"><div><strong>Export preferences</strong><small>Save a local JSON copy of your current account preferences. This is not a complete account data export.</small></div><button class="btn ghost sm" id="exportPreferencesBtn" type="button">Export preferences</button></div></div>`;
   const cookies=$("cookies");content.insertBefore(appearance,cookies);content.insertBefore(security,cookies);
   $("resetPasswordBtn")?.addEventListener("click",async()=>{try{const result=await supabase.auth.resetPasswordForEmail(state.user.email,{redirectTo:`${window.location.origin}/login.html`});if(result.error)throw result.error;setStatus("Password reset email requested.","success");}catch(error){setStatus(error?.message||"Could not request password reset.","error");reportAppError(error,"Password reset failed");}});
-  $("signOutSettingsBtn")?.addEventListener("click",async()=>{try{await supabase.auth.signOut();window.location.href="login.html?next=settings.html";}catch(error){reportAppError(error,"Sign out failed");}});
+  $("signOutSettingsBtn")?.addEventListener("click",async()=>{try{const result=await supabase.auth.signOut();if(result.error)throw result.error;window.location.href="login.html?next=settings.html";}catch(error){reportAppError(error,"Sign out failed");}});
+  $("signOutAllBtn")?.addEventListener("click",async()=>{
+    if(!await window.appUI.confirm("Sign out all your sessions on every device?"))return;
+    try{const result=await supabase.auth.signOut({scope:"global"});if(result.error)throw result.error;window.location.replace("login.html?next=settings.html");}
+    catch(error){setStatus(error.message||"Could not sign out all devices.","error");}
+  });
+  $("changePasswordBtn")?.addEventListener("click",async()=>{
+    const password=await window.appUI.prompt("Enter a new password with at least 12 characters.",{
+      title:"Change password",label:"New password",inputType:"password"
+    });
+    if(password===null)return;
+    if(password.length<12 || password.length>128){setStatus("Use a password between 12 and 128 characters.","error");return;}
+    const again=await window.appUI.prompt("Confirm the new password.",{title:"Confirm password",label:"Repeat new password",inputType:"password"});
+    if(again===null)return;
+    if(password!==again){setStatus("Passwords did not match.","error");return;}
+    try{const result=await supabase.auth.updateUser({password});if(result.error)throw result.error;setStatus("Password updated. Other sessions may need to sign in again.","success");}
+    catch(error){setStatus(error?.message||"Password update failed.","error");}
+  });
+  $("exportPreferencesBtn")?.addEventListener("click",()=>{
+    if(!state.preferences)return;
+    const exportBody=JSON.stringify({format:"timzee-preferences-v1",exported_at:new Date().toISOString(),preferences:state.preferences},null,2);
+    const url=URL.createObjectURL(new Blob([exportBody],{type:"application/json"}));
+    const link=document.createElement("a");
+    link.href=url;link.download="timzee-preferences.json";document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    setStatus("Preferences downloaded to this device.","success");
+  });
 }
 
 function applyControls(){

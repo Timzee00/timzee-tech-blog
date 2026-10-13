@@ -303,3 +303,23 @@ html { font-size: 16px; }
   outline: 3px solid var(--color-secondary);
   outline-offset: 3px;
 }
+
+/* Accessibility controls persist across visits, devices once synced, and themes. */
+html[data-reduce-motion="true"] *, html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after{
+  animation-duration:.01ms!important;animation-iteration-count:1!important;
+  transition-duration:.01ms!important;scroll-behavior:auto!important;
+}
+html[data-high-contrast="true"]{
+  --color-border:rgba(17,24,39,.58);
+  --color-border-strong:rgba(17,24,39,.85);
+  --color-text-muted:#354953;
+}
+html[data-theme="dark"][data-high-contrast="true"]{
+  --color-border:rgba(255,255,255,.55);
+  --color-border-strong:rgba(255,255,255,.9);
+  --color-text-muted:#d1dee8;
+}
+html[data-high-contrast="true"] :where(a,button,input,textarea,select):focus-visible{
+  outline:3px solid var(--color-secondary)!important;outline-offset:3px;
+}

@@ -19,6 +19,20 @@
     applyTheme(next);
   }
   applyTheme(saved() || (system.matches ? "dark" : "light"));
+  const APPEARANCE_KEY = "timzee-ui-appearance";
+  function applyAppearance(options) {
+    document.documentElement.dataset.reduceMotion = options?.reduceMotion === true ? "true" : "false";
+    document.documentElement.dataset.highContrast = options?.highContrast === true ? "true" : "false";
+  }
+  try { applyAppearance(JSON.parse(localStorage.getItem(APPEARANCE_KEY) || "{}")); }
+  catch { applyAppearance({}); }
+  window.addEventListener("timzee:preferences", event => applyAppearance(event.detail?.appearance));
+  window.addEventListener("storage", event => {
+    if (event.key === APPEARANCE_KEY) {
+      try { applyAppearance(JSON.parse(event.newValue || "{}")); }
+      catch { applyAppearance({}); }
+    }
+  });
   system.addEventListener("change", () => { if (!saved()) applyTheme(system.matches ? "dark" : "light"); });
   window.addEventListener("storage", event => { if (event.key === KEY) applyTheme(saved() || (system.matches ? "dark" : "light")); });
 
