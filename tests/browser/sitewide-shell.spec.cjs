@@ -375,3 +375,44 @@ test("Not interested changes the visible feed and Undo restores it", async ({ pa
   expect(feedbackWrites).toBe(1);
   expect(feedbackDeletes).toBe(1);
 });
+
+
+test("Video discovery exposes For You / Following modes on grid and full-screen views", async ({ page }) => {
+  await mockSite(page, { role: "user", populated: true });
+  const videoId="33333333-3333-4333-8333-333333333333";
+  await page.route("**/rpc/get_*feed*", async route => {
+    const u=new URL(route.request().url());
+    const isVideo=route.request().postDataJSON()?.p_content_type==="video";
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(
+      isVideo?[{content_type:"video",content_id:videoId,author_id:"11111111-1111-4111-8111-111111111111"}]:[]
+    )});
+  });
+  await page.goto("/videos.html");
+  const following=page.locator('[data-video-mode="following"]');
+  const fyp=page.locator('[data-video-mode="for-you"]');
+  await expect(fyp).toHaveAttribute("aria-pressed","true");
+  await following.click();
+  await expect(following).toHaveAttribute("aria-pressed","true");
+  await page.goto("/video.html");
+  await expect(page.locator('[data-reel-mode="for-you"]')).toHaveCount(1);
+  await expect(page.locator('[data-reel-mode="following"]')).toHaveCount(1);
+  await page.locator('[data-reel-mode="following"]').click();
+  await expect(page.locator('[data-reel-mode="following"]')).toHaveAttribute("aria-pressed","true");
+});
+
+test("Narrow-screen menu remains accessible and on-screen at 390px", async ({ page }) => {
+  await page.setViewportSize({width:390,height:844});
+  await mockSite(page);
+  await page.goto("/");
+  await page.getByRole("button",{name:/menu/i}).first().click();
+  const menu=page.locator("#siteMenu");
+  await expect(menu).toBeVisible();
+  const bounds=await menu.evaluate(node=>{
+    const rect=node.getBoundingClientRect();
+    return {left:rect.left,right:rect.right,width:rect.width,scrollWidth:node.scrollWidth,clientWidth:node.clientWidth};
+  });
+  expect(bounds.left).toBeGreaterThanOrEqual(-1);
+  expect(bounds.right).toBeLessThanOrEqual(391);
+  expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.clientWidth+2);
+  await expect(menu.getByRole("link",{name:"For You"})).toBeVisible();
+});
