@@ -23,8 +23,10 @@ exports.handler=async(event)=>{
   const {data:post,error}=await db.from("curator_posts").select("id,title,content,excerpt,description,source_name,source_url,status,is_posted").eq("id",id).maybeSingle();
   if(error)return respond(500,{error:"Could not load the draft."});
   if(!post || post.status!=="draft" || post.is_posted)return respond(409,{error:"Only unpublished drafts can be expanded."});
-  const evidence=toText(post.description+" "+post.content,4800);
-  if(evidence.length<170)return respond(422,{error:"This RSS source contains too little detail for a trustworthy full article. Add original reporting or more verified sources first."});
+  // The imported HTML repeats the source summary as bullet points. Never count
+  // that repeated text as independent evidence for a longer article.
+  const evidence=toText(post.description || post.excerpt,3200);
+  if(evidence.length<180)return respond(422,{error:"This RSS source contains too little independent detail for a trustworthy full article. Add original reporting or corroborated sources first."});
   const {data:quota,error:quotaError}=await db.rpc("consume_ai_rate_limit",{
     p_user_id:role.user.id,p_request_limit:5,p_window_seconds:600,p_daily_limit:30
   });
