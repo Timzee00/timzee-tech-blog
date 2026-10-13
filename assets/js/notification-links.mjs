@@ -6,7 +6,7 @@
 export function safeNotificationPath(raw, currentOrigin) {
   if (typeof raw !== "string" || !raw.trim()) return "";
   const input = raw.trim();
-  if (input.startsWith("//") || input.includes("\\") || /[\u0000-\u001f\u007f]/.test(input)) return "";
+  if (input.startsWith("//") || input.includes("\\") || /[\u0000-\u001f\u007f"\'<>]/.test(input)) return "";
   try {
     const base = new URL(currentOrigin);
     const target = new URL(input, base.origin + "/");
