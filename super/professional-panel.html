@@ -806,7 +806,7 @@
         document.getElementById("runScoutBtn")?.addEventListener("click", async () => {
           setScoutRunStatus("Running Scout...", "info");
           try {
-            const res = await fetchWithAuth("/.netlify/functions/scout-news", { method: "POST" });
+            const res = await fetchWithAuth("/.netlify/functions/scout-news-manual", { method: "POST" });
             const parsed = await safeParseJson(res);
             const data = parsed.data || {};
             if (!res.ok || !parsed.data) {

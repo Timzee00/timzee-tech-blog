@@ -449,7 +449,7 @@ export async function triggerScoutSync() {
   const token = sessionData?.session?.access_token;
   if (!token) throw new Error("You must be signed in to run the bot.");
 
-  const response = await fetch("/.netlify/functions/scout-news", {
+  const response = await fetch("/.netlify/functions/scout-news-manual", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` }
   });
