@@ -3,7 +3,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { requireRole } = require("./_lib/auth-role.js");
 const { randomUUID } = require("crypto");
 const { isScheduledInvocation } = require("./_lib/scheduled-event.cjs");
-const { clampScoutItems, scheduleScoutSources, classifyScoutSource, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
+const { clampScoutItems, scheduleScoutSources, classifyScoutSource, normalizeScoutDate, normalizeScoutArticleUrl, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
 
 const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(payload) });
 function escapeHTML(text = "") { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;"); }
@@ -129,7 +129,9 @@ exports.handler = async (event) => {
       if (Date.now() >= deadline) break;
       if (insertedCount >= perSource) break;
       if (!item.title || !item.link) continue;
-      const title = item.title.trim();
+      const articleUrl = normalizeScoutArticleUrl(item.link);
+      if (!articleUrl) continue;
+      const title = String(item.title).trim();
       const slug = slugify(title);
       if (!slug) continue;
       const summary = stripHTML(item.summary || "");
@@ -142,10 +144,10 @@ exports.handler = async (event) => {
         excerpt: rewriteExcerpt(summary, title),
         description: rewriteExcerpt(summary, title),
         content: buildContent(summary),
-        source_url: item.link,
-        url: item.link,
+        source_url: articleUrl,
+        url: articleUrl,
         author: source.name,
-        published_at: item.published_at || new Date().toISOString(),
+        published_at: normalizeScoutDate(item.published_at),
         tags: normalizeTags(source.tags, item.tags),
         image_url: item.image_url || "",
         image_source_url: item.image_url || item.link,

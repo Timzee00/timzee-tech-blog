@@ -29,4 +29,24 @@ function classifyScoutSource({ fetched = false, inserts = 0, duplicates = 0, err
   if (duplicates) return "already_imported";
   return "empty_feed";
 }
-module.exports={clampScoutItems,scheduleScoutSources,classifyScoutSource,SCOUT_LIMITS};
+function normalizeScoutDate(input, fallback = new Date()) {
+  if (!input) return fallback.toISOString();
+  const raw = String(input).trim();
+  // GDELT often uses compact dates such as 20261013T183000Z, which Postgres
+  // cannot reliably parse as a timestamp without timezone.
+  const compact = raw.match(/^(\\d{4})(\\d{2})(\\d{2})T?(\\d{2})(\\d{2})(\\d{2})Z?$/);
+  const normalized = compact
+    ? `${compact[1]}-${compact[2]}-${compact[3]}T${compact[4]}:${compact[5]}:${compact[6]}Z`
+    : raw;
+  const parsed = new Date(normalized);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : fallback.toISOString();
+}
+function normalizeScoutArticleUrl(raw) {
+  try {
+    const url = new URL(String(raw || "").trim());
+    if (!["https:", "http:"].includes(url.protocol) || !url.hostname) return "";
+    url.hash = "";
+    return url.toString();
+  } catch { return ""; }
+}
+module.exports={clampScoutItems,scheduleScoutSources,classifyScoutSource,normalizeScoutDate,normalizeScoutArticleUrl,SCOUT_LIMITS};

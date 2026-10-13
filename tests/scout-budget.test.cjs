@@ -28,3 +28,15 @@ test("source insert failure stays failed rather than resetting health", () => {
   assert.equal(classifyScoutSource({fetched:true}),"empty_feed");
   assert.equal(classifyScoutSource({fetched:false}),"failed");
 });
+
+test("normalizes compact GDELT dates and rejects malformed input safely", () => {
+  const { normalizeScoutDate } = require("../netlify/functions/_lib/scout-budget.cjs");
+  assert.equal(normalizeScoutDate("20261013T183000Z"),"2026-10-13T18:30:00.000Z");
+  assert.equal(normalizeScoutDate("invalid",new Date("2026-01-01T00:00:00Z")),"2026-01-01T00:00:00.000Z");
+});
+test("accepts only HTTP(S) article links and strips fragments", () => {
+  const { normalizeScoutArticleUrl } = require("../netlify/functions/_lib/scout-budget.cjs");
+  assert.equal(normalizeScoutArticleUrl("https://example.com/article#section"),"https://example.com/article");
+  assert.equal(normalizeScoutArticleUrl("javascript:alert(1)"),"");
+  assert.equal(normalizeScoutArticleUrl("file:///etc/passwd"),"");
+});
