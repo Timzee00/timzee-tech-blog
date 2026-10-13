@@ -35,8 +35,13 @@ function contentHref(row) {
 function renderRow(row) {
   const image = row.image_url && isSafeUrl(row.image_url) ? `<img src="${escapeHTML(row.image_url)}" alt="${escapeHTML(row.title || `${typeLabel(row.content_type)} preview`)}" loading="lazy">` : `<div class="fyp-media-fallback" aria-hidden="true">${escapeHTML(typeLabel(row.content_type).toUpperCase())}</div>`;
   const reason = row.reason ? `<span class="fyp-reason">${escapeHTML(row.reason)}</span>` : "";
+  // The current Following RPC does not read negative feedback, so do not
+  // offer a misleading "Not interested" button on that separate feed.
+  const feedback = state.mode === "for-you"
+    ? '<button type="button" class="btn ghost sm" data-fyp-action="not-interested">Not interested</button>'
+    : "";
   const body = clampText(stripHTML(row.excerpt || ""), 190);
-  return `<article class="fyp-card" data-content-type="${escapeHTML(row.content_type)}" data-content-id="${escapeHTML(row.content_id)}"><a class="fyp-media" href="${contentHref(row)}">${image}</a><div class="fyp-card-body"><div class="fyp-meta"><span class="chip">${escapeHTML(typeLabel(row.content_type))}</span><span>${escapeHTML(row.category || "")}</span><span>${timeAgo(row.created_at)}</span></div><a href="${contentHref(row)}"><h2>${escapeHTML(row.title || "Untitled")}</h2></a><p>${escapeHTML(body)}</p><div class="fyp-card-foot"><span>${reason}</span><button type="button" class="btn ghost sm" data-fyp-action="not-interested">Not interested</button></div></div></article>`;
+  return `<article class="fyp-card" data-content-type="${escapeHTML(row.content_type)}" data-content-id="${escapeHTML(row.content_id)}"><a class="fyp-media" href="${contentHref(row)}">${image}</a><div class="fyp-card-body"><div class="fyp-meta"><span class="chip">${escapeHTML(typeLabel(row.content_type))}</span><span>${escapeHTML(row.category || "")}</span><span>${timeAgo(row.created_at)}</span></div><a href="${contentHref(row)}"><h2>${escapeHTML(row.title || "Untitled")}</h2></a><p>${escapeHTML(body)}</p><div class="fyp-card-foot"><span>${reason}</span>${feedback}</div></div></article>`;
 }
 function updateUrl() {
   const params = new URLSearchParams();
