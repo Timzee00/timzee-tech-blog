@@ -21,3 +21,11 @@ test("disabled curator and no sources are obvious in health results", () => {
   assert.equal(result.enabled,false);
   assert.equal(result.configurationChecks.hasSources,false);
 });
+
+test("scout status route requires GET and a bearer token", async () => {
+ const { handler } = require("../netlify/functions/scout-news-status.js");
+ const wrong = await handler({httpMethod:"POST",headers:{}});
+ assert.equal(wrong.statusCode,405);
+ const anonymous = await handler({httpMethod:"GET",headers:{}});
+ assert.equal(anonymous.statusCode,401);
+});
