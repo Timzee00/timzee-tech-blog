@@ -281,20 +281,31 @@ export async function commentOnVideo(videoId, userId, authorName, body, replyTo 
   }).select().single();
 }
 
-export async function getVideoComments(videoId) {
+const VIDEO_COMMENT_PAGE_SIZE = 40;
+
+// One page at a time. The UI must never request a video's entire comment
+// history; the database can return millions of rows for a popular video.
+export async function fetchVideoCommentPage(videoId, { offset = 0, limit = VIDEO_COMMENT_PAGE_SIZE } = {}) {
+  if (!videoId) return [];
+  const pageSize = Math.max(1, Math.min(60, Math.trunc(Number(limit) || VIDEO_COMMENT_PAGE_SIZE)));
+  const start = Math.max(0, Math.trunc(Number(offset) || 0));
+  const { data, error } = await supabase
+    .from("video_comments")
+    .select("id,video_id,user_id,author_name,body,reply_to,created_at")
+    .eq("video_id", videoId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(start, start + pageSize - 1);
+  if (error) throw error;
+  return data || [];
+}
+
+// Keep legacy callers compatible while bounding their network payloads.
+export async function getVideoComments(videoId, options) {
   try {
-    const result = await supabase
-      .from("video_comments")
-      .select("*")
-      .eq("video_id", videoId)
-      .order("created_at", { ascending: true });
-    if (result && result.error) {
-      console.error("getVideoComments error:", result.error);
-      return [];
-    }
-    return result.data || [];
-  } catch (err) {
-    console.error("getVideoComments exception:", err);
+    return await fetchVideoCommentPage(videoId, options);
+  } catch (error) {
+    console.error("getVideoComments error:", error);
     return [];
   }
 }

@@ -417,6 +417,14 @@
         opacity: 0.7;
         line-height: 1;
       }
+      .comment-load-more {
+        display: block; width: calc(100% - 32px); min-height: 44px; margin: 8px 16px 14px;
+        border: 1px solid var(--color-border-strong,rgba(255,255,255,.26));
+        border-radius: 10px; color: #fff; background: rgba(255,255,255,.12);
+        font: 650 14px var(--font-body); cursor: pointer;
+      }
+      .comment-load-more[hidden] { display: none; }
+      .comment-load-more:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 3px; }
       .comment-drawer-list {
         flex: 1;
         overflow-y: auto;
@@ -533,7 +541,8 @@
         <h3>Comments</h3>
         <button type="button" class="comment-drawer-close" id="commentDrawerClose" aria-label="Close comments">&times;</button>
       </div>
-      <div class="comment-drawer-list" id="commentDrawerList"></div>
+      <div class="comment-drawer-list" id="commentDrawerList" aria-live="polite"></div>
+      <button type="button" id="commentLoadMoreBtn" class="comment-load-more" hidden>Load more comments</button>
       <form novalidate class="comment-drawer-form" id="commentDrawerForm">
         <input type="text" id="commentDrawerInput" placeholder="Add a comment..." maxlength="500" autocomplete="off">
         <button type="submit">Post</button>
@@ -549,6 +558,7 @@
         getVideoLikeCount,
         commentOnVideo,
         getVideoComments,
+        fetchVideoCommentPage,
         incrementVideoView
       } from "./assets/js/videos-marketplace.js";
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
@@ -1001,7 +1011,11 @@
       let replyingTo = null;
 
       function renderCommentTree(comments, parentId = null, depth = 0) {
-        const children = comments.filter((c) => (c.reply_to || null) === parentId);
+        const loadedIds = new Set(comments.map(c => c.id));
+        // Pages may contain replies whose parent belongs to an older page.
+        // Render those replies as independent roots until the parent arrives.
+        const children = comments.filter(c => (c.reply_to || null) === parentId ||
+          (parentId === null && c.reply_to && !loadedIds.has(c.reply_to)));
         if (!children.length) return "";
         return children
           .map((c) => {
@@ -1039,21 +1053,18 @@
         });
       }
 
-      async function openComments(videoId) {
-        state.commentsOpenFor = videoId;
-        replyingTo = null;
-        updateReplyIndicator();
-        drawer.classList.add("open");
-        backdrop.classList.add("open");
-        drawer.setAttribute("aria-hidden", "false");
-        drawerList.innerHTML = `<div class="comment-empty">Loading…</div>`;
-        const comments = await getVideoComments(videoId);
-        if (!comments.length) {
-          drawerList.innerHTML = `<div class="comment-empty">No comments yet — say something first.</div>`;
-          return;
-        }
-        drawerList.innerHTML = renderCommentTree(comments);
-        drawerList.querySelectorAll(".comment-reply-btn").forEach((btn) => {
+      const commentLoadMoreBtn = document.getElementById("commentLoadMoreBtn");
+      const COMMENT_PAGE_SIZE = 40;
+      let commentRows = [];
+      let commentOffset = 0;
+      let commentGeneration = 0;
+      let commentLoading = false;
+
+      function renderLoadedComments() {
+        drawerList.innerHTML = commentRows.length
+          ? renderCommentTree(commentRows)
+          : '<div class="comment-empty">No comments yet — say something first.</div>';
+        drawerList.querySelectorAll(".comment-reply-btn").forEach(btn => {
           btn.addEventListener("click", () => {
             replyingTo = { id: btn.dataset.replyId, name: btn.dataset.replyName };
             updateReplyIndicator();
@@ -1062,13 +1073,66 @@
         });
       }
 
+      async function loadCommentPage(videoId, generation) {
+        if (commentLoading || state.commentsOpenFor !== videoId) return;
+        commentLoading = true;
+        commentLoadMoreBtn.disabled = true;
+        commentLoadMoreBtn.textContent = "Loading comments…";
+        try {
+          const page = await fetchVideoCommentPage(videoId, {
+            offset: commentOffset,
+            limit: COMMENT_PAGE_SIZE
+          });
+          if (generation !== commentGeneration || state.commentsOpenFor !== videoId) return;
+          commentRows = [...commentRows, ...page];
+          commentOffset += page.length;
+          renderLoadedComments();
+          commentLoadMoreBtn.hidden = page.length < COMMENT_PAGE_SIZE;
+        } catch (error) {
+          if (generation !== commentGeneration || state.commentsOpenFor !== videoId) return;
+          if (!commentRows.length) drawerList.textContent = "Comments could not be loaded. Try again.";
+          console.warn("Video comments failed to load:", error);
+          commentLoadMoreBtn.hidden = false;
+        } finally {
+          if (generation === commentGeneration) {
+            commentLoading = false;
+            commentLoadMoreBtn.disabled = false;
+            commentLoadMoreBtn.textContent = commentRows.length ? "Load more comments" : "Retry loading comments";
+          }
+        }
+      }
+
+      async function openComments(videoId) {
+        state.commentsOpenFor = videoId;
+        commentGeneration++;
+        const generation = commentGeneration;
+        commentRows = [];
+        commentOffset = 0;
+        commentLoading = false;
+        replyingTo = null;
+        updateReplyIndicator();
+        drawer.classList.add("open");
+        backdrop.classList.add("open");
+        drawer.setAttribute("aria-hidden", "false");
+        drawerList.innerHTML = '<div class="comment-empty">Loading…</div>';
+        commentLoadMoreBtn.hidden = true;
+        await loadCommentPage(videoId, generation);
+      }
+
       function closeComments() {
+        commentGeneration++;
         drawer.classList.remove("open");
         backdrop.classList.remove("open");
         drawer.setAttribute("aria-hidden", "true");
         state.commentsOpenFor = null;
         replyingTo = null;
+        commentLoading = false;
+        commentLoadMoreBtn.hidden = true;
       }
+
+      commentLoadMoreBtn.addEventListener("click", () => {
+        if (state.commentsOpenFor) void loadCommentPage(state.commentsOpenFor, commentGeneration);
+      });
 
       document.getElementById("commentDrawerClose").addEventListener("click", closeComments);
       backdrop.addEventListener("click", closeComments);
