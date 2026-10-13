@@ -2,6 +2,7 @@ const Parser = require("rss-parser");
 const { createClient } = require("@supabase/supabase-js");
 const { requireRole } = require("./_lib/auth-role.js");
 const { randomUUID } = require("crypto");
+const { clampScoutItems, scheduleScoutSources, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
 
 const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(payload) });
 function escapeHTML(text = "") { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;"); }
@@ -35,15 +36,16 @@ exports.handler = async (event) => {
   if (settingsResult.error) return jsonResponse(500, { error: settingsResult.error.message || "Unable to load curator settings." });
   const enabled = settingsResult.data?.enabled ?? true;
   if (!enabled) return jsonResponse(200, { ok: true, skipped: "disabled" });
-  const perSource = Math.max(1, Number(settingsResult.data?.posts_per_source || 5));
+  const perSource = clampScoutItems(settingsResult.data?.posts_per_source || 5);
 
-  const sourcesResult = await supabase.from("curator_sources").select("*").eq("enabled", true);
+  const sourcesResult = await supabase.from("curator_sources").select("*").eq("enabled", true)
+    .order("last_fetched_at", { ascending: true, nullsFirst: true }).limit(12);
   if (sourcesResult.error) return jsonResponse(500, { error: sourcesResult.error.message || "Unable to load curator sources." });
   const fetchedSources = sourcesResult.data || [];
   const envFeedUrls = parseEnvFeeds(process.env.NEWS_FEEDS);
   const envTipUrls = parseEnvFeeds(process.env.NEWS_TIPS_FEEDS);
   const knownUrls = new Set(fetchedSources.flatMap((source) => [source.feed_url, source.url]).filter(Boolean));
-  const combinedEnv = [...envFeedUrls, ...envTipUrls];
+  const combinedEnv = [...new Set([...envFeedUrls, ...envTipUrls])].slice(0, 12);
   const fallbackSources = combinedEnv.filter((url) => !knownUrls.has(url)).map((url, index) => ({
     name: `Env source ${index + 1}`,
     source_type: "rss",
@@ -70,24 +72,37 @@ exports.handler = async (event) => {
     }
   }
 
-  const finalSources = [...fetchedSources, ...persistedFallbacks.filter((source) => !source.__error && source.feed_url)];
+  const finalSources = scheduleScoutSources([...fetchedSources, ...persistedFallbacks.filter((source) => !source.__error && source.feed_url)]);
   const setupErrors = persistedFallbacks.filter((source) => source.__error).map((source) => ({ source: source.name, error: source.__error }));
   if (!finalSources.length) return jsonResponse(200, { ok: true, skipped: "no_sources", feedErrors: setupErrors });
 
   const parser = new Parser({ timeout: 15000, customFields: { item: ["media:content", "media:thumbnail", "enclosure"] } });
   const posted = [];
   const feedErrors = [...setupErrors];
+  const startedAt = new Date().toISOString();
+  const deadline = Date.now() + 22000;
   for (const source of finalSources) {
+    if (Date.now() >= deadline) {
+      feedErrors.push({ source: source.name, error: "Deferred to the next scheduled run (time budget)" });
+      break;
+    }
     let items = [];
     try {
       items = source.source_type === "gdelt" ? await fetchGdeltItems(source) : await fetchRssItems(source, parser);
     } catch (error) {
-      feedErrors.push({ source: source.name, error: error.message || "fetch_failed" });
+      const message = String(error.message || "fetch_failed").slice(0, 300);
+      feedErrors.push({ source: source.name, error: message });
+      await supabase.from("curator_sources").update({
+        last_fetched_at: new Date().toISOString(),
+        failure_count: Math.max(0, Number(source.failure_count || 0)) + 1,
+        last_error: message
+      }).eq("id", source.id);
       continue;
     }
 
     let insertedCount = 0;
-    for (const item of items) {
+    for (const item of items.slice(0, SCOUT_LIMITS.MAX_ARTICLES_INSPECTED)) {
+      if (Date.now() >= deadline) break;
       if (insertedCount >= perSource) break;
       if (!item.title || !item.link) continue;
       const title = item.title.trim();
@@ -124,6 +139,8 @@ exports.handler = async (event) => {
 
       const insertResult = await supabase.from("curator_posts").insert(payload).select("id, title, source_url").single();
       if (insertResult.error) {
+        // A second scout may have already inserted this external article.
+        if (insertResult.error.code === "23505") continue;
         feedErrors.push({ source: source.name, title, error: insertResult.error.message || "insert_failed" });
         continue;
       }
@@ -137,5 +154,18 @@ exports.handler = async (event) => {
       .eq("id", source.id);
   }
 
-  return jsonResponse(200, { ok: true, posted, feedErrors });
+  // Service-role-only operational status, never exposed in public responses.
+  // Preserve the existing five-minute publication automation separately.
+  const finishedAt = new Date().toISOString();
+  const statusWrite = await supabase.from("system_job_status").upsert({
+    job_name: "curator-scout",
+    last_started_at: startedAt,
+    last_succeeded_at: finishedAt,
+    last_result: { reviewed_drafts_created: posted.length, sources_checked: finalSources.length,
+      source_errors: feedErrors.length, max_sources_per_run: SCOUT_LIMITS.MAX_SOURCES },
+    last_error: feedErrors.length ? "Some sources failed or were deferred; see curator logs." : null,
+    updated_at: finishedAt
+  }, { onConflict: "job_name" });
+  if (statusWrite.error) console.warn("Curator scout status update failed:", statusWrite.error.message);
+  return jsonResponse(200, { ok: true, posted, feedErrors, sourcesChecked: finalSources.length });
 };
