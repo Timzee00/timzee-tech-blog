@@ -19,3 +19,12 @@ test("source rotation after successful fetch moves it behind older sources", () 
   rows.slice(0,4).forEach(s=>s.last_fetched_at="2026-10-13T01:00:00Z");
   assert.deepEqual(scheduleScoutSources(rows).map(s=>s.id),["s4","s5","s6","s7"]);
 });
+
+test("source insert failure stays failed rather than resetting health", () => {
+  const { classifyScoutSource } = require("../netlify/functions/_lib/scout-budget.cjs");
+  assert.equal(classifyScoutSource({fetched:true,errors:["column missing"]}),"failed");
+  assert.equal(classifyScoutSource({fetched:true,inserts:1,errors:["one rejected"]}),"partial");
+  assert.equal(classifyScoutSource({fetched:true,duplicates:3}),"already_imported");
+  assert.equal(classifyScoutSource({fetched:true}),"empty_feed");
+  assert.equal(classifyScoutSource({fetched:false}),"failed");
+});

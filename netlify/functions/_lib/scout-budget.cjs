@@ -21,4 +21,12 @@ function scheduleScoutSources(sources, maxSources = MAX_SOURCES) {
 }
 const SCOUT_LIMITS = Object.freeze({ MAX_SOURCES, MAX_ITEMS_PER_SOURCE, MAX_ARTICLES_INSPECTED });
 
-module.exports={clampScoutItems,scheduleScoutSources,SCOUT_LIMITS};
+function classifyScoutSource({ fetched = false, inserts = 0, duplicates = 0, errors = [] } = {}) {
+  if (!fetched) return "failed";
+  if (errors.length && inserts === 0 && duplicates === 0) return "failed";
+  if (errors.length) return "partial";
+  if (inserts) return "imported";
+  if (duplicates) return "already_imported";
+  return "empty_feed";
+}
+module.exports={clampScoutItems,scheduleScoutSources,classifyScoutSource,SCOUT_LIMITS};

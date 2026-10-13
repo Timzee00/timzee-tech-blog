@@ -3,7 +3,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { requireRole } = require("./_lib/auth-role.js");
 const { randomUUID } = require("crypto");
 const { isScheduledInvocation } = require("./_lib/scheduled-event.cjs");
-const { clampScoutItems, scheduleScoutSources, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
+const { clampScoutItems, scheduleScoutSources, classifyScoutSource, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
 
 const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(payload) });
 function escapeHTML(text = "") { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;"); }
@@ -96,6 +96,8 @@ exports.handler = async (event) => {
   const posted = [];
   const feedErrors = [...setupErrors];
   let sourcesFetched = 0;
+  let sourcesFailed = 0;
+  const sourceOutcomes = [];
   const startedAt = new Date().toISOString();
   const deadline = Date.now() + 18000;
   for (const source of finalSources) {
@@ -110,6 +112,8 @@ exports.handler = async (event) => {
     } catch (error) {
       const message = String(error.message || "fetch_failed").slice(0, 300);
       feedErrors.push({ source: source.name, error: message });
+      sourcesFailed++;
+      sourceOutcomes.push({ source: source.name, status: "failed", error: message });
       await supabase.from("curator_sources").update({
         last_fetched_at: new Date().toISOString(),
         failure_count: Math.max(0, Number(source.failure_count || 0)) + 1,
@@ -119,6 +123,8 @@ exports.handler = async (event) => {
     }
 
     let insertedCount = 0;
+    let duplicates = 0;
+    const insertErrors = [];
     for (const item of items.slice(0, SCOUT_LIMITS.MAX_ARTICLES_INSPECTED)) {
       if (Date.now() >= deadline) break;
       if (insertedCount >= perSource) break;
@@ -154,31 +160,46 @@ exports.handler = async (event) => {
         .insert(payload).select("id").single();
       if (insertResult.error) {
         // A second scout may have already inserted this external article.
-        if (insertResult.error.code === "23505") continue;
-        feedErrors.push({ source: source.name, title, error: insertResult.error.message || "insert_failed" });
+        if (insertResult.error.code === "23505") { duplicates++; continue; }
+        const issue = String(insertResult.error.message || "insert_failed").slice(0, 300);
+        feedErrors.push({ source: source.name, title, error: issue });
+        insertErrors.push(issue);
         continue;
       }
       insertedCount += 1;
       posted.push({ source: source.name, title });
     }
 
-    await supabase
-      .from("curator_sources")
-      .update({ last_fetched_at: new Date().toISOString(), failure_count: 0, last_error: null })
-      .eq("id", source.id);
+    const outcome = classifyScoutSource({
+      fetched: true, inserts: insertedCount, duplicates, errors: insertErrors
+    });
+    sourceOutcomes.push({
+      source: source.name, status: outcome, imported: insertedCount, duplicates,
+      ...(insertErrors.length ? { error: insertErrors[0] } : {})
+    });
+    if (outcome === "failed") sourcesFailed++;
+    const issue = insertErrors.length ? insertErrors[0] : null;
+    const sourceUpdate = await supabase.from("curator_sources").update({
+      last_fetched_at: new Date().toISOString(),
+      failure_count: issue ? Math.max(0, Number(source.failure_count || 0)) + 1 : 0,
+      last_error: issue
+    }).eq("id", source.id);
+    if (sourceUpdate.error) feedErrors.push({
+      source: source.name, error: "Could not update source health: " + sourceUpdate.error.message
+    });
   }
 
   // Service-role-only operational status, never exposed in public responses.
   // Preserve the existing five-minute publication automation separately.
   const finishedAt = new Date().toISOString();
-  const failed = finalSources.length > 0 && sourcesFetched === 0 && feedErrors.length > 0;
+  const failed = finalSources.length > 0 && sourcesFailed === finalSources.length && posted.length === 0;
   const status = failed ? "failed" : feedErrors.length ? "partial" : posted.length ? "success" : "no_new_articles";
   const statusWrite = await supabase.from("system_job_status").upsert({
     job_name: "curator-scout",
     last_started_at: startedAt,
     ...(failed ? {last_failed_at:finishedAt} : {last_succeeded_at:finishedAt}),
     last_result: { reviewed_drafts_created: posted.length, sources_checked: finalSources.length, sources_fetched: sourcesFetched,
-      source_errors: feedErrors.length, status, max_sources_per_run: SCOUT_LIMITS.MAX_SOURCES },
+      source_errors: feedErrors.length, source_outcomes: sourceOutcomes, status, max_sources_per_run: SCOUT_LIMITS.MAX_SOURCES },
     last_error: failed ? "All checked feeds failed." : feedErrors.length ? "Some sources failed; inspect feed errors." : null,
     updated_at: finishedAt
   }, { onConflict: "job_name" });
@@ -189,7 +210,7 @@ exports.handler = async (event) => {
   if (legacyStatus.error) console.warn("Curator settings status update failed:",legacyStatus.error.message);
   if (failed) {
     console.error("All curator feeds failed:", feedErrors.map(entry=>({source:entry.source,error:entry.error})));
-    return jsonResponse(502,{ok:false,error:"All checked news sources failed. Review source errors and try again.",feedErrors,sourcesChecked:finalSources.length});
+    return jsonResponse(502,{ok:false,error:"All checked news sources failed. Review source errors and try again.",feedErrors,sourceOutcomes,sourcesChecked:finalSources.length});
   }
-  return jsonResponse(200,{ok:true,status,posted,feedErrors,sourcesChecked:finalSources.length});
+  return jsonResponse(200,{ok:true,status,posted,feedErrors,sourceOutcomes,sourcesChecked:finalSources.length});
 };
