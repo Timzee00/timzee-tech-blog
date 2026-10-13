@@ -49,7 +49,8 @@ exports.handler = async (event) => {
 
   const settingsResult = await supabase.from("curator_settings").select("*").maybeSingle();
   if (settingsResult.error) return jsonResponse(500, { error: settingsResult.error.message || "Unable to load curator settings." });
-  const enabled = settingsResult.data?.enabled ?? true;
+  const enabled = settingsResult.data?.enabled === true &&
+    settingsResult.data?.scout_enabled !== false;
   if (!enabled) return jsonResponse(200, { ok: true, skipped: "disabled" });
   const perSource = clampScoutItems(settingsResult.data?.posts_per_source || 5);
 
