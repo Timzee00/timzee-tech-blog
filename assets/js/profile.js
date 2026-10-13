@@ -22,6 +22,7 @@ import {
   reportAppError
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
+import { safeNotificationPath } from "./notification-links.mjs";
 import "./nav.js";
 
 const state = {
@@ -651,8 +652,8 @@ function renderNotifications() {
       const title = escapeHTML(note.title || "Notification");
       const body = escapeHTML(note.body || "");
       const timeLabel = timeAgo(note.created_at);
-      const linkTarget = note.link || note.link_url || "";
-      const link = linkTarget ? `<a href="${linkTarget}">Open</a>` : "";
+      const linkTarget = safeNotificationPath(note.link || note.link_url || "", location.origin);
+      const link = linkTarget ? `<a href="${escapeHTML(linkTarget)}">Open</a>` : "";
       return `
         <div class="notification-item ${unread ? "unread" : ""}" data-id="${note.id}">
           <strong>${title}</strong>
