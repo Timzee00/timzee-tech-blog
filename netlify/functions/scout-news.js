@@ -15,7 +15,21 @@ function buildContent(summary) { const cleaned = stripHTML(summary || ""); const
 function getDomain(url = "") { try { return new URL(url).hostname.replace("www.", ""); } catch { return ""; } }
 function extractRssImage(item) { const mediaContent = item["media:content"] || item["media:thumbnail"]; const mediaUrl = Array.isArray(mediaContent) ? mediaContent[0]?.$?.url || mediaContent[0]?.url : mediaContent?.$?.url || mediaContent?.url; if (mediaUrl) return mediaUrl; const enclosure = item.enclosure || (item.enclosures && item.enclosures[0]); return enclosure?.url && (enclosure.type || "").startsWith("image") ? enclosure.url : ""; }
 async function fetchRssItems(source, parser) { if (!source.feed_url) return []; const feed = await parser.parseURL(source.feed_url); return (feed.items || []).map((item) => ({ title: item.title || "", link: item.link || "", published_at: item.isoDate || item.pubDate || new Date().toISOString(), summary: item.contentSnippet || item.summary || item.content || "", tags: item.categories || [], image_url: extractRssImage(item) })); }
-async function fetchGdeltItems(source) { const query = source.query || source.feed_url || ""; if (!query) return []; const max = Number(source.max_items || 30); const response = await fetch(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&format=json&maxrecords=${max}`); if (!response.ok) throw new Error(`GDELT fetch failed: ${response.status}`); const data = await response.json(); return (data.articles || []).map((article) => ({ title: article.title || "", link: article.url || "", published_at: article.seendate || article.datetime || new Date().toISOString(), summary: article.extras?.summary || article.excerpt || article.snippet || "", tags: article.themes || [], image_url: article.socialimage || "" })); }
+async function fetchGdeltItems(source) {
+  const query = String(source.query || source.feed_url || "").trim().slice(0, 240);
+  if (!query) return [];
+  const max = Math.max(1, Math.min(30, Math.trunc(Number(source.max_items) || 30)));
+  const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&format=json&maxrecords=${max}`;
+  const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
+  if (!response.ok) throw new Error(`GDELT fetch failed: ${response.status}`);
+  const data = await response.json();
+  return (data.articles || []).map((article) => ({
+    title: article.title || "", link: article.url || "",
+    published_at: article.seendate || article.datetime || new Date().toISOString(),
+    summary: article.extras?.summary || article.excerpt || article.snippet || "",
+    tags: article.themes || [], image_url: article.socialimage || ""
+  }));
+}
 
 exports.handler = async (event) => {
   const SUPABASE_URL = process.env.SUPABASE_URL;
