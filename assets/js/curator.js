@@ -106,6 +106,9 @@ export async function createCuratorSource(sourceData) {
 
     const payload = {
       name: cleanText(sourceData?.name) || "Untitled Feed",
+      // The live curator_sources table has a NOT NULL url column and a
+      // feed_url compatibility column. Both must stay in sync.
+      url: feedUrl,
       feed_url: feedUrl,
       source_type: cleanText(sourceData?.source_type) || "rss",
       query: cleanText(sourceData?.query),
@@ -153,6 +156,7 @@ export async function updateCuratorSource(sourceId, sourceData) {
 
     const feedUrl = pickFeedUrl(sourceData);
     if (feedUrl) {
+      updatePayload.url = feedUrl;
       updatePayload.feed_url = feedUrl;
     }
 
