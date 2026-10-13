@@ -76,11 +76,11 @@ exports.handler = async (event) => {
   const setupErrors = persistedFallbacks.filter((source) => source.__error).map((source) => ({ source: source.name, error: source.__error }));
   if (!finalSources.length) return jsonResponse(200, { ok: true, skipped: "no_sources", feedErrors: setupErrors });
 
-  const parser = new Parser({ timeout: 15000, customFields: { item: ["media:content", "media:thumbnail", "enclosure"] } });
+  const parser = new Parser({ timeout: 6000, customFields: { item: ["media:content", "media:thumbnail", "enclosure"] } });
   const posted = [];
   const feedErrors = [...setupErrors];
   const startedAt = new Date().toISOString();
-  const deadline = Date.now() + 22000;
+  const deadline = Date.now() + 18000;
   for (const source of finalSources) {
     if (Date.now() >= deadline) {
       feedErrors.push({ source: source.name, error: "Deferred to the next scheduled run (time budget)" });
@@ -130,14 +130,10 @@ exports.handler = async (event) => {
         is_posted: false
       };
 
-      const existing = await supabase.from("curator_posts").select("id").eq("source_url", item.link).maybeSingle();
-      if (existing.error) {
-        feedErrors.push({ source: source.name, title, error: existing.error.message || "duplicate_check_failed" });
-        continue;
-      }
-      if (existing.data?.id) continue;
-
-      const insertResult = await supabase.from("curator_posts").insert(payload).select("id, title, source_url").single();
+      // Unique DB constraints on url/source_url are authoritative. Avoid a
+      // SELECT-before-INSERT round-trip and its concurrency race on every item.
+      const insertResult = await supabase.from("curator_posts")
+        .insert(payload).select("id").single();
       if (insertResult.error) {
         // A second scout may have already inserted this external article.
         if (insertResult.error.code === "23505") continue;
