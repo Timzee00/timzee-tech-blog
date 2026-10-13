@@ -191,9 +191,10 @@ function renderNav(categories) {
 }
 
 function hydrateCounts() {
-  state.commentCounts = state.engagement?.commentCounts || {};
-  state.likeCounts = state.engagement?.likeCounts || {};
-  state.userLikes = new Set(state.engagement?.likedPostIds || []);
+  // Merge so a slower initial request cannot erase stats for newly loaded posts.
+  Object.assign(state.commentCounts, state.engagement?.commentCounts || {});
+  Object.assign(state.likeCounts, state.engagement?.likeCounts || {});
+  for (const id of state.engagement?.likedPostIds || []) state.userLikes.add(id);
 }
 
 function showLoadingPlaceholders() {
@@ -231,8 +232,9 @@ function fallbackFilterPosts(posts, query = "", tags = []) {
 function buildPostCard(post, compact = false) {
   const category = state.categories.find((cat) => cat.id === post.category_id);
   const categoryName = category ? category.name : "General";
-  const commentCount = state.commentCounts[post.id] || 0;
-  const likeCount = state.likeCounts[post.id] || 0;
+  // A dash means the exact counter has not loaded; never report a fabricated 0.
+  const commentCount = Object.hasOwn(state.commentCounts, post.id) ? state.commentCounts[post.id] : "—";
+  const likeCount = Object.hasOwn(state.likeCounts, post.id) ? state.likeCounts[post.id] : "—";
   const liked = state.userLikes.has(post.id);
   const tags = normalizeTags(post.tags)
     .slice(0, 3)
@@ -416,20 +418,22 @@ async function loadMoreHomePosts() {
     const seen = new Set(state.posts.map(post => post.id));
     const newlyVisible = [];
     for (const post of page) if (!seen.has(post.id)) { state.posts.push(post); seen.add(post.id); newlyVisible.push(post.id); }
-    if (newlyVisible.length) {
-      try {
-        const engagement = await fetchPostEngagement(supabaseForEngagement, newlyVisible, state.user?.id);
-        Object.assign(state.likeCounts, engagement.likeCounts);
-        Object.assign(state.commentCounts, engagement.commentCounts);
-        for (const id of engagement.likedPostIds) state.userLikes.add(id);
-      } catch (error) {
-        console.warn("Post engagement could not be refreshed:", error);
-        if (status) status.textContent = "Posts loaded, but reaction counts may be temporarily unavailable.";
-      }
-    }
     renderTagFilters();
     renderCategories();
     renderLists();
+    if (newlyVisible.length) {
+      // More articles appear immediately; exact counts resolve independently.
+      void fetchPostEngagement(supabaseForEngagement, newlyVisible, state.user?.id)
+        .then(engagement => {
+          Object.assign(state.likeCounts, engagement.likeCounts);
+          Object.assign(state.commentCounts, engagement.commentCounts);
+          for (const id of engagement.likedPostIds) state.userLikes.add(id);
+          renderLists();
+        }).catch(error => {
+          console.warn("Post engagement could not be refreshed:", error);
+          if (status) status.textContent = "Posts loaded, but reaction counts may be temporarily unavailable.";
+        });
+    }
   } catch (error) {
     if (status) status.textContent = "Could not load more posts. Please retry.";
     console.warn("Additional posts failed:", error);
@@ -944,11 +948,7 @@ async function boot() {
   state.posts = posts;
   state.postsOffset = posts.length;
   state.hasMorePosts = posts.length === POSTS_PAGE_SIZE;
-  state.engagement = await softTimeout(
-    fetchPostEngagement(supabaseForEngagement, posts.map(post => post.id), state.user?.id),
-    { likeCounts: {}, commentCounts: {}, likedPostIds: [] },
-    "post engagement", 4000
-  );
+  state.engagement = null;
   state.ads = ads;
   state.discussionTopics = discussionTopics;
   state.discussionMessages = discussionMessages;
@@ -964,6 +964,18 @@ async function boot() {
   renderPopularTopics();
   renderCategories();
   renderLists();
+  // Visible articles must not wait behind exact-count queries, especially
+  // while a deployment is using the compatibility fallback.
+  void fetchPostEngagement(supabaseForEngagement, posts.map(post => post.id), state.user?.id)
+    .then(engagement => {
+      state.engagement = engagement;
+      hydrateCounts();
+      renderLists();
+    }).catch(error => {
+      console.warn("Post engagement could not be loaded:", error);
+      const status = document.getElementById("loadMorePostsStatus");
+      if (status) status.textContent = "Reaction counts are temporarily unavailable.";
+    });
   document.getElementById("loadMorePostsBtn")?.addEventListener("click", () => void loadMoreHomePosts());
   renderTagFilters();
   setupTagFilters();
