@@ -94,6 +94,7 @@ exports.handler = async (event) => {
   const parser = new Parser({ timeout: 6000, customFields: { item: ["media:content", "media:thumbnail", "enclosure"] } });
   const posted = [];
   const feedErrors = [...setupErrors];
+  let sourcesFetched = 0;
   const startedAt = new Date().toISOString();
   const deadline = Date.now() + 18000;
   for (const source of finalSources) {
@@ -104,6 +105,7 @@ exports.handler = async (event) => {
     let items = [];
     try {
       items = source.source_type === "gdelt" ? await fetchGdeltItems(source) : await fetchRssItems(source, parser);
+      sourcesFetched += 1;
     } catch (error) {
       const message = String(error.message || "fetch_failed").slice(0, 300);
       feedErrors.push({ source: source.name, error: message });
@@ -168,14 +170,13 @@ exports.handler = async (event) => {
   // Service-role-only operational status, never exposed in public responses.
   // Preserve the existing five-minute publication automation separately.
   const finishedAt = new Date().toISOString();
-  const sourceFailures = feedErrors.filter(item=>item.source && finalSources.some(src=>src.name===item.source)).length;
-  const failed = finalSources.length > 0 && sourceFailures >= finalSources.length && posted.length === 0;
+  const failed = finalSources.length > 0 && sourcesFetched === 0 && feedErrors.length > 0;
   const status = failed ? "failed" : feedErrors.length ? "partial" : posted.length ? "success" : "no_new_articles";
   const statusWrite = await supabase.from("system_job_status").upsert({
     job_name: "curator-scout",
     last_started_at: startedAt,
     ...(failed ? {last_failed_at:finishedAt} : {last_succeeded_at:finishedAt}),
-    last_result: { reviewed_drafts_created: posted.length, sources_checked: finalSources.length,
+    last_result: { reviewed_drafts_created: posted.length, sources_checked: finalSources.length, sources_fetched: sourcesFetched,
       source_errors: feedErrors.length, status, max_sources_per_run: SCOUT_LIMITS.MAX_SOURCES },
     last_error: failed ? "All checked feeds failed." : feedErrors.length ? "Some sources failed; inspect feed errors." : null,
     updated_at: finishedAt
