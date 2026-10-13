@@ -17,7 +17,8 @@ const MAX_TOKENS = 4096;
 const ALLOWED_MODELS = {
   groq: new Set(["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b"]),
   openai: new Set(["gpt-4o-mini", "gpt-4o"]),
-  anthropic: new Set(["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"])
+  anthropic: new Set(["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"]),
+  openrouter: new Set(["openrouter/free"])
 };
 
 function jsonResponse(body, status = 200, extraHeaders = {}) {
@@ -137,9 +138,10 @@ exports.handler = async (event) => {
       configured: {
         groq: Boolean(process.env.GROQ_API_KEY?.trim()),
         openai: Boolean(process.env.OPENAI_API_KEY?.trim()),
-        anthropic: Boolean(process.env.ANTHROPIC_API_KEY?.trim())
+        anthropic: Boolean(process.env.ANTHROPIC_API_KEY?.trim()),
+        openrouter: Boolean(process.env.OPENROUTER_API_KEY?.trim())
       },
-      modelDefaults: { groq: "openai/gpt-oss-120b", openai: "gpt-4o-mini", anthropic: "claude-haiku-4-5-20251001" }
+      modelDefaults: { groq: "openai/gpt-oss-120b", openai: "gpt-4o-mini", anthropic: "claude-haiku-4-5-20251001", openrouter: "openrouter/free" }
     });
   }
 
@@ -153,7 +155,7 @@ exports.handler = async (event) => {
       ? "gpt-4o-mini"
       : provider === "anthropic"
         ? "claude-sonnet-5"
-        : "openai/gpt-oss-120b";
+        : provider === "openrouter" ? "openrouter/free" : "openai/gpt-oss-120b";
   const model = String(rawPayload.model || defaultModel);
   if (!ALLOWED_MODELS[provider].has(model)) {
     return jsonResponse({ error: "Model is not allowed for this provider." }, 400);
@@ -164,7 +166,7 @@ exports.handler = async (event) => {
       ? process.env.OPENAI_API_KEY
       : provider === "anthropic"
         ? process.env.ANTHROPIC_API_KEY
-        : process.env.GROQ_API_KEY;
+        : provider === "openrouter" ? process.env.OPENROUTER_API_KEY : process.env.GROQ_API_KEY;
 
   if (!apiKey) {
     return jsonResponse({ error: `${provider} API key is not configured on the server.` }, 503);
@@ -242,6 +244,7 @@ exports.handler = async (event) => {
 
     const endpoint = provider === "openai"
       ? "https://api.openai.com/v1/chat/completions"
+      : provider === "openrouter" ? "https://openrouter.ai/api/v1/chat/completions"
       : "https://api.groq.com/openai/v1/chat/completions";
 
     const completionPayload = {
@@ -256,7 +259,8 @@ exports.handler = async (event) => {
       signal: AbortSignal.timeout(25000),
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`
+        Authorization: `Bearer ${apiKey}`,
+        ...(provider === "openrouter" ? { "X-OpenRouter-Title": "Timzee Tech Hub" } : {})
       },
       body: JSON.stringify(completionPayload)
     });

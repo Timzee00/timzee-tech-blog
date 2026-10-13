@@ -6,14 +6,16 @@ const PROVIDER_KEY = "ai_provider";
 export const PROVIDERS = {
   groq: "Groq",
   openai: "OpenAI",
-  anthropic: "Anthropic"
+  anthropic: "Anthropic",
+  openrouter: "OpenRouter"
 };
 
 // Keep production defaults on models explicitly listed as production by the provider.
 export const PROVIDER_MODELS = {
   groq: ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
   openai: ["gpt-4o-mini", "gpt-4o"],
-  anthropic: ["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"]
+  anthropic: ["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"],
+  openrouter: ["openrouter/free"]
 };
 
 export const DEFAULT_MODEL = PROVIDER_MODELS.groq[0];
@@ -158,7 +160,7 @@ export async function callGroqAPI({
 export async function generateContent({
   prompt,
   systemPrompt = SYSTEM_PROMPTS.contentIdeas,
-  model = DEFAULT_MODEL,
+  model = null,
   maxTokens = 2048,
   provider = null
 } = {}) {
