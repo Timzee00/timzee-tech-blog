@@ -1,8 +1,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { loadLatestThreadPreviews } = await import("../assets/js/chat-previews.mjs");
+const helper = import("../assets/js/chat-previews.mjs");
 
 test("RPC reads only distinct thread IDs in bounded batches", async () => {
+  const { loadLatestThreadPreviews } = await helper;
   const requests = [];
   const supabase = {
     rpc: async (name, data) => {
@@ -19,6 +20,7 @@ test("RPC reads only distinct thread IDs in bounded batches", async () => {
 });
 
 test("pre-migration fallback asks for one row per thread with concurrency cap", async () => {
+  const { loadLatestThreadPreviews } = await helper;
   const pending = [];
   let inFlight = 0, max = 0;
   const supabase = {
@@ -47,6 +49,7 @@ test("pre-migration fallback asks for one row per thread with concurrency cap", 
 });
 
 test("permission errors cannot be disguised as empty chats", async () => {
+  const { loadLatestThreadPreviews } = await helper;
   await assert.rejects(
     loadLatestThreadPreviews({rpc: async () => ({ error: { code:"42501", message:"No access" } })}, ["thread"]),
     error => error.code === "42501"
