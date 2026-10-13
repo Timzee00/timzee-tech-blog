@@ -14,7 +14,8 @@
 - The production DB is small (approximately 88 direct messages, 20 notifications, 1 post and 1 marketplace item by Postgres statistics). This cannot substantiate 100k-user capacity.
 - The DB already has `(thread_id, created_at DESC)` on direct messages and indexes for notification owner/read status and marketplace full-text search.
 - Post listing queries have no ordinary `posts.created_at DESC` index; video comments have a `video_id` index but lack the compound `(video_id, created_at DESC, id DESC)` index. Benchmark with representative data before adding indexes because they cost extra space and writes.
-- Other scale risks remain: homepage fetches unbounded post likes, comments and discussion records; unbounded friendships and group memberships; N+1 reel likes counts; realtime channel/billing ceilings; file size and egress, moderation operations, abuse and rate limits, and archival.
+- The homepage now shows 24 articles per page, filters future scheduled posts before pagination, renders posts without waiting for counts, and loads exact per-post like/comment summaries instead of downloading all reaction rows. The reviewed RLS-invoker RPC proposal is in docs/sql/review-only-post-engagement.sql, with bounded exact-count fallback for older databases. The SQL function is NOT deployed. Deep post pagination still uses OFFSET and should eventually become a created_at/id keyset cursor.
+- Other scale risks remain: unbounded discussion-message reads and friendship/group memberships; N+1 reel like counts; realtime/billing ceilings; file size and egress; moderation queues; spam/rate limits; and archival.
 
 ## Review-only backend SQL
 
@@ -31,3 +32,16 @@
 5. Optimize the worst SQL query plans and RLS overhead, enable paged/virtualized feeds, add rate limiting and background jobs, plan retention/archival, autoscaling and database backup/restore/rollback. Re-test after each change.
 
 **Release gate:** no claim of 100k-user readiness until observed performance under representative synthetic traffic, reproducible tests, secured backend proposals, and operating-cost evidence are recorded. CI/build, preview deployment and load testing remain outstanding.
+
+## Further review-only proposals
+
+- docs/sql/review-only-scale-indexes.sql: posts chronological listing, video comment pages, discussion topic message order and approved-comment lookup indexes. Validate their value and write cost with staging EXPLAIN before creating any production indexes.
+- Post engagement RPC is SECURITY INVOKER and grants access to anon/authenticated while retaining underlying RLS. Exact liked state uses indexed EXISTS with auth.uid(); it cannot be computed using user-supplied identity.
+- Stage SQL in real migrations using the Supabase CLI only after confirming schema and security; no live SQL writes or policy changes were carried out.
+- The new homepage only bounds article page size and article engagement queries. The remaining discussion-homepage full-table queries must be replaced by grouped, server-side summaries. Do not call the entire platform fully scalable yet.
+
+## Immediate verification checkpoint
+
+- In an isolated JavaScript exercise, the actual chat-preview module passed three checks (64-id RPC batches, five-in-flight legacy fallback, access-denial propagation).
+- The actual engagement summary module passed three comparable mocked-data checks (exact totals, bounded exact-count fallback, access-denial propagation).
+- The complete Node test suite, Playwright regressions, reproducible deployment build, Netlify preview and multi-user staging load tests have NOT run in this step. GitHub Actions billing was previously blocked.
