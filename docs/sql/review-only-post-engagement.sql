@@ -8,8 +8,9 @@ as $$
   select visible.id,
     (select count(*) from public.post_likes pl where pl.post_id = visible.id),
     (select count(*) from public.comments c where c.post_id = visible.id and c.status = 'approved'),
-    coalesce((select bool_or(pl.user_id = (select auth.uid()))
-              from public.post_likes pl where pl.post_id = visible.id), false)
+    exists (select 1 from public.post_likes pl
+            where pl.post_id = visible.id
+              and pl.user_id = (select auth.uid()))
   from (
     select distinct p.id
     from unnest(p_post_ids) ids(post_id)
