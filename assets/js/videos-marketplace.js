@@ -310,13 +310,32 @@ export async function getVideoComments(videoId, options) {
   }
 }
 
+// Public videos are not updatable by ordinary viewers (correct RLS).
+// Never use client-side read/modify/write counters: it loses concurrent views
+// and silently fails for non-owners. The staging-reviewed RPC atomically counts
+// at most one authenticated view per user/video/UTC day.
+let viewCounterRpcAvailable = true;
 export async function incrementVideoView(videoId) {
-  const video = await fetchVideoById(videoId);
-  if (video) {
-    await supabase
-      .from("videos")
-      .update({ view_count: (video.view_count || 0) + 1 })
-      .eq("id", videoId);
+  if (!videoId || !viewCounterRpcAvailable) return false;
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session?.user?.id) return false;
+    const { data, error } = await supabase.rpc("record_video_view", { p_video_id: videoId });
+    if (error) {
+      // Until the reviewed migration is deployed, skip metric updates
+      // rather than bypassing owners' RLS or logging an error per video.
+      if (["PGRST202", "42883"].includes(String(error.code || ""))) {
+        viewCounterRpcAvailable = false;
+        console.warn("Atomic video view tracking is pending the server migration.");
+      } else {
+        console.warn("Video view tracking failed:", error);
+      }
+      return false;
+    }
+    return data === true;
+  } catch (error) {
+    console.warn("Video view tracking unavailable:", error);
+    return false;
   }
 }
 
