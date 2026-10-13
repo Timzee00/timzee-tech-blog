@@ -524,6 +524,10 @@
         .comment-drawer { max-width: 480px; left: 50%; transform: translate(-50%, 100%); }
         .comment-drawer.open { transform: translate(-50%, 0); }
       }
+      .reel-feed-modes { position:fixed; top:calc(14px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%); z-index:90; display:flex; gap:4px; padding:4px; border-radius:999px; background:rgba(10,13,18,.84); border:1px solid rgba(255,255,255,.19); backdrop-filter:blur(12px); }
+      .reel-feed-modes button { border:0; background:transparent; color:#cbd5e1; border-radius:999px; padding:9px 15px; min-height:42px; font:700 13px system-ui; cursor:pointer; white-space:nowrap; }
+      .reel-feed-modes button.active { color:#fff; background:#0f766e; }
+      .reel-feed-modes button:focus-visible { outline:3px solid #7dd3fc; outline-offset:2px; }
     </style>
   </head>
   <body class="reel-mode">
@@ -532,6 +536,10 @@
 
     <main id="main-content" aria-label="Timzee Reels">
       <h1 class="visually-hidden">Timzee Reels</h1>
+      <nav class="reel-feed-modes" aria-label="Video feed">
+        <button type="button" data-reel-mode="for-you" aria-pressed="true" class="active">For You</button>
+        <button type="button" data-reel-mode="following" aria-pressed="false">Following</button>
+      </nav>
       <div id="reelRoot"></div>
     </main>
 
@@ -562,6 +570,7 @@
         incrementVideoView
       } from "./assets/js/videos-marketplace.js";
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
+      import { fetchVideoDiscoveryPage } from "./assets/js/video-discovery.mjs";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
 
@@ -574,12 +583,40 @@
         videos: [],
         offset: 0,
         limit: 6,
+        mode: params.get("mode") === "following" ? "following" : "for-you",
+        generation: 0,
         loadingMore: false,
         exhausted: false,
         activeIndex: 0,
         likedCache: {},
         commentsOpenFor: null
       };
+
+      function updateReelModeButtons() {
+        document.querySelectorAll("[data-reel-mode]").forEach(button => {
+          const active = button.dataset.reelMode === state.mode;
+          button.classList.toggle("active",active);
+          button.setAttribute("aria-pressed",String(active));
+        });
+      }
+      async function fetchModePage(offset) {
+        return fetchVideoDiscoveryPage(supabase,{
+          mode: state.mode, offset, limit: state.limit
+        });
+      }
+      document.querySelectorAll("[data-reel-mode]").forEach(button => button.addEventListener("click",async () => {
+        if (button.dataset.reelMode===state.mode) return;
+        state.mode=button.dataset.reelMode;
+        state.generation++;
+        state.offset=0; state.exhausted=false;
+        state.videos=[];
+        observer?.disconnect();
+        document.querySelectorAll(".reel-video").forEach(video=>video.pause());
+        updateReelModeButtons();
+        history.replaceState({}, "", "video.html?mode="+encodeURIComponent(state.mode));
+        await bootFeed(false);
+      }));
+      updateReelModeButtons();
 
       function renderLoading() {
         root.innerHTML = `<div class="reel-loading">Loading videos…</div>`;
@@ -590,7 +627,7 @@
           <div class="reel-empty">
             <div>
               <div style="font-size:32px; margin-bottom:10px;">📹</div>
-              <div>No videos to show yet.</div>
+              <div>${state.mode==="following" ? "Follow video creators to see their posts here." : "No recommended videos yet. Explore recent uploads."}</div>
               <a href="videos.html" style="color:#7dd3fc; display:inline-block; margin-top:10px;">← Back to Videos</a>
             </div>
           </div>
@@ -985,20 +1022,25 @@
         if (state.loadingMore || state.exhausted) return;
         if (idx >= state.videos.length - 2) {
           state.loadingMore = true;
-          state.offset += state.limit;
-          const more = await fetchVideos({ limit: state.limit, offset: state.offset });
-          if (!more.length) {
-            state.exhausted = true;
-          } else {
-            const startLen = state.videos.length;
-            state.videos = state.videos.concat(more);
-            const scroller = document.getElementById("scroller");
-            more.forEach((v, i) => {
-              scroller.insertAdjacentHTML("beforeend", itemTemplate(v, startLen + i));
-            });
-            wireItems();
-          }
-          state.loadingMore = false;
+          const version=state.generation, next=state.offset+state.limit;
+          try {
+            const more=await fetchModePage(next);
+            if (version!==state.generation) return;
+            if (!more.length) state.exhausted=true;
+            else {
+              state.offset=next;
+              const existing=new Set(state.videos.map(v=>v.id));
+              const unique=more.filter(v=>!existing.has(v.id));
+              const startLen=state.videos.length;
+              state.videos.push(...unique);
+              const scroller=document.getElementById("scroller");
+              unique.forEach((v,i)=>scroller?.insertAdjacentHTML("beforeend",itemTemplate(v,startLen+i)));
+              wireItems();
+            }
+          } catch(error) {
+            console.warn("Could not load recommended videos:",error);
+            root.setAttribute("data-load-error","true");
+          } finally { if(version===state.generation) state.loadingMore=false; }
         }
       }
 
@@ -1183,30 +1225,36 @@
         );
       }
 
-      async function boot() {
+      async function bootFeed(includeStartingVideo = false) {
+        const version=++state.generation;
         renderLoading();
-        state.user = await getCurrentUser();
-
-        let initial = [];
-        if (startId) {
-          const first = await fetchVideoById(startId);
-          if (first) initial.push(first);
+        try {
+          let initial=[];
+          if (includeStartingVideo && startId) {
+            const requested=await fetchVideoById(startId);
+            if (requested?.is_public) initial.push(requested);
+          }
+          const feed=await fetchModePage(0);
+          if(version!==state.generation)return;
+          feed.forEach(v=>{if(!initial.some(x=>x.id===v.id))initial.push(v);});
+          state.offset=0;
+          state.exhausted=feed.length<state.limit;
+          if(!initial.length){renderEmpty();return;}
+          await attachUploaderBadgesAndCounts(initial);
+          if(version!==state.generation)return;
+          state.videos=initial;
+          render();
+        } catch(error) {
+          if(version!==state.generation)return;
+          console.warn("Could not load video feed:",error);
+          root.innerHTML='<div class="reel-empty"><div>Videos are temporarily unavailable. <button class="btn" type="button" id="retryReel">Retry</button></div></div>';
+          document.getElementById("retryReel")?.addEventListener("click",()=>void bootFeed(false));
         }
-        const feed = await fetchVideos({ limit: state.limit, offset: 0 });
-        feed.forEach((v) => {
-          if (!initial.some((existing) => existing.id === v.id)) initial.push(v);
-        });
-
-        if (!initial.length) {
-          renderEmpty();
-          return;
-        }
-
-        await attachUploaderBadgesAndCounts(initial);
-        state.videos = initial;
-        render();
       }
-
+      async function boot() {
+        state.user=await getCurrentUser();
+        await bootFeed(true);
+      }
       boot();
     </script>
   </body>

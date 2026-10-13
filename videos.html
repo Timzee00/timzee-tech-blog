@@ -49,6 +49,12 @@
         <h1>Videos</h1>
         <p class="tagline">Discover tech tutorials, demos, and community content</p>
 
+        <div class="video-mode-switch" role="group" aria-label="Choose video feed">
+          <button class="filter-btn active" type="button" data-video-mode="for-you" aria-pressed="true">For You</button>
+          <button class="filter-btn" type="button" data-video-mode="following" aria-pressed="false">Following</button>
+          <button class="filter-btn" type="button" data-video-mode="latest" aria-pressed="false">Latest</button>
+          <a class="btn ghost sm" href="video.html">Full-screen viewer</a>
+        </div>
         <!-- Category Tabs -->
         <div class="category-filter" id="categoryTabs" aria-label="Video categories">
           <button type="button" class="filter-btn active" aria-pressed="true" data-category="all">All</button>
@@ -164,7 +170,8 @@
         uploadVideo,
         detectVideoDuration
       } from "./assets/js/videos-marketplace.js";
-      import { getCurrentUser, signOut } from "./assets/js/supabase.js";
+      import { getCurrentUser, signOut, supabase } from "./assets/js/supabase.js";
+      import { fetchVideoDiscoveryPage } from "./assets/js/video-discovery.mjs";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
 
       let state = {
@@ -172,6 +179,7 @@
         videos: [],
         offset: 0,
         category: "all",
+        mode: new URLSearchParams(location.search).get("mode") === "following" ? "following" : "for-you",
         limit: 20,
         selectedVideoDuration: 0
       };
@@ -211,10 +219,11 @@
         const more = document.getElementById("loadMoreBtn");
         loading = true; more.disabled = true; container.setAttribute("aria-busy", "true");
         try {
-          const rows = await (query ? searchVideos : fetchVideos)({
-            query, category, limit: state.limit, offset,
-
-          });
+          const rows = query || category || state.mode==="latest"
+            ? await (query ? searchVideos : fetchVideos)({ query, category, limit: state.limit, offset })
+            : await fetchVideoDiscoveryPage(supabase,{
+                mode:state.mode,limit:state.limit,offset
+              });
           if (version !== listVersion || query !== document.getElementById("videoSearch").value.trim()) return;
           state.videos = offset === 0 ? rows : [...state.videos, ...rows];
           renderVideos();
@@ -258,12 +267,29 @@
 
       }
 
+      function updateVideoModes(){
+        document.querySelectorAll("[data-video-mode]").forEach(button=>{
+          const active=button.dataset.videoMode===state.mode;
+          button.classList.toggle("active",active);
+          button.setAttribute("aria-pressed",String(active));
+        });
+      }
+      document.querySelectorAll("[data-video-mode]").forEach(button=>button.addEventListener("click",()=>{
+        if(state.mode===button.dataset.videoMode)return;
+        state.mode=button.dataset.videoMode;state.offset=0;updateVideoModes();
+        const url=new URL(location.href);url.searchParams.set("mode",state.mode);
+        history.replaceState({}, "", url.pathname+url.search);
+        void loadVideos();
+      }));
+      updateVideoModes();
+
       // Category tabs
       document.getElementById("categoryTabs").addEventListener("click", (e) => {
         if (e.target.dataset.category) {
           e.preventDefault();
           document.querySelectorAll("#categoryTabs [data-category]").forEach(button => { button.classList.toggle("active", button === e.target); button.setAttribute("aria-pressed", String(button === e.target)); });
           state.category = e.target.dataset.category;
+          if (state.category !== "all") {state.mode="latest";updateVideoModes();}
           state.offset = 0;
           loadVideos();
         }
