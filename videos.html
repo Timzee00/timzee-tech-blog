@@ -281,7 +281,18 @@
       }
       document.querySelectorAll("[data-video-mode]").forEach(button=>button.addEventListener("click",()=>{
         if(state.mode===button.dataset.videoMode)return;
-        state.mode=button.dataset.videoMode;state.offset=0;updateVideoModes();
+        state.mode=button.dataset.videoMode;
+        // Do not label category/search results as personalized or Following.
+        // Switching modes resets those separate discovery constraints.
+        const search=document.getElementById("videoSearch");
+        if(search)search.value="";
+        state.category="all";
+        document.querySelectorAll("#categoryTabs [data-category]").forEach(item=>{
+          const active=item.dataset.category==="all";
+          item.classList.toggle("active",active);
+          item.setAttribute("aria-pressed",String(active));
+        });
+        state.offset=0;updateVideoModes();
         const url=new URL(location.href);url.searchParams.set("mode",state.mode);
         history.replaceState({}, "", url.pathname+url.search);
         void loadVideos();
@@ -300,7 +311,12 @@
         }
       });
 
-      bindSearch(document.getElementById("videoSearch"), () => { state.offset = 0; void loadVideos(); });
+      bindSearch(document.getElementById("videoSearch"), () => {
+        if(document.getElementById("videoSearch").value.trim()){
+          state.mode="latest";updateVideoModes();
+        }
+        state.offset=0;void loadVideos();
+      });
 
       // Upload handlers
       const uploadArea = document.getElementById("uploadArea");
