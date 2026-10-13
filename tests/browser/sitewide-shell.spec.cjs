@@ -334,3 +334,44 @@ test("homepage limits first post batch and provides a Load More control", async 
   expect(postCalls.some(u => Number(u.searchParams.get("limit")) <= 24 ||
     (u.searchParams.has("offset") && u.searchParams.get("offset")==="0"))).toBeTruthy();
 });
+
+
+test("For You and Following switches are accessible and use distinct RPCs", async ({ page }) => {
+  await mockSite(page, { role: "user", populated: true });
+  const names = [];
+  page.on("request", request => {
+    if (request.url().includes("/rpc/get_personalized_feed")) names.push("for-you");
+    if (request.url().includes("/rpc/get_following_feed")) names.push("following");
+  });
+  await page.goto("/fyp.html");
+  const personalized = page.getByRole("button", { name: "For You", exact: true });
+  const following = page.getByRole("button", { name: "Following", exact: true });
+  await expect(personalized).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".fyp-card")).toHaveCount(1);
+  await following.click();
+  await expect(following).toHaveAttribute("aria-pressed", "true");
+  await expect(personalized).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator(".fyp-card")).toHaveCount(1);
+  expect(names).toContain("for-you");
+  expect(names).toContain("following");
+});
+
+test("Not interested changes the visible feed and Undo restores it", async ({ page }) => {
+  await mockSite(page, { role: "user", populated: true });
+  let feedbackWrites = 0;
+  let feedbackDeletes = 0;
+  await page.route("**/rest/v1/user_content_feedback*", async route => {
+    if (route.request().method() === "POST") feedbackWrites++;
+    if (route.request().method() === "DELETE") feedbackDeletes++;
+    return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.goto("/fyp.html");
+  await expect(page.locator(".fyp-card")).toHaveCount(1);
+  await page.getByRole("button", { name: "Not interested" }).click();
+  await expect(page.locator(".fyp-card")).toHaveCount(0);
+  await expect(page.locator("#fypFeedbackStatus")).toContainText("hidden");
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.locator(".fyp-card")).toHaveCount(1);
+  expect(feedbackWrites).toBe(1);
+  expect(feedbackDeletes).toBe(1);
+});
