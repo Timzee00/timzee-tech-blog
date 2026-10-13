@@ -34,7 +34,7 @@ function normalizeScoutDate(input, fallback = new Date()) {
   const raw = String(input).trim();
   // GDELT often uses compact dates such as 20261013T183000Z, which Postgres
   // cannot reliably parse as a timestamp without timezone.
-  const compact = raw.match(/^(\\d{4})(\\d{2})(\\d{2})T?(\\d{2})(\\d{2})(\\d{2})Z?$/);
+  const compact = raw.match(/^(\d{4})(\d{2})(\d{2})T?(\d{2})(\d{2})(\d{2})Z?$/);
   const normalized = compact
     ? `${compact[1]}-${compact[2]}-${compact[3]}T${compact[4]}:${compact[5]}:${compact[6]}Z`
     : raw;
