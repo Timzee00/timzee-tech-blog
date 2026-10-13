@@ -69,7 +69,7 @@ export async function createConversation(userId, title = "New Chat") {
     id: crypto.randomUUID(),
     user_id: userId,
     title,
-    model: DEFAULT_MODEL,
+    model: getModelsForProvider(getProvider())[0],
     created_at: new Date().toISOString()
   }).select().single();
 }
@@ -98,15 +98,18 @@ export async function saveMessage(conversationId, userId, role, content, tokensU
 export async function callGroqAPI({
   messages = [],
   systemPrompt = SYSTEM_PROMPTS.general,
-  model = DEFAULT_MODEL,
+  model = null,
   temperature = 0.7,
   maxTokens = 1024,
   provider = null
 } = {}) {
   const resolvedProvider = provider || getProvider();
+  const allowed = getModelsForProvider(resolvedProvider);
+  const remembered = localStorage.getItem("ai_model") || "";
+  const resolvedModel = allowed.includes(model) ? model : allowed.includes(remembered) ? remembered : allowed[0];
   const payload = {
     provider: resolvedProvider,
-    model,
+    model: resolvedModel,
     messages: [
       { role: "system", content: systemPrompt },
       ...messages
@@ -144,7 +147,7 @@ export async function callGroqAPI({
     return {
       content: data.message || data.choices?.[0]?.message?.content || "",
       usage: data.usage,
-      model: data.model || model
+      model: data.model || resolvedModel
     };
   } catch (error) {
     console.error("AI API call failed:", error);
@@ -173,7 +176,7 @@ export async function chat({
   userId = null,
   message,
   systemPrompt = SYSTEM_PROMPTS.general,
-  model = DEFAULT_MODEL,
+  model = null,
   provider = null
 } = {}) {
   let history = [];

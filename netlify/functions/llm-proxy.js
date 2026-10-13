@@ -102,15 +102,14 @@ function validateRequest(rawPayload, provider) {
 }
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return jsonResponse({ error: "Method not allowed. Use POST." }, 405);
+  if (!["GET", "POST"].includes(event.httpMethod)) {
+    return jsonResponse({ error: "Method not allowed." }, 405);
   }
-
-  if (requestBodyBytes(event) > MAX_BODY_BYTES) {
+  if (event.httpMethod === "POST" && requestBodyBytes(event) > MAX_BODY_BYTES) {
     return jsonResponse({ error: "Request body too large." }, 413);
   }
-  const parsed = parseJsonObject(event, MAX_BODY_BYTES);
-  if (parsed.error) return jsonResponse({ error: parsed.error }, parsed.statusCode);
+  const parsed = event.httpMethod === "POST" ? parseJsonObject(event, MAX_BODY_BYTES) : null;
+  if (parsed?.error) return jsonResponse({ error: parsed.error }, parsed.statusCode);
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -130,8 +129,21 @@ exports.handler = async (event) => {
     return jsonResponse({ error: "Invalid or expired auth token." }, 401);
   }
 
-  const rawPayload = parsed.payload;
+  // Authenticated diagnostic. Never return values, lengths, names of secret
+  // keys, or provider error bodies. Function-scoped env vars only.
+  if (event.httpMethod === "GET") {
+    return jsonResponse({
+      ready: true,
+      configured: {
+        groq: Boolean(process.env.GROQ_API_KEY?.trim()),
+        openai: Boolean(process.env.OPENAI_API_KEY?.trim()),
+        anthropic: Boolean(process.env.ANTHROPIC_API_KEY?.trim())
+      },
+      modelDefaults: { groq: "openai/gpt-oss-120b", openai: "gpt-4o-mini", anthropic: "claude-haiku-4-5-20251001" }
+    });
+  }
 
+  const rawPayload = parsed.payload;
   const provider = String(rawPayload.provider || "groq").toLowerCase();
   const validationError = validateRequest(rawPayload, provider);
   if (validationError) return jsonResponse({ error: validationError }, 400);

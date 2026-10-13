@@ -155,6 +155,26 @@
         $("aiProviderHint").textContent = `${PROVIDERS[provider] || provider} credentials are managed securely on the server.`;
       }
 
+      async function inspectServerConfiguration() {
+        try {
+          const { supabase } = await import("./assets/js/supabase.js");
+          const { data } = await supabase.auth.getSession();
+          const token = data?.session?.access_token;
+          if (!token) return;
+          const response = await fetch("/.netlify/functions/llm-proxy", {
+            headers: { Authorization: `Bearer ${token}` }, cache: "no-store"
+          });
+          if (!response.ok) return;
+          const diagnostic = await response.json();
+          const selected = providerSelect.value;
+          const configured = diagnostic.configured?.[selected] === true;
+          setStatus(configured
+            ? `${PROVIDERS[selected]} credential detected on this Netlify deployment. Use Test Connection to verify it.`
+            : `${PROVIDERS[selected]} credential is not available to Functions in this deployment. Check Netlify scope and redeploy.`,
+            configured ? null : false);
+        } catch (error) { console.warn("AI configuration diagnostic unavailable", error); }
+      }
+
       function loadSettings() {
         state.provider = getProvider();
         providerSelect.value = state.provider;
@@ -264,7 +284,8 @@
         state.provider = provider;
         populateModels(provider);
         setProvider(provider);
-        setStatus(`Provider changed to ${PROVIDERS[provider]}. Save to keep this choice.`, null);
+        setStatus(`Provider changed to ${PROVIDERS[provider]}.`, null);
+        void inspectServerConfiguration();
       });
 
       modelSelect.addEventListener("change", () => {
@@ -287,7 +308,8 @@
         localStorage.setItem("ai_model", model);
         state.provider = provider;
         state.model = model;
-        setStatus("AI settings saved for this browser.", true);
+        setStatus("AI settings saved for this browser. Provider credential check follows.", null);
+        void inspectServerConfiguration();
       });
 
       $("testAiBtn").addEventListener("click", testConnection);
@@ -327,6 +349,7 @@
       async function boot() {
         if (!(await setupAuth())) return;
         loadSettings();
+        void inspectServerConfiguration();
         renderPrompts();
       }
 
