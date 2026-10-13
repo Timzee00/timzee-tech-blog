@@ -292,7 +292,7 @@ test("failed Story video displays recoverable media feedback instead of hanging"
 });
 
 test("video comments are paged, with a retryable Load More action", async ({ page }) => {
-  await mockSite(page);
+  await mockSite(page, { populated: true });
   let requested = [];
   await page.route("**/rest/v1/video_comments*", route => {
     const url = new URL(route.request().url());
@@ -310,7 +310,11 @@ test("video comments are paged, with a retryable Load More action", async ({ pag
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(rows) });
   });
   await page.goto("/video.html");
-  // The real drawer still requires video data; this test exercises the same
-  // network paging path through a populated fixture and active reel.
-  expect(await page.locator("#commentLoadMoreBtn").count()).toBe(1);
+  await page.locator('.reel-chip[data-action="comment"]').first().click();
+  await expect(page.locator("#commentDrawer .comment-row")).toHaveCount(40);
+  await expect(page.locator("#commentLoadMoreBtn")).toBeVisible();
+  await page.locator("#commentLoadMoreBtn").click();
+  await expect(page.locator("#commentDrawer .comment-row")).toHaveCount(43);
+  await expect(page.locator("#commentLoadMoreBtn")).toBeHidden();
+  expect(requested.length).toBe(2);
 });
