@@ -1,12 +1,11 @@
 import { renderTrending } from "./trending-engine.js";
 import { renderPopular as renderPopularRanking } from "./popularity-engine.js";
+import { fetchPostEngagement } from "./post-engagement.mjs";
 import { bindSearch } from "./search-input.js";
-import { getCurrentUser, getCurrentUserWithRole, getDisplayName, getUserRole, signOut } from "./supabase.js";
+import { supabase as supabaseForEngagement, getCurrentUser, getCurrentUserWithRole, getDisplayName, getUserRole, signOut } from "./supabase.js";
 import {
   fetchCategories,
   fetchPosts,
-  fetchComments,
-  fetchPostLikes,
   fetchAds,
   fetchDiscussionTopics,
   fetchDiscussionMessages,
@@ -45,8 +44,7 @@ const state = {
   hasMorePosts: false,
   loadingMorePosts: false,
   filteredPosts: null,
-  comments: [],
-  likes: [],
+  engagement: null,
   likeCounts: {},
   commentCounts: {},
   userLikes: new Set(),
@@ -193,22 +191,9 @@ function renderNav(categories) {
 }
 
 function hydrateCounts() {
-  const commentCounts = {};
-  state.comments.forEach((comment) => {
-    commentCounts[comment.post_id] = (commentCounts[comment.post_id] || 0) + 1;
-  });
-  state.commentCounts = commentCounts;
-
-  const likeCounts = {};
-  const userLikes = new Set();
-  state.likes.forEach((like) => {
-    likeCounts[like.post_id] = (likeCounts[like.post_id] || 0) + 1;
-    if (state.user && like.user_id === state.user.id) {
-      userLikes.add(like.post_id);
-    }
-  });
-  state.likeCounts = likeCounts;
-  state.userLikes = userLikes;
+  state.commentCounts = state.engagement?.commentCounts || {};
+  state.likeCounts = state.engagement?.likeCounts || {};
+  state.userLikes = new Set(state.engagement?.likedPostIds || []);
 }
 
 function showLoadingPlaceholders() {
@@ -429,7 +414,19 @@ async function loadMoreHomePosts() {
     state.postsOffset += page.length;
     state.hasMorePosts = page.length === POSTS_PAGE_SIZE;
     const seen = new Set(state.posts.map(post => post.id));
-    for (const post of page) if (!seen.has(post.id)) { state.posts.push(post); seen.add(post.id); }
+    const newlyVisible = [];
+    for (const post of page) if (!seen.has(post.id)) { state.posts.push(post); seen.add(post.id); newlyVisible.push(post.id); }
+    if (newlyVisible.length) {
+      try {
+        const engagement = await fetchPostEngagement(supabaseForEngagement, newlyVisible, state.user?.id);
+        Object.assign(state.likeCounts, engagement.likeCounts);
+        Object.assign(state.commentCounts, engagement.commentCounts);
+        for (const id of engagement.likedPostIds) state.userLikes.add(id);
+      } catch (error) {
+        console.warn("Post engagement could not be refreshed:", error);
+        if (status) status.textContent = "Posts loaded, but reaction counts may be temporarily unavailable.";
+      }
+    }
     renderTagFilters();
     renderCategories();
     renderLists();
@@ -928,8 +925,6 @@ async function boot() {
   const [
     categories,
     posts,
-    comments,
-    likes,
     ads,
     discussionTopics,
     discussionMessages,
@@ -938,8 +933,6 @@ async function boot() {
   ] = await Promise.all([
     softTimeout(fetchCategories(), [], "categories"),
     softTimeout(fetchPosts({ status: "published", limit: POSTS_PAGE_SIZE }), [], "posts"),
-    softTimeout(fetchComments({ status: "approved" }), [], "comments"),
-    softTimeout(fetchPostLikes(), [], "likes"),
     softTimeout(fetchAds({ status: "active" }), [], "ads"),
     softTimeout(fetchDiscussionTopics(), [], "discussion topics"),
     softTimeout(fetchDiscussionMessages(), [], "discussion messages"),
@@ -951,8 +944,11 @@ async function boot() {
   state.posts = posts;
   state.postsOffset = posts.length;
   state.hasMorePosts = posts.length === POSTS_PAGE_SIZE;
-  state.comments = comments;
-  state.likes = likes;
+  state.engagement = await softTimeout(
+    fetchPostEngagement(supabaseForEngagement, posts.map(post => post.id), state.user?.id),
+    { likeCounts: {}, commentCounts: {}, likedPostIds: [] },
+    "post engagement", 4000
+  );
   state.ads = ads;
   state.discussionTopics = discussionTopics;
   state.discussionMessages = discussionMessages;
