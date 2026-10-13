@@ -1,8 +1,11 @@
 import { supabase, getCurrentUser } from "./supabase.js";
 import { loadUserPreferences, mergePreferences } from "./user-preferences.js";
 import { escapeHTML, clampText, stripHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
+import { diversifyFeed, feedCacheKey, cachedFeed } from "./feed-diversity.mjs";
 
 const state = { user: null, preferences: mergePreferences(), type: "all", mode: "for-you", loading: false };
+const feedCache = new Map();
+const suppressedContent = new Set();
 const $ = (id) => document.getElementById(id);
 
 function rememberKey(userId) { return `timzee:fyp:last:${userId}`; }
@@ -42,43 +45,117 @@ function updateUrl() {
   window.history.replaceState({}, "", `fyp.html${params.toString() ? `?${params}` : ""}`);
 }
 function applyActiveControls() {
-  document.querySelectorAll("[data-fyp-mode]").forEach((button) => button.classList.toggle("active", button.dataset.fypMode === state.mode));
-  document.querySelectorAll("[data-fyp-filter]").forEach((button) => button.classList.toggle("active", button.dataset.fypFilter === state.type));
+  document.querySelectorAll("[data-fyp-mode]").forEach(button => {
+    const active = button.dataset.fypMode === state.mode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  document.querySelectorAll("[data-fyp-filter]").forEach(button => {
+    const active = button.dataset.fypFilter === state.type;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
   const label = $("fypModeLabel");
   if (label) label.textContent = state.mode === "following" ? "Following" : "For You";
 }
 let feedVersion = 0;
-async function loadFeed() {
+async function loadFeed({ force = false } = {}) {
   const version = ++feedVersion;
-  const target = $("fypGrid"); if (!target) return;
-  state.loading = true; target.setAttribute("aria-busy", "true"); target.innerHTML = `<div class="callout">Building your ${state.mode === "following" ? "following" : "personalized"} feed…</div>`;
+  const target = $("fypGrid");
+  if (!target) return;
+  state.loading = true;
+  target.setAttribute("aria-busy", "true");
+  target.innerHTML = `<div class="callout">Building your ${state.mode === "following" ? "following" : "personalized"} feed…</div>`;
+  const refresh = $("refreshFypBtn");
+  if (refresh) refresh.disabled = true;
+  const mode = state.mode, type = state.type;
   try {
-    if (state.mode === "for-you" && !state.preferences.feed.showRecommendations) {
+    if (mode === "for-you" && !state.preferences.feed.showRecommendations) {
       target.innerHTML = `<div class="fyp-empty card"><h2>Recommendations are off</h2><p>Your For You feed is paused in settings. Switch to Following or turn recommendations back on.</p><div class="settings-inline-actions"><button class="btn" type="button" data-fyp-mode="following">Open Following</button><a class="btn ghost" href="settings.html#feed">Open feed settings</a></div></div>`;
-      const switchButton = target.querySelector('[data-fyp-mode="following"]');
-      switchButton?.addEventListener("click", () => { state.mode = "following"; saveRemembered(); updateUrl(); applyActiveControls(); void loadFeed(); });
+      target.querySelector('[data-fyp-mode="following"]')?.addEventListener("click", () => {
+        state.mode = "following"; saveRemembered(); updateUrl(); applyActiveControls(); void loadFeed();
+      });
       return;
     }
-    const rpcName = state.mode === "following" ? "get_following_feed" : "get_personalized_feed";
-    const result = await supabase.rpc(rpcName, { p_limit: 30, p_content_type: state.type === "all" ? "all" : state.type });
+    const key = feedCacheKey(mode, type);
+    let rows = !force ? cachedFeed(feedCache, key) : null;
+    if (!rows) {
+      const rpcName = mode === "following" ? "get_following_feed" : "get_personalized_feed";
+      const response = await supabase.rpc(rpcName, {
+        p_limit: 40, p_content_type: type === "all" ? "all" : type
+      });
+      if (version !== feedVersion) return;
+      if (response.error) throw response.error;
+      rows = diversifyFeed(response.data || [], { mode });
+      feedCache.set(key, { time: Date.now(), rows });
+    }
     if (version !== feedVersion) return;
-    if (result.error) throw result.error;
-    const rows = result.data || [];
-    target.innerHTML = rows.length ? rows.map(renderRow).join("") : `<div class="fyp-empty card"><h2>${state.mode === "following" ? "Nothing from followed creators yet" : "No recommendations yet"}</h2><p>${state.mode === "following" ? "Follow creators or communities and their new content will collect here." : "Follow creators and communities, save useful posts, like topics you enjoy, and your feed will learn from those signals."}</p><a class="btn" href="index.html">Explore the community</a></div>`;
+    const visible = rows.filter(row => !suppressedContent.has(row.content_type + ":" + row.content_id));
+    target.innerHTML = visible.length
+      ? visible.map(renderRow).join("")
+      : `<div class="fyp-empty card"><h2>${mode === "following" ? "Nothing from followed creators yet" : "No recommendations yet"}</h2><p>${mode === "following" ? "Follow creators or communities to see their updates here." : "Like posts, follow people and choose Not interested to improve future recommendations."}</p><a class="btn" href="index.html">Explore the community</a></div>`;
   } catch (error) {
     if (version !== feedVersion) return;
-    target.innerHTML = `<div class="callout">Unable to load your feed right now. Please try again.</div>`; reportAppError(error, "Feed loading failed");
-  } finally { if (version === feedVersion) { state.loading = false; target.setAttribute("aria-busy", "false"); } }
+    target.innerHTML = '<div class="callout" role="alert">Unable to load your feed right now. <button class="btn ghost sm" type="button" id="retryFypBtn">Retry</button></div>';
+    target.querySelector("#retryFypBtn")?.addEventListener("click", () => void loadFeed({ force: true }));
+    console.warn("Feed loading failed:", error);
+  } finally {
+    if (version === feedVersion) {
+      state.loading = false;
+      target.setAttribute("aria-busy", "false");
+      if (refresh) refresh.disabled = false;
+    }
+  }
 }
 async function markNotInterested(card) {
-  if (!state.user || !card) return;
-  const result = await supabase.from("user_content_feedback").upsert({ user_id: state.user.id, content_type: card.dataset.contentType, content_id: card.dataset.contentId, action: "not_interested" }, { onConflict: "user_id,content_type,content_id" });
-  if (result.error) throw result.error; card.remove();
+  if (!state.user || !card || card.dataset.feedbackPending === "true") return;
+  const button = card.querySelector('[data-fyp-action="not-interested"]');
+  const contentType = card.dataset.contentType, contentId = card.dataset.contentId;
+  const key = contentType + ":" + contentId;
+  card.dataset.feedbackPending = "true";
+  if (button) { button.disabled = true; button.textContent = "Saving…"; }
+  try {
+    const result = await supabase.from("user_content_feedback").upsert({
+      user_id: state.user.id, content_type: contentType,
+      content_id: contentId, action: "not_interested"
+    }, { onConflict: "user_id,content_type,content_id" });
+    if (result.error) throw result.error;
+    suppressedContent.add(key);
+    feedCache.clear(); // Next recommendation request must use new feedback.
+    card.remove();
+    const notice = $("fypFeedbackStatus");
+    if (notice) {
+      notice.replaceChildren(document.createTextNode("This recommendation is hidden. "));
+      const undo = document.createElement("button");
+      undo.type = "button"; undo.className = "btn ghost sm"; undo.textContent = "Undo";
+      undo.addEventListener("click", async () => {
+        undo.disabled = true;
+        const rollback = await supabase.from("user_content_feedback").delete()
+          .eq("user_id", state.user.id).eq("content_type", contentType)
+          .eq("content_id", contentId).eq("action", "not_interested");
+        if (rollback.error) {
+          undo.disabled = false;
+          notice.firstChild.textContent = "Could not undo that choice. ";
+          return;
+        }
+        suppressedContent.delete(key);
+        feedCache.clear();
+        notice.textContent = "Preference restored.";
+        void loadFeed({ force: true });
+      }, { once: true });
+      notice.append(undo);
+    }
+  } catch (error) {
+    if (button) { button.disabled = false; button.textContent = "Not interested"; }
+    throw error;
+  } finally {
+    delete card.dataset.feedbackPending;
+  }
 }
 function wire() {
   document.querySelectorAll("[data-fyp-mode]").forEach((button) => button.addEventListener("click", () => { state.mode = button.dataset.fypMode || "for-you"; saveRemembered(); updateUrl(); applyActiveControls(); void loadFeed(); }));
   document.querySelectorAll("[data-fyp-filter]").forEach((button) => button.addEventListener("click", () => { state.type = button.dataset.fypFilter || "all"; saveRemembered(); updateUrl(); applyActiveControls(); void loadFeed(); }));
-  $("refreshFypBtn")?.addEventListener("click", () => void loadFeed());
+  $("refreshFypBtn")?.addEventListener("click", () => void loadFeed({ force: true }));
   $("fypGrid")?.addEventListener("click", async (event) => { const action = event.target.closest("[data-fyp-action]"); if (!action) return; event.preventDefault(); const card = action.closest(".fyp-card"); try { await markNotInterested(card); } catch (error) { reportAppError(error, "Recommendation feedback failed"); } });
 }
 async function boot() {

@@ -31,14 +31,18 @@
     <div>
       <span class="chip">For You</span>
       <h1>A feed that learns what you care about.</h1>
-      <p>Timzee combines your follows, likes, saves, reading, viewing, community activity and explicit feedback to build a discovery feed across the platform.</p>
+      <p>Discover posts, videos, discussions, stories and listings using recent activity, creators you follow, topics you like and your explicit feedback.</p>
     </div>
     <div class="fyp-hero-actions"><button class="btn" id="refreshFypBtn" type="button">Refresh feed</button><a class="btn ghost" href="settings.html#feed">Customize</a></div>
   </section>
 
   <section class="container" aria-label="For You filters">
     <div class="fyp-toolbar card">
-      <div class="fyp-filter-list" role="tablist" aria-label="Content type">
+      <div class="fyp-mode-list" role="group" aria-label="Feed mode">
+        <button class="fyp-filter active" type="button" data-fyp-mode="for-you" aria-pressed="true">For You</button>
+        <button class="fyp-filter" type="button" data-fyp-mode="following" aria-pressed="false">Following</button>
+      </div>
+      <div class="fyp-filter-list" role="group" aria-label="Content type">
         <button class="fyp-filter active" type="button" data-fyp-filter="all">Everything</button>
         <button class="fyp-filter" type="button" data-fyp-filter="post">Posts</button>
         <button class="fyp-filter" type="button" data-fyp-filter="discussion">Discussions</button>
@@ -51,6 +55,7 @@
   </section>
 
   <section class="container">
+    <p id="fypFeedbackStatus" class="fyp-feedback-status" role="status" aria-live="polite"></p>
     <div id="fypGrid" class="fyp-grid" aria-live="polite"></div>
   </section>
 </main>
