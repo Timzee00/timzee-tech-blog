@@ -768,7 +768,7 @@
               const flash = document.getElementById(`pauseflash-${idx}`);
               if (!vid) return;
               if (vid.paused) {
-                playWithSoundFallback(vid, idx);
+                playWithSoundFallback(vid, idx, {explicit:true});
                 flash.textContent = "▶";
               } else {
                 vid.pause();
@@ -983,7 +983,7 @@
             dragging = false;
             track.classList.remove("dragging");
             scrubTime?.classList.remove("show");
-            if (wasPlayingBeforeDrag) playWithSoundFallback(vid, idx);
+            if (wasPlayingBeforeDrag) playWithSoundFallback(vid, idx, {explicit:true});
           }
 
           track.addEventListener("pointerup", endDrag);
@@ -1001,7 +1001,6 @@
               if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
                 state.activeIndex = Number(idx);
                 playWithSoundFallback(vid, idx);
-                incrementVideoView(entry.target.dataset.id).catch(() => {});
                 maybeLoadMore(Number(idx));
               } else {
                 vid.pause();
@@ -1010,7 +1009,14 @@
           },
           { threshold: [0, 0.6, 1] }
         );
-        scroller.querySelectorAll(".reel-item").forEach((el) => observer.observe(el));
+        scroller.querySelectorAll(".reel-item").forEach(el => {
+          observer.observe(el);
+          const video=el.querySelector("video");
+          video?.addEventListener("playing",() => {
+            // Only genuine playback events count, not just scrolling past.
+            void incrementVideoView(el.dataset.id).catch(()=>{});
+          },{once:true});
+        });
 
         // Mark liked state for signed-in user
         if (state.user) {
@@ -1258,6 +1264,9 @@
       async function boot() {
         state.user=await getCurrentUser();
         state.preferences=mergePreferences(await loadUserPreferences(state.user));
+        if(state.mode==="for-you" && state.preferences.feed.showRecommendations===false){
+          state.mode="following"; updateReelModeButtons();
+        }
         await bootFeed(true);
       }
       boot();

@@ -172,6 +172,7 @@
       } from "./assets/js/videos-marketplace.js";
       import { getCurrentUser, signOut, supabase } from "./assets/js/supabase.js";
       import { fetchVideoDiscoveryPage } from "./assets/js/video-discovery.mjs";
+      import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
 
       let state = {
@@ -800,9 +801,17 @@
         loadVideos();
       });
 
-      // Init
-      setupAuth();
-      loadVideos();
+      // Initialize user and preferences before requesting personalized videos.
+      void (async()=>{
+        try{
+          await setupAuth();
+          const preferences=mergePreferences(await loadUserPreferences(state.user));
+          if(state.mode==="for-you" && preferences.feed.showRecommendations===false){
+            state.mode="following";updateVideoModes();
+          }
+        }catch(error){console.warn("Video preferences could not load:",error);}
+        await loadVideos();
+      })();
     </script>
   </body>
 </html>
