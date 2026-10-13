@@ -440,7 +440,10 @@ class CuratorManager {
           Source: ${escapeHTML(post.curator_sources?.name || post.source_name || 'Unknown')} • ${escapeHTML(dateText)}
         </div>
         <p style="font-size: 13px; color: var(--color-text-muted); margin: 0;">${escapeHTML(post.excerpt || 'No summary available')}</p>
+        <p class="curator-source-ref">Source: <a href="${escapeHTML(post.source_url || '#')}" target="_blank" rel="noopener noreferrer">Original report ↗</a></p>
+        <p class="curator-editorial-state" data-editorial-state="${post.id}" role="status">Source brief — expand and fact-check before publishing.</p>
         <div class="post-actions">
+          <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-expand">Expand with AI</button>
           <button class="btn btn-primary" data-post-id="${post.id}" data-type="post-approve">✓ Approve & Post</button>
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-delete">✕ Reject</button>
         </div>
@@ -474,13 +477,43 @@ class CuratorManager {
     const postId = btn.dataset.postId;
     const type = btn.dataset.type;
 
-    if (type === "post-approve") {
+    if (type === "post-expand") {
+      await this.expandCuratorPost(postId, btn);
+    } else if (type === "post-approve") {
       await this.approveCuratorPost(postId, btn);
     } else if (type === "post-delete") {
       if (await window.appUI.confirm("Reject this article?")) {
         await deleteCuratorPost(postId);
         await this.load();
       }
+    }
+  }
+
+  async expandCuratorPost(curatorPostId, btn) {
+    const post = this.posts.find(p => p.id === curatorPostId);
+    if (!post) return;
+    if (!await window.appUI.confirm("Create a longer AI-assisted article draft? This overwrites the existing source brief, but will NOT publish it. You'll still need to check the facts and review the writing.")) return;
+    const label=btn.textContent;
+    btn.disabled=true;btn.textContent="Writing draft…";
+    try {
+      const {data}=await supabase.auth.getSession();
+      const token=data?.session?.access_token;
+      if(!token) throw new Error("Sign in again to use the editorial assistant.");
+      const res=await fetch("/.netlify/functions/curator-expand-article",{
+        method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+        body:JSON.stringify({id:curatorPostId})
+      });
+      const payload=await res.json().catch(()=>({}));
+      if(!res.ok)throw new Error(payload.error||"Could not expand the article.");
+      const warnings=payload.verificationNotes||[];
+      const note=this.container.querySelector('[data-editorial-state="'+curatorPostId+'"]');
+      if(note)note.textContent="Expanded to "+payload.wordCount+" words. Fact-check before publication."+ (warnings.length ? " Check: "+warnings.slice(0,2).join("; ") : "");
+      window.appUI.toast("AI-assisted article saved as a draft. Verify each factual claim and source before publishing.",{tone:"success"});
+      await this.load();
+    } catch(error) {
+      window.appUI.toast(error?.message||"Editorial expansion failed.",{tone:"error"});
+    } finally {
+      btn.disabled=false;btn.textContent=label;
     }
   }
 
