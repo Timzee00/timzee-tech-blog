@@ -18,7 +18,7 @@ import {
 } from "./curator.js";
 
 import { supabase, getCurrentUserWithRole, getUserRole } from "./supabase.js";
-import { escapeHTML, slugify } from "./utils.js";
+import { escapeHTML, slugify, isSafeUrl } from "./utils.js";
 import { createPost } from "./data.js";
 
 class CuratorManager {
@@ -440,7 +440,7 @@ class CuratorManager {
           Source: ${escapeHTML(post.curator_sources?.name || post.source_name || 'Unknown')} • ${escapeHTML(dateText)}
         </div>
         <p style="font-size: 13px; color: var(--color-text-muted); margin: 0;">${escapeHTML(post.excerpt || 'No summary available')}</p>
-        <p class="curator-source-ref">Source: <a href="${escapeHTML(post.source_url || '#')}" target="_blank" rel="noopener noreferrer">Original report ↗</a></p>
+        <p class="curator-source-ref">Source: <a href="${isSafeUrl(post.source_url || '') ? escapeHTML(post.source_url) : '#'}" target="_blank" rel="noopener noreferrer">Original report ↗</a></p>
         <p class="curator-editorial-state" data-editorial-state="${post.id}" role="status">Source brief — expand and fact-check before publishing.</p>
         <div class="post-actions">
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-expand">Expand with AI</button>
@@ -520,7 +520,13 @@ class CuratorManager {
   async approveCuratorPost(curatorPostId, btn) {
     const curatorPost = this.posts.find(p => p.id === curatorPostId);
     if (!curatorPost) return;
-    if (!await window.appUI.confirm(`Publish "${curatorPost.title}" to the site?`)) return;
+    const articleText = String(curatorPost.content || "").replace(/<[^>]*>/g, " ").replace(/&[^;]+;/g, " ");
+    const articleWords = articleText.trim().split(/\s+/).filter(Boolean).length;
+    if(articleWords<240){
+      window.appUI.toast("This source brief is too short for an original blog article. Expand and fact-check it first.",{tone:"warning"});
+      return;
+    }
+    if (!await window.appUI.confirm(`Publish "${curatorPost.title}" to the site? Confirm that you checked the factual claims, editorial quality and source attribution.`)) return;
 
     const originalText = btn.textContent;
     btn.disabled = true;
