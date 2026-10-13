@@ -167,15 +167,26 @@ exports.handler = async (event) => {
   // Service-role-only operational status, never exposed in public responses.
   // Preserve the existing five-minute publication automation separately.
   const finishedAt = new Date().toISOString();
+  const sourceFailures = feedErrors.filter(item=>item.source && finalSources.some(src=>src.name===item.source)).length;
+  const failed = finalSources.length > 0 && sourceFailures >= finalSources.length && posted.length === 0;
+  const status = failed ? "failed" : feedErrors.length ? "partial" : posted.length ? "success" : "no_new_articles";
   const statusWrite = await supabase.from("system_job_status").upsert({
     job_name: "curator-scout",
     last_started_at: startedAt,
-    last_succeeded_at: finishedAt,
+    ...(failed ? {last_failed_at:finishedAt} : {last_succeeded_at:finishedAt}),
     last_result: { reviewed_drafts_created: posted.length, sources_checked: finalSources.length,
-      source_errors: feedErrors.length, max_sources_per_run: SCOUT_LIMITS.MAX_SOURCES },
-    last_error: feedErrors.length ? "Some sources failed or were deferred; see curator logs." : null,
+      source_errors: feedErrors.length, status, max_sources_per_run: SCOUT_LIMITS.MAX_SOURCES },
+    last_error: failed ? "All checked feeds failed." : feedErrors.length ? "Some sources failed; inspect feed errors." : null,
     updated_at: finishedAt
   }, { onConflict: "job_name" });
   if (statusWrite.error) console.warn("Curator scout status update failed:", statusWrite.error.message);
-  return jsonResponse(200, { ok: true, posted, feedErrors, sourcesChecked: finalSources.length });
+  const legacyStatus = await supabase.from("curator_settings").update({
+    scout_last_run_at: finishedAt, scout_last_status: status
+  }).eq("id",settingsResult.data?.id);
+  if (legacyStatus.error) console.warn("Curator settings status update failed:",legacyStatus.error.message);
+  if (failed) {
+    console.error("All curator feeds failed:", feedErrors.map(entry=>({source:entry.source,error:entry.error})));
+    return jsonResponse(502,{ok:false,error:"All checked news sources failed. Review source errors and try again.",feedErrors,sourcesChecked:finalSources.length});
+  }
+  return jsonResponse(200,{ok:true,status,posted,feedErrors,sourcesChecked:finalSources.length});
 };

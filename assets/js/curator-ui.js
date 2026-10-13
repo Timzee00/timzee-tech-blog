@@ -313,9 +313,10 @@ class CuratorManager {
     try {
       const result = await triggerScoutSync();
       const count = result.posted ? result.posted.length : 0;
+      const status=result.status || "unknown";
       const errorCount = result.feedErrors ? result.feedErrors.length : 0;
       if (lastSync) {
-        lastSync.textContent = `Synced ${new Date().toLocaleTimeString()} — ${count} new article${count === 1 ? "" : "s"}${errorCount ? `, ${errorCount} feed error${errorCount === 1 ? "" : "s"}` : ""}`;
+        lastSync.textContent = `Sync ${status} at ${new Date().toLocaleTimeString()} — ${count} new draft${count === 1 ? "" : "s"}${errorCount ? `, ${errorCount} source error${errorCount === 1 ? "" : "s"}` : ""}`;
       }
       await this.load();
     } catch (error) {
