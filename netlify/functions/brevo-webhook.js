@@ -11,6 +11,8 @@ const suppressedEventKinds={
   hardbounce:"hard_bounce",
   invalid_email:"invalid",
   spam:"spam",
+  complaint:"spam",
+  complained:"spam",
   invalid:"invalid",
   blocked:"blocked"
 };
