@@ -748,7 +748,7 @@
 
         // Tap to play/pause, double-tap to like (Instagram/TikTok style)
         const tapState = {};
-        scroller.querySelectorAll("[data-tap]":not([data-reel-tap-wired])").forEach((zone) => {
+        scroller.querySelectorAll("[data-tap]:not([data-reel-tap-wired])").forEach((zone) => {
 
           zone.dataset.reelTapWired="true";
           zone.addEventListener("click", (e) => {
@@ -786,7 +786,7 @@
         });
 
         // Mute toggle
-        scroller.querySelectorAll(".reel-mute":not([data-reel-mute-wired])").forEach((btn) => {
+        scroller.querySelectorAll(".reel-mute:not([data-reel-mute-wired])").forEach((btn) => {
 
           btn.dataset.reelMuteWired="true";
           btn.addEventListener("click", (e) => {
@@ -805,7 +805,7 @@
         });
 
         // Expand caption on tap
-        scroller.querySelectorAll(".reel-caption":not([data-reel-caption-wired])").forEach((cap) => {
+        scroller.querySelectorAll(".reel-caption:not([data-reel-caption-wired])").forEach((cap) => {
 
           cap.dataset.reelCaptionWired="true";
           cap.addEventListener("click", (e) => {
@@ -865,7 +865,7 @@
           );
         }
 
-        scroller.querySelectorAll('[data-action="like"]':not([data-reel-like-wired])').forEach((btn) => {
+        scroller.querySelectorAll('[data-action="like"]:not([data-reel-like-wired])').forEach((btn) => {
 
           btn.dataset.reelLikeWired="true";
           btn.addEventListener("click", (e) => {
@@ -877,7 +877,7 @@
         });
 
         // Comment drawer
-        scroller.querySelectorAll('[data-action="comment"]':not([data-reel-comment-wired])').forEach((btn) => {
+        scroller.querySelectorAll('[data-action="comment"]:not([data-reel-comment-wired])').forEach((btn) => {
 
           btn.dataset.reelCommentWired="true";
           btn.addEventListener("click", (e) => {
@@ -887,7 +887,7 @@
         });
 
         // Share
-        scroller.querySelectorAll('[data-action="share"]':not([data-reel-share-wired])').forEach((btn) => {
+        scroller.querySelectorAll('[data-action="share"]:not([data-reel-share-wired])').forEach((btn) => {
 
           btn.dataset.reelShareWired="true";
           btn.addEventListener("click", async (e) => {
@@ -906,7 +906,7 @@
           });
         });
 
-        scroller.querySelectorAll('[data-action="download"]':not([data-reel-download-wired])').forEach((btn) => {
+        scroller.querySelectorAll('[data-action="download"]:not([data-reel-download-wired])').forEach((btn) => {
 
           btn.dataset.reelDownloadWired="true";
           btn.addEventListener("click", async (e) => {
@@ -940,7 +940,7 @@
         });
 
         // Progress bar: passive update + drag-to-seek + buffering spinner
-        scroller.querySelectorAll(".reel-video":not([data-reel-video-wired])").forEach((vid) => {
+        scroller.querySelectorAll(".reel-video:not([data-reel-video-wired])").forEach((vid) => {
 
           vid.dataset.reelVideoWired="true";
           const idx = vid.id.split("-")[1];
