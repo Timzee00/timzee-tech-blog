@@ -91,7 +91,32 @@ exports.handler=async(event)=>{
       }
     }
     let transformed;
-    try{transformed=normalizedArticle(raw,post.source_url,post.source_name);}catch(e){return respond(422,{error:"AI draft needs more editorial substance: "+e.message});}
+    try {
+      transformed=normalizedArticle(raw,post.source_url,post.source_name);
+    } catch(initialError) {
+      // A model may return a valid story in the wrong JSON shape. Offer ONE
+      // bounded repair attempt without fetching more source material or
+      // relaxing factual-evidence and publishing safeguards.
+      const repairRequest={
+        model,temperature:0.1,max_tokens:3800,
+        messages:[
+          {role:"system",content:system+" Fix structural mistakes in the supplied draft. Every section needs at least one substantive paragraph. Return complete JSON only. Do not invent or pad facts."},
+          {role:"user",content:user+"\\nPREVIOUS DRAFT (untrusted output):\\n"+raw.slice(0,9000)+"\\nVALIDATION ISSUE: "+String(initialError.message).slice(0,200)}
+        ]
+      };
+      try {
+        const repair=await fetch(endpoint,{
+          method:"POST",signal:AbortSignal.timeout(20000),
+          headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",...(provider==="openrouter"?{"X-OpenRouter-Title":"Timzee Tech Hub Editorial"}:{})},
+          body:JSON.stringify(repairRequest)
+        });
+        if(!repair.ok)return respond(422,{error:"The generated article requires manual editorial work: "+initialError.message});
+        const repaired=await repair.json();
+        transformed=normalizedArticle(String(repaired.choices?.[0]?.message?.content||""),post.source_url,post.source_name);
+      } catch(error) {
+        return respond(422,{error:"The source needs additional verified reporting or the model produced an incomplete article. No draft was overwritten. "+String(error.message||initialError.message).slice(0,180)});
+      }
+    }
     // Persist as DRAFT ONLY. Never auto-publish, approve or issue notifications.
     const result=await db.from("curator_posts").update({
       content:transformed.content,title:transformed.title||post.title,excerpt:transformed.excerpt,description:transformed.excerpt,
