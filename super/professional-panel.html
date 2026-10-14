@@ -112,6 +112,15 @@
       <section class="admin-card" data-panel="users">
         <h2>👤 Users</h2>
         <p style="color: var(--color-text-muted); margin-bottom: 20px;">View and manage user accounts</p>
+        <section class="form-card" style="margin-bottom:18px" aria-labelledby="reengagementTitle">
+          <h3 id="reengagementTitle">Bring members back</h3>
+          <p>View how many existing accounts have been inactive, check whether email permission is recorded, and promote your updated community without enrolling people silently.</p>
+          <div class="inline-actions" style="display:flex;flex-wrap:wrap;gap:10px">
+            <a class="btn" href="email-operations.html?legacyRecovery=1">View dormant members &amp; email eligibility</a>
+            <button type="button" class="btn ghost" id="copyMemberReturnInvite">Copy comeback invitation</button>
+          </div>
+          <p class="hint" id="memberReturnInviteStatus" role="status">Email outreach requires prior permission. Sharing a public invitation does not send an email or message automatically.</p>
+        </section>
         <div class="admin-management-controls"><div class="admin-management-row"><input type="search" id="superUserSearch" placeholder="Search by name, username or email"><button class="btn ghost" id="superUserFind">Search</button></div><p id="superUserSummary" role="status"></p></div><div id="allUsersContainer" class="admin-compact-list">Loading users...</div><div class="admin-list-pager"><button class="btn ghost" id="superUserPrev">Previous</button><span id="superUserPage">Page 1</span><button class="btn ghost" id="superUserNext">Next</button></div>
       </section>
 
@@ -712,6 +721,16 @@
         document.getElementById("superPostFind").addEventListener("click",()=>{adminPager.postPage=1;void loadPosts();});
         document.getElementById("superPostSearch").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();adminPager.postPage=1;void loadPosts();}});
         document.getElementById("superPostStatus").addEventListener("change",()=>{adminPager.postPage=1;void loadPosts();});
+        document.getElementById("copyMemberReturnInvite")?.addEventListener("click",async()=>{
+          const status=document.getElementById("memberReturnInviteStatus");
+          const message="We've refreshed Timzee Tech Hub with discussions, tech articles and community features. Come see what's new: https://timzee-tech-blog.netlify.app/";
+          try{
+            await navigator.clipboard.writeText(message);
+            status.textContent="Invitation copied. Share it only through channels where you have permission to contact recipients.";
+          }catch(error){
+            status.textContent="Copy unavailable here. Open the public Timzee Tech Hub homepage and share its link manually.";
+          }
+        });
         document.getElementById("superUserFind").addEventListener("click",()=>{adminPager.userPage=1;void loadUsers();});
         document.getElementById("superUserSearch").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();adminPager.userPage=1;void loadUsers();}});
         for(const kind of ["Post","User"]){
