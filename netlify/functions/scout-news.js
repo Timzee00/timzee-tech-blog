@@ -4,6 +4,7 @@ const { requireRole } = require("./_lib/auth-role.js");
 const { randomUUID } = require("crypto");
 const { isScheduledInvocation } = require("./_lib/scheduled-event.cjs");
 const { clampScoutItems, scheduleScoutSources, classifyScoutSource, normalizeScoutDate, normalizeScoutArticleUrl, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
+const {rankScoutItems, topicFor} = require("./_lib/scout-ranking.cjs");
 
 const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(payload) });
 function escapeHTML(text = "") { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;"); }
@@ -11,8 +12,8 @@ function stripHTML(text = "") { return text.replace(/<[^>]*>/g, " ").replace(/\s
 function slugify(text = "") { return text.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 80); }
 function parseEnvFeeds(value = "") { return (value || "").split(",").map((entry) => entry.trim()).filter(Boolean); }
 function normalizeTags(...tagSets) { const tags = new Set(); tagSets.forEach((set) => { if (!set) return; if (Array.isArray(set)) { set.forEach((tag) => tags.add(String(tag).toLowerCase().trim())); return; } if (typeof set === "string") set.split(",").map((tag) => tag.trim()).filter(Boolean).forEach((tag) => tags.add(tag.toLowerCase())); }); return Array.from(tags).filter(Boolean).slice(0, 8); }
-function rewriteExcerpt(summary, title) { const base = stripHTML(summary || title || ""); if (!base) return ""; return `In brief: ${base.length > 200 ? `${base.slice(0, 200).trim()}...` : base}`; }
-function buildContent(summary) { const cleaned = stripHTML(summary || ""); const sentences = cleaned.split(/[.!?]\s+/).map((s) => s.trim()).filter((s) => s.length > 30); const bullets = sentences.slice(0, 3); return `${cleaned ? `<p>${escapeHTML(cleaned)}</p>` : ""}${bullets.length ? `<ul>${bullets.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul>` : ""}`; }
+function rewriteExcerpt(summary, title) { const base = stripHTML(summary || title || ""); if (!base) return ""; return base.length > 235 ? `${base.slice(0, 235).trim()}…` : base; }
+function buildContent(summary,sourceUrl) { const cleaned = stripHTML(summary || "").slice(0,5500); return '<p>'+escapeHTML(cleaned || "This source requires additional editorial research.")+'</p><p><strong>Editorial status:</strong> Source brief. Enrich with corroborated information and human review before publication.</p><p>Original reporting: <a href="'+escapeHTML(sourceUrl)+'" target="_blank" rel="noopener noreferrer">Read source</a>.</p>'; }
 function getDomain(url = "") { try { return new URL(url).hostname.replace("www.", ""); } catch { return ""; } }
 function extractRssImage(item) { const mediaContent = item["media:content"] || item["media:thumbnail"]; const mediaUrl = Array.isArray(mediaContent) ? mediaContent[0]?.$?.url || mediaContent[0]?.url : mediaContent?.$?.url || mediaContent?.url; if (mediaUrl) return mediaUrl; const enclosure = item.enclosure || (item.enclosures && item.enclosures[0]); return enclosure?.url && (enclosure.type || "").startsWith("image") ? enclosure.url : ""; }
 async function fetchRssItems(source, parser) { if (!source.feed_url) return []; const feed = await parser.parseURL(source.feed_url); return (feed.items || []).map((item) => ({ title: item.title || "", link: item.link || "", published_at: item.isoDate || item.pubDate || new Date().toISOString(), summary: item.contentSnippet || item.summary || item.content || "", tags: item.categories || [], image_url: extractRssImage(item) })); }
@@ -127,7 +128,7 @@ exports.handler = async (event) => {
     let unusableArticles = 0;
     let inspectedArticles = 0;
     const insertErrors = [];
-    for (const item of items.slice(0, SCOUT_LIMITS.MAX_ARTICLES_INSPECTED)) {
+    for (const item of rankScoutItems(items.slice(0, SCOUT_LIMITS.MAX_ARTICLES_INSPECTED),{limit:SCOUT_LIMITS.MAX_ARTICLES_INSPECTED,maxPerTopic:8})) {
       if (Date.now() >= deadline) break;
       inspectedArticles++;
       if (insertedCount >= perSource) break;
@@ -146,12 +147,12 @@ exports.handler = async (event) => {
         slug,
         excerpt: rewriteExcerpt(summary, title),
         description: rewriteExcerpt(summary, title),
-        content: buildContent(summary),
+        content: buildContent(summary,articleUrl),
         source_url: articleUrl,
         url: articleUrl,
         author: source.name,
         published_at: normalizeScoutDate(item.published_at),
-        tags: normalizeTags(source.tags, item.tags),
+        tags: normalizeTags(source.tags, item.tags, [topicFor(item)]),
         image_url: item.image_url || "",
         image_source_url: item.image_url || item.link,
         image_credit: source.image_credit || source.name || getDomain(item.link),

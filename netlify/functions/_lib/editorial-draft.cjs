@@ -6,17 +6,17 @@ function normalizedArticle(response, sourceUrl,sourceName) {
   const data=typeof response==="string"?JSON.parse(response.replace(/^```(?:json)?\s*|\s*```$/gi,"").trim()):response;
   if(!data || !Array.isArray(data.sections) || data.sections.length<3 || data.sections.length>7)
     throw Error("The model did not produce a structured article.");
-  const intro=toText(data.introduction,1800), conclusion=toText(data.conclusion,1400);
+  const intro=toText(data.introduction,2600), conclusion=toText(data.conclusion,2400);
   if(intro.length<80 || conclusion.length<60)throw Error("The generated opening or conclusion is too short.");
   const sections=data.sections.map(s=>({
     heading:toText(s?.heading,110),
-    paragraphs:Array.isArray(s?.paragraphs)?s.paragraphs.map(p=>toText(p,1700)).filter(Boolean).slice(0,3):[]
+    paragraphs:Array.isArray(s?.paragraphs)?s.paragraphs.map(p=>toText(p,2600)).filter(Boolean).slice(0,4):[]
   }));
   if(sections.some(s=>!s.heading || !s.paragraphs.length || s.paragraphs.some(p=>p.length<65)))
     throw Error("The generated article has incomplete sections.");
   const contentText=[intro,...sections.flatMap(s=>s.paragraphs),conclusion].join(" ");
   const words=contentText.split(/\s+/).length;
-  if(words<240 || words>1150)throw Error("The article must contain 240–1,150 words for editorial review.");
+  if(words<450 || words>1450)throw Error("The article must contain 450–1,450 words for editorial review.");
   const safeUrl=new URL(sourceUrl);
   if(!["https:","http:"].includes(safeUrl.protocol))throw Error("Invalid source URL.");
   const html=[
