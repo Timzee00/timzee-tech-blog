@@ -17,12 +17,12 @@ let mentionRequest = 0;
  * Search for users to mention
  */
 export async function searchUsersForMention(query) {
-  if (!query || query.length < 1 || query.length > 32 || !/^[a-z0-9_]+$/i.test(query)) return [];
+  if (query.length > 32 || !/^[a-z0-9_]*$/i.test(query)) return [];
   
   // Check cache first
   const cacheKey = `mention_${query.toLowerCase()}`;
-  if (mentionCache[cacheKey]) {
-    return mentionCache[cacheKey];
+  if (mentionCache[cacheKey] && Date.now()-mentionCache[cacheKey].time < 45000) {
+    return mentionCache[cacheKey].results;
   }
 
   try {
@@ -30,6 +30,7 @@ export async function searchUsersForMention(query) {
       .from("public_profiles")
       .select("id, username, display_name, avatar_url")
       .ilike("username", `${query}%`)
+      .order("username", {ascending:true})
       .limit(10);
 
     if (error) {
@@ -44,7 +45,7 @@ export async function searchUsersForMention(query) {
       avatar_url: user.avatar_url
     }));
 
-    mentionCache[cacheKey] = results;
+    mentionCache[cacheKey] = {time:Date.now(),results};
     return results;
   } catch (error) {
     console.error("Mention search failed:", error);
@@ -156,9 +157,12 @@ export function insertMention(field, username, searchTerm) {
   const text = field.value;
   const cursorPos = field.selectionStart;
   
-  // Find the @ symbol
-  let atIndex = text.lastIndexOf("@", cursorPos - 1);
-  if (atIndex === -1) atIndex = 0;
+  // Only replace the mention token immediately before the caret. Never
+  // overwrite an unrelated earlier @ mention or an email address.
+  const prefix=text.slice(0,cursorPos);
+  const match=prefix.match(/(^|[^\\w@])@([a-z0-9_]*)$/i);
+  if (!match) return;
+  const atIndex=cursorPos-match[2].length-1;
 
   // Replace the @ with mention
   const before = text.substring(0, atIndex);

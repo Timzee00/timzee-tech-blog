@@ -656,9 +656,17 @@ class CuratorManager {
       (permitted?'Images marked as rights-verified by editor. ':'Image rights are not confirmed. ')+
       (credited?'Credit: '+escapeHTML(credited)+'. ':'')+
       'This is a private preview and has not been published.</p></article></div>';
-    dialog.style.cssText="position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(760px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:hidden;padding:0;border-radius:16px;";
-    dialog.querySelector(".curator-preview-body").style.cssText="max-height:calc(100dvh - 100px);overflow-y:auto;overflow-x:hidden;padding:clamp(12px,3vw,24px);";
-    dialog.querySelectorAll("img,iframe,video").forEach(media=>{media.style.maxWidth="100%";media.style.width="100%";media.style.height="auto";});
+    dialog.style.cssText="position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(760px,calc(100vw - 20px));min-width:0;max-width:calc(100vw - 20px);height:min(92dvh,900px);max-height:calc(100dvh - 20px);overflow:hidden;padding:0;border-radius:16px;display:flex;flex-direction:column;";
+    const body=dialog.querySelector(".curator-preview-body");
+    body.style.cssText="flex:1 1 auto;min-height:0;min-width:0;max-width:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:clamp(12px,3vw,24px);";
+    dialog.querySelector(".curator-preview-toolbar").style.cssText="display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;padding:12px 16px;";
+    dialog.querySelectorAll(".post-shell,.post-article,.post-content,.curator-preview-cover,figure").forEach(el=>{
+      el.style.minWidth="0";el.style.maxWidth="100%";el.style.overflowWrap="anywhere";
+    });
+    dialog.querySelectorAll("img,iframe,video").forEach(media=>{
+      media.style.maxWidth="100%";media.style.width="100%";media.style.height="auto";
+      media.style.objectFit="contain";
+    });
     document.body.append(dialog);
     const close=()=>dialog.close();
     dialog.querySelector(".curator-preview-close")?.addEventListener("click",close);

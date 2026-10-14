@@ -18,8 +18,10 @@ exports.handler=async(event)=>{
   const db=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
   const role=await requireRole(db,token,["admin","super"],"Only editors can expand article drafts.");
   if(role.error)return respond(403,{error:role.error});
-  const provider=process.env.CURATOR_AI_PROVIDER==="openrouter"?"openrouter":"groq";
-  const apiKey=provider==="openrouter"?process.env.OPENROUTER_API_KEY:process.env.GROQ_API_KEY;
+  const requested=process.env.CURATOR_AI_PROVIDER==="openrouter"?"openrouter":"groq";
+  const provider=requested==="groq" && !process.env.GROQ_API_KEY?.trim() && process.env.OPENROUTER_API_KEY?.trim()
+    ? "openrouter" : requested;
+  const apiKey=provider==="openrouter"?process.env.OPENROUTER_API_KEY?.trim():process.env.GROQ_API_KEY?.trim();
   if(!apiKey)return respond(503,{error:provider==="openrouter"?"OPENROUTER_API_KEY is unavailable to this deployed Function. Check its context/scope and redeploy.":"GROQ_API_KEY is unavailable to this deployed Function. Check its context/scope and redeploy.",provider});
   const {data:post,error}=await db.from("curator_posts").select("id,title,content,excerpt,description,source_name,source_url,status,is_posted").eq("id",id).maybeSingle();
   if(error)return respond(500,{error:"Could not load the draft."});

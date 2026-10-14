@@ -792,6 +792,7 @@
             const vid = document.getElementById(`video-${idx}`);
             if (!vid) return;
             state.sessionMuted = !vid.muted;
+            try { sessionStorage.setItem("timzee:reels-muted",String(state.sessionMuted)); } catch {}
             scroller.querySelectorAll(".reel-video").forEach(item => { item.muted = state.sessionMuted; });
             scroller.querySelectorAll(".reel-mute").forEach(button => {
               button.textContent = state.sessionMuted ? "🔇" : "🔊";
@@ -1291,7 +1292,10 @@
       async function boot() {
         state.user=await getCurrentUser();
         state.preferences=mergePreferences(await loadUserPreferences(state.user));
-        state.sessionMuted = state.preferences.videos.mutedByDefault === true;
+        try {
+          const savedMute=sessionStorage.getItem("timzee:reels-muted");
+          state.sessionMuted = savedMute === null ? state.preferences.videos.mutedByDefault === true : savedMute === "true";
+        } catch { state.sessionMuted = state.preferences.videos.mutedByDefault === true; }
         if(state.mode==="for-you" && state.preferences.feed.showRecommendations===false){
           state.mode="following"; updateReelModeButtons();
         }
