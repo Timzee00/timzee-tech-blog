@@ -58,7 +58,7 @@ test("explicit button calls only the account-owned opt-in RPC",async()=>{
   assert.equal(button.textContent,"Enabled");
 });
 test("not now and don't show again remember user choice without sending",async()=>{
-  for(const [action,expected] of [["Not now","until"],["Don't show again","never"]]){
+  for(const [action,expected] of [["Not now","until"],["Hide on this device","never"]]){
     const env=setup();
     await env.fn({user:existing,supabase:env.supabase});
     const btn=env.main.children[0].children[1].children.find(x=>x.textContent===action);
