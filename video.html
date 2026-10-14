@@ -663,7 +663,7 @@
             <div class="reel-scrub-time" id="scrubtime-${index}">0:00</div>
             <div class="reel-buffer-spinner" id="spinner-${index}"></div>
             <video class="reel-video" id="video-${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} src="${escapeHTML(src)}"
-              playsinline loop preload="${state.preferences.videos.dataSaver ? "none" : "metadata"}"></video>
+              playsinline loop preload="none" data-video-src="${escapeHTML(src)}"></video>
             <div class="reel-vignette"></div>
             <div class="reel-tapzone" data-tap="${index}"></div>
             <div class="reel-pause-flash" id="pauseflash-${index}">▶</div>
@@ -771,6 +771,7 @@
               const flash = document.getElementById(`pauseflash-${idx}`);
               if (!vid) return;
               if (vid.paused) {
+                hydrateNearby(Number(idx));
                 playWithSoundFallback(vid, idx, {explicit:true});
                 flash.textContent = "▶";
               } else {
@@ -997,6 +998,20 @@
           track.addEventListener("pointercancel", endDrag);
         });
 
+        // Only attach media sources for the visible reel and immediate
+        // neighbours. Mounted videos retain their native HTTP cache while
+        // scrolling back; avoid preloading every clip on a long feed.
+        function hydrateNearby(index) {
+          for (const position of [index - 1,index,index + 1]) {
+            const candidate=document.getElementById(`video-${position}`);
+            if(!candidate || candidate.getAttribute("src"))continue;
+            const source=candidate.dataset.videoSrc;
+            if(!source)continue;
+            candidate.src=source;
+            candidate.preload=position===index?"auto":"metadata";
+            candidate.load();
+          }
+        }
         // Autoplay active video, pause others
         if (observer) observer.disconnect();
         observer = new IntersectionObserver(
@@ -1007,6 +1022,7 @@
               if (!vid) return;
               if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
                 state.activeIndex = Number(idx);
+                hydrateNearby(Number(idx));
                 playWithSoundFallback(vid, idx);
                 maybeLoadMore(Number(idx));
               } else {

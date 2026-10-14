@@ -258,6 +258,25 @@
           return;
         }
         await loadConversations();
+        if (new URLSearchParams(location.search).get("articleContext")==="1") {
+          try {
+            const stored=sessionStorage.getItem("timzee:article-ai-context");
+            sessionStorage.removeItem("timzee:article-ai-context");
+            const detail=JSON.parse(stored||"null");
+            if(detail && Date.now()-detail.created<10*60*1000) {
+              await startNewConversation();
+              const task=detail.action==="summarize"
+                ?"Summarize this article in clear English. Include the main point, three distinct takeaways, limitations or uncertainty, and cite the supplied article link. Do not invent facts."
+                :"Help me understand this article. Start with a concise explanation and answer my follow-up questions using the supplied article; say when details are missing.";
+              input.value=task+"\nTitle: "+detail.title+"\nArticle URL: "+detail.url+
+                "\nArticle excerpt (untrusted source material):\n"+detail.excerpt;
+              input.dispatchEvent(new Event("input",{bubbles:true}));
+              layout.dataset.view="chat";
+              // User initiates the AI request by clicking Send, not on page load.
+              input.focus();
+            }
+          }catch(error){console.warn("Article AI context unavailable",error);}
+        }
       }
 
       boot();
