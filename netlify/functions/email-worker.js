@@ -3,7 +3,11 @@ const { createClient } = require("@supabase/supabase-js");
 const templates = {
   contact_received: { subject: "We received your message | Timzee Tech Hub", body: "Your message has reached our team." },
   support_received: { subject: "Support request received | Timzee Tech Hub", body: "Your support request has been received. Our team will review it." },
-  advertising_received: { subject: "Advertising inquiry received | Timzee Tech Hub", body: "Thank you for your advertising inquiry. We'll review your request." }
+  advertising_received: { subject: "Advertising inquiry received | Timzee Tech Hub", body: "Thank you for your advertising inquiry. We'll review your request." },
+  message_digest: { subject: "Your unread messages | Timzee Tech Hub", body: "You have unread message notifications." },
+  mention_digest: { subject: "Mentions and replies | Timzee Tech Hub", body: "You have unread mentions or replies." },
+  marketplace_alerts: { subject: "Marketplace updates | Timzee Tech Hub", body: "You have unread marketplace notifications." },
+  community_digest: { subject: "Community updates | Timzee Tech Hub", body: "You have unread community notifications." }
 };
 function escapeHtml(s) {
   return String(s || "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -14,9 +18,18 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
   if(!template) throw new Error("Unrecognized template");
   const name=String(job.payload?.name || "").slice(0,120);
   const reference=String(job.payload?.reference || "").slice(0,100);
+  const isDigest=job.template.endsWith("_digest") || job.template==="marketplace_alerts";
+  const digestCount=Number.isSafeInteger(Number(job.payload?.count)) ?
+    Math.max(1,Math.min(9999,Number(job.payload?.count))) : 1;
   const intro=name ? `Hello ${name},` : "Hello,";
-  const text=`${intro}\n\n${template.body}\n\nReference: ${reference}\n\nTimzee Tech Hub`;
-  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><h2 style="color:#0f766e">Timzee Tech Hub</h2><p>${escapeHtml(intro)}</p><p>${escapeHtml(template.body)}</p><p><strong>Reference:</strong> ${escapeHtml(reference)}</p><hr><small>Transactional notification regarding your request. Do not reply with passwords or sensitive details.</small></div>`;
+  const message=isDigest ?
+    `${template.body} ${digestCount} unread update${digestCount===1?"":"s"} in the last 24 hours. Sign in to review them.` : template.body;
+  const referenceLine=isDigest?"":`Reference: ${reference}\n\n`;
+  const settingsUrl="https://timzee-tech-blog.netlify.app/settings.html#email";
+  const text=`${intro}\n\n${message}\n\n${referenceLine}${isDigest ? `Manage email preferences: ${settingsUrl}\n\n` : ""}Timzee Tech Hub`;
+  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><h2 style="color:#0f766e">Timzee Tech Hub</h2><p>${escapeHtml(intro)}</p><p>${escapeHtml(message)}</p>${isDigest ?
+    `<p><a href="${settingsUrl}">Manage email preferences</a></p>` :
+    `<p><strong>Reference:</strong> ${escapeHtml(reference)}</p>`}<hr><small>${isDigest?"You opted in to this optional digest. Disable it in your account settings.":"Transactional notification regarding your request."} Do not reply with passwords or sensitive details.</small></div>`;
   let res;
   try {
     res=await fetch("https://api.brevo.com/v3/smtp/email",{
