@@ -40,6 +40,35 @@ export function generateRoundupDraft(rows,topic){
   ].join("\n");
   return {title:items.length+' '+heading+' updates worth knowing',content,excerpt:'A sourced roundup of '+items.length+' '+topic+' updates. Verify each announcement before acting.',tags:[topic,"roundup"],source_url:items[0].url,source_id:rows[0].source_id,source_name:"Timzee curated roundup",image_url:rows[0].image_url||"",published_at:new Date().toISOString(),status:"draft"};
 }
+
+const ROUNDUP_SIGNALS={
+  jobs:/\b(hiring|job opening|remote job|vacanc(?:y|ies)|recruit(?:ment|ing)|apply for.*role|career opportunities)\b/i,
+  scholarships:/\b(scholarship|studentship|tuition funding|fully funded|study grant|bursar(?:y|ies))\b/i,
+  opportunities:/\b(fellowship|internship|accelerator|grant application|competition|application deadline|training opportunity)\b/i,
+  freebies:/\b(free (?:plan|tier|access|course|software|resource|trial)|giveaway|freebie|no.cost offer)\b/i,
+  travel:/\b(visa|work permit|study abroad|relocation|travel opportunity|digital nomad|immigration)\b/i,
+  football:/\b(football|premier league|uefa|fifa|champions league|transfer window|la liga|serie a)\b/i,
+  sports:/\b(sport|basketball|nba|tennis|olympic|athlete|world cup)\b/i,
+  music:/\b(music|album|single|song|singer|record label|streaming charts)\b/i,
+  entertainment:/\b(celebrity|actor|movie|film|entertainment|tv series)\b/i,
+  world:/\b(election|government|war|diplomacy|conflict|sanctions|foreign policy)\b/i,
+  ai:/\b(artificial intelligence|machine learning|neural network|llm|ai model|ai agent)\b/i,
+  security:/\b(cybersecurity|malware|vulnerability|ransomware|data breach|security patch)\b/i,
+  builders:/\b(indie developer|open.source|github project|build in public|side project)\b/i,
+  software:/\b(software|operating system|browser|framework|developer tooling|database)\b/i
+};
+export function suggestRoundupIds(rows,topic,{limit=6}={}){
+  const signal=ROUNDUP_SIGNALS[topic];
+  if(!signal)return [];
+  const matches=[];
+  for(const row of rows||[]){
+    if(!trustedExternalUrl(row?.source_url)||!row?.id)continue;
+    const text=[row.title,row.excerpt,row.description,...(Array.isArray(row.tags)?row.tags:[])].join(" ").slice(0,3000);
+    if(signal.test(text))matches.push(row.id);
+  }
+  return matches.length>=2?matches.slice(0,Math.max(2,Math.min(6,limit))):[];
+}
+
 export function socialCaption(title,url,topic="news"){
   const link=trustedExternalUrl(url);if(!link)throw Error("A public URL is required.");
   return plainText(title).slice(0,160)+"\n\nRead this "+plainText(topic).slice(0,40)+" update on Timzee Tech Hub, with sources and context:\n"+link;

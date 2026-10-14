@@ -22,7 +22,7 @@ import {
 import { supabase, getCurrentUserWithRole, getUserRole } from "./supabase.js";
 import { escapeHTML, slugify, isSafeUrl } from "./utils.js";
 import { createPost, createPostMedia } from "./data.js";
-import { ROUNDUP_TOPICS, generateRoundupDraft, trustedExternalUrl, imageUrls, htmlEscape, socialCaption } from "./curator-publishing.mjs";
+import { ROUNDUP_TOPICS, generateRoundupDraft, suggestRoundupIds, trustedExternalUrl, imageUrls, htmlEscape, socialCaption } from "./curator-publishing.mjs";
 
 class CuratorManager {
   constructor() {
@@ -166,6 +166,7 @@ class CuratorManager {
             <select id="roundupTopic" class="field">
               ${ROUNDUP_TOPICS.map(topic => '<option value="'+htmlEscape(topic)+'">'+htmlEscape(topic)+'</option>').join("")}
             </select>
+            <button type="button" class="btn ghost" id="suggestCuratorRoundup">Suggest related stories</button>
             <button type="button" class="btn ghost" id="createCuratorRoundup">Group selected stories into draft</button>
             <span id="roundupSelectionCount" role="status">0 selected (2–6 required)</span>
           </div>
@@ -286,6 +287,7 @@ class CuratorManager {
     });
 
     this.container.querySelector("#createCuratorRoundup")?.addEventListener("click",()=>void this.createRoundup());
+    this.container.querySelector("#suggestCuratorRoundup")?.addEventListener("click",()=>this.suggestRoundup());
 
     // Add source
     this.container.querySelector("#addSourceBtn").addEventListener("click", () => {
@@ -498,6 +500,18 @@ class CuratorManager {
       this.container.querySelector("#roundupSelectionCount").textContent=this.roundupIds.size+" selected (2–6 required)";
     }));
     this.container.querySelector("#roundupSelectionCount").textContent=this.roundupIds.size+" selected (2–6 required)";
+  }
+
+  suggestRoundup(){
+    const topic=this.container.querySelector("#roundupTopic")?.value||"";
+    const ids=suggestRoundupIds(this.posts,topic);
+    if(ids.length<2){
+      window.appUI.toast("Not enough matching source briefs. Select two or more verified items manually.",{tone:"warning"});
+      return;
+    }
+    this.roundupIds=new Set(ids);
+    this.renderPosts();
+    window.appUI.toast(ids.length+" matching "+topic+" stories selected for human review. Verify their relevance before grouping.");
   }
 
   async createRoundup(){
