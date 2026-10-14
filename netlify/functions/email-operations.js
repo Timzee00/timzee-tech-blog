@@ -40,6 +40,17 @@ exports.handler=async event=>{
     })):[];
     return reply(200,{cases,delivery_enabled:process.env.EMAIL_DELIVERY_ENABLED==="true"});
   }
+  if(event.queryStringParameters?.legacyRecovery === "1") {
+    const {data,error}=await db.rpc("legacy_user_recovery_overview");
+    if(error)return reply(503,{error:"Legacy recovery overview unavailable"});
+    const allowed=["total_members","email_confirmed","no_recent_activity_30d",
+      "no_recent_activity_60d","no_recent_activity_90d","has_visit_tracking",
+      "documented_newsletter_consent","documented_newsletter_and_inactive_30d",
+      "inactivity_reminder_opted_in"];
+    const counts=Object.fromEntries(allowed.map(key=>[key,Math.max(0,Number(data?.[key]||0))]));
+    return reply(200,{counts,auto_send:false,dry_run:true,
+      notice:"Last sign-in is an activity proxy. No marketing permission is inferred."});
+  }
   if(event.queryStringParameters?.inactivityPreview === "1"){
     const {data,error}=await db.rpc("prepare_inactivity_reminders",{p_dry_run:true,p_limit:10});
     if(error)return reply(503,{error:"Inactivity preview unavailable"});
