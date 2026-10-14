@@ -7,7 +7,7 @@ exports.handler=async event=>{
  if(!url||!key)return reply(503,{error:"Server authentication unavailable."});
  const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
  const token=(event.headers?.authorization||event.headers?.Authorization||"").replace(/^Bearer\s+/i,"");
- const guard=await requireRole(db,token,["super"],"Only Super Admins can search the staff directory.");
+ const guard=await requireRole(db,token,["admin","super"],"Staff directory access required.");
  if(guard.error)return reply(403,{error:guard.error});
  const params=event.queryStringParameters||{};
  const search=String(params.search||"").trim().slice(0,100);
