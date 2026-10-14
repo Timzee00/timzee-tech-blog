@@ -19,7 +19,7 @@
 <script type="module">
 import {supabase,getSession} from "../assets/js/supabase.js";
 const status=document.getElementById("status"),metrics=document.getElementById("metrics"),delivery=document.getElementById("deliveryState");
-const labels={pending:"Pending",processing:"Processing",sent:"Accepted by Brevo",delivered:"Confirmed delivered",awaiting_delivery_confirmation:"Awaiting delivery update",provider_failed:"Bounced / rejected",failed:"Failed jobs",quarantined:"Needs manual review",suppressed:"Suppressed",sent_last_24h:"Accepted (24 hours)",total:"Total jobs"};
+const labels={pending:"Pending",processing:"Processing",sent:"Accepted by Brevo",delivered:"Confirmed delivered",awaiting_delivery_confirmation:"Awaiting delivery update",provider_failed:"Bounced / rejected",failed:"Failed jobs",quarantined:"Needs manual review",reviewed_cases:"Reviewed / closed",suppressed:"Suppressed",sent_last_24h:"Accepted (24 hours)",total:"Total jobs"};
 async function refresh(){
   const session=await getSession();
   if(!session?.access_token){status.textContent="Sign in as super admin to view email metrics.";return;}
