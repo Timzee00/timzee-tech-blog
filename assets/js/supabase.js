@@ -215,6 +215,13 @@ const fetchCurrentUserOnce = singleFlight(async () => {
   }
   if (typeof window !== "undefined") window.__timzeeCurrentUserId = user.id;
   await resolveTrustedRole(user);
+  // Invitation is optional and deferred; never delays sign-in or page loading.
+  const created=Date.parse(user.created_at||"");
+  if(Number.isFinite(created)&&Date.now()-created>=30*24*60*60*1000){
+    void import("./member-recovery-invite.js")
+      .then(module=>module.maybeInviteReturningMember({user,supabase}))
+      .catch(()=>{});
+  }
   return user;
 });
 
