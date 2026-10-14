@@ -332,8 +332,8 @@
               </div>
               <div class="listing-seller">
                 <a class="seller-avatar" href="profile.html?id=${encodeURIComponent(item.user_id || '')}" aria-label="View seller profile">${escapeHTML((item.seller_name || '?').trim().slice(0, 1).toUpperCase())}</a>
-                <span>${escapeHTML(item.seller_name || '')}</span>
-                ${item.seller_verified ? '<span class="badge-chip verified" title="Verified Seller">Verified Seller</span>' : ''}
+                <span class="market-seller-name">${escapeHTML(item.seller_name || '')}</span>
+                ${item.seller_verified ? '<span class="badge-chip verified market-verified-badge" title="Verified Seller">Verified Seller</span>' : ''}
               </div>
             </div>
           </article>
