@@ -35,6 +35,7 @@ import {
 } from "./data.js";
 import { uploadMedia } from "./media.js";
 import { bindRichEditorToolbar } from "./editor-tools.js";
+import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
 import {
   formatDate,
   toTagArray,
@@ -964,7 +965,7 @@ function handlePostForm() {
     const editor = document.getElementById("postEditor");
     const contentRaw = editor?.innerHTML?.trim() || "";
     const contentText = editor?.innerText?.trim() || "";
-    const content = window.normalizeHtml ? window.normalizeHtml(contentRaw) : contentRaw;
+    const content = stripEditorialScaffolding(window.normalizeHtml ? window.normalizeHtml(contentRaw) : contentRaw);
 
     if (categoryId === customCategoryValue) {
       const customInput = document.getElementById("customCategory");
