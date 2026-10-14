@@ -32,23 +32,18 @@ exports.handler = async (event) => {
   const normalizedUsername = username || email.split("@")[0];
 
   const findExistingUser = async () => {
-    let page = 1;
-    const perPage = 200;
-    while (page <= 5) {
-      const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-      if (error) break;
-      const match = (data?.users || []).find((user) => user.email?.toLowerCase() === email.toLowerCase());
-      if (match) return match;
-      if ((data?.users || []).length < perPage) break;
-      page += 1;
-    }
-    if (normalizedUsername) {
-      const profileLookup = await supabase.from("profiles").select("id,email").eq("username", normalizedUsername).maybeSingle();
-      if (profileLookup.data?.id) return profileLookup.data;
-    }
-    return null;
+    // Indexed profile lookup avoids scanning the first 1,000 Auth users.
+    // Confirm the returned UUID against Auth before changing permissions.
+    const lookup=await supabase.from("profiles").select("id,email")
+      .ilike("email",email.trim()).limit(2);
+    if(lookup.error)throw new Error("Cannot verify registered account.");
+    if(!lookup.data?.length)return null;
+    if(lookup.data.length!==1)throw new Error("Ambiguous account email; contact support.");
+    const userResult=await supabase.auth.admin.getUserById(lookup.data[0].id);
+    if(userResult.error||!userResult.data?.user)throw new Error("Registered account unavailable.");
+    if(userResult.data.user.email?.toLowerCase()!==email.trim().toLowerCase())throw new Error("Profile email does not match Auth email.");
+    return userResult.data.user;
   };
-
   const promoteExisting = async (userId, existingUser = {}) => {
     const currentMeta = existingUser.user_metadata || {};
     const currentAppMeta = existingUser.app_metadata || {};
@@ -80,7 +75,9 @@ exports.handler = async (event) => {
     return jsonResponse(200, { ok: true, userId, mode: "promoted" });
   };
 
-  const existingUser = await findExistingUser();
+  let existingUser;
+  try{existingUser=await findExistingUser();}
+  catch(error){return jsonResponse(409,{error:error.message||"Unable to verify account."});}
   if (existingUser && !password) return promoteExisting(existingUser.id, existingUser);
   if (!password) return jsonResponse(400, { error: "Password required to create a new admin." });
 
