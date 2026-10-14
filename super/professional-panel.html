@@ -98,7 +98,7 @@
       <section class="admin-card" data-panel="posts">
         <h2>📰 All Posts</h2>
         <p style="color: var(--color-text-muted); margin-bottom: 20px;">View and manage all content on the site</p>
-        <div class="admin-management-controls"><div class="admin-management-row"><input type="search" id="superPostSearch" placeholder="Search title or author"><select id="superPostStatus"><option value="all">All statuses</option><option value="published">Published</option><option value="draft">Draft</option><option value="scheduled">Scheduled</option></select><button class="btn ghost" id="superPostFind" type="button">Search</button></div><p id="superPostSummary" role="status"></p></div><div id="allPostsContainer" class="admin-compact-list">Loading posts...</div><div class="admin-list-pager"><button class="btn ghost" id="superPostPrev">Previous</button><span id="superPostPage">Page 1</span><button class="btn ghost" id="superPostNext">Next</button></div>
+        <div class="admin-management-controls"><div class="admin-management-row"><input type="search" id="superPostSearch" placeholder="Search title or author"><select id="superPostStatus"><option value="all">All statuses</option><option value="published">Published</option><option value="draft">Draft</option><option value="scheduled">Scheduled</option></select><button class="btn ghost" id="superPostFind" type="button">Search</button></div><p id="superPostSummary" role="status"></p></div><p class="hint">Select <strong>Edit post</strong> to open the full editor with this article loaded. Changes update the existing post rather than creating a duplicate.</p><div id="allPostsContainer" class="admin-compact-list">Loading posts...</div><div class="admin-list-pager"><button class="btn ghost" id="superPostPrev">Previous</button><span id="superPostPage">Page 1</span><button class="btn ghost" id="superPostNext">Next</button></div>
       </section>
 
       <!-- Site Analysis -->
@@ -671,7 +671,7 @@
                 <div class="form-card" style="margin-bottom:12px;" data-post-id="${post.id}">
                   <strong>${escapeHTML(post.title || "Untitled")}</strong>
                   <div style="color:var(--color-text-muted);font-size:12px;">${escapeHTML(post.author_name || "Unknown")} • ${escapeHTML(post.status || "draft")}</div>
-                  <div class="admin-list-actions"><a class="btn ghost" href="../post.html?id=${post.id}" target="_blank" rel="noopener noreferrer">Preview</a>
+                  <div class="admin-list-actions"><a class="btn ghost" href="../post.html?id=${post.id}" target="_blank" rel="noopener noreferrer">Preview</a><a class="btn ghost" href="../admin/dashboard.html?editPost=${encodeURIComponent(post.id)}">Edit post</a>
                     <button class="btn ghost" data-post-action="${post.status === "published" ? "unpublish" : "publish"}" data-post-id="${post.id}">${post.status === "published" ? "Unpublish" : "Publish"}</button>
                     <details><summary>More actions</summary><button class="btn ghost" style="color:var(--color-danger);" data-post-action="delete" data-post-id="${post.id}">Delete permanently</button></details>
                   </div>
