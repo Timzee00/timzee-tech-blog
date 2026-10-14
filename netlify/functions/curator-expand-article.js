@@ -30,9 +30,9 @@ exports.handler=async(event)=>{
   const evidence=toText(editorialText.length>(post.description||"").length?editorialText:(post.description || post.excerpt),5500);
   if(evidence.length<(mode==="translate"?55:380))return respond(422,{error:"The source only provides a short excerpt. More verified reporting is needed for a detailed article; Scout saved it as a brief for review."});
   const {data:quota,error:quotaError}=await db.rpc("consume_ai_rate_limit",{
-    p_user_id:role.user.id,p_request_limit:5,p_window_seconds:600,p_daily_limit:30
+    p_user_id:role.user.id,p_now:new Date().toISOString(),p_request_limit:5,p_window_seconds:600,p_daily_limit:30
   });
-  if(quotaError||typeof quota?.allowed!=="boolean")return respond(503,{error:"Editorial rate limiting is unavailable."});
+  if(quotaError||typeof quota?.allowed!=="boolean"){console.warn("Editorial quota check failed",quotaError?.code);return respond(503,{error:"Editorial rate limiting is unavailable. Verify the Supabase RPC signature and grants."});}
   if(!quota.allowed)return respond(429,{error:"Editorial AI limit reached. Try again later."});
   const endpoint=provider==="openrouter"?"https://openrouter.ai/api/v1/chat/completions":"https://api.groq.com/openai/v1/chat/completions";
   const model=provider==="openrouter"?"openrouter/free":"openai/gpt-oss-20b";
