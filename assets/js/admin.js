@@ -1515,9 +1515,46 @@ function requestActionButton(status, kind, id) {
   const value = normalizeRequestStatus(status);
   const action = value === "completed" ? "reopen" : "complete";
   const label = value === "completed" ? "Reopen" : "Complete";
-  return `<button class="muted" data-action="${action}" data-kind="${kind}" data-id="${id}">${label}</button>`;
+  return `<button class="muted" data-action="view" data-kind="${kind}" data-id="${id}">View / Reply</button> <button class="muted" data-action="${action}" data-kind="${kind}" data-id="${id}">${label}</button>`;
 }
 
+function inspectRequest(kind,id){
+  const entries={
+    contact:state.contactRequests,
+    support:state.supportRequests,
+    newsletter:state.newsletterSignups,
+    ads:state.adApplications
+  };
+  const item=(entries[kind]||[]).find(entry=>String(entry.id)===String(id));
+  if(!item)return;
+  document.getElementById("adminRequestDialog")?.remove();
+  const dialog=document.createElement("dialog");
+  dialog.id="adminRequestDialog";
+  dialog.className="admin-request-detail";
+  const heading=document.createElement("h3");
+  heading.textContent=(kind[0].toUpperCase()+kind.slice(1))+" request";
+  dialog.append(heading);
+  const fields=["name","email","company","subject","issue","interest","budget","message","created_at","status"];
+  for(const key of fields){
+    if(item[key]===null||item[key]===undefined||item[key]==="")continue;
+    const section=document.createElement("div");section.className="admin-request-field";
+    const label=document.createElement("strong");label.textContent=key.replace(/_/g," ");
+    const value=document.createElement("p");value.textContent=String(item[key]);
+    section.append(label,value);dialog.append(section);
+  }
+  const actions=document.createElement("div");actions.className="admin-list-actions";
+  if(item.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item.email)){
+    const reply=document.createElement("a");reply.className="btn";
+    reply.href="mailto:"+encodeURIComponent(item.email)+"?subject="+encodeURIComponent("Re: Timzee Tech Hub "+kind+" request");
+    reply.textContent="Reply via email";actions.append(reply);
+  }
+  const copy=document.createElement("button");copy.className="btn ghost";copy.textContent="Copy details";
+  copy.type="button";copy.addEventListener("click",()=>void navigator.clipboard.writeText(fields.filter(k=>item[k]!=null).map(k=>k+": "+String(item[k])).join("\n")).then(()=>window.appUI.toast("Copied request details.")).catch(()=>window.appUI.toast("Unable to copy.")));
+  actions.append(copy);
+  const close=document.createElement("button");close.className="btn ghost";close.textContent="Close";close.type="button";close.addEventListener("click",()=>dialog.close());actions.append(close);
+  dialog.append(actions);dialog.addEventListener("close",()=>dialog.remove());
+  document.body.append(dialog);dialog.showModal();
+}
 function attachRequestHandlers(table, kind, updater) {
   if (!table) return;
   table.querySelectorAll(`button[data-kind='${kind}']`).forEach((btn) => {
@@ -1525,6 +1562,7 @@ function attachRequestHandlers(table, kind, updater) {
       const id = btn.dataset.id;
       const action = btn.dataset.action;
       if (!id || !action) return;
+      if(action==="view"){inspectRequest(kind,id);return;}
       const nextStatus = action === "complete" ? "completed" : "open";
       const result = await updater(id, nextStatus);
       if (result.error) {
