@@ -40,6 +40,13 @@ exports.handler=async event=>{
     })):[];
     return reply(200,{cases,delivery_enabled:process.env.EMAIL_DELIVERY_ENABLED==="true"});
   }
+  if(event.queryStringParameters?.digestPreview === "1") {
+    const {data,error}=await db.rpc("prepare_email_digests",{p_dry_run:true,p_limit:10});
+    if(error)return reply(503,{error:"Digest preview unavailable"});
+    return reply(200,{dry_run:true,enabled:data?.enabled===true,
+      eligible:Number(data?.eligible||0),remaining_budget:Number(data?.remaining_budget||0),
+      enqueued:0});
+  }
   if(event.queryStringParameters?.verifyProvider === "1") {
     const apiKey=process.env.BREVO_API_KEY;
     if(!apiKey)return reply(503,{provider:"Brevo",authenticated:false,error:"Brevo API key is missing"});
