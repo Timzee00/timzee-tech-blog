@@ -23,6 +23,7 @@ import { supabase, getCurrentUserWithRole, getUserRole } from "./supabase.js";
 import { escapeHTML, slugify, isSafeUrl, normalizeHtml } from "./utils.js";
 import { createPost, createPostMedia } from "./data.js";
 import { ROUNDUP_TOPICS, generateRoundupDraft, suggestRoundupIds, trustedExternalUrl, imageUrls, htmlEscape, socialCaption, placeEditorialFigures } from "./curator-publishing.mjs";
+import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
 
 class CuratorManager {
   constructor() {
@@ -824,7 +825,7 @@ class CuratorManager {
       const title = curatorPost.title || "Untitled";
       const body=curatorPost.content || (curatorPost.excerpt ? '<p>'+escapeHTML(curatorPost.excerpt)+'</p>' : "");
       const credit=selectedImages.length ? '<p class="curator-image-credit">Images: '+htmlEscape(imageCredit)+'</p>' : "";
-      const content=placeEditorialFigures(body,selectedImages,imageCredit)+credit;
+      const content=placeEditorialFigures(stripEditorialScaffolding(body),selectedImages,imageCredit)+credit;
       const now = new Date().toISOString();
 
       const result = await createPost({
