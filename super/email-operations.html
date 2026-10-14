@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Email Operations | Timzee Tech Hub</title>
+<link rel="stylesheet" href="../assets/css/admin.css"><script defer src="../assets/js/theme-init.js"></script>
+<style>body{font-family:system-ui,sans-serif}main{max-width:1000px;margin:30px auto;padding:0 20px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0}.metric{padding:22px;border:1px solid #c7d4d4;border-radius:14px;background:var(--card-solid,#fff);color:var(--ink,#152e32)}.metric strong{display:block;font-size:2rem;margin-top:8px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}button{cursor:pointer}#status{margin:18px 0}</style></head>
+<body class="admin-shell">
+<main><a href="panel.html">← Back to Super Admin</a><h1>Email Operations</h1><p>Read-only operational dashboard. Campaign sending is not enabled here.</p>
+<div class="toolbar"><button class="btn" type="button" id="refresh">Refresh metrics</button><span id="deliveryState" aria-live="polite"></span></div>
+<p role="status" id="status">Authenticating…</p>
+<div id="metrics" class="metrics" aria-live="polite"></div>
+<p>Metrics reflect queued receipt emails, not Supabase Auth SMTP messages. An empty queue does not prove successful SMTP delivery.</p>
+</main>
+<script type="module">
+import {supabase,getSession} from "../assets/js/supabase.js";
+const status=document.getElementById("status"),metrics=document.getElementById("metrics"),delivery=document.getElementById("deliveryState");
+const labels={pending:"Pending",processing:"Processing",sent:"Sent",failed:"Failed",suppressed:"Suppressed",sent_last_24h:"Sent (24 hours)",total:"Total jobs"};
+async function refresh(){
+  const session=await getSession();
+  if(!session?.access_token){status.textContent="Sign in as super admin to view email metrics.";return;}
+  status.textContent="Loading…";
+  try{
+    const response=await fetch("/.netlify/functions/email-operations",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});
+    const body=await response.json();
+    if(!response.ok)throw new Error(body.error||"Metrics unavailable");
+    delivery.textContent=body.delivery_enabled?"Delivery enabled":"Delivery paused";
+    metrics.replaceChildren();
+    for(const [key,label] of Object.entries(labels)){
+      const card=document.createElement("div");card.className="metric";
+      const title=document.createElement("span");title.textContent=label;
+      const number=document.createElement("strong");number.textContent=Number(body.statistics?.[key]||0).toLocaleString();
+      card.append(title,number);metrics.append(card);
+    }
+    status.textContent="Metrics loaded. Oldest pending job: "+(body.statistics?.oldest_pending_at||"None");
+  }catch(error){metrics.replaceChildren();status.textContent=error.message||"Unable to load email metrics";}
+}
+document.getElementById("refresh").addEventListener("click",refresh);
+refresh();
+</script></body></html>
