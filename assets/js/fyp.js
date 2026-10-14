@@ -33,15 +33,128 @@ function contentHref(row) {
   return "#";
 }
 function renderRow(row) {
-  const image = row.image_url && isSafeUrl(row.image_url) ? `<img src="${escapeHTML(row.image_url)}" alt="${escapeHTML(row.title || `${typeLabel(row.content_type)} preview`)}" loading="lazy">` : `<div class="fyp-media-fallback" aria-hidden="true">${escapeHTML(typeLabel(row.content_type).toUpperCase())}</div>`;
-  const reason = row.reason ? `<span class="fyp-reason">${escapeHTML(row.reason)}</span>` : "";
-  // The current Following RPC does not read negative feedback, so do not
-  // offer a misleading "Not interested" button on that separate feed.
-  const feedback = state.mode === "for-you"
-    ? '<button type="button" class="btn ghost sm" data-fyp-action="not-interested">Not interested</button>'
-    : "";
-  const body = clampText(stripHTML(row.excerpt || ""), 190);
-  return `<article class="fyp-card" data-content-type="${escapeHTML(row.content_type)}" data-content-id="${escapeHTML(row.content_id)}"><a class="fyp-media" href="${contentHref(row)}">${image}</a><div class="fyp-card-body"><div class="fyp-meta"><span class="chip">${escapeHTML(typeLabel(row.content_type))}</span><span>${escapeHTML(row.category || "")}</span><span>${timeAgo(row.created_at)}</span></div><a href="${contentHref(row)}"><h2>${escapeHTML(row.title || "Untitled")}</h2></a><p>${escapeHTML(body)}</p><div class="fyp-card-foot"><span>${reason}</span>${feedback}</div></div></article>`;
+  const type=row.content_type,mediaUrl=row.video_url;
+  const isVideo=type==="video" && mediaUrl && isSafeUrl(mediaUrl);
+  const image=row.image_url && isSafeUrl(row.image_url)
+    ? '<img src="'+escapeHTML(row.image_url)+'" alt="'+escapeHTML(row.title||"Story image")+'" loading="lazy">'
+    : '<div class="fyp-media-fallback" aria-hidden="true">'+escapeHTML(typeLabel(type).toUpperCase())+'</div>';
+  const media=isVideo ?
+    '<video class="fyp-inline-video" controls playsinline preload="none"'+
+      (row.image_url&&isSafeUrl(row.image_url)?' poster="'+escapeHTML(row.image_url)+'"':"")+
+      ' src="'+escapeHTML(mediaUrl)+'" aria-label="'+escapeHTML(row.title||"Community video")+'"></video>' :
+    '<a class="fyp-media" href="'+contentHref(row)+'" aria-label="Open '+escapeHTML(typeLabel(type))+'">'+image+'</a>';
+  const reason=row.reason?'<span class="fyp-reason">'+escapeHTML(row.reason)+'</span>':"";
+  const feedback=state.mode==="for-you"?
+    '<button type="button" class="btn ghost sm" data-fyp-action="not-interested">Not interested</button>':"";
+  const body=clampText(stripHTML(row.excerpt||""),270);
+  const interact=["post","video"].includes(type);
+  const social=interact?'<div class="fyp-social-actions">'+
+    '<button type="button" class="btn ghost sm fyp-like" aria-pressed="false" data-fyp-action="like">♡ Like</button>'+
+    '<button type="button" class="btn ghost sm" data-fyp-action="comments" aria-expanded="false">Comments</button>'+
+    '<a class="btn ghost sm" href="'+contentHref(row)+'">View full '+(type==="video"?"video":"post")+'</a></div>'+
+    '<section class="fyp-comments" hidden><h3>Comments</h3><div class="fyp-comment-list"></div>'+
+    '<form class="fyp-comment-form"><label for="fyp-comment-'+escapeHTML(row.content_id)+'">Add a comment</label>'+
+    '<textarea id="fyp-comment-'+escapeHTML(row.content_id)+'" name="comment" required minlength="1" maxlength="1500" rows="3" placeholder="Join the discussion respectfully"></textarea>'+
+    '<button type="submit" class="btn sm">Post comment</button></form><div class="fyp-comment-status" role="status"></div></section>':"";
+  return '<article class="fyp-card" data-content-type="'+escapeHTML(type)+'" data-content-id="'+escapeHTML(row.content_id)+'">'+
+    media+'<div class="fyp-card-body"><div class="fyp-meta"><span class="chip">'+escapeHTML(typeLabel(type))+
+    '</span><span>'+escapeHTML(row.category||"")+'</span><span>'+timeAgo(row.created_at)+'</span></div>'+
+    '<a href="'+contentHref(row)+'"><h2>'+escapeHTML(row.title||"Untitled")+'</h2></a>'+
+    '<p>'+escapeHTML(body)+'</p>'+social+
+    '<div class="fyp-card-foot">'+reason+feedback+'</div></div></article>';
+}
+async function enrichVideoItems(rows){
+  const ids=[...new Set(rows.filter(r=>r.content_type==="video").map(r=>r.content_id))].slice(0,40);
+  if(!ids.length)return rows;
+  const {data,error}=await supabase.from("videos")
+    .select("id,video_url,thumbnail_url,title,is_public").in("id",ids).eq("is_public",true);
+  if(error){console.warn("Unable to load inline video sources",error.message);return rows;}
+  const index=new Map((data||[]).map(v=>[v.id,v]));
+  return rows.map(row=>{
+    if(row.content_type!=="video")return row;
+    const video=index.get(row.content_id);
+    return {...row,video_url:video?.video_url||null,image_url:video?.thumbnail_url||row.image_url};
+  });
+}
+async function hydrateLikes(root){
+  if(!state.user?.id)return;
+  const cards=[...root.querySelectorAll('.fyp-card[data-content-type="post"],.fyp-card[data-content-type="video"]')];
+  await Promise.all(["post","video"].map(async type=>{
+    const ids=cards.filter(c=>c.dataset.contentType===type).map(c=>c.dataset.contentId);
+    if(!ids.length)return;
+    const table=type==="post"?"post_likes":"video_likes";
+    const col=type==="post"?"post_id":"video_id";
+    const {data,error}=await supabase.from(table).select(col).eq("user_id",state.user.id).in(col,ids);
+    if(error)return;
+    const liked=new Set((data||[]).map(row=>row[col]));
+    cards.filter(c=>c.dataset.contentType===type).forEach(card=>{
+      const btn=card.querySelector('[data-fyp-action="like"]');
+      if(!btn)return;
+      const active=liked.has(card.dataset.contentId);
+      btn.setAttribute("aria-pressed",String(active));
+      btn.textContent=active?"♥ Liked":"♡ Like";
+    });
+  }));
+}
+async function toggleLike(card,button){
+  const type=card.dataset.contentType,id=card.dataset.contentId;
+  if(!["post","video"].includes(type)||!state.user?.id)return;
+  const table=type==="post"?"post_likes":"video_likes",col=type==="post"?"post_id":"video_id";
+  const active=button.getAttribute("aria-pressed")==="true";
+  button.disabled=true;
+  try{
+    const query=active?supabase.from(table).delete().eq(col,id).eq("user_id",state.user.id):
+      supabase.from(table).insert({[col]:id,user_id:state.user.id});
+    const {error}=await query;
+    if(error)throw error;
+    button.setAttribute("aria-pressed",String(!active));
+    button.textContent=active?"♡ Like":"♥ Liked";
+    feedCache.clear();
+  }catch(error){
+    const feedback=card.querySelector(".fyp-comment-status");
+    if(feedback)feedback.textContent="Couldn't update your like. Please try again.";
+    reportAppError(error,"For You like failed");
+  }finally{button.disabled=false;}
+}
+async function loadInlineComments(card){
+  const type=card.dataset.contentType,id=card.dataset.contentId;
+  const panel=card.querySelector(".fyp-comments");
+  if(!panel)return;
+  const table=type==="video"?"video_comments":"comments";
+  const column=type==="video"?"video_id":"post_id";
+  const query=supabase.from(table).select("id,author_name,body,created_at")
+    .eq(column,id).order("created_at",{ascending:false}).limit(20);
+  if(type==="post")query.eq("status","approved");
+  const {data,error}=await query;
+  const list=panel.querySelector(".fyp-comment-list");
+  list.replaceChildren();
+  if(error){list.textContent="Comments couldn't load right now.";return;}
+  if(!(data||[]).length){list.textContent="No comments yet. Start the conversation.";return;}
+  for(const comment of data){
+    const article=document.createElement("article");article.className="fyp-comment-item";
+    const name=document.createElement("strong");name.textContent=String(comment.author_name||"Member").replace(/<[^>]*>/g,"").slice(0,70);
+    const body=document.createElement("p");body.textContent=comment.body||"";
+    article.append(name,body);list.append(article);
+  }
+}
+async function submitInlineComment(card,form){
+  const type=card.dataset.contentType,id=card.dataset.contentId;
+  const body=form.elements.comment?.value?.trim()||"";
+  const status=card.querySelector(".fyp-comment-status");
+  if(!body||body.length>1500){status.textContent="Enter a comment under 1,500 characters.";return;}
+  if(!state.user?.id){status.textContent="Please sign in first.";return;}
+  const isVideo=type==="video";
+  const payload=isVideo?{video_id:id,user_id:state.user.id,author_name:state.user.user_metadata?.display_name||"Member",body}:
+    {post_id:id,author_id:state.user.id,author_name:state.user.user_metadata?.display_name||"Member",body,status:"pending"};
+  const submit=form.querySelector('button[type="submit"]');submit.disabled=true;
+  try{
+    const {error}=await supabase.from(isVideo?"video_comments":"comments").insert(payload);
+    if(error)throw error;
+    form.reset();
+    status.textContent=isVideo?"Comment posted.":"Comment submitted for moderation.";
+    await loadInlineComments(card);
+  }catch(error){status.textContent="Couldn't post your comment. Please try again.";reportAppError(error,"Inline comment failed");}
+  finally{submit.disabled=false;}
 }
 function updateUrl() {
   const params = new URLSearchParams();
@@ -95,10 +208,12 @@ async function loadFeed({ force = false } = {}) {
       feedCache.set(key, { time: Date.now(), rows });
     }
     if (version !== feedVersion) return;
+    rows=await enrichVideoItems(rows);
     const visible = rows.filter(row => !suppressedContent.has(row.content_type + ":" + row.content_id));
     target.innerHTML = visible.length
       ? visible.map(renderRow).join("")
       : `<div class="fyp-empty card"><h2>${mode === "following" ? "Nothing from followed creators yet" : "No recommendations yet"}</h2><p>${mode === "following" ? "Follow creators or communities to see their updates here." : "Like posts, follow people and choose Not interested to improve future recommendations."}</p><a class="btn" href="index.html">Explore the community</a></div>`;
+    if(visible.length)void hydrateLikes(target);
   } catch (error) {
     if (version !== feedVersion) return;
     target.innerHTML = '<div class="callout" role="alert">Unable to load your feed right now. <button class="btn ghost sm" type="button" id="retryFypBtn">Retry</button></div>';
@@ -161,7 +276,25 @@ function wire() {
   document.querySelectorAll("[data-fyp-mode]").forEach((button) => button.addEventListener("click", () => { state.mode = button.dataset.fypMode || "for-you"; saveRemembered(); updateUrl(); applyActiveControls(); void loadFeed(); }));
   document.querySelectorAll("[data-fyp-filter]").forEach((button) => button.addEventListener("click", () => { state.type = button.dataset.fypFilter || "all"; saveRemembered(); updateUrl(); applyActiveControls(); void loadFeed(); }));
   $("refreshFypBtn")?.addEventListener("click", () => void loadFeed({ force: true }));
-  $("fypGrid")?.addEventListener("click", async (event) => { const action = event.target.closest("[data-fyp-action]"); if (!action) return; event.preventDefault(); const card = action.closest(".fyp-card"); try { await markNotInterested(card); } catch (error) { reportAppError(error, "Recommendation feedback failed"); } });
+  $("fypGrid")?.addEventListener("click",async event=>{
+    const button=event.target.closest("[data-fyp-action]");
+    if(!button)return;
+    const card=button.closest(".fyp-card");if(!card)return;
+    event.preventDefault();
+    if(button.dataset.fypAction==="like"){await toggleLike(card,button);return;}
+    if(button.dataset.fypAction==="comments"){
+      const panel=card.querySelector(".fyp-comments");if(!panel)return;
+      panel.hidden=!panel.hidden;button.setAttribute("aria-expanded",String(!panel.hidden));
+      if(!panel.hidden)await loadInlineComments(card);
+      return;
+    }
+    try{await markNotInterested(card);}catch(error){reportAppError(error,"Recommendation feedback failed");}
+  });
+  $("fypGrid")?.addEventListener("submit",async event=>{
+    const form=event.target.closest(".fyp-comment-form");if(!form)return;
+    event.preventDefault();
+    await submitInlineComment(form.closest(".fyp-card"),form);
+  });
 }
 async function boot() {
   state.user = await getCurrentUser();
