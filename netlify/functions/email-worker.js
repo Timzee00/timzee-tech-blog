@@ -19,12 +19,12 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
   const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><h2 style="color:#0f766e">Timzee Tech Hub</h2><p>${escapeHtml(intro)}</p><p>${escapeHtml(template.body)}</p><p><strong>Reference:</strong> ${escapeHtml(reference)}</p><hr><small>Transactional notification regarding your request. Do not reply with passwords or sensitive details.</small></div>`;
   const res=await fetch("https://api.brevo.com/v3/smtp/email",{
     method:"POST",signal:timeout(8000),
-    headers:{"api-key":apiKey,"content-type":"application/json"},
+    headers:{"api-key":apiKey,"content-type":"application/json","accept":"application/json"},
     body:JSON.stringify({
       sender:{email:senderEmail,name:senderName},
       to:[{email:job.recipient_email}],
-      subject:template.subject,htmlContent:html,textContent:text,
-      headers:{"X-Mailin-custom":"type:transactional"}
+      subject:template.subject,htmlContent:html,
+      headers:{"X-Mailin-custom":"type:transactional","Idempotency-Key":job.id}
     })
   });
   let body={};try{body=await res.json()}catch{}
@@ -50,7 +50,7 @@ exports.handler=async()=>{
   if(statsError) throw new Error("Email quota check unavailable; refusing to send");
   const remaining=Math.max(0,dailyCap-Number(statistics?.sent_last_24h||0));
   if(!remaining) return {statusCode:200,body:"Worker daily email cap reached"};
-  const {data,error}=await supabase.rpc("claim_email_jobs",{p_limit:Math.min(3,remaining)});
+  const {data,error}=await supabase.rpc("claim_email_jobs",{p_limit:Math.min(1,remaining)});
   if(error) throw error;
   const results={claimed:data?.length||0,sent:0,failed:0};
   for(const job of data||[]){
