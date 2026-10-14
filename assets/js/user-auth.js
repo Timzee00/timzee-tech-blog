@@ -2,6 +2,7 @@ import {
   supabase,
   SITE_URL,
   getCurrentUser,
+  getSession,
   getAuthCallbackError,
   hadOAuthCallback,
   signIn,
@@ -294,6 +295,8 @@ async function boot() {
   const signupForm = document.getElementById("signupForm");
   const forgotToggle = document.getElementById("forgotToggle");
   const forgotForm = document.getElementById("forgotForm");
+  const forgotMessage = document.getElementById("forgotMessage");
+  const forgotSubmit = document.getElementById("forgotSubmit");
   const switcher = document.querySelector(".auth-switcher");
   const switchButtons = document.querySelectorAll(".auth-switch-btn");
   const loginMessage = document.getElementById("loginMessage");
@@ -302,7 +305,9 @@ async function boot() {
   const resetMessage = document.getElementById("resetMessage");
   const googleSignIn = document.getElementById("googleSignIn");
   const appleSignIn = document.getElementById("appleSignIn");
-  const redirectTo = makeAuthRedirect(getAuthRedirectOrigin(window.location.origin, SITE_URL));
+  const recoveryRedirect = new URL(makeAuthRedirect(getAuthRedirectOrigin(window.location.origin, SITE_URL)));
+  recoveryRedirect.searchParams.set("recovery", "1");
+  const redirectTo = recoveryRedirect.toString();
 
   const setView = (view) => {
     if (!switcher) return;
@@ -310,10 +315,12 @@ async function boot() {
     const loginPanel = switcher.querySelector(".auth-panel-login");
     const signupPanel = switcher.querySelector(".auth-panel-signup");
     const resetPanel = switcher.querySelector(".auth-panel-reset");
+    const forgotPanel = switcher.querySelector(".auth-panel-forgot");
     if (loginPanel) loginPanel.setAttribute("aria-hidden", view !== "login");
     if (signupPanel) signupPanel.setAttribute("aria-hidden", view !== "signup");
     if (resetPanel) resetPanel.setAttribute("aria-hidden", view !== "reset");
-    [loginPanel, signupPanel, resetPanel].forEach(panel => { if (panel) panel.inert = panel.getAttribute("aria-hidden") === "true"; });
+    if (forgotPanel) forgotPanel.setAttribute("aria-hidden", view !== "forgot");
+    [loginPanel, signupPanel, resetPanel, forgotPanel].forEach(panel => { if (panel) panel.inert = panel.getAttribute("aria-hidden") === "true"; });
     const currentPanel = switcher.querySelector(`.auth-panel-${view}`);
     if (document.activeElement?.closest(".auth-switcher")) currentPanel?.querySelector("input")?.focus();
   };
@@ -323,7 +330,7 @@ async function boot() {
   const recoveryType = hashParams.get("type") || "";
   const accessToken = hashParams.get("access_token");
   const refreshToken = hashParams.get("refresh_token");
-  const isRecovery = recoveryType === "recovery" || recoveryType === "password_recovery";
+  const isRecovery = recoveryType === "recovery" || recoveryType === "password_recovery" || queryParams.get("recovery") === "1";
   const oauthCallback = startedWithOAuthCallback && !isRecovery;
   const callbackExchangeError = await getAuthCallbackError();
 
@@ -337,7 +344,8 @@ async function boot() {
       });
       if (error) setMessage(resetMessage, error.message || "Recovery session failed.");
     } else {
-      setMessage(resetMessage, "Recovery link invalid or expired. Request a new one.");
+      const recoverySession = await getSession();
+      if (!recoverySession || callbackExchangeError) setMessage(resetMessage, "Recovery link invalid or expired. Request a new one.");
     }
     clearHash();
   }
@@ -410,7 +418,13 @@ async function boot() {
   }
 
   if (forgotToggle && forgotForm) {
-    forgotToggle.addEventListener("click", () => forgotForm.classList.toggle("hidden"));
+    forgotToggle.addEventListener("click", () => {
+      setMessage(forgotMessage, "", false);
+      const previousEmail = document.getElementById("loginEmail")?.value.trim();
+      if (previousEmail) document.getElementById("forgotEmail").value = previousEmail;
+      setView("forgot");
+      document.getElementById("forgotEmail")?.focus();
+    });
   }
 
   if (forgotForm) {
@@ -418,14 +432,19 @@ async function boot() {
       event.preventDefault();
       const email = document.getElementById("forgotEmail").value.trim();
       if (!email) return;
-      const result = await resetPassword(email, redirectTo);
-      if (result.error) {
-        setMessage(loginMessage, normalizeAuthError(result.error, "forgot"));
-        return;
+      if (forgotSubmit) { forgotSubmit.disabled = true; forgotSubmit.textContent = "Sending…"; }
+      try {
+        const result = await resetPassword(email, redirectTo);
+        if (result.error) {
+          setMessage(forgotMessage, normalizeAuthError(result.error, "forgot"));
+          return;
+        }
+        setMessage(forgotMessage, "If this email belongs to an account, a reset link will arrive shortly. Check your inbox and spam folder.");
+      } catch (error) {
+        setMessage(forgotMessage, normalizeAuthError(error, "forgot"));
+      } finally {
+        if (forgotSubmit) { forgotSubmit.disabled = false; forgotSubmit.textContent = "Send reset link"; }
       }
-      setMessage(loginMessage, "Password reset link sent. Check your inbox/spam, then open the link to set a new password.");
-      forgotForm.classList.add("hidden");
-      forgotForm.reset();
     });
   }
 
@@ -463,6 +482,11 @@ async function boot() {
         setMessage(resetMessage, "Passwords do not match.");
         return;
       }
+      const recoverySession = await getSession();
+      if (!recoverySession) {
+        setMessage(resetMessage, "Recovery session missing or expired. Request a new reset link.");
+        return;
+      }
       const result = await supabase.auth.updateUser({ password });
       if (result.error) {
         setMessage(resetMessage, normalizeAuthError(result.error, "reset"));
@@ -471,6 +495,9 @@ async function boot() {
       await signOut();
       resetForm.reset();
       setMessage(loginMessage, "Password updated successfully. Please sign in with your new password.");
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("recovery");
+      history.replaceState({}, document.title, clean.pathname + clean.search);
       setView("login");
     });
   }
