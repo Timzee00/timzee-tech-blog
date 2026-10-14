@@ -31,7 +31,7 @@ function normalizedArticle(response, sourceUrl,sourceName) {
     ...sections.flatMap(s=>["<h2>"+escapeHTML(s.heading)+"</h2>",...s.paragraphs.map(p=>"<p>"+escapeHTML(p)+"</p>")]),
     "<h2>Conclusion</h2>","<p>"+escapeHTML(conclusion)+"</p>",
     '<p class="curator-source-credit">Based on reporting from <a rel="noopener noreferrer" target="_blank" href="'+escapeHTML(safeUrl.toString())+'">'+escapeHTML(sourceName||safeUrl.hostname)+"</a>. Read the original report for primary details.</p>"
-  ].join("\n");
+  ];
   const takeaways=[...new Set((Array.isArray(data.takeaways)?data.takeaways:[])
     .map(x=>toText(x,210)).filter(x=>x.length>=35&&x.length<=210))].slice(0,4);
   if(takeaways.length<2) throw Error("The article requires at least two useful independent takeaways.");
@@ -43,6 +43,6 @@ function normalizedArticle(response, sourceUrl,sourceName) {
   const warnings=Array.isArray(data.verification_notes)?data.verification_notes.map(v=>toText(v,220)).filter(Boolean).slice(0,6):[];
   const excerpt=toText(data.dek || intro,240);
   const englishTitle=toText(data.headline,160);
-  return {content:html,excerpt,title:englishTitle||null,wordCount:words,warnings};
+  return {content:html.join("\n"),excerpt,title:englishTitle||null,wordCount:words,warnings};
 }
 module.exports={normalizedArticle,toText,escapeHTML};
