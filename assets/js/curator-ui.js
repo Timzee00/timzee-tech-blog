@@ -20,7 +20,7 @@ import {
 } from "./curator.js";
 
 import { supabase, getCurrentUserWithRole, getUserRole } from "./supabase.js";
-import { escapeHTML, slugify, isSafeUrl } from "./utils.js";
+import { escapeHTML, slugify, isSafeUrl, normalizeHtml } from "./utils.js";
 import { createPost, createPostMedia } from "./data.js";
 import { ROUNDUP_TOPICS, generateRoundupDraft, suggestRoundupIds, trustedExternalUrl, imageUrls, htmlEscape, socialCaption } from "./curator-publishing.mjs";
 
@@ -484,6 +484,7 @@ class CuratorManager {
           <label><input type="checkbox" data-curator-image-rights="${post.id}"> I verified permission to display these images on Timzee Tech Hub</label>
         </details>
         <div class="post-actions">
+          <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-preview">Preview post</button>
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-expand">Expand with AI</button>
           <button class="btn btn-primary" data-post-id="${post.id}" data-type="post-approve">✓ Approve & Post</button>
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-delete">✕ Reject</button>
@@ -603,7 +604,9 @@ class CuratorManager {
     const postId = btn.dataset.postId;
     const type = btn.dataset.type;
 
-    if (type === "post-expand") {
+    if (type === "post-preview") {
+      this.previewCuratorPost(postId);
+    } else if (type === "post-expand") {
       await this.expandCuratorPost(postId, btn);
     } else if (type === "post-approve") {
       await this.approveCuratorPost(postId, btn);
@@ -613,6 +616,50 @@ class CuratorManager {
         await this.load();
       }
     }
+  }
+
+  previewCuratorPost(id) {
+    const post=this.posts.find(item=>item.id===id);
+    if(!post)return;
+    // This is a local visual preview; no published post is created.
+    const selected=imageUrls(this.container.querySelector('[data-curator-images="'+id+'"]')?.value||"");
+    const permitted=this.container.querySelector('[data-curator-image-rights="'+id+'"]')?.checked===true;
+    const media=selected.length?selected:post.image_url && trustedExternalUrl(post.image_url)?[post.image_url]:[];
+    const credited=this.container.querySelector('[data-curator-image-credit="'+id+'"]')?.value.trim()||"";
+    const doc=new DOMParser().parseFromString(String(post.content||""),"text/html");
+    const takeawayTag=doc.querySelector("[data-timzee-takeaways]")?.getAttribute("data-timzee-takeaways");
+    let insights=[];
+    try {
+      const parsed=JSON.parse(decodeURIComponent(takeawayTag||""));
+      if(Array.isArray(parsed))insights=parsed.filter(x=>typeof x==="string").slice(0,4);
+    }catch{}
+    const dialog=document.createElement("dialog");
+    dialog.className="curator-post-preview-dialog";
+    dialog.setAttribute("aria-label","Preview curated article");
+    const imageHtml=media.filter(trustedExternalUrl).slice(0,6).map((url,i)=>
+      '<figure><img src="'+escapeHTML(url)+'" alt="Proposed curated image '+(i+1)+'" loading="lazy" referrerpolicy="no-referrer"></figure>'
+    ).join("");
+    dialog.innerHTML=
+      '<div class="curator-preview-toolbar"><strong>Unpublished article preview</strong><button type="button" class="btn ghost curator-preview-close">Close</button></div>'+
+      '<div class="curator-preview-body"><article class="post-shell post-article">'+
+      '<p class="post-kicker">'+escapeHTML((post.tags||[])[0]||"General")+' · '+escapeHTML(post.source_name||"Curator")+'</p>'+
+      '<h1>'+escapeHTML(post.title||"Untitled")+'</h1>'+
+      '<p class="post-dek">'+escapeHTML(post.excerpt||"")+'</p>'+
+      (imageHtml?'<div class="curator-preview-gallery">'+imageHtml+'</div>':'')+
+      (insights.length?'<section class="post-highlights"><h2>Key Takeaways</h2><ul>'+
+         insights.map(i=>'<li>'+escapeHTML(i)+'</li>').join("")+'</ul></section>':'')+
+      '<div class="post-content">'+normalizeHtml(post.content||"")+'</div>'+
+      '<p class="curator-preview-note">'+
+      (permitted?'Images marked as rights-verified by editor. ':'Image rights are not confirmed. ')+
+      (credited?'Credit: '+escapeHTML(credited)+'. ':'')+
+      'This is a private preview and has not been published.</p></article></div>';
+    document.body.append(dialog);
+    const close=()=>dialog.close();
+    dialog.querySelector(".curator-preview-close")?.addEventListener("click",close);
+    dialog.addEventListener("close",()=>dialog.remove(),{once:true});
+    dialog.addEventListener("click",e=>{if(e.target===dialog)close();});
+    if(typeof dialog.showModal==="function")dialog.showModal();
+    else dialog.setAttribute("open","");
   }
 
   async expandCuratorPost(curatorPostId, btn) {
