@@ -164,3 +164,29 @@ Source-controlled only (requires a **future** Netlify build once credits return)
 - Read-only verification: SQL dispatch flag false, 20/day cap, 0 opted-in users, 0 queue jobs, anonymous/authenticated roles cannot call the scheduling RPC; dry run returned 0 groups, and disabled dispatch enqueued 0 jobs.
 - The scheduler is a **pilot**, not a 100,000-active-user solution. Production-scale work requires cursor-based eligibility evaluation, provider-aligned batching/quotas, monitoring and load tests, email one-click unsubscribe or equivalent consent UX, auditability, retention and operational controls.
 - Because Netlify credits are exhausted, do not trigger a build or publish the new worker until the user explicitly requests a deployment. The existing preview does not include these new commits.
+
+
+## Workflow status and inactivity email automation — 2026-10-14
+Deployed to Supabase (all migrations are source-controlled):
+- `workflow_status_email_triggers`: AFTER UPDATE OF status on support, advertising applications, verification applications, and content reports. Only recognized outcomes are queued; no raw support text, verification documents, or moderation evidence are included. Staff RLS is authoritative. The same status/id gets a single email job.
+- `opt_in_inactivity_reminders`: user-owned `inactivity_reminders` preference defaults false. Private, one-row-per-user visit tracking. `public.record_my_site_visit()` is authenticated-only and server-rate-limited to one write per six hours. Dormant accounts from before deployment are **not** automatically emailed. Requires a genuine visit after opting in.
+- `send_time_status_and_inactivity_checks`: service-only checks prevent stale status decisions, recently returned users, suspended accounts, or opted-out recipients from receiving queued mail.
+- `inactivity_one_click_opt_out`: a service-only job-scoped function to disable check-in mail and suppress pending reminders.
+- Campaign settings `private.inactivity_campaign_controls`: **disabled**, inactive-after 30 days, temporary pilot cap 10 enqueues/day. A successful enqueue marks the inactivity episode to prevent repeat nags until the user revisits.
+- Read-only SQL verification: four workflow status triggers active, opt-in stamp trigger active, no queued jobs, no opted-in users, campaign flag false. Anonymous/normal members cannot prepare campaigns or call service-only unsubscribe RPC.
+
+Source changes requiring a **future** Netlify rebuild:
+- Sitewide Supabase client reports signed-in, visible-page member visits; browser and database both throttle writes. Public/anonymous visitors do not use this visit tracker.
+- Settings > Email updates has a dedicated, opt-in-by-default-off reminder toggle explaining the 30-day absence threshold.
+- `email-inactivity-preparer.js` has a daily schedule (08:30 UTC) but will **not queue** without `EMAIL_DELIVERY_ENABLED=true`, `EMAIL_INACTIVITY_ENABLED=true` and the separate Supabase campaign flag. All are currently off or unset.
+- `email-worker.js` now contains generic status-change templates and friendly reminder copy, verifies authorization immediately before sending and avoids exposing sensitive user content.
+- `unsubscribe.html` and `email-opt-out.js` allow no-login opt-out with a signed, job-scoped, 90-day token and no-referrer policy.
+- `email-operations?inactivityPreview=1` enables a super-admin-only dry-run aggregate preview; does not queue jobs.
+- `tests/email-workflow-and-inactivity.test.cjs` covers defaults, disabled gates, stale status, a returned user, and tampered unsubscribe tokens. GitHub Actions remain locked by account billing, and the local environment could not clone GitHub. Source syntax checks passed, but this is not equivalent to an integration test.
+
+New **required secret before enabling**:
+- `EMAIL_UNSUBSCRIBE_SECRET`: distinct randomly generated secret (at least 32 characters) stored only as Netlify Functions secret, preferably from a secure password manager. Never reuse the Brevo SMTP key, Brevo API key, or webhook bearer secret. Generated token signing fails closed if the secret is missing. The opt-out endpoint must be deployed alongside the sender before activation.
+- Keep `EMAIL_INACTIVITY_ENABLED` unset/false and `EMAIL_DELIVERY_ENABLED` unset/false until test emails, unsubscribe workflow, credentials, and provider webhooks have been verified.
+- The check-in is **optional re-engagement**, not a necessary account message; never opt users in silently or use their email for marketing without consent. Brevo manages standard list-unsubscribe headers but the body has a direct preference-off link too.
+- Do not backfill historical users or manually queue live reminders. The preview branch is a static deployed snapshot and won't contain any of these changes without a new Netlify build. Current hosting credits are exhausted.
+- Scale note: current scheduler is deliberately limited and not proven at 100K concurrent users. Add indexed keyset scanning/queue capacity and suppression reconciliation, provider quota automation, retention rules and end-to-end load testing before large rollout.
