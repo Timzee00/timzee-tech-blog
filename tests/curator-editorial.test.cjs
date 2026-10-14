@@ -7,10 +7,14 @@ const paragraph="The original report highlights a development, but further infor
 const draft={
   introduction:paragraph+" "+paragraph,dek:"Source-based explainer for editorial review.",
   sections:[
-   {heading:"What the source says",paragraphs:[paragraph,paragraph]},
-   {heading:"Wider context",paragraphs:[paragraph,paragraph]},
-   {heading:"Unanswered questions",paragraphs:[paragraph,paragraph]}
-  ],conclusion:paragraph,verification_notes:["Verify timelines"]
+   {heading:"What the source says",paragraphs:[paragraph.repeat(2),paragraph.repeat(2)]},
+   {heading:"Wider context",paragraphs:[paragraph.repeat(2),paragraph.repeat(2)]},
+   {heading:"Unanswered questions",paragraphs:[paragraph.repeat(2),paragraph.repeat(2)]},
+   {heading:"How readers can evaluate the claim",paragraphs:[paragraph.repeat(2),paragraph.repeat(2)]},
+   {heading:"What remains uncertain",paragraphs:[paragraph.repeat(2),paragraph.repeat(2)]}
+  ],conclusion:paragraph.repeat(2),
+  takeaways:["The underlying reporting supports a specific development, but readers still need independent evidence about real-world adoption.","Source attribution and documented uncertainty matter more than a long article that merely repeats one claim."],
+  verification_notes:["Verify timelines"]
 };
 test("renders source-credited long-form article with escaped sections",()=>{
  const data=normalizedArticle(JSON.stringify(draft),"https://example.org/story#section","Tech source");

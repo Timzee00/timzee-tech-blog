@@ -8,6 +8,7 @@ test("a long structured draft is escaped, attributed, and held for review",()=>{
    introduction:paragraph.repeat(2),
    sections:Array.from({length:5},(_,i)=>({heading:i===0?"<script>Danger</script>Background":"What we know "+i,paragraphs:[paragraph.repeat(4)]})),
    conclusion:paragraph.repeat(2),
+   takeaways:["The source establishes what its author described, not whether the outcome will translate to every environment.","Additional independent evidence is necessary before drawing conclusions about impact or adoption."],
    verification_notes:["Confirm the scope of the announced rollout"]
  },src,"Trusted News");
  assert.ok(article.wordCount>=450);
