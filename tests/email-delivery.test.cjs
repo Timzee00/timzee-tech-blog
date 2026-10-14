@@ -75,7 +75,7 @@ test("worker reuses job UUID as provider idempotency key", async () => {
   }});
   const result=JSON.parse((await handler()).body);
   assert.equal(requestCount,1);
-  assert.equal(payload.headers["Idempotency-Key"],job.id);
+  assert.equal(payload.headers.idempotencyKey,job.id);
   assert.equal(payload.to[0].email,job.recipient_email);
   assert.equal(result.sent,1);
   assert.equal(completed.p_success,true);
@@ -150,4 +150,71 @@ test("webhook refuses invalid bearer tokens without touching the DB",async()=>{
   });
   assert.equal(response.statusCode,401);
   assert.equal(called,0);
+});
+
+test("network uncertainty quarantines the job instead of blindly retrying",async()=>{
+  const calls=[];
+  const handler=loadHandler("email-worker",{rpc:async(name,args)=>{
+    calls.push(name);
+    if(name==="email_delivery_statistics")return {data:{sent_last_24h:0},error:null};
+    if(name==="claim_email_jobs")return {data:[job],error:null};
+    if(name==="is_email_suppressed")return {data:false,error:null};
+    if(name==="quarantine_email_job")return {data:true,error:null};
+    throw Error("Unexpected RPC "+name);
+  }},{env:workerEnv,fetch:async()=>{throw Error("connection lost");}});
+  const response=await handler();
+  assert.equal(response.statusCode,200);
+  assert.equal(JSON.parse(response.body).quarantined,1);
+  assert.equal(calls.filter(x=>x==="complete_email_job").length,0);
+});
+
+test("Brevo duplicate_parameter response requires manual reconciliation",async()=>{
+  const calls=[];
+  const handler=loadHandler("email-worker",{rpc:async(name,args)=>{
+    calls.push(name);
+    if(name==="email_delivery_statistics")return {data:{sent_last_24h:0},error:null};
+    if(name==="claim_email_jobs")return {data:[job],error:null};
+    if(name==="is_email_suppressed")return {data:false,error:null};
+    if(name==="quarantine_email_job")return {data:true,error:null};
+    throw Error("Unexpected RPC "+name);
+  }},{env:workerEnv,fetch:async()=>({
+    ok:false,status:400,
+    json:async()=>({code:"duplicate_parameter",message:"Duplicate idempotency key"})
+  })});
+  const response=await handler();
+  assert.equal(response.statusCode,200);
+  assert.equal(JSON.parse(response.body).quarantined,1);
+  assert.equal(calls.includes("quarantine_email_job"),true);
+});
+
+test("Brevo 429 response is retryable with backoff",async()=>{
+  const calls=[];
+  const handler=loadHandler("email-worker",{rpc:async(name,args)=>{
+    calls.push([name,args]);
+    if(name==="email_delivery_statistics")return {data:{sent_last_24h:0},error:null};
+    if(name==="claim_email_jobs")return {data:[job],error:null};
+    if(name==="is_email_suppressed")return {data:false,error:null};
+    if(name==="complete_email_job")return {data:null,error:null};
+    throw Error("Unexpected RPC "+name);
+  }},{env:workerEnv,fetch:async()=>({
+    ok:false,status:429,json:async()=>({message:"Rate limit"})
+  })});
+  const response=await handler();
+  assert.equal(JSON.parse(response.body).failed,1);
+  assert.equal(calls.some(x=>x[0]==="quarantine_email_job"),false);
+  const completed=calls.find(x=>x[0]==="complete_email_job");
+  assert.equal(completed[1].p_success,false);
+});
+
+test("Brevo millisecond timestamps normalize to seconds",async()=>{
+  const calls=[];
+  const handler=loadHandler("brevo-webhook",{rpc:async(name,args)=>{
+    calls.push(args);return {data:{handled:true,suppressed:false},error:null};
+  }},{env:{BREVO_WEBHOOK_TOKEN:"webhook-test"}});
+  const response=await handler({
+    httpMethod:"POST",headers:{authorization:"Bearer webhook-test"},
+    body:JSON.stringify({event:"delivered",email:"test@example.com","message-id":"provider-1",ts_epoch:1700000000000})
+  });
+  assert.equal(response.statusCode,200);
+  assert.equal(calls[0].p_event_epoch,1700000000);
 });
