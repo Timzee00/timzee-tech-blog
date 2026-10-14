@@ -434,8 +434,9 @@ class CuratorManager {
     list.innerHTML = this.posts.map(post => {
       const dateText = post.published_at ? new Date(post.published_at).toLocaleDateString() : "Unknown date";
       const wordCount = String(post.content || "").replace(/<[^>]*>/g, " ").trim().split(/\s+/).filter(Boolean).length;
-      const editorialStatus = wordCount < 450
-        ? "Source brief — expand and fact-check before publishing."
+      const isSourceBrief=String(post.content||"").includes("Editorial status:");
+      const editorialStatus = isSourceBrief || wordCount < 450
+        ? "Source brief — expand with evidence and fact-check before publishing."
         : "Article draft · " + wordCount + " words · Fact-check before publishing.";
       return `
       <div class="post-card">
@@ -526,8 +527,8 @@ class CuratorManager {
     if (!curatorPost) return;
     const articleText = String(curatorPost.content || "").replace(/<[^>]*>/g, " ").replace(/&[^;]+;/g, " ");
     const articleWords = articleText.trim().split(/\s+/).filter(Boolean).length;
-    if(articleWords<450){
-      window.appUI.toast("This source brief is too short for an original blog article. Expand and fact-check it first.",{tone:"warning"});
+    if(articleWords<450 || articleText.includes("Editorial status:")){
+      window.appUI.toast("This is a source brief, not an original article. Expand and fact-check it before publishing.",{tone:"warning"});
       return;
     }
     if (!await window.appUI.confirm(`Publish "${curatorPost.title}" to the site? Confirm that you checked the factual claims, editorial quality and source attribution.`)) return;

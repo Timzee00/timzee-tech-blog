@@ -4,7 +4,7 @@ const escapeHTML = value => String(value??"").replace(/&/g,"&amp;").replace(/</g
 function toText(value,max=1600) { return String(value||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim().slice(0,max); }
 function normalizedArticle(response, sourceUrl,sourceName) {
   const data=typeof response==="string"?JSON.parse(response.replace(/^```(?:json)?\s*|\s*```$/gi,"").trim()):response;
-  if(!data || !Array.isArray(data.sections) || data.sections.length<3 || data.sections.length>7)
+  if(!data || !Array.isArray(data.sections) || data.sections.length<4 || data.sections.length>7)
     throw Error("The model did not produce a structured article.");
   const intro=toText(data.introduction,2600), conclusion=toText(data.conclusion,2400);
   if(intro.length<80 || conclusion.length<60)throw Error("The generated opening or conclusion is too short.");

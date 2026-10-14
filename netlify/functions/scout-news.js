@@ -24,7 +24,7 @@ function bestRssEvidence(item) {
     .sort((a,b)=>b.length-a.length)[0] || "";
 }
 function extractRssImage(item) { const mediaContent = item["media:content"] || item["media:thumbnail"]; const mediaUrl = Array.isArray(mediaContent) ? mediaContent[0]?.$?.url || mediaContent[0]?.url : mediaContent?.$?.url || mediaContent?.url; if (mediaUrl) return mediaUrl; const enclosure = item.enclosure || (item.enclosures && item.enclosures[0]); return enclosure?.url && (enclosure.type || "").startsWith("image") ? enclosure.url : ""; }
-async function fetchRssItems(source, parser) { if (!source.feed_url) return []; const feed = await parser.parseURL(source.feed_url); return (feed.items || []).map((item) => ({ title: item.title || "", link: item.link || "", published_at: item.isoDate || item.pubDate || new Date().toISOString(), summary: bestRssEvidence(item), tags: item.categories || [], image_url: extractRssImage(item) })); }
+async function fetchRssItems(source, parser) { if (!source.feed_url) return []; const feed = await parser.parseURL(source.feed_url); return (feed.items || []).map((item) => ({ title: item.title || "", link: item.link || "", published_at: item.isoDate || item.pubDate || null, summary: bestRssEvidence(item), tags: item.categories || [], image_url: extractRssImage(item) })); }
 async function fetchGdeltItems(source) {
   const query = String(source.query || source.feed_url || "").trim().slice(0, 240);
   if (!query) return [];
@@ -35,7 +35,7 @@ async function fetchGdeltItems(source) {
   const data = await response.json();
   return (data.articles || []).map((article) => ({
     title: article.title || "", link: article.url || "",
-    published_at: article.seendate || article.datetime || new Date().toISOString(),
+    published_at: article.seendate || article.datetime || null,
     summary: article.extras?.summary || article.excerpt || article.snippet || "",
     tags: article.themes || [], image_url: article.socialimage || ""
   }));
