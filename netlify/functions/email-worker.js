@@ -24,7 +24,7 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
       sender:{email:senderEmail,name:senderName},
       to:[{email:job.recipient_email}],
       subject:template.subject,htmlContent:html,
-      headers:{"X-Mailin-custom":"type:transactional","Idempotency-Key":job.id}
+      headers:{"X-Mailin-custom":"type:transactional",idempotencyKey:job.id}
     })
   });
   let body={};try{body=await res.json()}catch{}
