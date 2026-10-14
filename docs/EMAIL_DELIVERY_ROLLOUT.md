@@ -129,3 +129,24 @@ User's Netlify credits are exhausted. Continue improving source code and connect
 - Supabase Security Advisor still warns `auth_leaked_password_protection` is disabled. Review when the Auth plan/features permit. RLS without policies on private email tables is intentional.
 - Existing Netlify environment has `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `BREVO_WEBHOOK_TOKEN`; the key/token were not marked secret in earlier account metadata. Never print or expose their values in logs, screenshots, or code.
 - Keep `EMAIL_DELIVERY_ENABLED` unset/false until the updated Netlify branch is deployed, webhook authentication is verified, credentials and quota are tested, and a user-approved recipient receives exactly one test email.
+
+
+## Manual reconciliation and optional email preferences (October 14, 2026)
+Deployed to Supabase:
+- `email_manual_review_audit`: private append-only review actions and service-role-only list/record RPCs. Actor and rationale are stored; review does not change job status or trigger retries.
+- `email_notification_preferences`: optional message, mention, marketplace, and community email choices; all default `false`, with authenticated users limited to their own row via RLS.
+- `email_review_stats_refinement`: separates unresolved quarantined jobs from closed human reviews.
+
+Source-controlled only (requires a **future** Netlify build once credits return):
+- Super-admin `/super/email-operations.html` displays up to 25 unresolved quarantined jobs, accepts an explicit decision and a 15–1000 character review note, and requires confirmation before saving.
+- Super-admin-only Netlify endpoint validates JWT and authoritative active profile role, records the actor ID from verified auth, and provides masked/redacted case details without address or message payload.
+- User Settings page has four independent optional email switches with accurate warning that no optional email feature is live yet. Security and password recovery emails are separate and continue independent of preference switches.
+- Added regression tests covering authorization, no sending, data minimization, preferences, and RLS scripts. GitHub Actions cannot run while the account billing lock remains in place.
+
+**Safety and operational limitations:**
+- No replay/resend button exists. Admin review is only a case record; confirmed status currently depends on human evidence rather than automatic Brevo verification.
+- The provider webhook and latest Netlify endpoints have not been deployed to the actual public domain in this credit-limited session.
+- Email worker remains fail-closed because `EMAIL_DELIVERY_ENABLED` must be exactly `true` before any sending.
+- No optional digest or marketing email is generated yet; marketing requires a separately implemented and audited consent flow.
+- Review note may include evidence but should never contain raw API keys, passwords, or unnecessary personal data.
+- New database objects are private or row-scoped; server service role remains solely in Netlify functions.
