@@ -13,7 +13,15 @@ function slugify(text = "") { return text.toLowerCase().replace(/[^a-z0-9\s-]/g,
 function parseEnvFeeds(value = "") { return (value || "").split(",").map((entry) => entry.trim()).filter(Boolean); }
 function normalizeTags(...tagSets) { const tags = new Set(); tagSets.forEach((set) => { if (!set) return; if (Array.isArray(set)) { set.forEach((tag) => tags.add(String(tag).toLowerCase().trim())); return; } if (typeof set === "string") set.split(",").map((tag) => tag.trim()).filter(Boolean).forEach((tag) => tags.add(tag.toLowerCase())); }); return Array.from(tags).filter(Boolean).slice(0, 8); }
 function rewriteExcerpt(summary, title) { const base = stripHTML(summary || title || ""); if (!base) return ""; return base.length > 235 ? `${base.slice(0, 235).trim()}…` : base; }
-function buildContent(summary,sourceUrl) { const cleaned = stripHTML(summary || "").slice(0,5500); return '<p>'+escapeHTML(cleaned || "This source requires additional editorial research.")+'</p><p><strong>Editorial status:</strong> Source brief. Enrich with corroborated information and human review before publication.</p><p>Original reporting: <a href="'+escapeHTML(sourceUrl)+'" target="_blank" rel="noopener noreferrer">Read source</a>.</p>'; }
+function buildContent(summary,sourceUrl,imageCandidates=[]){
+  const cleaned=stripHTML(summary||"").slice(0,5500);
+  const candidates=[...new Set(imageCandidates)].slice(0,4).map(url=>
+    '<li><a data-curator-image-candidate="'+encodeURIComponent(url)+'" href="'+escapeHTML(url)+'" rel="noopener noreferrer" target="_blank">Image candidate</a> (reuse rights unverified)</li>').join("");
+  return '<p>'+escapeHTML(cleaned||"This source requires additional editorial research.")+'</p>'
+    +'<p><strong>Editorial status:</strong> Source brief. Add research and human review before publication.</p>'
+    +(candidates?'<section><h2>Candidate images: staff review only</h2><ul>'+candidates+'</ul></section>':"")
+    +'<p>Original reporting: <a href="'+escapeHTML(sourceUrl)+'" target="_blank" rel="noopener noreferrer">Read source</a>.</p>';
+}
 function getDomain(url = "") { try { return new URL(url).hostname.replace("www.", ""); } catch { return ""; } }
 function bestRssEvidence(item) {
   // Some feeds supply fuller source material in content:encoded. Retain only
@@ -23,8 +31,24 @@ function bestRssEvidence(item) {
   return parts.map(v=>stripHTML(String(v||"")).slice(0,4200))
     .sort((a,b)=>b.length-a.length)[0] || "";
 }
-function extractRssImage(item) { const mediaContent = item["media:content"] || item["media:thumbnail"]; const mediaUrl = Array.isArray(mediaContent) ? mediaContent[0]?.$?.url || mediaContent[0]?.url : mediaContent?.$?.url || mediaContent?.url; if (mediaUrl) return mediaUrl; const enclosure = item.enclosure || (item.enclosures && item.enclosures[0]); return enclosure?.url && (enclosure.type || "").startsWith("image") ? enclosure.url : ""; }
-async function fetchRssItems(source, parser) { if (!source.feed_url) return []; const feed = await parser.parseURL(source.feed_url); return (feed.items || []).map((item) => ({ title: item.title || "", link: item.link || "", published_at: item.isoDate || item.pubDate || null, summary: bestRssEvidence(item), tags: item.categories || [], image_url: extractRssImage(item) })); }
+function extractRssImages(item){
+  const raw=[];
+  const add=media=>{
+    if(!media)return;
+    if(Array.isArray(media)){media.forEach(add);return;}
+    if(typeof media==="string"){raw.push(media);return;}
+    const url=media.url||media.$?.url;
+    if(url && (!media.type||String(media.type).startsWith("image")))raw.push(url);
+  };
+  add(item["media:content"]);add(item["media:thumbnail"]);add(item.enclosure);add(item.enclosures);
+  const html=[item.content,item["content:encoded"],item.summary].filter(Boolean).join(" ").slice(0,18000);
+  for(const match of html.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["']/gi))raw.push(match[1]);
+  return [...new Set(raw.map(value=>{
+    try{const u=new URL(String(value));return ["https:","http:"].includes(u.protocol)?u.toString():"";}catch{return "";}
+  }).filter(Boolean))].slice(0,4);
+}
+function extractRssImage(item){return extractRssImages(item)[0]||"";}
+async function fetchRssItems(source, parser) { if (!source.feed_url) return []; const feed = await parser.parseURL(source.feed_url); return (feed.items || []).map((item) => ({ title: item.title || "", link: item.link || "", published_at: item.isoDate || item.pubDate || null, summary: bestRssEvidence(item), tags: item.categories || [], image_url: extractRssImage(item), image_urls: extractRssImages(item) })); }
 async function fetchGdeltItems(source) {
   const query = String(source.query || source.feed_url || "").trim().slice(0, 240);
   if (!query) return [];
@@ -37,7 +61,7 @@ async function fetchGdeltItems(source) {
     title: article.title || "", link: article.url || "",
     published_at: article.seendate || article.datetime || null,
     summary: article.extras?.summary || article.excerpt || article.snippet || "",
-    tags: article.themes || [], image_url: article.socialimage || ""
+    tags: article.themes || [], image_url: article.socialimage || "", image_urls: article.socialimage ? [article.socialimage] : []
   }));
 }
 
@@ -158,7 +182,7 @@ exports.handler = async (event) => {
         slug,
         excerpt: rewriteExcerpt(summary, title),
         description: rewriteExcerpt(summary, title),
-        content: buildContent(summary,articleUrl),
+        content: buildContent(summary,articleUrl,item.image_urls||[item.image_url].filter(Boolean)),
         source_url: articleUrl,
         url: articleUrl,
         author: source.name,

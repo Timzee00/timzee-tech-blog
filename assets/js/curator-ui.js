@@ -445,6 +445,8 @@ class CuratorManager {
     }
 
     list.innerHTML = this.posts.map(post => {
+      const candidates=[...String(post.content||"").matchAll(/data-curator-image-candidate="([^"]+)"/g)]
+        .map(match=>{try{return decodeURIComponent(match[1]);}catch{return "";}}).filter(Boolean);
       const dateText = post.published_at ? new Date(post.published_at).toLocaleDateString() : "Unknown date";
       const wordCount = String(post.content || "").replace(/<[^>]*>/g, " ").trim().split(/\s+/).filter(Boolean).length;
       const isSourceBrief=String(post.content||"").includes("Editorial status:");
@@ -465,7 +467,7 @@ class CuratorManager {
           <summary>Images and embeds (up to six)</summary>
           <p>Source images are previews only. Add approved HTTPS image URLs, one per line. Publishing requires confirmed image rights.</p>
           ${post.image_url && trustedExternalUrl(post.image_url)?'<img class="curator-image-preview" loading="lazy" referrerpolicy="no-referrer" alt="Source image preview - rights not verified" src="'+escapeHTML(post.image_url)+'" style="max-width:180px;max-height:120px;object-fit:contain;">':""}
-          <label>Approved image URLs<textarea data-curator-images="${post.id}" rows="3" class="field" placeholder="https://example.com/licensed-image.jpg"></textarea></label>
+          <label>Approved image URLs<textarea data-curator-images="${post.id}" rows="3" class="field" placeholder="https://example.com/licensed-image.jpg">${escapeHTML(candidates.join("\n"))}</textarea></label>
           <label>Image credit and permission reference<input data-curator-image-credit="${post.id}" class="field" placeholder="Photographer / license / permission link"></label>
           <label><input type="checkbox" data-curator-image-rights="${post.id}"> I verified permission to display these images on Timzee Tech Hub</label>
         </details>
