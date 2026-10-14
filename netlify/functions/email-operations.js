@@ -40,6 +40,13 @@ exports.handler=async event=>{
     })):[];
     return reply(200,{cases,delivery_enabled:process.env.EMAIL_DELIVERY_ENABLED==="true"});
   }
+  if(event.queryStringParameters?.inactivityPreview === "1"){
+    const {data,error}=await db.rpc("prepare_inactivity_reminders",{p_dry_run:true,p_limit:10});
+    if(error)return reply(503,{error:"Inactivity preview unavailable"});
+    return reply(200,{dry_run:true,enabled:data?.enabled===true,
+      eligible:Number(data?.eligible||0),remaining_budget:Number(data?.remaining_budget||0),
+      enqueued:0});
+  }
   if(event.queryStringParameters?.digestPreview === "1") {
     const {data,error}=await db.rpc("prepare_email_digests",{p_dry_run:true,p_limit:10});
     if(error)return reply(503,{error:"Digest preview unavailable"});
