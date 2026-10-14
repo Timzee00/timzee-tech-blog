@@ -684,7 +684,7 @@
               const postId = btn.dataset.postId;
               const action = btn.dataset.postAction;
               if (action === "delete") {
-                if (!await window.appUI.confirm("Delete this post permanently? This cannot be undone.")) return;
+                if (!await window.appUI.confirm("Permanently delete this post and its linked comments, reactions and attachments? This cannot be undone. Choose Cancel if you only want to unpublish it.")) return;
                 btn.disabled = true;
                 const { error: delError } = await supabase.from("posts").delete().eq("id", postId);
                 if (delError) {
@@ -692,6 +692,7 @@
                   btn.disabled = false;
                   return;
                 }
+                window.appUI.toast("Post permanently removed, including dependent comments and media.",{tone:"success"});
                 loadPosts();
                 return;
               }
