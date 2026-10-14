@@ -748,9 +748,10 @@
 
         // Tap to play/pause, double-tap to like (Instagram/TikTok style)
         const tapState = {};
-        scroller.querySelectorAll("[data-tap]":not([data-reeltapwired])").forEach((zone) => {
+        scroller.querySelectorAll("[data-tap]":not([data-reel-tap-wired])").forEach((zone) => {
 
-          zone.dataset.reelTapWired="true";          zone.addEventListener("click", (e) => {
+          zone.dataset.reelTapWired="true";
+          zone.addEventListener("click", (e) => {
             const idx = zone.dataset.tap;
             const now = Date.now();
             const last = tapState[idx] || 0;
@@ -785,9 +786,10 @@
         });
 
         // Mute toggle
-        scroller.querySelectorAll(".reel-mute":not([data-reelmutewired])").forEach((btn) => {
+        scroller.querySelectorAll(".reel-mute":not([data-reel-mute-wired])").forEach((btn) => {
 
-          btn.dataset.reelMuteWired="true";          btn.addEventListener("click", (e) => {
+          btn.dataset.reelMuteWired="true";
+          btn.addEventListener("click", (e) => {
             e.stopPropagation();
             const idx = btn.id.split("-")[1];
             const vid = document.getElementById(`video-${idx}`);
@@ -803,9 +805,10 @@
         });
 
         // Expand caption on tap
-        scroller.querySelectorAll(".reel-caption":not([data-reelcaptionwired])").forEach((cap) => {
+        scroller.querySelectorAll(".reel-caption":not([data-reel-caption-wired])").forEach((cap) => {
 
-          cap.dataset.reelCaptionWired="true";          cap.addEventListener("click", (e) => {
+          cap.dataset.reelCaptionWired="true";
+          cap.addEventListener("click", (e) => {
             e.stopPropagation();
             cap.classList.toggle("expanded");
           });
@@ -862,9 +865,10 @@
           );
         }
 
-        scroller.querySelectorAll('[data-action="like"]':not([data-reellikewired])').forEach((btn) => {
+        scroller.querySelectorAll('[data-action="like"]':not([data-reel-like-wired])').forEach((btn) => {
 
-          btn.dataset.reelLikeWired="true";          btn.addEventListener("click", (e) => {
+          btn.dataset.reelLikeWired="true";
+          btn.addEventListener("click", (e) => {
             e.stopPropagation();
             performLike(btn.dataset.id, btn.dataset.index).catch((error) =>
               console.warn("Like failed:", error)
@@ -873,18 +877,20 @@
         });
 
         // Comment drawer
-        scroller.querySelectorAll('[data-action="comment"]':not([data-reelcommentwired])').forEach((btn) => {
+        scroller.querySelectorAll('[data-action="comment"]':not([data-reel-comment-wired])').forEach((btn) => {
 
-          btn.dataset.reelCommentWired="true";          btn.addEventListener("click", (e) => {
+          btn.dataset.reelCommentWired="true";
+          btn.addEventListener("click", (e) => {
             e.stopPropagation();
             openComments(btn.dataset.id);
           });
         });
 
         // Share
-        scroller.querySelectorAll('[data-action="share"]':not([data-reelsharewired])').forEach((btn) => {
+        scroller.querySelectorAll('[data-action="share"]':not([data-reel-share-wired])').forEach((btn) => {
 
-          btn.dataset.reelShareWired="true";          btn.addEventListener("click", async (e) => {
+          btn.dataset.reelShareWired="true";
+          btn.addEventListener("click", async (e) => {
             e.stopPropagation();
             const videoId = btn.dataset.id;
             const url = `${window.location.origin}${window.location.pathname}?id=${videoId}`;
@@ -900,9 +906,10 @@
           });
         });
 
-        scroller.querySelectorAll('[data-action="download"]':not([data-reeldownloadwired])').forEach((btn) => {
+        scroller.querySelectorAll('[data-action="download"]':not([data-reel-download-wired])').forEach((btn) => {
 
-          btn.dataset.reelDownloadWired="true";          btn.addEventListener("click", async (e) => {
+          btn.dataset.reelDownloadWired="true";
+          btn.addEventListener("click", async (e) => {
             e.stopPropagation();
             const url = btn.dataset.url;
             if (!url) return;
@@ -933,9 +940,10 @@
         });
 
         // Progress bar: passive update + drag-to-seek + buffering spinner
-        scroller.querySelectorAll(".reel-video":not([data-reelvideowired])").forEach((vid) => {
+        scroller.querySelectorAll(".reel-video":not([data-reel-video-wired])").forEach((vid) => {
 
-          vid.dataset.reelVideoWired="true";          const idx = vid.id.split("-")[1];
+          vid.dataset.reelVideoWired="true";
+          const idx = vid.id.split("-")[1];
           const track = document.getElementById(`progresstrack-${idx}`);
           const fill = document.getElementById(`progress-${idx}`);
           const spinner = document.getElementById(`spinner-${idx}`);
@@ -1044,10 +1052,13 @@
         scroller.querySelectorAll(".reel-item").forEach(el => {
           observer.observe(el);
           const video=el.querySelector("video");
-          video?.addEventListener("playing",() => {
-            // Only genuine playback events count, not just scrolling past.
-            void incrementVideoView(el.dataset.id).catch(()=>{});
-          },{once:true});
+          if(video && !video.dataset.playViewWired) {
+            video.dataset.playViewWired="true";
+            video.addEventListener("playing",() => {
+              // Only genuine playback events count, not just scrolling past.
+              void incrementVideoView(el.dataset.id).catch(()=>{});
+            },{once:true});
+          }
         });
 
         // Mark liked state for signed-in user
