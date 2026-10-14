@@ -59,7 +59,7 @@
         <div class="callout" style="margin-top:16px;">
           Only super admins can add/remove admins. Use the regular admin workspace for day-to-day handling.
         </div>
-        <div id="adminList" style="margin-top:20px;"></div>
+        <form id="promoteAdminForm" class="admin-management-controls"><label for="newAdminEmail">Promote existing registered account to Admin</label><div class="admin-management-row"><input id="newAdminEmail" type="email" placeholder="Account email" required><button class="btn" type="submit">Promote to Admin</button></div><p id="promoteAdminStatus" role="status"></p></form><div id="adminList" style="margin-top:20px;"></div>
       </section>
 
       <!-- Curator Bot Management -->
@@ -97,7 +97,7 @@
       <section class="admin-card" data-panel="posts">
         <h2>📰 All Posts</h2>
         <p style="color: var(--color-text-muted); margin-bottom: 20px;">View and manage all content on the site</p>
-        <div id="allPostsContainer" style="text-align: center; padding: 40px; color: var(--color-text-muted);">Loading posts...</div>
+        <div class="admin-management-controls"><div class="admin-management-row"><input type="search" id="superPostSearch" placeholder="Search title or author"><select id="superPostStatus"><option value="all">All statuses</option><option value="published">Published</option><option value="draft">Draft</option><option value="scheduled">Scheduled</option></select><button class="btn ghost" id="superPostFind" type="button">Search</button></div><p id="superPostSummary" role="status"></p></div><div id="allPostsContainer" class="admin-compact-list">Loading posts...</div><div class="admin-list-pager"><button class="btn ghost" id="superPostPrev">Previous</button><span id="superPostPage">Page 1</span><button class="btn ghost" id="superPostNext">Next</button></div>
       </section>
 
       <!-- Site Analysis -->
@@ -111,7 +111,7 @@
       <section class="admin-card" data-panel="users">
         <h2>👤 Users</h2>
         <p style="color: var(--color-text-muted); margin-bottom: 20px;">View and manage user accounts</p>
-        <div id="allUsersContainer" style="text-align: center; padding: 40px; color: var(--color-text-muted);">Loading users...</div>
+        <div class="admin-management-controls"><div class="admin-management-row"><input type="search" id="superUserSearch" placeholder="Search by name, username or email"><button class="btn ghost" id="superUserFind">Search</button></div><p id="superUserSummary" role="status"></p></div><div id="allUsersContainer" class="admin-compact-list">Loading users...</div><div class="admin-list-pager"><button class="btn ghost" id="superUserPrev">Previous</button><span id="superUserPage">Page 1</span><button class="btn ghost" id="superUserNext">Next</button></div>
       </section>
 
       <!-- Site Settings -->
@@ -562,25 +562,50 @@
           }
         };
 
+        const adminPager={postPage:1,userPage:1,pageSize:12};
+        const updatePager=(type,page,more,label)=>{
+          document.getElementById("super"+type+"Page").textContent="Page "+page;
+          document.getElementById("super"+type+"Prev").disabled=page<=1;
+          document.getElementById("super"+type+"Next").disabled=!more;
+          document.getElementById("super"+type+"Summary").textContent=label;
+        };
+        document.getElementById("promoteAdminForm").addEventListener("submit",async event=>{
+          event.preventDefault();
+          const email=document.getElementById("newAdminEmail").value.trim();
+          const status=document.getElementById("promoteAdminStatus");
+          if(!await window.appUI.confirm("Promote the existing account "+email+" to Admin?"))return;
+          status.textContent="Processing…";
+          try{
+            const res=await fetchWithAuth("/.netlify/functions/create-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
+            const parsed=await safeParseJson(res);
+            if(!res.ok)throw Error(parsed.data?.error||"Promotion failed.");
+            status.textContent="Admin permissions granted.";await loadAdmins();
+          }catch(error){status.textContent=error.message||"Unable to promote this account.";}
+        });
         const loadUsers = async () => {
           try {
-            const res = await fetchWithAuth("/.netlify/functions/list-users");
+            const search=document.getElementById("superUserSearch").value.trim();
+            const query=new URLSearchParams({perPage:"12",page:String(adminPager.userPage)});
+            if(search){query.delete("page");query.set("search",search);query.set("maxPages","5");}
+            const res = await fetchWithAuth("/.netlify/functions/list-users?"+query);
             const parsed = await safeParseJson(res);
             const data = parsed.data || {};
             if (!res.ok || !parsed.data) {
               throw new Error(data.error || `Failed to load users. ${parsed.raw ? "Response was HTML (Netlify function not running)." : ""}`);
             }
-            const cards = (data.users || []).map((user) => `
+            const users=search?(data.users||[]).slice((adminPager.userPage-1)*12,adminPager.userPage*12):(data.users||[]);
+            updatePager("User",adminPager.userPage,search?(data.users||[]).length>adminPager.userPage*12:Boolean(data.hasMore),users.length+" users displayed"+(search?" (search currently limited to 1,000 accounts)":""));
+            const cards = users.map((user) => `
               <div class="form-card" style="margin-bottom:12px;" data-user-id="${user.id}">
                 <strong>${escapeHTML(user.display_name || user.email || "Member")}</strong>
                 <div style="color:var(--color-text-muted);font-size:12px;">${escapeHTML(user.email || "—")} • ${escapeHTML(user.role || "user")}</div>
                 <div style="color:var(--color-text-muted);font-size:12px;">Status: ${user.account_status || "active"} ${user.is_verified ? "• Verified" : ""} ${user.is_staff_pick ? "• Staff Pick" : ""} ${user.is_featured ? "• Featured" : ""}</div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                <div class="admin-list-actions"><a class="btn ghost" href="../profile.html?id=${user.id}" target="_blank" rel="noopener noreferrer">View profile</a><details><summary>Manage</summary><div class="admin-list-actions">
                   <button class="btn ghost" data-user-action="${user.is_verified ? "unverify" : "verify"}" data-user-id="${user.id}">${user.is_verified ? "Unverify" : "Verify"}</button>
                   <button class="btn ghost" data-user-action="${user.account_status === "suspended" ? "activate" : "suspend"}" data-user-id="${user.id}">${user.account_status === "suspended" ? "Activate" : "Suspend"}</button>
                   <button class="btn ghost" data-user-action="${user.is_featured ? "unfeature" : "feature"}" data-user-id="${user.id}">${user.is_featured ? "Unfeature" : "Feature"}</button>
                   <button class="btn ghost" data-user-action="${user.is_staff_pick ? "unstaff" : "staff"}" data-user-id="${user.id}">${user.is_staff_pick ? "Unstaff" : "Staff Pick"}</button>
-                </div>
+                </div></details></div>
               </div>
             `);
             renderList("allUsersContainer", cards, "No users found.");
@@ -624,11 +649,13 @@
           const container = document.getElementById("allPostsContainer");
           if (!container) return;
           container.textContent = "Loading posts...";
-          const { data, error } = await supabase
-            .from("posts")
-            .select("id, title, status, created_at, author_name")
-            .order("created_at", { ascending: false })
-            .limit(50);
+          let query=supabase.from("posts").select("id,title,status,created_at,author_name",{count:"exact"}).order("created_at",{ascending:false});
+          const term=document.getElementById("superPostSearch").value.trim().replace(/[%(),]/g," ");
+          const status=document.getElementById("superPostStatus").value;
+          if(term)query=query.or("title.ilike.%"+term+"%,author_name.ilike.%"+term+"%");
+          if(status!=="all")query=query.eq("status",status);
+          const {data,error,count}=await query.range((adminPager.postPage-1)*12,adminPager.postPage*12-1);
+          updatePager("Post",adminPager.postPage,(count||0)>adminPager.postPage*12,(count||0)+" matching posts");
           if (error) {
             container.innerHTML = `<div class="callout" style="border-left-color:var(--color-danger);">${escapeHTML(error.message || "Unable to load posts.")}</div>`;
             return;
@@ -643,9 +670,9 @@
                 <div class="form-card" style="margin-bottom:12px;" data-post-id="${post.id}">
                   <strong>${escapeHTML(post.title || "Untitled")}</strong>
                   <div style="color:var(--color-text-muted);font-size:12px;">${escapeHTML(post.author_name || "Unknown")} • ${escapeHTML(post.status || "draft")}</div>
-                  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                  <div class="admin-list-actions"><a class="btn ghost" href="../post.html?id=${post.id}" target="_blank" rel="noopener noreferrer">Preview</a>
                     <button class="btn ghost" data-post-action="${post.status === "published" ? "unpublish" : "publish"}" data-post-id="${post.id}">${post.status === "published" ? "Unpublish" : "Publish"}</button>
-                    <button class="btn ghost" style="color:var(--color-danger);" data-post-action="delete" data-post-id="${post.id}">Delete</button>
+                    <details><summary>More actions</summary><button class="btn ghost" style="color:var(--color-danger);" data-post-action="delete" data-post-id="${post.id}">Delete permanently</button></details>
                   </div>
                 </div>`
             )
@@ -680,6 +707,20 @@
           });
         };
 
+        document.getElementById("superPostFind").addEventListener("click",()=>{adminPager.postPage=1;void loadPosts();});
+        document.getElementById("superPostSearch").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();adminPager.postPage=1;void loadPosts();}});
+        document.getElementById("superPostStatus").addEventListener("change",()=>{adminPager.postPage=1;void loadPosts();});
+        document.getElementById("superUserFind").addEventListener("click",()=>{adminPager.userPage=1;void loadUsers();});
+        document.getElementById("superUserSearch").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();adminPager.userPage=1;void loadUsers();}});
+        for(const kind of ["Post","User"]){
+          for(const direction of ["Prev","Next"]){
+            document.getElementById("super"+kind+direction).addEventListener("click",()=>{
+              const key=kind==="Post"?"postPage":"userPage";
+              adminPager[key]=Math.max(1,adminPager[key]+(direction==="Next"?1:-1));
+              void (kind==="Post"?loadPosts():loadUsers());
+            });
+          }
+        }
         const loadAnalysis = async () => {
           const statsEl = document.getElementById("analysisStats");
           const topEl = document.getElementById("analysisTopPosts");
