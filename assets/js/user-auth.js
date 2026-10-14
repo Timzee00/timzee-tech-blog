@@ -309,7 +309,7 @@ async function boot() {
   const resetMessage = document.getElementById("resetMessage");
   const googleSignIn = document.getElementById("googleSignIn");
   const appleSignIn = document.getElementById("appleSignIn");
-  const redirectTo = SITE_URL ? `${SITE_URL}/login.html` : undefined;
+  const redirectTo = SITE_URL ? `${SITE_URL}/login.html?recovery=1` : undefined;
 
   const setView = (view) => {
     if (!switcher) return;
@@ -329,7 +329,7 @@ async function boot() {
   const recoveryType = hashParams.get("type") || "";
   const accessToken = hashParams.get("access_token");
   const refreshToken = hashParams.get("refresh_token");
-  const isRecovery = recoveryType === "recovery" || recoveryType === "password_recovery";
+  const isRecovery = recoveryType === "recovery" || recoveryType === "password_recovery" || queryParams.get("recovery") === "1";
   const oauthCallback = isOAuthCallback() && !isRecovery;
 
   let initialView = switcher?.dataset.view || "login";
@@ -342,7 +342,8 @@ async function boot() {
       });
       if (error) setMessage(resetMessage, error.message || "Recovery session failed.");
     } else {
-      setMessage(resetMessage, "Recovery link invalid or expired. Request a new one.");
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data?.session) setMessage(resetMessage, "Recovery link invalid or expired. Request a new one.");
     }
     clearHash();
   }
@@ -477,6 +478,11 @@ async function boot() {
       }
       if (password !== confirm) {
         setMessage(resetMessage, "Passwords do not match.");
+        return;
+      }
+      const { data: recoveryData } = await supabase.auth.getSession();
+      if (!recoveryData?.session) {
+        setMessage(resetMessage, "Recovery session missing or expired. Request a new reset link.");
         return;
       }
       const result = await supabase.auth.updateUser({ password });
