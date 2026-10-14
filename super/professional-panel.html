@@ -585,16 +585,16 @@
         const loadUsers = async () => {
           try {
             const search=document.getElementById("superUserSearch").value.trim();
-            const query=new URLSearchParams({perPage:"12",page:String(adminPager.userPage)});
-            if(search){query.delete("page");query.set("search",search);query.set("maxPages","5");}
-            const res = await fetchWithAuth("/.netlify/functions/list-users?"+query);
+            const query=new URLSearchParams(search?{search,page:String(adminPager.userPage)}:{perPage:"12",page:String(adminPager.userPage)});
+            const endpoint=search?"/.netlify/functions/search-staff-users":"/.netlify/functions/list-users";
+            const res = await fetchWithAuth(endpoint+"?"+query);
             const parsed = await safeParseJson(res);
             const data = parsed.data || {};
             if (!res.ok || !parsed.data) {
               throw new Error(data.error || `Failed to load users. ${parsed.raw ? "Response was HTML (Netlify function not running)." : ""}`);
             }
-            const users=search?(data.users||[]).slice((adminPager.userPage-1)*12,adminPager.userPage*12):(data.users||[]);
-            updatePager("User",adminPager.userPage,search?(data.users||[]).length>adminPager.userPage*12:Boolean(data.hasMore),users.length+" users displayed"+(search?" (search currently limited to 1,000 accounts)":""));
+            const users=data.users||[];
+            updatePager("User",adminPager.userPage,Boolean(data.hasMore),search?`${data.total||0} matching accounts`:`${users.length} users displayed`);
             const cards = users.map((user) => `
               <div class="form-card" style="margin-bottom:12px;" data-user-id="${user.id}">
                 <strong>${escapeHTML(user.display_name || user.email || "Member")}</strong>
