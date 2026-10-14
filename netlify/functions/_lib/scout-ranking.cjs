@@ -7,10 +7,27 @@ const interestAreas = [
   ["security","Security",/\b(vulnerabilit|breach|ransomware|cybersecurity|security patch|zero.day|malware|exploit)\b/i],
   ["software","Software",/\b(browser|operating system|windows|linux|android|ios|framework|typescript|python|javascript|cloud|database)\b/i],
   ["business","Startups and business",/\b(startup|funding|acquisition|founder|business|regulation|privacy|antitrust|jobs|creator economy)\b/i],
-  ["science","Technology and science",/\b(robotic|quantum|satellite|space|chip|semiconductor|electric vehicle|battery|research)\b/i]
+  ["science","Technology and science",/\b(robotic|quantum|satellite|space|chip|semiconductor|electric vehicle|battery|research)\b/i],
+  ["jobs","Jobs and careers",/\b(job openings?|recruiting|now hiring|career opportunities|vacanc(?:y|ies)|remote jobs?|graduate trainee|internship|apprenticeship)\b/i],
+  ["scholarships","Scholarships and grants",/\b(scholarships?|fully funded|fellowships?|research grant|studentship|tuition waivers?|study abroad)\b/i],
+  ["travel","Travel and exchange",/\b(visa|travel grants?|exchange program|work abroad|digital nomad|immigration|study visa)\b/i],
+  ["freebies","Free and affordable",/\b(freebies?|giveaways?|free tier|free access|open access|promo code|discount|legitimate alternatives?|free trial)\b/i],
+  ["opportunities","Opportunities",/\b(applications? open|apply now|competitions?|calls? for proposals?|accelerators?|contests?|funding opportunities)\b/i],
+  ["football","Football",/\b(football|soccer|premier league|champions league|transfer window|world cup|afcon|uefa|fifa|arsenal|chelsea|manchester united|liverpool)\b/i],
+  ["sports","Sports",/\b(nba|basketball|tennis|olympics|formula one|grand prix|athletics|boxing|wrestling)\b/i],
+  ["music","Music and artists",/\b(music|album|single release|grammy|afrobeats|afrobeat|concert|tour dates|artist|record label|spotify|billboard charts?)\b/i],
+  ["entertainment","Entertainment and culture",/\b(celebrity|entertainment|film|movies?|nollywood|hollywood|streaming series|viral moment|pop culture)\b/i],
+  ["world","World affairs",/\b(conflict|war|ceasefire|diplomacy|sanctions|humanitarian|united nations|elections?|geopolitics|military)\b/i]
 ];
 function topicFor(item){
   const haystack=[item.title, ...(Array.isArray(item.tags)?item.tags:[])].join(" ").slice(0,1200);
+  // Time-sensitive opportunity feeds must be classified ahead of generic
+  // words like "AI" or "startup" in their headlines.
+  const priority=["jobs","scholarships","travel","freebies","opportunities","football","sports","music","entertainment","world"];
+  for(const key of priority){
+    const hit=interestAreas.find(([name,,regex])=>name===key && regex.test(haystack));
+    if(hit)return hit[0];
+  }
   return interestAreas.find(([, , re])=>re.test(haystack))?.[0]||"other";
 }
 function publishedMillis(value){
@@ -37,7 +54,10 @@ function rankScoutItems(items,{now=Date.now(),limit=30,maxPerTopic=8}={}){
     // The trending queue is fresh news, not an archive. Missing or future
     // dates may indicate malformed metadata; allow slight clock drift only.
     const age=now-published;
-    return published>0 && age>=-3600000 && age<=7*86400000;
+    const opportunity=["jobs","scholarships","travel","freebies","opportunities"].includes(topicFor(item));
+    // Opportunity discovery needs a longer window; publication still requires
+    // checking current opening/expiry directly at the primary source.
+    return published>0 && age>=-3600000 && age<=(opportunity?30:7)*86400000;
   })
     .map((item,index)=>({...item,__newsScore:newsScore(item,now),__rankIndex:index}))
     .sort((a,b)=>b.__newsScore-a.__newsScore || a.__rankIndex-b.__rankIndex);

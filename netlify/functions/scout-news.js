@@ -134,7 +134,8 @@ exports.handler = async (event) => {
     let insertedCount = 0;
     let duplicates = 0;
     let filteredStale = items.filter(item=>item.published_at &&
-      Date.now()-Date.parse(item.published_at)>7*86400000).length;
+      Date.now()-Date.parse(item.published_at)>
+        (["jobs","scholarships","travel","freebies","opportunities"].includes(topicFor(item))?30:7)*86400000).length;
     let unusableArticles = 0;
     let inspectedArticles = 0;
     const insertErrors = [];
