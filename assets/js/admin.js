@@ -956,7 +956,7 @@ function handlePostForm() {
     event.preventDefault();
     const title = document.getElementById("postTitle").value.trim();
     const categorySelect = document.getElementById("postCategory");
-    let categoryId = categorySelect.value;
+    let categoryId = categorySelect.value || null;
     const tags = toTagArray(document.getElementById("postTags").value);
     const status = document.getElementById("postStatus").value || "published";
     const publishAtRaw = document.getElementById("postPublishAt").value;
