@@ -272,6 +272,13 @@ class CuratorManager {
         @media(min-width:750px) { .post-actions { grid-template-columns:repeat(3,minmax(0,1fr)); } }
         @media(max-width:420px) { .curator-manager { margin:12px 0; } .post-card {padding:12px;} .post-actions > .btn {font-size:13px;} }
 
+        .curator-manager .curator-reporting-editor {padding:10px 12px;border:1px solid var(--color-border);border-radius:10px;max-width:100%;min-width:0;}
+        .curator-manager .curator-reporting-editor summary {min-height:44px;padding:10px 0;cursor:pointer;font-weight:650;}
+        .curator-manager .curator-reporting-editor label {display:block;margin:12px 0;line-height:1.5;font-size:14px;}
+        .curator-manager .curator-reporting-editor :is(textarea,input[type=url]) {display:block;width:100%;min-width:0;max-width:100%;padding:10px;border:1px solid var(--color-border-strong);border-radius:9px;background:var(--color-surface);color:var(--color-text);font:inherit;font-size:16px;}
+        .curator-manager .curator-reporting-confirm {display:flex!important;gap:10px;align-items:flex-start;}
+        .curator-manager .curator-reporting-confirm input {flex:0 0 auto;width:18px;height:18px;margin-top:3px;}
+        .curator-manager .curator-reporting-hint {font-size:13px;color:var(--color-text-muted);line-height:1.55;margin:4px 0;}
         /* The original 1fr/auto header could allocate almost every pixel to
            two stat cards and make "Content Curator Bot" a 2-character column. */
         .curator-manager,.curator-manager .tab-content,.curator-manager .post-card,
@@ -529,6 +536,17 @@ class CuratorManager {
           <label>Image credit and permission reference<input data-curator-image-credit="${post.id}" class="field" placeholder="Photographer / license / permission link"></label>
           <label><input type="checkbox" data-curator-image-rights="${post.id}"> I verified permission to display these images on Timzee Tech Hub</label>
         </details>
+        <details class="curator-reporting-editor">
+          <summary>Additional verified reporting (for a longer AI draft)</summary>
+          <p class="curator-reporting-hint">A short RSS excerpt cannot justify a full-length article. Review an additional reliable source, then add specific facts here and supply its link. The AI will use your notes as unverified editor-provided material until you fact-check the final draft.</p>
+          <label>Source URL for your additional reporting
+            <input type="url" class="field" data-curator-reporting-source="${post.id}" placeholder="https://official-source.example/report">
+          </label>
+          <label>Evidence and context from that source
+            <textarea class="field" data-curator-reporting="${post.id}" rows="5" maxlength="4500" placeholder="Summarize checked facts, dates and relevant context in your own words. Do not copy full articles."></textarea>
+          </label>
+          <label class="curator-reporting-confirm"><input type="checkbox" data-curator-reporting-checked="${post.id}"> I reviewed this source and will fact-check the generated draft before publication.</label>
+        </details>
         <div class="post-actions">
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-preview">Preview post</button>
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-translate">Translate to English</button>
@@ -746,6 +764,15 @@ class CuratorManager {
     const post = this.posts.find(p => p.id === curatorPostId);
     if (!post) return;
     if (!await window.appUI.confirm("Create a longer AI-assisted article draft? This overwrites the existing source brief, but will NOT publish it. You'll still need to check the facts and review the writing.")) return;
+    const reporting=this.container.querySelector('[data-curator-reporting="'+curatorPostId+'"]')?.value.trim()||"";
+    const reportingUrl=this.container.querySelector('[data-curator-reporting-source="'+curatorPostId+'"]')?.value.trim()||"";
+    const reportingChecked=this.container.querySelector('[data-curator-reporting-checked="'+curatorPostId+'"]')?.checked===true;
+    if(reporting || reportingUrl){
+      if(reporting.length<100 || reporting.length>4500 || !trustedExternalUrl(reportingUrl) || !reportingChecked){
+        window.appUI.toast("Additional reporting needs at least 100 characters of specific facts, a valid public source URL and your verification checkbox.",{tone:"warning"});
+        return;
+      }
+    }
     const label=btn.textContent;
     btn.disabled=true;btn.textContent="Writing draft…";
     try {
@@ -754,7 +781,7 @@ class CuratorManager {
       if(!token) throw new Error("Sign in again to use the editorial assistant.");
       const res=await fetch("/.netlify/functions/curator-expand-article",{
         method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
-        body:JSON.stringify({id:curatorPostId})
+        body:JSON.stringify({id:curatorPostId,reporting,reportingUrl})
       });
       const payload=await res.json().catch(()=>({}));
       if(!res.ok)throw new Error(payload.error||"Could not expand the article.");
@@ -764,7 +791,7 @@ class CuratorManager {
       window.appUI.toast("AI-assisted article saved as a draft. Verify each factual claim and source before publishing.",{tone:"success"});
       await this.load();
     } catch(error) {
-      window.appUI.toast(error?.message||"Editorial expansion failed.",{tone:"error"});
+      window.appUI.toast(error?.message||"Editorial expansion failed. Add verified context and retry, or keep it as a source brief.",{tone:"error"});
     } finally {
       btn.disabled=false;btn.textContent=label;
     }
