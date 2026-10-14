@@ -2,6 +2,7 @@ import {
   supabase,
   SITE_URL,
   getCurrentUser,
+  getSession,
   signIn,
   signInWithProvider,
   signUp,
@@ -342,8 +343,8 @@ async function boot() {
       });
       if (error) setMessage(resetMessage, error.message || "Recovery session failed.");
     } else {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data?.session) setMessage(resetMessage, "Recovery link invalid or expired. Request a new one.");
+      const recoverySession = await getSession();
+      if (!recoverySession) setMessage(resetMessage, "Recovery link invalid or expired. Request a new one.");
     }
     clearHash();
   }
@@ -480,8 +481,8 @@ async function boot() {
         setMessage(resetMessage, "Passwords do not match.");
         return;
       }
-      const { data: recoveryData } = await supabase.auth.getSession();
-      if (!recoveryData?.session) {
+      const recoverySession = await getSession();
+      if (!recoverySession) {
         setMessage(resetMessage, "Recovery session missing or expired. Request a new reset link.");
         return;
       }
