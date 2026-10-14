@@ -35,6 +35,9 @@ export async function maybeInviteReturningMember({user,supabase}){
     .select("inactivity_reminders").eq("user_id",user.id).maybeSingle();
   if(error||data?.inactivity_reminders===true)return;
   if(document.getElementById("member-email-invite"))return;
+  if(document.readyState==="loading"){
+    await new Promise(resolve=>document.addEventListener("DOMContentLoaded",resolve,{once:true}));
+  }
   const main=document.querySelector("main");if(!main)return;
   addStyles();
   const aside=document.createElement("aside");aside.id="member-email-invite";
@@ -54,7 +57,7 @@ export async function maybeInviteReturningMember({user,supabase}){
   const later=document.createElement("button");later.type="button";
   later.className="member-email-invite-secondary";later.textContent="Not now";
   const never=document.createElement("button");never.type="button";
-  never.className="member-email-invite-secondary";never.textContent="Don't show again";
+  never.className="member-email-invite-secondary";never.textContent="Hide on this device";
   later.addEventListener("click",()=>{writeState(user.id,{until:Date.now()+THIRTY_DAYS});aside.remove();});
   never.addEventListener("click",()=>{writeState(user.id,{never:true});aside.remove();});
   enable.addEventListener("click",async()=>{
