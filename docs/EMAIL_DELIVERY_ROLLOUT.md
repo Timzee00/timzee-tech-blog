@@ -69,7 +69,7 @@ Later on 2026-10-14, all three SQL migrations were applied successfully. Read-on
 - Confirmed three active triggers on contact, support, and ad submissions.
 - Verified empty queue immediately after deployment; no unsolicited sends.
 - Netlify project `timzee-tech-blog`: `EMAIL_DELIVERY_ENABLED=false`, sender email and sender name set for Functions in production.
-- Netlify is missing `BREVO_API_KEY` (transactional REST API key) and `BREVO_WEBHOOK_TOKEN` (random webhook bearer secret). These must be configured as secret environment variables in the production Functions scope and redeployed.
+- Netlify now lists `BREVO_API_KEY`, but its value has not been authenticated against Brevo in the worker. `BREVO_WEBHOOK_TOKEN` is still missing. Both must be secured with appropriate Functions scope before activation.
 - Source code for the worker and webhook is committed on `main`; Netlify reported an older deploy-preview build sourced from `fix/sitewide-shell-20261010`. This branch is 163 commits ahead of their merge base while `main` has separate email work. **Do not overwrite this work with a blind branch switch/merge**; safely integrate via reviewed PR.
 - Transactional Brevo webhook to register in Brevo after deployment: `https://timzee-tech-blog.netlify.app/.netlify/functions/brevo-webhook`. Choose type `transactional` and events hardBounce, spam, invalid, blocked. Use Brevo's bearer-token authentication matching `BREVO_WEBHOOK_TOKEN`; do not put it in the URL.
 - Keep worker disabled until the admin-only dashboard, quota limits, provider API key, anti-abuse safeguards, and live test receipt are verified.
@@ -77,3 +77,16 @@ Later on 2026-10-14, all three SQL migrations were applied successfully. Read-on
 ## Security advisor findings
 - RLS-without-policy on private queue/suppression tables is intentional (service role only); public system_job_status is separately server-only.
 - Supabase Auth leaked-password protection was flagged disabled. Enable in dashboard where plan permits.
+
+
+## Integration branch and verification (2026-10-14)
+- Active sitewide redesign: `fix/sitewide-shell-20261010` (PR #4 into `main`).
+- Email staging: `feature/email-delivery-sitewide-20261014` (draft PR #5 into the sitewide redesign branch).
+- Ported the email worker, admin API/page, webhook, and three SQL migrations without overwriting redesigned files.
+- Added a dedicated reset-email form and PKCE recovery guard to the sitewide login implementation.
+- Netlify environment-variable metadata confirms `BREVO_API_KEY` is available to Functions, but reports `is_secret=false` and broad scopes (builds, functions, runtime, post-processing). Treat this as a security configuration problem until an owner rotates/recreates it as a secret scoped only to Functions.
+- API attempts to create `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, and `EMAIL_DELIVERY_ENABLED=false` returned success, but repeat Netlify listings did not show those keys. **Do not assume these are actually configured.** Live delivery still fails closed by code when the enable flag is not exactly `true`.
+- The code's worker limit defaults to 50 emails per rolling 24-hour window (maximum configured 250), reserving the Brevo free plan's 300/day shared capacity for Auth SMTP.
+- Static syntax checks and mocked worker tests passed: disabled path, missing configuration, quota exhaustion, suppression, and successful provider response/queue completion. No real email has been dispatched.
+- The Brevo webhook can be configured with Bearer authentication via `auth.type=bearer` in the Brevo webhook configuration. A unique random `BREVO_WEBHOOK_TOKEN` must be configured in Netlify first, then Brevo; never use the API key as webhook token.
+- Necessary before release: merge/review PR #5, validate Netlify deploy on correct branch, secure key storage, sender variables, webhook secret/configuration, one authorized receipt to a controlled inbox, then decide whether to enable worker.
