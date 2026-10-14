@@ -25,7 +25,7 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
       body:JSON.stringify({
         sender:{email:senderEmail,name:senderName},
         to:[{email:job.recipient_email}],
-        subject:template.subject,htmlContent:html,
+        subject:template.subject,htmlContent:html,textContent:text,
         headers:{"X-Mailin-custom":"type:transactional",idempotencyKey:job.id}
       })
     });
