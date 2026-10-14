@@ -70,3 +70,45 @@ test("digest preview only runs in dry-run mode and never calls Brevo",async()=>{
   assert.match(source,/digestPreview/);
   assert.match(source,/enqueued:0/);
 });
+
+test("opted-out users do not receive queued digests even when global delivery is enabled",async()=>{
+  let networkCalls=0;const calls=[];
+  const job={id:"2b984c39-3056-47c8-bbc1-58b9012efaf1",
+    recipient_email:"user@example.test",template:"mention_digest",payload:{count:2}};
+  const handler=loadHandler("email-worker",{
+    rpc:async(name)=>{
+      calls.push(name);
+      if(name==="email_delivery_statistics")return {data:{sent_last_24h:0},error:null};
+      if(name==="claim_email_jobs")return {data:[job],error:null};
+      if(name==="is_email_suppressed")return {data:false,error:null};
+      if(name==="check_digest_consent")return {data:false,error:null};
+      if(name==="suppress_email_job")return {data:true,error:null};
+      throw Error("Unexpected RPC "+name);
+    }
+  },{env:{EMAIL_DELIVERY_ENABLED:"true",BREVO_API_KEY:"test",
+      BREVO_SENDER_EMAIL:"sender@example.test"},
+    fetch:()=>{networkCalls++;throw Error("Opted-out user cannot be emailed");}});
+  const result=await handler();
+  assert.equal(result.statusCode,200);
+  assert.equal(networkCalls,0);
+  assert.equal(JSON.parse(result.body).suppressed,1);
+  assert.equal(calls.includes("complete_email_job"),false);
+});
+test("consent-check failure halts sending rather than guessing permission",async()=>{
+  let sent=false;
+  const job={id:"2b984c39-3056-47c8-bbc1-58b9012efaf1",
+    recipient_email:"user@example.test",template:"mention_digest",payload:{count:1}};
+  const handler=loadHandler("email-worker",{
+    rpc:async(name)=>{
+      if(name==="email_delivery_statistics")return {data:{sent_last_24h:0},error:null};
+      if(name==="claim_email_jobs")return {data:[job],error:null};
+      if(name==="is_email_suppressed")return {data:false,error:null};
+      if(name==="check_digest_consent")return {data:null,error:{message:"Unavailable"}};
+      throw Error("Unexpected RPC "+name);
+    }
+  },{env:{EMAIL_DELIVERY_ENABLED:"true",BREVO_API_KEY:"test",
+      BREVO_SENDER_EMAIL:"sender@example.test"},
+    fetch:()=>{sent=true;throw Error("Must not send");}});
+  await assert.rejects(handler(),/Digest consent check unavailable/);
+  assert.equal(sent,false);
+});
