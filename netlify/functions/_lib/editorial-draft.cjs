@@ -26,6 +26,14 @@ function normalizedArticle(response, sourceUrl,sourceName) {
     "<h2>Conclusion</h2>","<p>"+escapeHTML(conclusion)+"</p>",
     '<p class="curator-source-credit">Based on reporting from <a rel="noopener noreferrer" target="_blank" href="'+escapeHTML(safeUrl.toString())+'">'+escapeHTML(sourceName||safeUrl.hostname)+"</a>. Read the original report for primary details.</p>"
   ].join("\n");
+  const takeaways=[...new Set((Array.isArray(data.takeaways)?data.takeaways:[])
+    .map(x=>toText(x,210)).filter(x=>x.length>=35&&x.length<=210))].slice(0,4);
+  if(takeaways.length<2) throw Error("The article requires at least two useful independent takeaways.");
+  for(const insight of takeaways) {
+    if(contentText.toLowerCase().includes(insight.toLowerCase()))
+      throw Error("Takeaways cannot copy article sentences verbatim.");
+  }
+  html.unshift('<div hidden data-timzee-takeaways="'+escapeHTML(encodeURIComponent(JSON.stringify(takeaways)))+'"></div>');
   const warnings=Array.isArray(data.verification_notes)?data.verification_notes.map(v=>toText(v,220)).filter(Boolean).slice(0,6):[];
   const excerpt=toText(data.dek || intro,240);
   return {content:html,excerpt,wordCount:words,warnings};

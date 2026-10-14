@@ -298,15 +298,15 @@ function renderPost(data, post) {
 }
 
 function buildTakeaways(post) {
-  const text = stripHTML(post.content || "");
-  const sentences = text
-    .split(/[.!?]\s+/)
-    .map((sentence) => sentence.trim())
-    .filter((sentence) => sentence.length > 30);
-  if (sentences.length) return sentences.slice(0, 3);
-  const tags = normalizeTags(post.tags);
-  if (!tags.length) return [];
-  return tags.slice(0, 3).map((tag) => `Tagged with ${tag}.`);
+  // An editorial Key Takeaways box is not the first three article sentences.
+  // Old articles without authored takeaways simply omit the box.
+  const tag=String(post.content||"").match(/data-timzee-takeaways="([^"]+)"/);
+  if(!tag)return [];
+  try {
+    const parsed=JSON.parse(decodeURIComponent(tag[1].replace(/&amp;/g,"&")));
+    return Array.isArray(parsed) ? parsed
+      .filter(x=>typeof x==="string"&&x.trim().length>=25).slice(0,4) : [];
+  } catch { return []; }
 }
 
 function renderTakeaways(post) {
