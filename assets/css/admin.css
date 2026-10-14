@@ -877,3 +877,60 @@ select:focus-visible {
 .admin-traffic-bar{width:100%;max-width:24px;min-height:2px;background:var(--admin-accent);border-radius:4px 4px 0 0}
 .admin-traffic-day small{font-size:9px;writing-mode:vertical-rl;max-height:28px;overflow:hidden;opacity:.8}
 @media(max-width:650px){.admin-traffic-chart{gap:3px}.admin-traffic-day{min-width:4px}.admin-traffic-day small{display:none}}
+
+
+/* Curator and super-admin mobile containment: full-width content, scrollable
+   navigation and no accidental 240px sidebar on phone-sized viewports. */
+@media (max-width: 960px) {
+  .admin-shell .admin-panel {
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px clamp(12px, 3.5vw, 24px) 44px;
+  }
+  .admin-shell .admin-panel > .admin-nav {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 8px;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .admin-shell .admin-panel > .admin-nav > :is(button,a) {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: 44px;
+  }
+  .admin-shell .admin-panel > .admin-card,
+  .admin-shell .admin-panel > .admin-card > #botManagerContainer {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .admin-shell .admin-card [data-panel],
+  .admin-shell .admin-card :is(input,select,textarea) { max-width: 100%; }
+  .admin-shell .admin-card :is(h1,h2,h3,p) { overflow-wrap: anywhere; }
+}
+@media (max-width: 480px) {
+  .admin-shell .admin-panel > .admin-card { padding: 14px; }
+  .admin-shell .admin-compact-list .form-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-shell .admin-list-actions {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+  .admin-shell .admin-list-actions > :is(a,button,details) { flex: 1 1 auto; }
+  .admin-shell .admin-list-actions details[open] > button {
+    min-height: 44px;
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+  }
+}
