@@ -150,3 +150,17 @@ Source-controlled only (requires a **future** Netlify build once credits return)
 - No optional digest or marketing email is generated yet; marketing requires a separately implemented and audited consent flow.
 - Review note may include evidence but should never contain raw API keys, passwords, or unnecessary personal data.
 - New database objects are private or row-scoped; server service role remains solely in Netlify functions.
+
+
+## Opt-in digests — implemented, dispatch OFF (October 14, 2026)
+- Supabase migrations `opt_in_digest_preparation`, `digest_consent_recheck`, and `digest_scheduler_null_guard` applied to `duvbcwwprkzzyzikmcol`.
+- `public.prepare_email_digests(p_dry_run boolean default true,p_limit integer default 10)` is service-role only. It categorizes unread notifications, considers only verified users with active profiles and explicit per-category opt-ins, checks suppressions and previous 24h jobs, and never enqueues in dry-run mode.
+- Live dispatch also requires `private.email_digest_controls.enabled=true`. This is **false** in production; pilot daily digest queue cap is 20.
+- Netlify worker `email-digest-preparer.js` is scheduled for 08:00 UTC when eventually deployed but fails closed unless BOTH `EMAIL_DIGEST_ENABLED=true` and `EMAIL_DELIVERY_ENABLED=true`. Neither has been enabled during credit-free development.
+- Email worker supports `message_digest`, `mention_digest`, `marketplace_alerts`, and `community_digest` with counts only: no raw chat, post, marketplace, or notification content is emailed. An account-settings link supports future opt-out.
+- Every optional digest job is rechecked against the user's current category consent and active/verified account status immediately before Brevo; unauthorized jobs are suppressed without network sending. A preference UPDATE also cancels pending disallowed digests.
+- The protected super-admin dashboard has an eligibility preview that only returns counts and never enqueues or sends.
+- Synthetic checks: absent gate does not contact Supabase, revoked consent causes no Brevo request, valid consent reaches a mocked provider once, consent RPC failure refuses to send. Real Brevo delivery has not been tested.
+- Read-only verification: SQL dispatch flag false, 20/day cap, 0 opted-in users, 0 queue jobs, anonymous/authenticated roles cannot call the scheduling RPC; dry run returned 0 groups, and disabled dispatch enqueued 0 jobs.
+- The scheduler is a **pilot**, not a 100,000-active-user solution. Production-scale work requires cursor-based eligibility evaluation, provider-aligned batching/quotas, monitoring and load tests, email one-click unsubscribe or equivalent consent UX, auditability, retention and operational controls.
+- Because Netlify credits are exhausted, do not trigger a build or publish the new worker until the user explicitly requests a deployment. The existing preview does not include these new commits.
