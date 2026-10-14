@@ -751,39 +751,35 @@
         };
         document.getElementById("trafficRange").addEventListener("change",()=>void loadTraffic());
         const loadAnalysis = async () => {
-          const statsEl = document.getElementById("analysisStats");
-          const topEl = document.getElementById("analysisTopPosts");
-          if (!statsEl || !topEl) return;
-
-          const postsCount = await supabase.from("posts").select("id", { count: "exact", head: true });
-          const commentsCount = await supabase.from("comments").select("id", { count: "exact", head: true });
-          const topicsCount = await supabase.from("discussion_topics").select("id", { count: "exact", head: true });
-          const usersCount = await supabase.from("profiles").select("id",{count:"exact",head:true});
-
-          statsEl.innerHTML = `
-            <div class="stat-card"><div class="stat-label">Posts</div><div class="stat-value">${postsCount.count || 0}</div></div>
-            <div class="stat-card"><div class="stat-label">Comments</div><div class="stat-value">${commentsCount.count || 0}</div></div>
-            <div class="stat-card"><div class="stat-label">Topics</div><div class="stat-value">${topicsCount.count || 0}</div></div>
-            <div class="stat-card"><div class="stat-label">Users</div><div class="stat-value">${usersCount.count ?? "—"}</div></div>
-          `;
-
-          const topPosts = await supabase
-            .from("posts")
-            .select("id, title, views")
-            .order("views", { ascending: false })
-            .limit(5);
-          if (!topPosts.error && topPosts.data?.length) {
+          const statsEl=document.getElementById("analysisStats");
+          const topEl=document.getElementById("analysisTopPosts");
+          if(!statsEl||!topEl)return;
+          try{
+            const res=await fetchWithAuth("/.netlify/functions/site-content-report");
+            const result=await safeParseJson(res);
+            if(!res.ok)throw Error(result.data?.error||"Site totals unavailable.");
+            const totals=result.data.totals||{};
+            statsEl.innerHTML=[
+              ["Posts",totals.posts],["Comments",totals.comments],
+              ["Topics",totals.topics],["Users",totals.users]
+            ].map(([name,value])=>'<div class="stat-card"><div class="stat-label">'+name+
+              '</div><div class="stat-value">'+Number(value||0).toLocaleString()+'</div></div>').join("");
             topEl.replaceChildren();
-            const heading=document.createElement("strong");heading.textContent="Top posts (recorded post views)";
+            const head=document.createElement("strong");head.textContent="Most-viewed posts";
             const list=document.createElement("ol");
-            topPosts.data.forEach(post=>{
-              const li=document.createElement("li");
-              const link=document.createElement("a");link.href="../post.html?id="+encodeURIComponent(post.id);
-              link.textContent=post.title+" ("+Number(post.views||0).toLocaleString()+" views)";
-              li.append(link);list.append(li);
-            });topEl.append(heading,list);
-          } else {
-            topEl.textContent = "No top posts yet.";
+            for(const post of (result.data.topPosts||[])){
+              const item=document.createElement("li");
+              const link=document.createElement("a");
+              link.href="../post.html?id="+encodeURIComponent(post.id);
+              link.textContent=post.title+" · "+Number(post.views||0).toLocaleString()+" recorded views";
+              item.append(link);list.append(item);
+            }
+            const note=document.createElement("small");
+            note.textContent=result.data.note||"";
+            topEl.append(head,list,note);
+          }catch(error){
+            statsEl.innerHTML="";
+            topEl.textContent=error.message||"Site totals unavailable.";
           }
         };
 
