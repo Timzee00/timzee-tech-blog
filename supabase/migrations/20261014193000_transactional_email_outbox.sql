@@ -27,7 +27,7 @@ grant select,update,insert on private.email_jobs to service_role;
 
 create or replace function private.enqueue_public_receipt()
 returns trigger language plpgsql security definer
-set search_path to pg_catalog, private as $
+set search_path to pg_catalog, private as $$
 declare
   kind text;
 begin
