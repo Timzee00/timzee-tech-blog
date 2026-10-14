@@ -54,3 +54,21 @@ test("non-admin review submissions do not reach service-role RPC",async()=>{
   const response=await user(request(valid));
   assert.equal(response.statusCode,403);assert.equal(calls.length,0);
 });
+
+test("case list strips recipient addresses embedded in provider errors",async()=>{
+  const calls=[];
+  const db=client("super",calls);
+  db.rpc=async(name,args)=>{
+    calls.push({name,args});
+    return {data:[{id:validJob,template:"contact_received",
+      reason:"Address member@example.test rejected",recipient_email:"member@example.test",
+      payload:{secret:"not for client"}}],error:null};
+  };
+  const handler=loadHandler("email-operations",db);
+  const result=await handler({httpMethod:"GET",headers:auth,queryStringParameters:{review:"1"}});
+  assert.equal(result.statusCode,200);
+  assert.match(result.body,/\[redacted email\]/);
+  assert.equal(result.body.includes("member@example.test"),false);
+  assert.equal(result.body.includes("recipient_email"),false);
+  assert.equal(result.body.includes("not for client"),false);
+});
