@@ -23,5 +23,17 @@ exports.handler=async event=>{
   .or(expr).order("created_at",{ascending:false})
   .range((page-1)*size,page*size-1);
  if(error)return reply(503,{error:"User search is temporarily unavailable."});
- return reply(200,{users:data||[],page,total:count||0,hasMore:(count||0)>page*size});
+ const profiles=data||[];
+ const users=await Promise.all(profiles.map(async profile=>{
+   if(profile.email && profile.username)return profile;
+   // Some older profiles lack email/username. Resolve just the visible page
+   // through trusted Auth metadata, never expose access tokens or passwords.
+   const {data:authResult,error:authError}=await db.auth.admin.getUserById(profile.id);
+   if(authError || !authResult?.user)return profile;
+   const user=authResult.user;
+   return {...profile,email:profile.email||user.email||"",
+     username:profile.username||user.user_metadata?.username||"",
+     display_name:profile.display_name||user.user_metadata?.display_name||""};
+ }));
+ return reply(200,{users,page,total:count||0,hasMore:(count||0)>page*size});
 };
