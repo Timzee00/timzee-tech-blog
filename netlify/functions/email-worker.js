@@ -1,4 +1,5 @@
 const { createClient } = require("@supabase/supabase-js");
+const {createInactivityToken}=require("./_lib/email-opt-out-token.js");
 
 const templates = {
   contact_received: { subject: "We received your message | Timzee Tech Hub", body: "Your message has reached our team." },
@@ -36,10 +37,15 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
     isWorkflow ? `${template.body} Current status: ${state||"updated"}.` : template.body;
   const referenceLine=optional?"":`Reference: ${reference}\n\n`;
   const settingsUrl="https://timzee-tech-blog.netlify.app/settings.html#email";
-  const text=`${intro}\n\n${message}\n\n${referenceLine}${optional ? `Manage email preferences: ${settingsUrl}\n\n` : ""}Timzee Tech Hub`;
+  const unsubscribeUrl=isInactivity ?
+    "https://timzee-tech-blog.netlify.app/unsubscribe.html?token="+
+      encodeURIComponent(createInactivityToken(job)) : null;
+  const optOutText=unsubscribeUrl ? "Stop future check-in emails: "+unsubscribeUrl+"\\n\\n" : "";
+  const optOutHtml=unsubscribeUrl ? `<p><a href="${unsubscribeUrl}">Stop these reminders without signing in</a></p>` : "";
+  const text=`${intro}\n\n${message}\n\n${referenceLine}${optional ? `Manage email preferences: ${settingsUrl}\n\n` : ""}${optOutText}Timzee Tech Hub`;
   const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><h2 style="color:#0f766e">Timzee Tech Hub</h2><p>${escapeHtml(intro)}</p><p>${escapeHtml(message)}</p>${optional ?
     `<p><a href="${settingsUrl}">Manage email preferences</a></p>` :
-    `<p><strong>Reference:</strong> ${escapeHtml(reference)}</p>`}<hr><small>${optional?"You opted in to this optional email category. You can disable it in account settings.":"Transactional notification regarding your request."} Do not reply with passwords or sensitive details.</small></div>`;
+    `<p><strong>Reference:</strong> ${escapeHtml(reference)}</p>`}${optOutHtml}<hr><small>${optional?"You opted in to this optional email category. You can disable it in account settings.":"Transactional notification regarding your request."} Do not reply with passwords or sensitive details.</small></div>`;
   let res;
   try {
     res=await fetch("https://api.brevo.com/v3/smtp/email",{
