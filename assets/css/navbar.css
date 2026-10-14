@@ -113,3 +113,14 @@
   .site-menu :where(a,button){overflow-wrap:break-word;}
   .site-menu .site-menu-footer{margin-top:12px;}
 }
+
+/* Mobile floating controls must never punch through an open navigation drawer. */
+@media(max-width:960px){
+ body.nav-open :where(.floating-action,.floating-chat,.chat-fab,.support-fab,.back-to-top,.scroll-to-top,.quick-action-rail,.side-action-rail){
+   visibility:hidden!important;pointer-events:none!important;
+ }
+ body.nav-open .drawer-backdrop-layer{z-index:100000!important;}
+ body.nav-open .site-menu{z-index:100001!important;}
+ .site-menu :where(button,input,select,textarea,a){max-width:100%;box-sizing:border-box;}
+ .site-menu .site-menu-header .site-menu-close{width:44px;flex:0 0 44px;}
+}
