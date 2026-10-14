@@ -2,13 +2,19 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Email Operations | Timzee Tech Hub</title>
 <link rel="stylesheet" href="../assets/css/admin.css"><script defer src="../assets/js/theme-init.js"></script>
-<style>body{font-family:system-ui,sans-serif}main{max-width:1000px;margin:30px auto;padding:0 20px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0}.metric{padding:22px;border:1px solid #c7d4d4;border-radius:14px;background:var(--card-solid,#fff);color:var(--ink,#152e32)}.metric strong{display:block;font-size:2rem;margin-top:8px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}button{cursor:pointer}#status{margin:18px 0}</style></head>
+<style>body{font-family:system-ui,sans-serif}main{max-width:1000px;margin:30px auto;padding:0 20px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0}.metric{padding:22px;border:1px solid #c7d4d4;border-radius:14px;background:var(--card-solid,#fff);color:var(--ink,#152e32)}.metric strong{display:block;font-size:2rem;margin-top:8px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}button{cursor:pointer}#status{margin:18px 0}.review-panel{margin-top:28px}.review-list{display:grid;gap:14px}.review-card{border:1px solid #9ca3af70;border-radius:14px;padding:18px;background:var(--card-solid,#fff);color:var(--ink,#152e32)}.review-card header{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}.review-card p{overflow-wrap:anywhere}.review-form{display:grid;gap:10px;margin-top:14px}.review-form label{font-weight:600;display:grid;gap:4px}.review-form select,.review-form textarea{width:100%;font:inherit;color:inherit;background:var(--card-solid,#fff);padding:10px;border:1px solid #96a3a3;border-radius:9px}.review-form textarea{min-height:90px;resize:vertical}.review-form button{justify-self:start}.review-id{font:inherit;word-break:break-all;font-size:.84rem;opacity:.8}.review-help{font-size:.88rem;opacity:.85}</style></head>
 <body class="admin-shell">
 <main><a href="panel.html">← Back to Super Admin</a><h1>Email Operations</h1><p>Read-only operational dashboard. Campaign sending is not enabled here.</p>
 <div class="toolbar"><button class="btn" type="button" id="refresh">Refresh metrics</button><button class="btn ghost" type="button" id="verifyBrevo">Verify Brevo connection</button><span id="deliveryState" aria-live="polite"></span></div>
 <p role="status" id="status">Authenticating…</p>
 <div id="metrics" class="metrics" aria-live="polite"></div>
 <p>Metrics cover queued Timzee Tech Hub receipt emails only. “Accepted” is not “delivered.” Provider delivery outcomes depend on webhook activation. Supabase Auth SMTP messages are not included in these job counts.</p>
+<section class="review-panel" aria-labelledby="reviewHeading">
+<h2 id="reviewHeading">Manual delivery reconciliation</h2>
+<p>Review uncertain sends against Brevo transaction logs before recording a decision. This review does not queue, resend, or delete emails.</p>
+<div class="toolbar"><button class="btn ghost" type="button" id="refreshReviews">Refresh review queue</button><span id="reviewStatus" role="status" aria-live="polite">Not loaded</span></div>
+<div id="reviewList" class="review-list" aria-live="polite"></div>
+</section>
 </main>
 <script type="module">
 import {supabase,getSession} from "../assets/js/supabase.js";
@@ -51,5 +57,67 @@ document.getElementById("verifyBrevo").addEventListener("click",async()=>{
   finally{button.disabled=false;button.textContent="Verify Brevo connection";}
 });
 
+async function loadReviews(){
+  const list=document.getElementById("reviewList");
+  const feedback=document.getElementById("reviewStatus");
+  const session=await getSession();
+  if(!session?.access_token){feedback.textContent="Sign in as super admin to review cases.";return;}
+  feedback.textContent="Loading review queue…";list.replaceChildren();
+  try{
+    const response=await fetch("/.netlify/functions/email-operations?review=1",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||"Could not load reviews");
+    const cases=Array.isArray(data.cases)?data.cases:[];
+    feedback.textContent=cases.length? `${cases.length} awaiting review (up to 25 shown)`:"No uncertain deliveries awaiting review";
+    for(const item of cases){
+      const card=document.createElement("article");card.className="review-card";
+      const header=document.createElement("header");
+      const title=document.createElement("strong");title.textContent=item.template||"Transactional email";
+      const date=document.createElement("time");date.textContent=item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable";
+      header.append(title,date);card.append(header);
+      const ref=document.createElement("p");ref.className="review-id";ref.textContent="Case: "+String(item.id||"");
+      const details=document.createElement("p");details.textContent="Attempts: "+Number(item.attempts||0)+" · Delivery: "+String(item.delivery_state||"unconfirmed")+" · Last review: "+String(item.last_decision||"unreviewed");
+      const reason=document.createElement("p");reason.textContent="Reason: "+String(item.reason||"Outcome uncertain");
+      card.append(ref,details,reason);
+      const form=document.createElement("form");form.className="review-form";
+      const actionLabel=document.createElement("label");actionLabel.textContent="Review decision";
+      const select=document.createElement("select");select.required=true;
+      const options=[
+        ["needs_investigation","Still investigating (keep open)"],
+        ["provider_delivery_confirmed","Brevo confirms delivered"],
+        ["provider_not_sent_confirmed","Brevo confirms not sent"],
+        ["closed_no_retry","Close without retry"]
+      ];
+      for(const [value,title] of options){const option=document.createElement("option");option.value=value;option.textContent=title;select.append(option);}
+      actionLabel.append(select);
+      const noteLabel=document.createElement("label");noteLabel.textContent="Audit note (reference what you checked)";
+      const note=document.createElement("textarea");note.required=true;note.minLength=15;note.maxLength=1000;note.placeholder="Record the Brevo transaction evidence or why you need more time.";noteLabel.append(note);
+      const hint=document.createElement("span");hint.className="review-help";hint.textContent="No email is sent. Enter no passwords or unnecessary personal information.";
+      const button=document.createElement("button");button.type="submit";button.className="btn";button.textContent="Record review";
+      form.append(actionLabel,noteLabel,hint,button);
+      form.addEventListener("submit",async(event)=>{
+        event.preventDefault();
+        if(!form.reportValidity())return;
+        if(!window.confirm("Save this audited decision? It will not resend the email."))return;
+        const latestSession=await getSession();
+        if(!latestSession?.access_token){feedback.textContent="Session expired. Sign in again.";return;}
+        button.disabled=true;button.textContent="Saving…";
+        try{
+          const response=await fetch("/.netlify/functions/email-operations",{
+            method:"POST",cache:"no-store",headers:{Authorization:`Bearer ${latestSession.access_token}`,"Content-Type":"application/json"},
+            body:JSON.stringify({job_id:item.id,decision:select.value,note:note.value.trim()})
+          });
+          const result=await response.json();
+          if(!response.ok)throw new Error(result.error||"Review could not be saved");
+          feedback.textContent="Decision recorded. No email was sent.";
+          await loadReviews();
+        }catch(error){feedback.textContent=error.message||"Could not save review";button.disabled=false;button.textContent="Record review";}
+      });
+      card.append(form);list.append(card);
+    }
+  }catch(error){feedback.textContent=error.message||"Review queue unavailable";}
+}
+document.getElementById("refreshReviews").addEventListener("click",loadReviews);
 refresh();
+loadReviews();
 </script></body></html>
