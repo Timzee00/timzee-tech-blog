@@ -94,6 +94,18 @@ exports.handler=async()=>{
       results.suppressed=(results.suppressed||0)+1;
       continue;
     }
+    if(["message_digest","mention_digest","marketplace_alerts","community_digest"].includes(job.template)){
+      const consent=await supabase.rpc("check_digest_consent",{
+        p_email:job.recipient_email,p_template:job.template
+      });
+      if(consent.error)throw new Error("Digest consent check unavailable; refusing to send");
+      if(consent.data!==true){
+        const stopped=await supabase.rpc("suppress_email_job",{p_id:job.id});
+        if(stopped.error)throw new Error("Unable to safely suppress opted-out digest");
+        results.suppressed=(results.suppressed||0)+1;
+        continue;
+      }
+    }
     let success=false,providerId=null,errorMessage=null;
     try{providerId=await sendBrevo(job,brevoKey,senderEmail,senderName);success=true;results.sent++;}
     catch(err){
