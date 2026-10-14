@@ -34,8 +34,10 @@ exports.handler=async event=>{
     const email=String(item?.email||"").toLowerCase().trim();
     if(!kind||!email||email.length>320){ignored++;continue;}
     const providerId=String(item["message-id"]||item.messageId||item.message_id||"").trim().slice(0,255);
-    const rawEpoch=Number(item.ts_epoch ?? item.ts);
-    const eventEpoch=Number.isSafeInteger(rawEpoch) && rawEpoch>0 ? rawEpoch : null;
+    // Brevo ts_event/ts are in seconds. ts_epoch may be milliseconds.
+    const rawTime=Number(item.ts_event ?? item.ts ?? item.ts_epoch);
+    const epochSeconds=rawTime>=1_000_000_000_000 ? Math.floor(rawTime/1000) : rawTime;
+    const eventEpoch=Number.isSafeInteger(epochSeconds) && epochSeconds>0 ? epochSeconds : null;
     const result=await supabase.rpc("record_brevo_delivery_event",{
       p_event:kind,p_email:email,p_message_id:providerId,p_event_epoch:eventEpoch
     });
