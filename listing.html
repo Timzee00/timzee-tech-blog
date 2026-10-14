@@ -109,6 +109,7 @@
             <p class="description-text" id="description"></p>
           </div>
 
+          <div id="contactSellerFeedback" role="status" aria-live="polite" class="market-contact-feedback" hidden></div>
           <div id="inquiryContainer" class="inquiry-section" style="display: none;">
             <h3>Interested? Send an Inquiry</h3>
             <form novalidate id="inquiryForm" class="inquiry-form">
@@ -385,19 +386,25 @@
 
       function setupEventListeners() {
         document.getElementById("contactBtn").addEventListener("click", async () => {
+          const sellerId = state.listing?.user_id;
+          const feedback=document.getElementById("contactSellerFeedback");
+          const messageUser=(text)=>{
+            if(feedback){feedback.hidden=false;feedback.textContent=text;feedback.scrollIntoView({behavior:"smooth",block:"nearest"});}
+          };
+          if(!state.listing){messageUser("Listing is still loading. Please try again.");return;}
           if (!state.user) {
-            const next = encodeURIComponent(`listing.html?id=${state.itemId}`);
-            window.location.href = `login.html?next=${next}`;
+            messageUser("Sign in to send an inquiry to this seller.");
+            const next=encodeURIComponent("listing.html?id="+state.itemId);
+            window.location.href="login.html?next="+next;
             return;
           }
 
-          const sellerId = state.listing.user_id;
           if (!sellerId) {
-            setInquiryStatus("Seller contact is unavailable for this listing.", "error");
+            messageUser("Seller contact is unavailable for this listing.");
             return;
           }
           if (sellerId === state.user.id) {
-            setInquiryStatus("This is your own listing.", "muted");
+            messageUser("This is your own listing.");
             return;
           }
           const whatsapp = String(state.sellerProfile?.marketplace_whatsapp || "").replace(/[^\d+]/g, "");
@@ -409,11 +416,12 @@
           }
 
           if (state.sellerProfile && state.sellerProfile.allow_messages === false) {
-            setInquiryStatus("This seller is not accepting direct messages. You can still send a marketplace inquiry below.", "muted");
+            messageUser("This seller is not accepting direct messages. You can still send an inquiry below.");
             document.getElementById("inquiryContainer")?.scrollIntoView({ behavior: "smooth", block: "center" });
             return;
           }
 
+          messageUser("Checking available contact options…");
           const friendship = await supabase
             .from("friendships")
             .select("id,status")
@@ -430,7 +438,7 @@
             inquiry.style.display = "block";
             inquiry.scrollIntoView({ behavior: "smooth", block: "center" });
             document.getElementById("inquiryMessage")?.focus();
-            setInquiryStatus("Start an inquiry to contact this seller.", "muted");
+            messageUser("Write your inquiry below, then tap Send Inquiry.");
           }
         });
 
