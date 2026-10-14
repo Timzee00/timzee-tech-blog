@@ -43,7 +43,14 @@ exports.handler=async()=>{
     return {statusCode:503,body:"Email worker not configured"};
   }
   const supabase=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
-  const {data,error}=await supabase.rpc("claim_email_jobs",{p_limit:3});
+  // Conservative free-plan reserve: leave capacity for Supabase Auth emails.
+  const capInput=Number.parseInt(process.env.EMAIL_WORKER_DAILY_CAP||"50",10);
+  const dailyCap=Number.isFinite(capInput)?Math.max(1,Math.min(250,capInput)):50;
+  const {data:statistics,error:statsError}=await supabase.rpc("email_delivery_statistics");
+  if(statsError) throw new Error("Email quota check unavailable; refusing to send");
+  const remaining=Math.max(0,dailyCap-Number(statistics?.sent_last_24h||0));
+  if(!remaining) return {statusCode:200,body:"Worker daily email cap reached"};
+  const {data,error}=await supabase.rpc("claim_email_jobs",{p_limit:Math.min(3,remaining)});
   if(error) throw error;
   const results={claimed:data?.length||0,sent:0,failed:0};
   for(const job of data||[]){
