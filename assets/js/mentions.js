@@ -77,13 +77,20 @@ async function showMentionDropdown(field, searchTerm) {
   if (request !== mentionRequest || !field.isConnected || document.activeElement !== field || !suggestions.length) return;
 
   const rect = field.getBoundingClientRect();
+  // Android's virtual keyboard reduces visualViewport, not always innerHeight.
+  const viewport=window.visualViewport;
+  const viewTop=viewport?.offsetTop || 0;
+  const viewBottom=viewTop+(viewport?.height || window.innerHeight);
+  const menuHeight=Math.min(260,Math.max(100,viewBottom-viewTop-20));
+  const roomBelow=viewBottom-rect.bottom;
+  const top=roomBelow>=160 ? rect.bottom+5 : Math.max(viewTop+8,rect.top-menuHeight-6);
   const dropdown = document.createElement("div");
   dropdown.className = "mention-dropdown";
   dropdown.setAttribute("role","listbox");
   dropdown.setAttribute("aria-label","Mention a community member");
   dropdown.style.cssText = `
     position: fixed;
-    top: ${Math.max(8, Math.min(rect.bottom+5, innerHeight-220))}px;
+    top: ${Math.min(top,viewBottom-70)}px;
     left: ${Math.max(8,Math.min(rect.left,innerWidth-Math.min(300,innerWidth-16)-8))}px;
     width: min(300px, calc(100vw - 16px));
     background: var(--color-surface, #ffffff);
@@ -91,7 +98,7 @@ async function showMentionDropdown(field, searchTerm) {
     border: 1px solid #ddd;
     border-radius: 8px;
     max-width: 300px;
-    max-height: 300px;
+    max-height: ${menuHeight}px;
     overflow-y: auto;
     z-index: 10000;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -137,6 +144,8 @@ async function showMentionDropdown(field, searchTerm) {
 
     item.setAttribute("role","option");
     item.setAttribute("aria-label",`Mention @${user.username}`);
+    // Keep the textarea focused so its caret position is preserved.
+    item.addEventListener("pointerdown",event=>event.preventDefault());
     item.addEventListener("click", () => {
       insertMention(field, user.username, searchTerm);
       closeMentionDropdown();
