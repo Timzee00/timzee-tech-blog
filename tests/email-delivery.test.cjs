@@ -92,7 +92,7 @@ test("webhook rejects missing bearer token without touching DB", async () => {
 test("webhook records documented invalid_email event and ignores unrelated events", async () => {
   const calls=[];
   const handler=loadHandler("brevo-webhook",{rpc:async (name,args)=>{
-    calls.push([name,args]);return {data:true,error:null};
+    calls.push([name,args]);return {data:{handled:true,suppressed:true,recorded:true,matched_jobs:0},error:null};
   }},{env:{BREVO_WEBHOOK_TOKEN:"webhook-test"}});
   const response=await handler({
     httpMethod:"POST",
@@ -104,14 +104,14 @@ test("webhook records documented invalid_email event and ignores unrelated event
   });
   assert.equal(response.statusCode,200);
   assert.equal(calls.length,1);
-  assert.equal(calls[0][0],"register_email_suppression");
-  assert.equal(calls[0][1].p_reason,"invalid");
+  assert.equal(calls[0][0],"record_brevo_delivery_event");
+  assert.equal(calls[0][1].p_event,"invalid");
 });
 
 test("Brevo complaint label triggers spam suppression", async () => {
   const calls=[];
   const handler=loadHandler("brevo-webhook",{rpc:async (name,args)=>{
-    calls.push([name,args]);return {data:true,error:null};
+    calls.push([name,args]);return {data:{handled:true,suppressed:true,recorded:true,matched_jobs:0},error:null};
   }},{env:{BREVO_WEBHOOK_TOKEN:"webhook-test"}});
   const response=await handler({
     httpMethod:"POST",
@@ -120,5 +120,34 @@ test("Brevo complaint label triggers spam suppression", async () => {
   });
   assert.equal(response.statusCode,200);
   assert.equal(calls.length,1);
-  assert.equal(calls[0][1].p_reason,"spam");
+  assert.equal(calls[0][1].p_event,"spam");
+});
+
+test("delivered webhook passes provider metadata without adding recipient to event log",async()=>{
+  const calls=[];
+  const handler=loadHandler("brevo-webhook",{rpc:async(name,args)=>{
+    calls.push({name,args});return {data:{handled:true,suppressed:false,recorded:true,matched_jobs:1},error:null};
+  }},{env:{BREVO_WEBHOOK_TOKEN:"webhook-test"}});
+  const response=await handler({
+    httpMethod:"POST",headers:{authorization:"Bearer webhook-test"},
+    body:JSON.stringify({event:"delivered",email:"test@example.test","message-id":"brevo-id-1",ts_epoch:1700000000})
+  });
+  assert.equal(response.statusCode,200);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].name,"record_brevo_delivery_event");
+  assert.equal(calls[0].args.p_message_id,"brevo-id-1");
+  assert.equal(calls[0].args.p_event_epoch,1700000000);
+  assert.equal(calls[0].args.p_event,"delivered");
+  assert.equal(JSON.parse(response.body).suppressed,0);
+});
+
+test("webhook refuses invalid bearer tokens without touching the DB",async()=>{
+  let called=0;
+  const handler=loadHandler("brevo-webhook",{rpc:async()=>{called++;return {data:true,error:null};}},{env:{BREVO_WEBHOOK_TOKEN:"webhook-test"}});
+  const response=await handler({
+    httpMethod:"POST",headers:{authorization:"Bearer incorrect"},
+    body:JSON.stringify({event:"hard_bounce",email:"test@example.test"})
+  });
+  assert.equal(response.statusCode,401);
+  assert.equal(called,0);
 });
