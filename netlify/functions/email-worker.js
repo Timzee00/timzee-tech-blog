@@ -47,6 +47,17 @@ exports.handler=async()=>{
   if(error) throw error;
   const results={claimed:data?.length||0,sent:0,failed:0};
   for(const job of data||[]){
+    const suppression=await supabase.rpc("is_email_suppressed",{p_email:job.recipient_email});
+    if(suppression.error){
+      console.error("Email suppression check failed",job.id,suppression.error.message);
+      throw new Error("Suppression lookup unavailable; refusing to send");
+    }
+    if(suppression.data===true){
+      const stopped=await supabase.rpc("suppress_email_job",{p_id:job.id});
+      if(stopped.error)throw new Error("Could not suppress email job");
+      results.suppressed=(results.suppressed||0)+1;
+      continue;
+    }
     let success=false,providerId=null,errorMessage=null;
     try{providerId=await sendBrevo(job,brevoKey,senderEmail,senderName);success=true;results.sent++;}
     catch(err){errorMessage=String(err?.message||err);results.failed++;console.warn("Email send failed",job.id,errorMessage);}
