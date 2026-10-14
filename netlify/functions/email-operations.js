@@ -10,6 +10,22 @@ exports.handler=async event=>{
   const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
   const auth=await requireRole(db,token,["super"],"Super admin access required");
   if(auth.error)return reply(403,{error:"Access denied"});
+  if(event.queryStringParameters?.verifyProvider === "1") {
+    const apiKey=process.env.BREVO_API_KEY;
+    if(!apiKey)return reply(503,{provider:"Brevo",authenticated:false,error:"Brevo API key is missing"});
+    try {
+      const response=await fetch("https://api.brevo.com/v3/account",{
+        headers:{"api-key":apiKey,"accept":"application/json"},
+        signal:AbortSignal.timeout(8000)
+      });
+      return reply(response.ok?200:503,{
+        provider:"Brevo",authenticated:response.ok,http_status:response.status,
+        message:response.ok?"Brevo API credentials authenticated. No email was sent.":"Brevo rejected the API credentials or the account request."
+      });
+    } catch {
+      return reply(503,{provider:"Brevo",authenticated:false,error:"Could not reach Brevo to verify credentials"});
+    }
+  }
   const {data,error}=await db.rpc("email_delivery_statistics");
   if(error)return reply(503,{error:"Email stats not activated"});
   return reply(200,{statistics:data,delivery_enabled:process.env.EMAIL_DELIVERY_ENABLED==="true"});
