@@ -52,6 +52,10 @@ exports.handler = async (event) => {
   const promoteExisting = async (userId, existingUser = {}) => {
     const currentMeta = existingUser.user_metadata || {};
     const currentAppMeta = existingUser.app_metadata || {};
+    const {data: existingProfile,error: existingProfileError}=await supabase.from("profiles").select("role").eq("id",userId).maybeSingle();
+    if(existingProfileError || !existingProfile)return jsonResponse(409,{error:"Could not verify existing account role. No changes made."});
+    if(existingProfile.role==="super")return jsonResponse(409,{error:"Account is already Super Admin; use the authorized role-management flow instead."});
+    if(existingProfile.role==="admin")return jsonResponse(200,{ok:true,userId,mode:"already_admin"});
     const updatedMeta = {
       ...currentMeta,
       role: "admin",
