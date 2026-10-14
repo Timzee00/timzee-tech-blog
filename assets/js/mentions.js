@@ -160,7 +160,7 @@ export function insertMention(field, username, searchTerm) {
   // Only replace the mention token immediately before the caret. Never
   // overwrite an unrelated earlier @ mention or an email address.
   const prefix=text.slice(0,cursorPos);
-  const match=prefix.match(/(^|[^\\w@])@([a-z0-9_]*)$/i);
+  const match=prefix.match(/(^|[^\w@])@([a-z0-9_]*)$/i);
   if (!match) return;
   const atIndex=cursorPos-match[2].length-1;
 
