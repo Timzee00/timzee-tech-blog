@@ -10,6 +10,7 @@ import {
   deleteCuratorSource,
   toggleCuratorSourceStatus,
   getUnpostedCuratorPosts,
+  createCuratorPost,
   markCuratorPostAsPosted,
   deleteCuratorPost,
   getCuratorStats,
@@ -19,7 +20,8 @@ import {
 
 import { supabase, getCurrentUserWithRole, getUserRole } from "./supabase.js";
 import { escapeHTML, slugify, isSafeUrl } from "./utils.js";
-import { createPost } from "./data.js";
+import { createPost, createPostMedia } from "./data.js";
+import { ROUNDUP_TOPICS, generateRoundupDraft, trustedExternalUrl, imageUrls, htmlEscape, socialCaption } from "./curator-publishing.mjs";
 
 class CuratorManager {
   constructor() {
@@ -27,6 +29,7 @@ class CuratorManager {
     this.posts = [];
     this.stats = null;
     this.currentUser = null;
+    this.roundupIds = new Set();
   }
 
   async init(containerId) {
@@ -156,6 +159,14 @@ class CuratorManager {
             <h3>Articles Queue</h3>
             <p>Review and approve articles before posting</p>
           </div>
+          <div class="curator-roundup-controls" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+            <label for="roundupTopic">Roundup category</label>
+            <select id="roundupTopic" class="field">
+              ${ROUNDUP_TOPICS.map(topic => '<option value="'+htmlEscape(topic)+'">'+htmlEscape(topic)+'</option>').join("")}
+            </select>
+            <button type="button" class="btn ghost" id="createCuratorRoundup">Group selected stories into draft</button>
+            <span id="roundupSelectionCount" role="status">0 selected (2–6 required)</span>
+          </div>
           <div id="postsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
             <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--color-text-muted);">Loading articles...</div>
           </div>
@@ -266,6 +277,8 @@ class CuratorManager {
         this.container.querySelector(`.tab-content[data-tab="${tab}"]`).style.display = "block";
       });
     });
+
+    this.container.querySelector("#createCuratorRoundup")?.addEventListener("click",()=>void this.createRoundup());
 
     // Add source
     this.container.querySelector("#addSourceBtn").addEventListener("click", () => {
@@ -440,6 +453,7 @@ class CuratorManager {
         : "Article draft · " + wordCount + " words · Fact-check before publishing.";
       return `
       <div class="post-card">
+        <label class="curator-roundup-choice"><input type="checkbox" data-roundup-id="${post.id}" ${this.roundupIds.has(post.id)?"checked":""}> Include in roundup</label>
         <div class="post-title">${escapeHTML(post.title || '')}</div>
         <div class="post-meta">
           Source: ${escapeHTML(post.curator_sources?.name || post.source_name || 'Unknown')} • ${escapeHTML(dateText)}
@@ -447,6 +461,14 @@ class CuratorManager {
         <p style="font-size: 13px; color: var(--color-text-muted); margin: 0;">${escapeHTML(post.excerpt || 'No summary available')}</p>
         <p class="curator-source-ref">Source: <a href="${isSafeUrl(post.source_url || '') ? escapeHTML(post.source_url) : '#'}" target="_blank" rel="noopener noreferrer">Original report ↗</a></p>
         <p class="curator-editorial-state" data-editorial-state="${post.id}" role="status">${escapeHTML(editorialStatus)}</p>
+        <details class="curator-media-editor">
+          <summary>Images and embeds (up to six)</summary>
+          <p>Source images are previews only. Add approved HTTPS image URLs, one per line. Publishing requires confirmed image rights.</p>
+          ${post.image_url && trustedExternalUrl(post.image_url)?'<img class="curator-image-preview" loading="lazy" referrerpolicy="no-referrer" alt="Source image preview - rights not verified" src="'+escapeHTML(post.image_url)+'" style="max-width:180px;max-height:120px;object-fit:contain;">':""}
+          <label>Approved image URLs<textarea data-curator-images="${post.id}" rows="3" class="field" placeholder="https://example.com/licensed-image.jpg"></textarea></label>
+          <label>Image credit and permission reference<input data-curator-image-credit="${post.id}" class="field" placeholder="Photographer / license / permission link"></label>
+          <label><input type="checkbox" data-curator-image-rights="${post.id}"> I verified permission to display these images on Timzee Tech Hub</label>
+        </details>
         <div class="post-actions">
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-expand">Expand with AI</button>
           <button class="btn btn-primary" data-post-id="${post.id}" data-type="post-approve">✓ Approve & Post</button>
@@ -458,6 +480,25 @@ class CuratorManager {
     list.querySelectorAll(".btn").forEach(btn => {
       btn.addEventListener("click", (e) => this.handlePostAction(e, btn));
     });
+    list.querySelectorAll("[data-roundup-id]").forEach(box=>box.addEventListener("change",()=>{
+      if(box.checked)this.roundupIds.add(box.dataset.roundupId);
+      else this.roundupIds.delete(box.dataset.roundupId);
+      this.container.querySelector("#roundupSelectionCount").textContent=this.roundupIds.size+" selected (2–6 required)";
+    }));
+    this.container.querySelector("#roundupSelectionCount").textContent=this.roundupIds.size+" selected (2–6 required)";
+  }
+
+  async createRoundup(){
+    const topic=this.container.querySelector("#roundupTopic")?.value||"";
+    const chosen=this.posts.filter(post=>this.roundupIds.has(post.id));
+    try{
+      const draft=generateRoundupDraft(chosen,topic);
+      if(!await window.appUI.confirm("Save "+chosen.length+" stories as one "+topic+" roundup draft? Verify every source and deadline before publication."))return;
+      await createCuratorPost(draft);
+      this.roundupIds.clear();
+      await this.load();
+      window.appUI.toast("Roundup saved as a source-attributed draft. Expand and fact-check it before publication.");
+    }catch(error){window.appUI.toast(error.message||"Roundup creation failed.",{tone:"error"});}
   }
 
   async handleSourceAction(e, btn) {
@@ -525,6 +566,14 @@ class CuratorManager {
   async approveCuratorPost(curatorPostId, btn) {
     const curatorPost = this.posts.find(p => p.id === curatorPostId);
     if (!curatorPost) return;
+    const imagesBox=this.container.querySelector('[data-curator-images="'+curatorPostId+'"]');
+    const selectedImages=imageUrls(imagesBox?.value||"");
+    const approved=this.container.querySelector('[data-curator-image-rights="'+curatorPostId+'"]')?.checked===true;
+    const imageCredit=this.container.querySelector('[data-curator-image-credit="'+curatorPostId+'"]')?.value.trim()||"";
+    if(selectedImages.length && (!approved || imageCredit.length<5)){
+      window.appUI.toast("Verify image reuse rights and enter a meaningful attribution/permission reference before publishing.",{tone:"warning"});
+      return;
+    }
     const articleText = String(curatorPost.content || "").replace(/<[^>]*>/g, " ").replace(/&[^;]+;/g, " ");
     const articleWords = articleText.trim().split(/\s+/).filter(Boolean).length;
     if(articleWords<450 || articleText.includes("Editorial status:")){
@@ -539,8 +588,9 @@ class CuratorManager {
 
     try {
       const title = curatorPost.title || "Untitled";
-      const content = curatorPost.content
-        || (curatorPost.excerpt ? `<p>${escapeHTML(curatorPost.excerpt)}</p>` : "");
+      const body=curatorPost.content || (curatorPost.excerpt ? '<p>'+escapeHTML(curatorPost.excerpt)+'</p>' : "");
+      const credit=selectedImages.length ? '<p class="curator-image-credit">Images: '+htmlEscape(imageCredit)+'</p>' : "";
+      const content=body+credit;
       const now = new Date().toISOString();
 
       const result = await createPost({
@@ -552,7 +602,7 @@ class CuratorManager {
         author_name: curatorPost.curator_sources?.name || curatorPost.source_name || "Content Curator Bot",
         created_at: now,
         updated_at: now,
-        cover: curatorPost.image_url || "",
+        cover: selectedImages[0] || "",
         tags: curatorPost.tags || [],
         content,
         pinned: false,
@@ -562,8 +612,25 @@ class CuratorManager {
       });
 
       if (result.error) throw result.error;
-
+      const publishedId=result.data?.id;
+      // A published post is never duplicated if attaching gallery media
+      // fails. Staff can follow the published link and repair media manually.
       await markCuratorPostAsPosted(curatorPostId);
+      const failedMedia=[];
+      if(publishedId){
+        for(const [index,url] of selectedImages.slice(1).entries()){
+          const record=await createPostMedia({id:crypto.randomUUID(),post_id:publishedId,url,media_type:"image",sort_order:index+1});
+          if(record.error)failedMedia.push(record.error.message||"media insert error");
+        }
+      }
+      const postUrl=new URL("post.html?id="+encodeURIComponent(publishedId||""),window.location.href).toString();
+      if(failedMedia.length) window.appUI.toast("Post published, but some gallery images failed. Repair gallery on "+postUrl,{tone:"error"});
+      else window.appUI.toast("Article published. Social caption ready to share.",{tone:"success"});
+      try{
+        const caption=socialCaption(title,postUrl,(curatorPost.tags||[])[0]||"news");
+        const use=await window.appUI.confirm("Copy a social sharing caption for this published article?");
+        if(use)await navigator.clipboard.writeText(caption);
+      }catch(e){console.warn("Social share caption unavailable",e);}
       await this.load();
     } catch (error) {
       window.appUI.toast(`Failed to publish: ${error.message}`);
