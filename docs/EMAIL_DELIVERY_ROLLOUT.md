@@ -1,7 +1,7 @@
 # Timzee Tech Hub — transactional email rollout
 
 ## Status
-The GitHub migration and email worker are source-controlled, but **do not assume they are activated in production**. Apply and verify the migration through an authorized Supabase deployment workflow; do not send public campaigns until provider, limits, and suppression are verified.
+Three SQL migrations are deployed to the live Timzee Tech Blog Supabase database and read-only access checks passed. The Netlify worker and webhook have **not** been verified on a published production deployment. Live email sending remains paused. Do not send campaigns until credentials, provider quota, consent, and suppression are verified.
 
 ## Required Netlify server-side environment
 - `SUPABASE_URL`: project URL (Timzee Tech Blog)
@@ -26,7 +26,7 @@ After updating Netlify environment variables, redeploy. Keep all keys out of Git
 4. The worker's default upper bound is 20 jobs per minute (approximately 1,200 per hour, before failures), which is intentionally conservative. It is not sufficient for 100,000 simultaneous recipients.
 5. There is no admin email operations console, per-event preference center, delivery-cost budget, or dead-letter replay UI yet.
 6. The currently configured Brevo plan quota and API permissions need confirmation before live sends.
-7. The migration needs authorized database deployment and read-only verification; it was **not** applied automatically.
+7. The database outbox, metrics, and suppression migrations were applied and verified on 2026-10-14; delivery remains disabled until Netlify is deployed and configured.
 
 ## Mandatory verification
 1. Deploy SQL migration using approved Supabase workflow.
@@ -58,4 +58,22 @@ Do not put the Brevo SMTP password in `BREVO_API_KEY`. They are different creden
 7. Implement bounce/complaint suppression, unsubscribe/consent, provider reconciliation, and capacity testing **before** any large campaigns.
 
 ## Current live database verification
-A read-only database check on 2026-10-14 returned no `private.email_jobs` table or statistics RPC. The migration must not be described as deployed.
+Later on 2026-10-14, all three SQL migrations were applied successfully. Read-only verification confirmed the outbox and statistics RPC exist, database RLS is enabled, and anonymous/authenticated users cannot call claim/metrics/suppression RPCs.
+
+
+## Live infrastructure status (2026-10-14)
+- Supabase project: `duvbcwwprkzzyzikmcol`
+- Database migration `transactional_email_outbox`: **applied**
+- Database migration `email_delivery_statistics`: **applied**
+- Database migration `email_suppression_controls`: **applied**
+- Confirmed three active triggers on contact, support, and ad submissions.
+- Verified empty queue immediately after deployment; no unsolicited sends.
+- Netlify project `timzee-tech-blog`: `EMAIL_DELIVERY_ENABLED=false`, sender email and sender name set for Functions in production.
+- Netlify is missing `BREVO_API_KEY` (transactional REST API key) and `BREVO_WEBHOOK_TOKEN` (random webhook bearer secret). These must be configured as secret environment variables in the production Functions scope and redeployed.
+- Source code for the worker and webhook is committed on `main`; Netlify reported an older deploy-preview build sourced from `fix/sitewide-shell-20261010`. This branch is 163 commits ahead of their merge base while `main` has separate email work. **Do not overwrite this work with a blind branch switch/merge**; safely integrate via reviewed PR.
+- Transactional Brevo webhook to register in Brevo after deployment: `https://timzee-tech-blog.netlify.app/.netlify/functions/brevo-webhook`. Choose type `transactional` and events hardBounce, spam, invalid, blocked. Use Brevo's bearer-token authentication matching `BREVO_WEBHOOK_TOKEN`; do not put it in the URL.
+- Keep worker disabled until the admin-only dashboard, quota limits, provider API key, anti-abuse safeguards, and live test receipt are verified.
+
+## Security advisor findings
+- RLS-without-policy on private queue/suppression tables is intentional (service role only); public system_job_status is separately server-only.
+- Supabase Auth leaked-password protection was flagged disabled. Enable in dashboard where plan permits.
