@@ -90,3 +90,16 @@ Later on 2026-10-14, all three SQL migrations were applied successfully. Read-on
 - Static syntax checks and mocked worker tests passed: disabled path, missing configuration, quota exhaustion, suppression, and successful provider response/queue completion. No real email has been dispatched.
 - The Brevo webhook can be configured with Bearer authentication via `auth.type=bearer` in the Brevo webhook configuration. A unique random `BREVO_WEBHOOK_TOKEN` must be configured in Netlify first, then Brevo; never use the API key as webhook token.
 - Necessary before release: merge/review PR #5, validate Netlify deploy on correct branch, secure key storage, sender variables, webhook secret/configuration, one authorized receipt to a controlled inbox, then decide whether to enable worker.
+
+
+## Staging integration milestone (2026-10-14)
+- PR #5 merged into `fix/sitewide-shell-20261010` as commit `1d5d61c73a2f8793a8fd480932714fe0e4557c89`, not into `main`.
+- Netlify confirmed successful preview deployment of the integration branch at `https://deploy-preview-5--timzee-tech-blog.netlify.app`.
+- Read-only browser testing confirmed Forgot password opens an email-only form at desktop and 375px/320px mobile widths, with no horizontal clipping.
+- Brevo worker now uses an `Idempotency-Key` header on outbound requests and a one-job-per-invocation limit.
+- Pilot throttling migration `20261014223000_public_email_receipt_throttle.sql` deployed in Supabase: one receipt per recipient/template/hour and at most 150 queued public receipts per rolling 24 hours. These thresholds are intentionally temporary, **not** million-user capacity.
+- Brevo webhook accepts provider event `invalid_email` as well as `hard_bounce`, `spam` and `blocked`.
+- Regression tests added, but GitHub Actions workflows could not execute because GitHub reported: "The job was not started because your account is locked due to a billing issue." Fix GitHub billing before treating CI as green.
+- `BREVO_API_KEY` is configured on Netlify and sender email/name match Brevo, but account metadata marks the API key non-secret; user elected to retain visibility, so protect Netlify account permissions and consider future rotation.
+- `BREVO_WEBHOOK_TOKEN` and provider webhook configuration are still required. `EMAIL_DELIVERY_ENABLED` is absent in Netlify listings, so the worker's code-level fail-closed gate remains OFF.
+- End-to-end sending and webhook delivery are not yet verified. Leave automated transactional sending paused.
