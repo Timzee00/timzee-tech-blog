@@ -318,6 +318,31 @@ function renderProfileFriends() {
     .join("");
 }
 
+function plainDisplayName(value) {
+  const raw=String(value||"Member");
+  const cleaned=raw.replace(/<[^>]*>/g,"").replace(/[<>]/g,"").trim();
+  return cleaned && !/^(?:img\s+src|onerror\s*=)/i.test(cleaned) ? cleaned.slice(0,80) : "Member";
+}
+function setupProfilePhotoViewer(){
+  const modal=document.getElementById("profileImageDialog");
+  const image=document.getElementById("profileImageFull");
+  if(!modal||!image)return;
+  document.querySelectorAll("[data-profile-image]").forEach(button=>button.addEventListener("click",()=>{
+    const kind=button.dataset.profileImage;
+    const source=document.getElementById(kind==="cover"?"profileCoverImg":"profileAvatar");
+    const url=source?.currentSrc||source?.src;
+    if(!url || !isSafeUrl(url))return;
+    image.src=url;
+    image.alt=kind==="cover"?"Full cover photo":"Full profile photo";
+    document.getElementById("profileImageCaption").textContent=kind==="cover"?"Cover photo":"Profile photo";
+    if(!modal.open)modal.showModal();
+  }));
+  document.getElementById("closeProfileImage")?.addEventListener("click",()=>modal.close());
+  modal.addEventListener("click",event=>{if(event.target===modal)modal.close();});
+  modal.addEventListener("close",()=>image.removeAttribute("src"));
+}
+setupProfilePhotoViewer();
+
 function renderProfile() {
   const avatar = document.getElementById("profileAvatar");
   const cover = document.getElementById("profileCoverImg");
@@ -333,7 +358,7 @@ function renderProfile() {
     cover.src = state.profile?.cover_url || "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1200&q=80";
   }
   if (name) {
-    const displayName = state.profile?.display_name || "Member";
+    const displayName = plainDisplayName(state.profile?.display_name || "Member");
     const badge = state.profile?.is_verified
       ? `<span class="verified-badge" title="Verified">✓</span>`
       : "";
