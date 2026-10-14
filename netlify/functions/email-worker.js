@@ -40,7 +40,7 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
   const unsubscribeUrl=isInactivity ?
     "https://timzee-tech-blog.netlify.app/unsubscribe.html?token="+
       encodeURIComponent(createInactivityToken(job)) : null;
-  const optOutText=unsubscribeUrl ? "Stop future check-in emails: "+unsubscribeUrl+"\\n\\n" : "";
+  const optOutText=unsubscribeUrl ? "Stop future check-in emails: "+unsubscribeUrl+"\n\n" : "";
   const optOutHtml=unsubscribeUrl ? `<p><a href="${unsubscribeUrl}">Stop these reminders without signing in</a></p>` : "";
   const text=`${intro}\n\n${message}\n\n${referenceLine}${optional ? `Manage email preferences: ${settingsUrl}\n\n` : ""}${optOutText}Timzee Tech Hub`;
   const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><h2 style="color:#0f766e">Timzee Tech Hub</h2><p>${escapeHtml(intro)}</p><p>${escapeHtml(message)}</p>${optional ?
