@@ -485,6 +485,7 @@ class CuratorManager {
         </details>
         <div class="post-actions">
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-preview">Preview post</button>
+          <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-translate">Translate to English</button>
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-expand">Expand with AI</button>
           <button class="btn btn-primary" data-post-id="${post.id}" data-type="post-approve">✓ Approve & Post</button>
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-delete">✕ Reject</button>
@@ -606,6 +607,8 @@ class CuratorManager {
 
     if (type === "post-preview") {
       this.previewCuratorPost(postId);
+    } else if (type === "post-translate") {
+      await this.translateCuratorPost(postId,btn);
     } else if (type === "post-expand") {
       await this.expandCuratorPost(postId, btn);
     } else if (type === "post-approve") {
@@ -660,6 +663,26 @@ class CuratorManager {
     dialog.addEventListener("click",e=>{if(e.target===dialog)close();});
     if(typeof dialog.showModal==="function")dialog.showModal();
     else dialog.setAttribute("open","");
+  }
+
+  async translateCuratorPost(id,button) {
+    if(!await window.appUI.confirm("Translate this source brief into English? This will replace its current summary, not publish an article."))return;
+    const label=button.textContent;button.disabled=true;button.textContent="Translating…";
+    try {
+      const {data}=await supabase.auth.getSession();
+      const token=data?.session?.access_token;
+      if(!token)throw Error("Sign in again to translate this article.");
+      const response=await fetch("/.netlify/functions/curator-expand-article",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+        body:JSON.stringify({id,mode:"translate"})
+      });
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok)throw Error(payload.error||"English translation failed.");
+      window.appUI.toast("English translation saved as a source brief; review it before expansion.",{tone:"success"});
+      await this.load();
+    }catch(error){window.appUI.toast(error.message||"Translation failed.",{tone:"error"});}
+    finally{button.disabled=false;button.textContent=label;}
   }
 
   async expandCuratorPost(curatorPostId, btn) {
