@@ -36,6 +36,7 @@ function normalizedArticle(response, sourceUrl,sourceName) {
   html.unshift('<div hidden data-timzee-takeaways="'+escapeHTML(encodeURIComponent(JSON.stringify(takeaways)))+'"></div>');
   const warnings=Array.isArray(data.verification_notes)?data.verification_notes.map(v=>toText(v,220)).filter(Boolean).slice(0,6):[];
   const excerpt=toText(data.dek || intro,240);
-  return {content:html,excerpt,wordCount:words,warnings};
+  const englishTitle=toText(data.headline,160);
+  return {content:html,excerpt,title:englishTitle||null,wordCount:words,warnings};
 }
 module.exports={normalizedArticle,toText,escapeHTML};

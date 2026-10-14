@@ -41,7 +41,7 @@ exports.handler=async(event)=>{
     "Never invent dates, quotes, statistics, research results, interviews or organizations.",
     "Distinguish source-backed claims from general educational context. If a detail is unsupported, omit it and list it under verification_notes.",
     "Never copy the source wording beyond common terms; explain the implications and uncertainty using original language.",
-    "Return JSON only with keys: introduction (string), dek (string), sections (array of 4-6 objects with heading and paragraphs (array of 1-4 strings)), conclusion (string), takeaways (2-4 concise analytical insights that are NOT sentences copied from the article), verification_notes (array of strings).",
+    "Return JSON only with keys: headline (concise English headline faithful to the original), introduction (string), dek (string), sections (array of 4-6 objects with heading and paragraphs (array of 1-4 strings)), conclusion (string), takeaways (2-4 concise analytical insights that are NOT sentences copied from the article), verification_notes (array of strings).",
     "Aim for 650-1050 words total only when source evidence permits. Include what happened, how it works, context, implications, limitations and what to watch next as appropriate. No repeated points, fabricated certainty, HTML or Markdown.",
     "Takeaways must express actionable implications, useful insights, limits or specific next steps; never copy article paragraphs.",
     "If source reporting is in another language, write the complete draft and takeaways in fluent English, translating faithfully without inventing facts or attributing independent reporting.",
@@ -65,7 +65,7 @@ exports.handler=async(event)=>{
     try{transformed=normalizedArticle(raw,post.source_url,post.source_name);}catch(e){return respond(422,{error:"AI draft needs more editorial substance: "+e.message});}
     // Persist as DRAFT ONLY. Never auto-publish, approve or issue notifications.
     const result=await db.from("curator_posts").update({
-      content:transformed.content,excerpt:transformed.excerpt,description:transformed.excerpt,
+      content:transformed.content,title:transformed.title||post.title,excerpt:transformed.excerpt,description:transformed.excerpt,
       updated_at:new Date().toISOString()
     }).eq("id",id).eq("status","draft").eq("is_posted",false).select("id").maybeSingle();
     if(result.error)return respond(500,{error:"Unable to save the expanded draft."});
