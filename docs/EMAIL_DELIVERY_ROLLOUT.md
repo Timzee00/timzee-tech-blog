@@ -103,3 +103,12 @@ Later on 2026-10-14, all three SQL migrations were applied successfully. Read-on
 - `BREVO_API_KEY` is configured on Netlify and sender email/name match Brevo, but account metadata marks the API key non-secret; user elected to retain visibility, so protect Netlify account permissions and consider future rotation.
 - `BREVO_WEBHOOK_TOKEN` and provider webhook configuration are still required. `EMAIL_DELIVERY_ENABLED` is absent in Netlify listings, so the worker's code-level fail-closed gate remains OFF.
 - End-to-end sending and webhook delivery are not yet verified. Leave automated transactional sending paused.
+
+
+## Safe Brevo authentication diagnostic
+- The super-admin page `/super/email-operations.html` now has a **Verify Brevo connection** control.
+- It calls the protected `email-operations?verifyProvider=1` endpoint, which authenticates the current user as a super admin and makes a read-only GET to Brevo's account API using the server-side key.
+- It does not send email, reveal the API key, or change Brevo settings.
+- Local sandbox simulations checked unauthenticated access (401), non-admin access (403), good Brevo credentials (200), and rejected Brevo credentials (503). The new regression tests are committed, but GitHub Actions remains unable to start because of the account billing lock.
+- Current Supabase outbox count is zero, with no sent, pending or failed transactional receipt jobs (read-only check on 2026-10-14).
+- Once the staging branch is deployed with the new function, a super admin can verify Brevo credentials before adding webhook authentication or sending a controlled test message.
