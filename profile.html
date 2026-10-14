@@ -70,12 +70,12 @@
         <section class="profile-main">
           <section class="discussion-card profile-card profile-hero" data-reveal>
             <div class="profile-cover">
-              <img id="profileCoverImg" alt="Profile cover">
-              <div class="profile-cover-overlay"></div>
+              <button type="button" class="profile-image-open profile-cover-open" data-profile-image="cover" aria-label="View full cover photo"><img id="profileCoverImg" alt="Profile cover"></button>
+              <div class="profile-cover-overlay" aria-hidden="true"></div>
             </div>
             <div class="profile-identity">
               <div class="profile-avatar-wrap">
-                <img id="profileAvatar" class="profile-avatar" alt="Profile avatar">
+                <button type="button" class="profile-image-open profile-avatar-open" data-profile-image="avatar" aria-label="View full profile photo"><img id="profileAvatar" class="profile-avatar" alt="Profile avatar"></button>
               </div>
               <div class="profile-body">
                 <div class="chip" id="profileRole">Member</div>
@@ -220,6 +220,7 @@
       </section>
     </main>
 
+<dialog id="profileImageDialog" class="profile-image-dialog" aria-label="Full size profile photo"><div class="profile-image-dialog-head"><strong id="profileImageCaption">Profile photo</strong><button type="button" id="closeProfileImage" aria-label="Close image viewer">Close ×</button></div><img id="profileImageFull" alt="Expanded profile photo"></dialog>
     <footer class="footer">
       <div class="container">
         <div class="footer-links">
