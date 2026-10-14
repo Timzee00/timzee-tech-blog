@@ -5,7 +5,7 @@
 <style>body{font-family:system-ui,sans-serif}main{max-width:1000px;margin:30px auto;padding:0 20px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0}.metric{padding:22px;border:1px solid #c7d4d4;border-radius:14px;background:var(--card-solid,#fff);color:var(--ink,#152e32)}.metric strong{display:block;font-size:2rem;margin-top:8px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}button{cursor:pointer}#status{margin:18px 0}.review-panel{margin-top:28px}.review-list{display:grid;gap:14px}.review-card{border:1px solid #9ca3af70;border-radius:14px;padding:18px;background:var(--card-solid,#fff);color:var(--ink,#152e32)}.review-card header{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}.review-card p{overflow-wrap:anywhere}.review-form{display:grid;gap:10px;margin-top:14px}.review-form label{font-weight:600;display:grid;gap:4px}.review-form select,.review-form textarea{width:100%;font:inherit;color:inherit;background:var(--card-solid,#fff);padding:10px;border:1px solid #96a3a3;border-radius:9px}.review-form textarea{min-height:90px;resize:vertical}.review-form button{justify-self:start}.review-id{font:inherit;word-break:break-all;font-size:.84rem;opacity:.8}.review-help{font-size:.88rem;opacity:.85}</style></head>
 <body class="admin-shell">
 <main><a href="panel.html">← Back to Super Admin</a><h1>Email Operations</h1><p>Read-only operational dashboard. Campaign sending is not enabled here.</p>
-<div class="toolbar"><button class="btn" type="button" id="refresh">Refresh metrics</button><button class="btn ghost" type="button" id="verifyBrevo">Verify Brevo connection</button><span id="deliveryState" aria-live="polite"></span></div>
+<div class="toolbar"><button class="btn" type="button" id="refresh">Refresh metrics</button><button class="btn ghost" type="button" id="verifyBrevo">Verify Brevo connection</button><button class="btn ghost" type="button" id="digestPreview">Preview eligible digests</button><span id="deliveryState" aria-live="polite"></span></div>
 <p role="status" id="status">Authenticating…</p>
 <div id="metrics" class="metrics" aria-live="polite"></div>
 <p>Metrics cover queued Timzee Tech Hub receipt emails only. “Accepted” is not “delivered.” Provider delivery outcomes depend on webhook activation. Supabase Auth SMTP messages are not included in these job counts.</p>
@@ -117,6 +117,21 @@ async function loadReviews(){
     }
   }catch(error){feedback.textContent=error.message||"Review queue unavailable";}
 }
+document.getElementById("digestPreview").addEventListener("click",async()=>{
+  const button=document.getElementById("digestPreview");
+  const session=await getSession();
+  if(!session?.access_token){status.textContent="Sign in as super admin first.";return;}
+  button.disabled=true;button.textContent="Checking…";
+  try{
+    const response=await fetch("/.netlify/functions/email-operations?digestPreview=1",{
+      headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
+    });
+    const result=await response.json();
+    if(!response.ok)throw Error(result.error||"Digest preview unavailable");
+    status.textContent=`${Number(result.eligible||0)} eligible digest groups. Dispatch ${result.enabled?"configured":"disabled"}. No emails queued or sent.`;
+  }catch(error){status.textContent=error.message||"Digest preview failed";}
+  finally{button.disabled=false;button.textContent="Preview eligible digests";}
+});
 document.getElementById("refreshReviews").addEventListener("click",loadReviews);
 refresh();
 loadReviews();
