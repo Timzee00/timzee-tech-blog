@@ -868,7 +868,7 @@ async function setupFaq() {
 function populateCategories() {
   const select = document.getElementById("postCategory");
   if (!select) return;
-  select.innerHTML = state.categories
+  select.innerHTML = '<option value="">Uncategorized</option>' + state.categories
     .map((cat) => `<option value="${cat.id}">${cat.name}</option>`)
     .join("");
   select.insertAdjacentHTML(
@@ -1084,6 +1084,54 @@ function handlePostForm() {
   document.getElementById("resetFormBtn").addEventListener("click", resetForm);
 }
 
+async function openPostForEditing(postId) {
+  if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(String(postId||""))){
+    window.appUI.toast("This post edit link is invalid.",{tone:"error"});return false;
+  }
+  let post=state.posts.find(item=>item.id===postId);
+  if(!post){
+    const result=await supabase.from("posts").select("*").eq("id",postId).maybeSingle();
+    if(result.error||!result.data){
+      window.appUI.toast("Unable to load that post for editing. Check staff access.",{tone:"error"});return false;
+    }
+    post=result.data;
+  }
+  editingPostId=post.id;
+  const title=document.getElementById("postTitle");
+  title.value=post.title||"";
+  const categorySelect=document.getElementById("postCategory");
+  if(state.categories.some(cat=>cat.id===post.category_id)){
+    categorySelect.value=post.category_id;
+  }else{
+    // Preserve an uncategorized or legacy post rather than forcing an
+    // invented custom category on every edit.
+    categorySelect.value="";
+  }
+  categorySelect.dispatchEvent(new Event("change"));
+  document.getElementById("customCategory").value="";
+  document.getElementById("postTags").value=normalizeTags(post.tags).join(", ");
+  document.getElementById("postStatus").value=post.status||"published";
+  document.getElementById("postPublishAt").value=toLocalDateTimeValue(post.publish_at);
+  document.getElementById("postStatus").dispatchEvent(new Event("change"));
+  const coverInput=document.getElementById("postCover");
+  coverInput.value=post.cover||"";
+  coverFile=null;coverPreviewUrl=post.cover||"";
+  updateCoverPreview(coverPreviewUrl);
+  const editor=document.getElementById("postEditor");
+  if(editor)editor.innerHTML=window.normalizeHtml?
+    window.normalizeHtml(stripEditorialScaffolding(post.content||"")):
+    stripEditorialScaffolding(post.content||"");
+  document.getElementById("savePostBtn").textContent="Update post";
+  document.getElementById("postFormHint").textContent="Editing: "+(post.title||"Untitled")+". Save to update the existing post.";
+  resetPostMediaSelections();
+  await loadPostMedia(post.id);
+  document.querySelector('.admin-nav button[data-tab="compose"]')?.click();
+  const form=document.getElementById("postForm");
+  form?.scrollIntoView({behavior:"smooth",block:"start"});
+  title?.focus({preventScroll:true});
+  return true;
+}
+
 function renderPostsTable() {
   const table = document.getElementById("postsTable");
   if (!table) return;
@@ -1114,33 +1162,8 @@ function renderPostsTable() {
       const post = state.posts.find((item) => item.id === btn.dataset.id);
       if (!post) return;
       if (action === "edit") {
-        editingPostId = post.id;
-        document.getElementById("postTitle").value = post.title;
-        const categorySelect = document.getElementById("postCategory");
-        if (state.categories.some((cat) => cat.id === post.category_id)) {
-          categorySelect.value = post.category_id;
-          document.getElementById("customCategoryWrap").classList.add("hidden");
-          document.getElementById("customCategory").value = "";
-        } else {
-          categorySelect.value = customCategoryValue;
-          document.getElementById("customCategoryWrap").classList.remove("hidden");
-          document.getElementById("customCategory").value = "";
-        }
-        document.getElementById("postTags").value = normalizeTags(post.tags).join(", ");
-        document.getElementById("postStatus").value = post.status || "published";
-        document.getElementById("postPublishAt").value = toLocalDateTimeValue(post.publish_at);
-        document.getElementById("postStatus").dispatchEvent(new Event("change"));
-        const coverInput = document.getElementById("postCover");
-        coverInput.value = post.cover || "";
-        coverFile = null;
-        coverPreviewUrl = post.cover || "";
-        updateCoverPreview(coverPreviewUrl);
-        const editor = document.getElementById("postEditor");
-        if (editor) editor.innerHTML = window.normalizeHtml ? window.normalizeHtml(post.content || "") : (post.content || "");
-        document.getElementById("savePostBtn").textContent = "Update";
-        document.getElementById("postFormHint").textContent = "Editing post.";
-        resetPostMediaSelections();
-        await loadPostMedia(post.id);
+        await openPostForEditing(post.id);
+        return;
       }
       if (action === "pin") {
         await updatePost(post.id, { pinned: !post.pinned });
@@ -1901,6 +1924,8 @@ async function bootDashboard() {
   handlePostForm();
   setupPostReview();
   renderPostsTable();
+  const requestedPost=new URLSearchParams(window.location.search).get("editPost");
+  if(requestedPost)await openPostForEditing(requestedPost);
   renderCommentsTable();
   setupUsersPanel();
   setupThemeForm();
