@@ -17,7 +17,7 @@ let mentionRequest = 0;
  * Search for users to mention
  */
 export async function searchUsersForMention(query) {
-  if (!query || query.length < 2) return [];
+  if (!query || query.length < 1 || query.length > 32 || !/^[a-z0-9_]+$/i.test(query)) return [];
   
   // Check cache first
   const cacheKey = `mention_${query.toLowerCase()}`;
@@ -29,7 +29,7 @@ export async function searchUsersForMention(query) {
     const { data, error } = await supabase
       .from("public_profiles")
       .select("id, username, display_name, avatar_url")
-      .ilike("username", `%${query}%`)
+      .ilike("username", `${query}%`)
       .limit(10);
 
     if (error) {
@@ -78,6 +78,8 @@ async function showMentionDropdown(field, searchTerm) {
   const rect = field.getBoundingClientRect();
   const dropdown = document.createElement("div");
   dropdown.className = "mention-dropdown";
+  dropdown.setAttribute("role","listbox");
+  dropdown.setAttribute("aria-label","Mention a community member");
   dropdown.style.cssText = `
     position: fixed;
     top: ${Math.max(8, Math.min(rect.bottom+5, innerHeight-220))}px;
@@ -132,6 +134,8 @@ async function showMentionDropdown(field, searchTerm) {
       item.style.background = "transparent";
     });
 
+    item.setAttribute("role","option");
+    item.setAttribute("aria-label",`Mention @${user.username}`);
     item.addEventListener("click", () => {
       insertMention(field, user.username, searchTerm);
       closeMentionDropdown();
