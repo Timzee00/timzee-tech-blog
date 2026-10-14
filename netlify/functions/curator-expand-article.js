@@ -36,8 +36,11 @@ exports.handler=async(event)=>{
     let valid=false;
     try {
       const u=new URL(researchUrl);
-      valid=u.protocol==="https:" && !!u.hostname && !u.username && !u.password
-        && !/^(?:localhost|127(?:\\.\\d{1,3}){3}|0\\.0\\.0\\.0|10\\.\\d+\\.\\d+\\.\\d+|192\\.168\\.\\d+\\.\\d+|169\\.254\\.\\d+\\.\\d+|172\\.(?:1[6-9]|2\\d|3[01])\\.\\d+\\.\\d+|.*\\.local)$/i.test(u.hostname);
+      const host=u.hostname.toLowerCase();
+      const isLocal=host==="localhost"||host.endsWith(".local");
+      const isIpAddress=/^[0-9.]+$/.test(host)||host.includes(":");
+      valid=u.protocol==="https:" && host.includes(".") &&
+        !u.username && !u.password && !isLocal && !isIpAddress;
     } catch {}
     if(research.length<100||research.length>4500||researchUrl.length>600||!valid){
       return respond(400,{error:"Additional reporting must include specific facts (100-4,500 characters) and a public HTTPS source URL."});
