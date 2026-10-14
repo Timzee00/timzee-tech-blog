@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, fix/sitewide-shell-20261010]
 
 permissions:
   contents: read
