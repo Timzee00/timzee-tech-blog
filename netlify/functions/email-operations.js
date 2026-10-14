@@ -31,7 +31,14 @@ exports.handler=async event=>{
   if(event.queryStringParameters?.review==="1") {
     const {data,error}=await db.rpc("list_email_review_cases",{p_limit:25});
     if(error)return reply(503,{error:"Manual review queue unavailable"});
-    return reply(200,{cases:Array.isArray(data)?data:[],delivery_enabled:process.env.EMAIL_DELIVERY_ENABLED==="true"});
+    const cases=Array.isArray(data)?data.map(item=>({
+      id:item.id,template:item.template,attempts:item.attempts,
+      created_at:item.created_at,updated_at:item.updated_at,
+      delivery_state:item.delivery_state,last_decision:item.last_decision,
+      reviewed_at:item.reviewed_at,
+      reason:String(item.reason||"").replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,"[redacted email]")
+    })):[];
+    return reply(200,{cases,delivery_enabled:process.env.EMAIL_DELIVERY_ENABLED==="true"});
   }
   if(event.queryStringParameters?.verifyProvider === "1") {
     const apiKey=process.env.BREVO_API_KEY;
