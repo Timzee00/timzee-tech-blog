@@ -57,11 +57,11 @@ drop trigger if exists enqueue_advertising_email on public.ad_applications;
 create trigger enqueue_advertising_email after insert on public.ad_applications
 for each row execute function private.enqueue_public_receipt();
 
-create or replace function private.claim_email_jobs(p_limit integer default 20)
+create or replace function public.claim_email_jobs(p_limit integer default 20)
 returns setof private.email_jobs language plpgsql security definer
 set search_path to pg_catalog,private as $$
 begin
-  if auth.role() is distinct from 'service_role' then raise exception 'forbidden'; end if;
+  if current_setting('request.jwt.claim.role',true) is distinct from 'service_role' then raise exception 'forbidden'; end if;
   return query
   with claimed as (
     select id from private.email_jobs
@@ -74,14 +74,14 @@ begin
     lease_until=now()+interval '4 minutes',updated_at=now()
   from claimed c where j.id=c.id returning j.*;
 end $$;
-revoke all on function private.claim_email_jobs(integer) from public,anon,authenticated;
-grant execute on function private.claim_email_jobs(integer) to service_role;
+revoke all on function public.claim_email_jobs(integer) from public,anon,authenticated;
+grant execute on function public.claim_email_jobs(integer) to service_role;
 
-create or replace function private.complete_email_job(p_id uuid,p_success boolean,p_provider_id text default null,p_error text default null)
+create or replace function public.complete_email_job(p_id uuid,p_success boolean,p_provider_id text default null,p_error text default null)
 returns void language plpgsql security definer
 set search_path to pg_catalog,private as $$
 begin
-  if auth.role() is distinct from 'service_role' then raise exception 'forbidden'; end if;
+  if current_setting('request.jwt.claim.role',true) is distinct from 'service_role' then raise exception 'forbidden'; end if;
   update private.email_jobs
   set status=case when p_success then 'sent' when attempts>=6 then 'failed' else 'pending' end,
       sent_at=case when p_success then now() else sent_at end,
@@ -92,5 +92,7 @@ begin
       lease_until=null,updated_at=now()
   where id=p_id and status='processing';
 end $$;
-revoke all on function private.complete_email_job(uuid,boolean,text,text) from public,anon,authenticated;
-grant execute on function private.complete_email_job(uuid,boolean,text,text) to service_role;
+revoke all on function public.complete_email_job(uuid,boolean,text,text) from public,anon,authenticated;
+grant execute on function public.complete_email_job(uuid,boolean,text,text) to service_role;
+
+-- RPC functions are in exposed public schema but execution is service-only; data remains private.
