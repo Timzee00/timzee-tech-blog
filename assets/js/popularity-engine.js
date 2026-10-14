@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js";
+import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
 import { escapeHTML, stripHTML, clampText, isSafeUrl, timeAgo } from "./utils.js";
 
 const TRACK_ID = "popularTrack";
@@ -23,7 +24,7 @@ function buildCard(post) {
   const media = plausibleCoverImage(post.cover || "")
     ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}" loading="lazy">`
     : `<div class="popular-media-fallback" aria-hidden="true"><span>${escapeHTML((post.content_type || "POST").toUpperCase())}</span></div>`;
-  const summary = escapeHTML(clampText(stripHTML(post.content || ""), 150));
+  const summary = escapeHTML(clampText(stripHTML(stripEditorialScaffolding(post.content || "")), 150));
   return `<article class="popular-card" data-popular-score="${escapeHTML(String(post.popularity_score || 0))}">
       <a class="popular-media" aria-label="${escapeHTML(post.title || 'Read post')}" href="post.html?id=${encodeURIComponent(post.id)}">${media}</a>
       <div class="popular-body">
