@@ -39,3 +39,23 @@ After updating Netlify environment variables, redeploy. Keep all keys out of Git
 8. Add load tests and SLOs before committing to million-user capacity.
 
 Do not put the Brevo SMTP password in `BREVO_API_KEY`. They are different credentials.
+
+
+## Next-stage controls added
+- `EMAIL_DELIVERY_ENABLED=true` is a mandatory server-side kill switch. By default, the worker exits without sending.
+- Worker batch reduced to three jobs, with eight-second per-request timeout, to limit the duration of scheduled serverless runs.
+- Super-admin-only read-only console at `/super/email-operations.html` uses a guarded Netlify API.
+- `20261014201500_email_delivery_statistics.sql` adds service-role-only aggregate metrics. Apply **after** the initial outbox migration.
+- Metrics do not include personally identifiable recipient addresses.
+
+## Production activation order
+1. Set up Brevo REST API key and verified sender securely in Netlify environment.
+2. Apply the two SQL migrations through an approved database deployment path, and check security advisors.
+3. Deploy and verify serverless execution while `EMAIL_DELIVERY_ENABLED` is unset.
+4. Verify new form submissions enqueue jobs without browser access to the private table.
+5. Test the worker in a controlled verified-recipient environment before setting `EMAIL_DELIVERY_ENABLED=true`.
+6. Verify Supabase Auth SMTP separately from the Brevo REST worker.
+7. Implement bounce/complaint suppression, unsubscribe/consent, provider reconciliation, and capacity testing **before** any large campaigns.
+
+## Current live database verification
+A read-only database check on 2026-10-14 returned no `private.email_jobs` table or statistics RPC. The migration must not be described as deployed.
