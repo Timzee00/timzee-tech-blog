@@ -9,6 +9,7 @@ function tokenMatches(actual,expected){
 const suppressedEventKinds={
   hard_bounce:"hard_bounce",
   hardbounce:"hard_bounce",
+  invalid_email:"invalid",
   spam:"spam",
   invalid:"invalid",
   blocked:"blocked"
