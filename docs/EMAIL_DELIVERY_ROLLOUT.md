@@ -15,16 +15,16 @@ After updating Netlify environment variables, redeploy. Keep all keys out of Git
 ## Already wired
 - Database outbox triggers for newly inserted contact, support and advertising applications.
 - Email IDs derived from immutable submission IDs to avoid duplicate enqueues.
-- Scheduled Netlify worker runs once per minute, claims at most 20 jobs per run, sends via Brevo REST API, and stores its outcome.
+- Scheduled Netlify worker runs once per minute when deployed and enabled, claims at most 1 job per run, sends via Brevo REST API, and stores provider acceptance separately from delivery confirmation.
 - Backoff and up to six attempts for failed deliveries.
 - No mail send occurs inside the frontend or database transaction.
 
 ## Known limitations — not production scale yet
 1. Only contact/support/advertising acknowledgment templates are implemented. No newsletters, bulk campaigns, support replies, moderation notices, marketplace messages or security-alert triggers yet.
-2. Brevo webhooks, suppression lists, complaint/bounce handling and subscription consent synchronization are not yet implemented.
-3. A claim lease can expire after Brevo accepts a message but before result persistence. Retries can lead to a duplicate email. Provider-side idempotency strategy and reconciliation are required.
-4. The worker's default upper bound is 20 jobs per minute (approximately 1,200 per hour, before failures), which is intentionally conservative. It is not sufficient for 100,000 simultaneous recipients.
-5. There is no admin email operations console, per-event preference center, delivery-cost budget, or dead-letter replay UI yet.
+2. Webhook and suppression code exists, but real webhook activation and end-to-end delivery are unverified. Marketing subscription consent synchronization is not implemented.
+3. Ambiguous provider outcomes are now held for manual reconciliation to prevent blind automatic resends. Brevo documents a 30-minute idempotency TTL. Human review, provider reconciliation and controlled replay UI are still required.
+4. The pilot worker is intentionally capped at one claimed job per invocation and 50 sends per rolling 24 hours by default. This is not sufficient for 100,000 active recipients.
+5. A read-only super-admin aggregate email operations console exists in GitHub; an end-user preference center, cost budget, and manual reconciliation/replay UI are not yet implemented.
 6. The currently configured Brevo plan quota and API permissions need confirmation before live sends.
 7. The database outbox, metrics, and suppression migrations were applied and verified on 2026-10-14; delivery remains disabled until Netlify is deployed and configured.
 
@@ -112,3 +112,20 @@ Later on 2026-10-14, all three SQL migrations were applied successfully. Read-on
 - Local sandbox simulations checked unauthenticated access (401), non-admin access (403), good Brevo credentials (200), and rejected Brevo credentials (503). The new regression tests are committed, but GitHub Actions remains unable to start because of the account billing lock.
 - Current Supabase outbox count is zero, with no sent, pending or failed transactional receipt jobs (read-only check on 2026-10-14).
 - Once the staging branch is deployed with the new function, a super admin can verify Brevo credentials before adding webhook authentication or sending a controlled test message.
+
+
+## Credit-free development checkpoint — October 14, 2026
+User's Netlify credits are exhausted. Continue improving source code and connected Supabase infrastructure, but do **not** trigger a new Netlify deployment, change the public production site, or send a live email without a controlled release window. Existing deploy preview is a snapshot and does not include subsequent commits until Netlify rebuilds it.
+
+- GitHub development branch: `fix/sitewide-shell-20261010` (PR #4 remains unmerged into main).
+- Supabase migration `email_delivery_event_journal`: applied. Private `email_provider_events` stores provider message IDs, event kinds, and timestamps (not message bodies or recipient emails).
+- Supabase migration `quarantine_uncertain_email_delivery`: applied. Unexpected network outcomes, duplicate-parameter responses, and other uncertain results are held as failed jobs requiring manual reconciliation; no blind retry.
+- Supabase migration `email_reconciliation_metrics`: applied. Aggregated super-admin statistics separate Brevo-accepted, confirmed delivered, rejected/bounced, and held-for-review jobs.
+- Netlify webhook code recognizes Brevo's documented hard_bounce, spam, blocked, invalid_email, delivered, soft_bounce and deferred events. It normalizes ts_event/ts seconds and ts_epoch millisecond timestamps.
+- Brevo send request uses documented `headers.idempotencyKey` (UUID), whose server-side provider protection is documented for batch transactional emails and has a limited TTL. It is an extra defense, not a permanent guarantee for single-message sending.
+- Synthetic/mocked checks passed for provider-accepted, network failure, duplicate-parameter response, 429 rate limit, timestamp conversion, and incorrect webhook token. These checks did **not** contact the real Brevo API, and GitHub Actions remains blocked by an account billing issue.
+- Read-only SQL checks: no queued email jobs, no webhook journal rows. Service role can execute privileged recording and quarantine functions; anonymous and normal authenticated accounts cannot.
+- Review queue UI, email preferences, webhook monitoring, monthly budget guard, retention policy, provider-event replay tests, and full 100,000-active-user load testing are future work.
+- Supabase Security Advisor still warns `auth_leaked_password_protection` is disabled. Review when the Auth plan/features permit. RLS without policies on private email tables is intentional.
+- Existing Netlify environment has `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `BREVO_WEBHOOK_TOKEN`; the key/token were not marked secret in earlier account metadata. Never print or expose their values in logs, screenshots, or code.
+- Keep `EMAIL_DELIVERY_ENABLED` unset/false until the updated Netlify branch is deployed, webhook authentication is verified, credentials and quota are tested, and a user-approved recipient receives exactly one test email.
