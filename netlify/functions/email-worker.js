@@ -41,7 +41,7 @@ exports.handler=async()=>{
     console.error("Email worker disabled: required server-only configuration missing");
     return {statusCode:503,body:"Email worker not configured"};
   }
-  const supabase=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false},db:{schema:"private"}});
+  const supabase=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data,error}=await supabase.rpc("claim_email_jobs",{p_limit:20});
   if(error) throw error;
   const results={claimed:data?.length||0,sent:0,failed:0};
