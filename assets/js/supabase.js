@@ -314,3 +314,34 @@ export async function resetPassword(email, redirectTo) {
   const options = target ? { redirectTo: target } : undefined;
   return supabase.auth.resetPasswordForEmail(email, options);
 }
+
+
+/**
+ * Record a signed-in visit for user-requested inactivity reminders.
+ * At most one RPC per member per six hours per browser; server enforces the
+ * same limit. No activity is tracked for anonymous visitors through this RPC.
+ */
+if (typeof window !== "undefined" && typeof document !== "undefined") {
+  let visitRunning = false;
+  const recordVisit = async () => {
+    if (visitRunning || document.visibilityState === "hidden") return;
+    visitRunning = true;
+    try {
+      await authCallbackPromise;
+      const { data, error } = await supabase.auth.getSession();
+      const userId = data?.session?.user?.id;
+      if (error || !userId) return;
+      const key = "timzee_member_visit_v1:" + userId;
+      const previous = Number(localStorage.getItem(key) || 0);
+      if (Number.isFinite(previous) && Date.now() - previous < 6 * 60 * 60 * 1000 && previous <= Date.now()) return;
+      const result = await supabase.rpc("record_my_site_visit");
+      if (!result.error && result.data === true) localStorage.setItem(key, String(Date.now()));
+    } catch { /* Best-effort activity signal; never block page rendering. */ }
+    finally { visitRunning = false; }
+  };
+  window.setTimeout(recordVisit, 1600);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void recordVisit();
+  });
+  window.addEventListener("pageshow", () => { void recordVisit(); });
+}
