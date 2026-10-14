@@ -383,7 +383,8 @@ class CuratorManager {
     try {
       this.sources = await getAllCuratorSources();
       this.posts = await getUnpostedCuratorPosts(50);
-      this.publishedPosts = await getPublishedCuratorPosts(20);
+      try { this.publishedPosts = await getPublishedCuratorPosts(20); }
+      catch(error) { console.warn("Published gallery history unavailable",error); this.publishedPosts=[]; }
       this.stats = await getCuratorStats();
 
       this.renderStats();
