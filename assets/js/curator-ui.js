@@ -434,7 +434,7 @@ class CuratorManager {
     list.innerHTML = this.posts.map(post => {
       const dateText = post.published_at ? new Date(post.published_at).toLocaleDateString() : "Unknown date";
       const wordCount = String(post.content || "").replace(/<[^>]*>/g, " ").trim().split(/\s+/).filter(Boolean).length;
-      const editorialStatus = wordCount < 240
+      const editorialStatus = wordCount < 450
         ? "Source brief — expand and fact-check before publishing."
         : "Article draft · " + wordCount + " words · Fact-check before publishing.";
       return `
@@ -526,7 +526,7 @@ class CuratorManager {
     if (!curatorPost) return;
     const articleText = String(curatorPost.content || "").replace(/<[^>]*>/g, " ").replace(/&[^;]+;/g, " ");
     const articleWords = articleText.trim().split(/\s+/).filter(Boolean).length;
-    if(articleWords<240){
+    if(articleWords<450){
       window.appUI.toast("This source brief is too short for an original blog article. Expand and fact-check it first.",{tone:"warning"});
       return;
     }

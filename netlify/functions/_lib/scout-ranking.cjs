@@ -31,7 +31,14 @@ function newsScore(item,now=Date.now()){
 }
 function rankScoutItems(items,{now=Date.now(),limit=30,maxPerTopic=8}={}){
   const seen=new Set(), counts=new Map(), result=[];
-  const sorted=[...(items||[])].filter(item=>item&&item.title&&item.link)
+  const sorted=[...(items||[])].filter(item=>{
+    if(!item?.title||!item?.link) return false;
+    const published=publishedMillis(item.published_at);
+    // The trending queue is fresh news, not an archive. Missing or future
+    // dates may indicate malformed metadata; allow slight clock drift only.
+    const age=now-published;
+    return published>0 && age>=-3600000 && age<=7*86400000;
+  })
     .map((item,index)=>({...item,__newsScore:newsScore(item,now),__rankIndex:index}))
     .sort((a,b)=>b.__newsScore-a.__newsScore || a.__rankIndex-b.__rankIndex);
   for(const item of sorted){
