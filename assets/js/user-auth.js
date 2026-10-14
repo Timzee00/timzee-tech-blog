@@ -299,6 +299,8 @@ async function boot() {
   const signupForm = document.getElementById("signupForm");
   const forgotToggle = document.getElementById("forgotToggle");
   const forgotForm = document.getElementById("forgotForm");
+  const forgotMessage = document.getElementById("forgotMessage");
+  const forgotSubmit = document.getElementById("forgotSubmit");
   const switcher = document.querySelector(".auth-switcher");
   const switchButtons = document.querySelectorAll(".auth-switch-btn");
   const loginMessage = document.getElementById("loginMessage");
@@ -315,9 +317,11 @@ async function boot() {
     const loginPanel = switcher.querySelector(".auth-panel-login");
     const signupPanel = switcher.querySelector(".auth-panel-signup");
     const resetPanel = switcher.querySelector(".auth-panel-reset");
+    const forgotPanel = switcher.querySelector(".auth-panel-forgot");
     if (loginPanel) loginPanel.setAttribute("aria-hidden", view !== "login");
     if (signupPanel) signupPanel.setAttribute("aria-hidden", view !== "signup");
     if (resetPanel) resetPanel.setAttribute("aria-hidden", view !== "reset");
+    if (forgotPanel) forgotPanel.setAttribute("aria-hidden", view !== "forgot");
   };
 
   const hashParams = getHashParams();
@@ -411,7 +415,13 @@ async function boot() {
   }
 
   if (forgotToggle && forgotForm) {
-    forgotToggle.addEventListener("click", () => forgotForm.classList.toggle("hidden"));
+    forgotToggle.addEventListener("click", () => {
+      setMessage(forgotMessage, "", false);
+      const loginEmail = document.getElementById("loginEmail")?.value.trim();
+      if (loginEmail) document.getElementById("forgotEmail").value = loginEmail;
+      setView("forgot");
+      document.getElementById("forgotEmail")?.focus();
+    });
   }
 
   if (forgotForm) {
@@ -419,14 +429,19 @@ async function boot() {
       event.preventDefault();
       const email = document.getElementById("forgotEmail").value.trim();
       if (!email) return;
-      const result = await resetPassword(email, redirectTo);
-      if (result.error) {
-        setMessage(loginMessage, normalizeAuthError(result.error, "forgot"));
-        return;
+      if (forgotSubmit) { forgotSubmit.disabled = true; forgotSubmit.textContent = "Sending…"; }
+      try {
+        const result = await resetPassword(email, redirectTo);
+        if (result.error) {
+          setMessage(forgotMessage, normalizeAuthError(result.error, "forgot"));
+          return;
+        }
+        setMessage(forgotMessage, "If an account exists for this email, a password reset link will arrive shortly. Check your inbox and spam folder.");
+      } catch (error) {
+        setMessage(forgotMessage, normalizeAuthError(error, "forgot"));
+      } finally {
+        if (forgotSubmit) { forgotSubmit.disabled = false; forgotSubmit.textContent = "Send reset link"; }
       }
-      setMessage(loginMessage, "Password reset link sent. Check your inbox/spam, then open the link to set a new password.");
-      forgotForm.classList.add("hidden");
-      forgotForm.reset();
     });
   }
 
