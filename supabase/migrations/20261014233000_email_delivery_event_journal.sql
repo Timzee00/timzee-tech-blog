@@ -33,7 +33,7 @@ create or replace function public.record_brevo_delivery_event(
   p_event_epoch bigint default null
 )
 returns jsonb language plpgsql security definer
-set search_path to pg_catalog,private,public
+set search_path to pg_catalog,private
 as $body$
 declare
   event_kind text := lower(trim(coalesce(p_event,'')));
@@ -70,7 +70,9 @@ begin
 
   -- Retain only message-level metadata, never message content or recipient email.
   if mid <> '' and length(mid) <= 255 then
-    fingerprint := md5('brevo:'||mid||':'||event_kind||':'||event_ts::text||':'||address);
+    -- A retry without Brevo's event timestamp must still produce the same key.
+    fingerprint := md5('brevo:'||mid||':'||event_kind||':'||
+      coalesce(p_event_epoch::text,'unknown')||':'||address);
     insert into private.email_provider_events(event_key,provider_message_id,event_name,event_time)
     values(fingerprint,mid,event_kind,event_ts)
     on conflict(event_key) do nothing;
