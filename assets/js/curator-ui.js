@@ -648,7 +648,7 @@ class CuratorManager {
       '<p class="post-kicker">'+escapeHTML((post.tags||[])[0]||"General")+' · '+escapeHTML(post.source_name||"Curator")+'</p>'+
       '<h1>'+escapeHTML(post.title||"Untitled")+'</h1>'+
       '<p class="post-dek">'+escapeHTML(post.excerpt||"")+'</p>'+
-      (imageHtml?'<div class="curator-preview-gallery">'+imageHtml+'</div>':'')+
+      (imageHtml?'<div class="curator-preview-gallery" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;">'+imageHtml+'</div>':'')+
       (insights.length?'<section class="post-highlights"><h2>Key Takeaways</h2><ul>'+
          insights.map(i=>'<li>'+escapeHTML(i)+'</li>').join("")+'</ul></section>':'')+
       '<div class="post-content">'+normalizeHtml(post.content||"")+'</div>'+
@@ -656,6 +656,9 @@ class CuratorManager {
       (permitted?'Images marked as rights-verified by editor. ':'Image rights are not confirmed. ')+
       (credited?'Credit: '+escapeHTML(credited)+'. ':'')+
       'This is a private preview and has not been published.</p></article></div>';
+    dialog.style.cssText="position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(760px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:hidden;padding:0;border-radius:16px;";
+    dialog.querySelector(".curator-preview-body").style.cssText="max-height:calc(100dvh - 100px);overflow-y:auto;overflow-x:hidden;padding:clamp(12px,3vw,24px);";
+    dialog.querySelectorAll("img,iframe,video").forEach(media=>{media.style.maxWidth="100%";media.style.width="100%";media.style.height="auto";});
     document.body.append(dialog);
     const close=()=>dialog.close();
     dialog.querySelector(".curator-preview-close")?.addEventListener("click",close);

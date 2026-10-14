@@ -20,7 +20,7 @@ exports.handler=async(event)=>{
   if(role.error)return respond(403,{error:role.error});
   const provider=process.env.CURATOR_AI_PROVIDER==="openrouter"?"openrouter":"groq";
   const apiKey=provider==="openrouter"?process.env.OPENROUTER_API_KEY:process.env.GROQ_API_KEY;
-  if(!apiKey)return respond(503,{error:provider==="openrouter"?"OPENROUTER_API_KEY is not available to Netlify Functions.":"GROQ_API_KEY is not available to Netlify Functions."});
+  if(!apiKey)return respond(503,{error:provider==="openrouter"?"OPENROUTER_API_KEY is unavailable to this deployed Function. Check its context/scope and redeploy.":"GROQ_API_KEY is unavailable to this deployed Function. Check its context/scope and redeploy.",provider});
   const {data:post,error}=await db.from("curator_posts").select("id,title,content,excerpt,description,source_name,source_url,status,is_posted").eq("id",id).maybeSingle();
   if(error)return respond(500,{error:"Could not load the draft."});
   if(!post || post.status!=="draft" || post.is_posted)return respond(409,{error:"Only unpublished drafts can be expanded."});
@@ -62,7 +62,7 @@ exports.handler=async(event)=>{
     });
     if(!res.ok){
       console.warn("Curator AI provider status",provider,res.status);
-      return respond(res.status===429?429:502,{error:res.status===429?"AI provider rate limit reached. Try later.":"AI provider did not accept the draft request. Check provider configuration/model access."});
+      return respond(res.status===429?429:502,{error:res.status===429?"AI provider rate limit reached. Try later.":res.status===401||res.status===403?"AI provider rejected authentication or permissions. Verify the deployed key and model access.":"AI provider returned HTTP "+res.status+". Check model access, provider availability, and deploy environment.",provider});
     }
     const json=await res.json();
     const raw=json.choices?.[0]?.message?.content;

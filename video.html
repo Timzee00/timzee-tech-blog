@@ -582,6 +582,7 @@
       const state = {
         user: null,
         preferences: mergePreferences(),
+        sessionMuted: false,
         videos: [],
         offset: 0,
         limit: 6,
@@ -727,11 +728,13 @@
       // rather than defaulting every video to muted regardless.
       function playWithSoundFallback(vid, idx, { explicit = false } = {}) {
         if (!explicit && state.preferences.videos.autoplay === false) return;
-        if (!explicit) vid.muted = state.preferences.videos.mutedByDefault === true;
+        // Preserve the viewer's latest mute decision across every reel.
+        vid.muted = state.sessionMuted;
         const attempt = vid.play();
         if (attempt && typeof attempt.catch === "function") {
           attempt.catch(() => {
             vid.muted = true;
+            state.sessionMuted = true;
             const btn = document.getElementById(`mute-${idx}`);
             if (btn) btn.textContent = "🔇";
             vid.play().catch(() => {});
@@ -787,8 +790,12 @@
             const idx = btn.id.split("-")[1];
             const vid = document.getElementById(`video-${idx}`);
             if (!vid) return;
-            vid.muted = !vid.muted;
-            btn.textContent = vid.muted ? "🔇" : "🔊";
+            state.sessionMuted = !vid.muted;
+            scroller.querySelectorAll(".reel-video").forEach(item => { item.muted = state.sessionMuted; });
+            scroller.querySelectorAll(".reel-mute").forEach(button => {
+              button.textContent = state.sessionMuted ? "🔇" : "🔊";
+              button.setAttribute("aria-label",state.sessionMuted?"Unmute videos":"Mute videos");
+            });
           });
         });
 
@@ -1268,6 +1275,7 @@
       async function boot() {
         state.user=await getCurrentUser();
         state.preferences=mergePreferences(await loadUserPreferences(state.user));
+        state.sessionMuted = state.preferences.videos.mutedByDefault === true;
         if(state.mode==="for-you" && state.preferences.feed.showRecommendations===false){
           state.mode="following"; updateReelModeButtons();
         }

@@ -11,6 +11,7 @@ let activeMentionDropdown = null;
 let activeMentionField = null;
 let currentSearchTerm = "";
 let cursorAtMention = false;
+let mentionRequest = 0;
 
 /**
  * Search for users to mention
@@ -61,6 +62,7 @@ export function closeMentionDropdown() {
   }
   currentSearchTerm = "";
   activeMentionField = null;
+  mentionRequest++;
 }
 
 /**
@@ -69,18 +71,20 @@ export function closeMentionDropdown() {
 async function showMentionDropdown(field, searchTerm) {
   // Remove existing dropdown
   closeMentionDropdown();
-
+  const request = ++mentionRequest;
   const suggestions = await searchUsersForMention(searchTerm);
-  if (suggestions.length === 0) return;
+  if (request !== mentionRequest || !field.isConnected || document.activeElement !== field || !suggestions.length) return;
 
   const rect = field.getBoundingClientRect();
   const dropdown = document.createElement("div");
   dropdown.className = "mention-dropdown";
   dropdown.style.cssText = `
     position: fixed;
-    top: ${rect.bottom + 5}px;
-    left: ${rect.left}px;
-    background: white;
+    top: ${Math.max(8, Math.min(rect.bottom+5, innerHeight-220))}px;
+    left: ${Math.max(8,Math.min(rect.left,innerWidth-Math.min(300,innerWidth-16)-8))}px;
+    width: min(300px, calc(100vw - 16px));
+    background: var(--color-surface, #ffffff);
+    color: var(--color-text, #111827);
     border: 1px solid #ddd;
     border-radius: 8px;
     max-width: 300px;
@@ -237,10 +241,13 @@ export function setupMentionInput(field) {
       
       // Simple cycling through items
       let selected = activeMentionDropdown.querySelector("[data-selected]");
-      if (!selected && event.key === "ArrowDown") {
-        items[0].setAttribute("data-selected", "true");
-        items[0].style.background = "#f0f0f0";
-      }
+      const current=Array.from(items).indexOf(selected);
+      items.forEach(item=>{item.removeAttribute("data-selected");item.style.background="transparent";});
+      const next=(current+(event.key==="ArrowDown"?1:-1)+items.length)%items.length;
+      items[next].setAttribute("data-selected","true");
+      items[next].style.background="var(--color-surface-muted, #e5e7eb)";
+      items[next].scrollIntoView({block:"nearest"});
+
     }
 
     // Handle Enter to select mention
