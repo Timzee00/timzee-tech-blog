@@ -56,33 +56,36 @@ begin
   ) on commit drop;
   truncate table digest_candidate_work;
 
+  with classified as (
+    select n.user_id,
+      case
+        when lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(message|chat)' then 'message_digest'
+        when lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(mention|reply|comment)' then 'mention_digest'
+        when lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(market|inquir|listing|order)' then 'marketplace_alerts'
+        when lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(follow|community|discussion|announcement)' then 'community_digest'
+        else null
+      end as kind
+    from public.notifications n
+    where n.read_at is null
+      and n.created_at >= (now() at time zone 'utc')-interval '24 hours'
+  )
   insert into digest_candidate_work(user_id,template,recipient_email,item_count)
-  select n.user_id,
-    case
-      when lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(message|chat)' then 'message_digest'
-      when lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(mention|reply|comment)' then 'mention_digest'
-      when lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(market|inquir|listing|order)' then 'marketplace_alerts'
-      when lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(follow|community|discussion|announcement)' then 'community_digest'
-      else null
-    end as template,
-    lower(trim(u.email)) as recipient_email,
-    count(*)::integer as item_count
-  from public.notifications n
+  select n.user_id,n.kind,lower(trim(u.email)),count(*)::integer
+  from classified n
   join public.email_notification_preferences p on p.user_id=n.user_id
   join auth.users u on u.id=n.user_id
   join public.profiles pr on pr.id=n.user_id
-  where n.read_at is null and n.created_at >= (now() at time zone 'utc')-interval '24 hours'
-    and u.email_confirmed_at is not null
+  where u.email_confirmed_at is not null
     and nullif(trim(coalesce(u.email,'')),'') is not null
     and pr.account_status='active'
     and not exists (select 1 from private.email_suppressions es where es.email=lower(trim(u.email)))
     and (
-      (p.message_digest and lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(message|chat)')
-      or (p.mention_digest and lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(mention|reply|comment)')
-      or (p.marketplace_alerts and lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(market|inquir|listing|order)')
-      or (p.community_digest and lower(coalesce(nullif(n.notification_type,''),nullif(n.type,''),'')) ~ '(follow|community|discussion|announcement)')
+      (n.kind='message_digest' and p.message_digest)
+      or (n.kind='mention_digest' and p.mention_digest)
+      or (n.kind='marketplace_alerts' and p.marketplace_alerts)
+      or (n.kind='community_digest' and p.community_digest)
     )
-  group by n.user_id,template,lower(trim(u.email))
+  group by n.user_id,n.kind,lower(trim(u.email))
   having count(*)>0;
 
   delete from digest_candidate_work c where c.template is null or exists (
