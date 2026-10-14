@@ -1,0 +1,24 @@
+name: Email delivery gate
+on:
+  pull_request:
+    branches: [main, fix/sitewide-shell-20261010]
+permissions:
+  contents: read
+concurrency:
+  group: email-delivery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Email worker and webhook unit tests
+        run: node --test tests/email-delivery.test.cjs
+      - name: Database migration SQL syntax
+        run: node --test tests/migrations.test.cjs
