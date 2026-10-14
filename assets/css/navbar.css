@@ -124,3 +124,15 @@
  .site-menu :where(button,input,select,textarea,a){max-width:100%;box-sizing:border-box;}
  .site-menu .site-menu-header .site-menu-close{width:44px;flex:0 0 44px;}
 }
+
+/* Keep the bottom of every footer reachable behind the mobile tab bar. */
+@media (max-width:960px){
+  body:has(.bottom-tab-bar) footer.footer{
+    padding-bottom:calc(92px + env(safe-area-inset-bottom));
+    scroll-margin-bottom:calc(90px + env(safe-area-inset-bottom));
+  }
+  .bottom-tab-bar{
+    padding-bottom:calc(8px + env(safe-area-inset-bottom));
+    min-height:62px;
+  }
+}
