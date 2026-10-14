@@ -23,7 +23,7 @@ function mountExtraSettings(){
   <label class="toggle-row"><span><strong>Message digest</strong><small>A grouped summary of unread messages instead of one email per chat.</small></span><input type="checkbox" data-email-notification="message_digest"></label>
   <label class="toggle-row"><span><strong>Mention digest</strong><small>Grouped mentions and discussion replies.</small></span><input type="checkbox" data-email-notification="mention_digest"></label>
   <label class="toggle-row"><span><strong>Marketplace updates</strong><small>Updates related to your marketplace activity, when available.</small></span><input type="checkbox" data-email-notification="marketplace_alerts"></label>
-  <label class="toggle-row"><span><strong>Community digest</strong><small>Occasional updates from communities you follow, when available.</small></span><input type="checkbox" data-email-notification="community_digest"></label>
+  <label class="toggle-row"><span><strong>Community digest</strong><small>Occasional updates from communities you follow, when available.</small></span><input type="checkbox" data-email-notification="community_digest"></label><label class="toggle-row"><span><strong>Reminder after a long absence</strong><small>Opt in to one email after 30 days without a visit. You can turn it off anytime.</small></span><input type="checkbox" data-email-notification="inactivity_reminders"></label>
   </div>`;
   const cookies=$("cookies");content.insertBefore(appearance,cookies);content.insertBefore(email,cookies);content.insertBefore(security,cookies);
   $("resetPasswordBtn")?.addEventListener("click",async()=>{try{const result=await supabase.auth.resetPasswordForEmail(state.user.email,{redirectTo:`${window.location.origin}/login.html`});if(result.error)throw result.error;setStatus("Password reset email requested.","success");}catch(error){setStatus(error?.message||"Could not request password reset.","error");reportAppError(error,"Password reset failed");}});
@@ -56,10 +56,10 @@ function mountExtraSettings(){
   });
 }
 
-const EMAIL_OPTION_KEYS=["message_digest","mention_digest","marketplace_alerts","community_digest"];
+const EMAIL_OPTION_KEYS=["message_digest","mention_digest","marketplace_alerts","community_digest","inactivity_reminders"];
 async function loadEmailPreferences(){
   const result=await supabase.from("email_notification_preferences")
-    .select("message_digest,mention_digest,marketplace_alerts,community_digest")
+    .select("message_digest,mention_digest,marketplace_alerts,community_digest,inactivity_reminders")
     .eq("user_id",state.user.id).maybeSingle();
   if(result.error)throw result.error;
   state.emailPreferences=Object.fromEntries(EMAIL_OPTION_KEYS.map(key=>[key,result.data?.[key]===true]));
