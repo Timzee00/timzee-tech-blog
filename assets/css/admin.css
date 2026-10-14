@@ -865,3 +865,15 @@ select:focus-visible {
 .admin-request-detail .admin-request-field strong{text-transform:capitalize}
 .admin-request-detail .admin-request-field p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.6}
 .admin-request-detail .admin-list-actions{margin-top:18px}
+
+
+.admin-traffic-panel{margin-top:18px;max-width:100%;min-width:0;overflow:hidden}
+.admin-traffic-panel .admin-management-row{justify-content:space-between}
+.admin-traffic-panel .admin-management-row h3{margin:0 auto 0 0}
+.admin-traffic-panel #trafficRange{padding:9px 12px;min-height:40px;max-width:145px}
+.admin-traffic-panel #trafficNote{font-size:13px;color:var(--admin-text-muted);line-height:1.5}
+.admin-traffic-chart{display:flex;align-items:end;min-height:180px;height:210px;gap:clamp(2px,.65vw,8px);max-width:100%;overflow-x:auto;padding:16px 4px 12px;border-bottom:1px solid var(--admin-border-soft)}
+.admin-traffic-day{flex:1 0 4px;min-width:4px;height:100%;display:flex;flex-direction:column;justify-content:end;align-items:center;gap:5px}
+.admin-traffic-bar{width:100%;max-width:24px;min-height:2px;background:var(--admin-accent);border-radius:4px 4px 0 0}
+.admin-traffic-day small{font-size:9px;writing-mode:vertical-rl;max-height:28px;overflow:hidden;opacity:.8}
+@media(max-width:650px){.admin-traffic-chart{gap:3px}.admin-traffic-day{min-width:4px}.admin-traffic-day small{display:none}}
