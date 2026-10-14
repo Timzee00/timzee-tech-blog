@@ -6,6 +6,8 @@ const STYLE_ID = "timzee-consent-style";
 const BANNER_ID = "timzee-consent-banner";
 const MODAL_ID = "timzee-cookie-settings-modal";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 180;
+const CONSENT_META_KEY = "timzee_cookie_consent_meta_v2";
+const CONSENT_META_COOKIE = "timzee_cookie_consent_review";
 
 function injectStyles() {
   if (document.getElementById(STYLE_ID)) return;
@@ -25,7 +27,7 @@ function injectStyles() {
     .timzee-cookie-option{display:flex;gap:11px;align-items:flex-start;padding:12px;border:1px solid var(--color-border,rgba(15,23,42,.1));border-radius:12px;margin-top:9px}
     .timzee-cookie-option input{margin-top:3px}.timzee-cookie-option strong{display:block;font-size:.86rem}.timzee-cookie-option small{display:block;margin-top:2px;color:var(--color-text-muted,#667085);line-height:1.4}
     .timzee-cookie-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap}.timzee-cookie-modal-actions button{padding:9px 13px;border-radius:10px;border:1px solid var(--color-border-strong,rgba(15,23,42,.16));background:transparent;font:600 .82rem var(--font-body,system-ui);cursor:pointer}.timzee-cookie-modal-actions .primary{background:var(--color-primary,#0f766e);color:#fff;border-color:transparent}
-    @media (max-width:960px){#${BANNER_ID}{position:relative;left:auto;right:auto;bottom:auto;width:calc(100% - 20px);margin:12px auto;z-index:1000}.timzee-consent-card{align-items:stretch;flex-direction:column;gap:12px}.timzee-consent-actions{width:100%}.timzee-consent-actions button{flex:1;min-width:0}}
+    @media (max-width:960px){#${BANNER_ID}{position:relative;left:auto;right:auto;bottom:auto;width:calc(100% - 20px);margin:12px auto;z-index:1000;clear:both}.timzee-consent-card{align-items:stretch;flex-direction:column;gap:12px}.timzee-consent-actions{width:100%}.timzee-consent-actions button{flex:1;min-width:0}}
   `;
   document.head.appendChild(style);
 }
@@ -37,25 +39,41 @@ function getCookie(name) {
 }
 function setCookie(name, value, maxAge = COOKIE_MAX_AGE) { document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Max-Age=${maxAge}; Path=/; SameSite=Lax; Secure`; }
 function removeCookie(name) { document.cookie = `${encodeURIComponent(name)}=; Max-Age=0; Path=/; SameSite=Lax; Secure`; }
+function recentConsent() {
+  let stamp=0;
+  try { stamp=Number(JSON.parse(localStorage.getItem(CONSENT_META_KEY)||"null")?.time||0); }
+  catch (_) {}
+  if(!stamp)stamp=Number(getCookie(CONSENT_META_COOKIE)||0);
+  return Number.isFinite(stamp)&&stamp>0&&stamp<=Date.now()&&
+    Date.now()-stamp<COOKIE_MAX_AGE*1000;
+}
 function readConsent() {
-  try {
-    const local = localStorage.getItem(CONSENT_KEY) || "";
-    const cookie = getCookie(CONSENT_COOKIE);
-    return local === "accepted" || local === "declined" || local === "custom" ? local : cookie;
-  } catch (_) { return getCookie(CONSENT_COOKIE); }
+  // Older installs had an indefinite localStorage choice without a timestamp.
+  // Invite a fresh decision rather than assuming it lasts forever.
+  if(!recentConsent())return "";
+  let value="";
+  try { value=localStorage.getItem(CONSENT_KEY)||""; } catch (_) {}
+  if(!value)value=getCookie(CONSENT_COOKIE);
+  return ["accepted","declined","custom"].includes(value)?value:"";
 }
 function readChoices() {
-  try {
-    const value = JSON.parse(localStorage.getItem("timzee_cookie_choices") || "null");
-    if (value && typeof value.preferences === "boolean" && typeof value.measurement === "boolean") return value;
-  } catch (_) {}
-  return { preferences: getCookie(PREFERENCES_COOKIE) === "1" || readConsent() === "accepted", measurement: getCookie(MEASUREMENT_COOKIE) === "1" || readConsent() === "accepted" };
+  if(!readConsent())return {preferences:false,measurement:false};
+  try{
+    const value=JSON.parse(localStorage.getItem("timzee_cookie_choices")||"null");
+    if(value&&typeof value.preferences==="boolean"&&typeof value.measurement==="boolean")
+      return {preferences:value.preferences,measurement:value.measurement};
+  }catch(_){}
+  return {
+    preferences:getCookie(PREFERENCES_COOKIE)==="1",
+    measurement:getCookie(MEASUREMENT_COOKIE)==="1"
+  };
 }
 function writeConsent(value) {
   const choices = typeof value === "object" ? value : { preferences: value === "accepted", measurement: value === "accepted" };
   // "custom" keeps each individual choice authoritative, including when localStorage is unavailable.
   const status = choices.preferences && choices.measurement ? "accepted" : choices.preferences || choices.measurement ? "custom" : "declined";
-  try { localStorage.setItem(CONSENT_KEY, status); localStorage.setItem("timzee_cookie_choices", JSON.stringify(choices)); } catch (_) {}
+  try { localStorage.setItem(CONSENT_KEY, status); localStorage.setItem("timzee_cookie_choices", JSON.stringify(choices)); localStorage.setItem(CONSENT_META_KEY,JSON.stringify({time:Date.now(),version:2})); } catch (_) {}
+  setCookie(CONSENT_META_COOKIE,String(Date.now()));
   setCookie(CONSENT_COOKIE, status);
   setCookie(PREFERENCES_COOKIE, choices.preferences ? "1" : "0");
   if (choices.measurement) setCookie(MEASUREMENT_COOKIE, "1"); else removeCookie(MEASUREMENT_COOKIE);
