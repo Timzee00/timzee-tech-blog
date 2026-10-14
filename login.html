@@ -25,6 +25,11 @@
     <link rel="stylesheet" href="assets/css/styles.css">
     <script defer src="assets/js/theme-init.js"></script>
     <style>
+      .auth-switcher[data-view="forgot"] .auth-panel-login,
+      .auth-switcher[data-view="forgot"] .auth-panel-signup,
+      .auth-switcher[data-view="forgot"] .auth-panel-reset { display:none !important; }
+      .auth-switcher:not([data-view="forgot"]) .auth-panel-forgot { display:none !important; }
+      .auth-switcher[data-view="forgot"] .auth-panel-forgot { display:block !important; }
       .oauth-divider { display:flex; align-items:center; gap:12px; margin:18px 0 14px; color:var(--muted,#6b7280); font-size:.82rem; }
       .oauth-divider::before, .oauth-divider::after { content:""; height:1px; flex:1; background:currentColor; opacity:.25; }
       .oauth-buttons { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -163,6 +168,20 @@
               <p class="callout" id="signupMessage" style="display:none; margin-top:14px;"></p>
               <div class="callout" style="margin-top:14px;">After sign-up, check inbox/spam for email confirmation before your first login.</div>
               <div class="auth-switch"><span>Already have an account?</span><button class="btn ghost auth-switch-btn" type="button" data-switch="login">Sign In</button></div>
+            </div>
+
+            <div class="auth-card auth-panel auth-panel-forgot secondary-card" aria-hidden="true">
+              <h2>Forgot your password?</h2>
+              <p class="tagline">Enter your account email and we'll send a secure link to reset your password.</p>
+              <form id="forgotForm" class="form-grid auth-form">
+                <div class="auth-input-group">
+                  <label for="forgotEmail">Email address</label>
+                  <input type="email" id="forgotEmail" placeholder="you@example.com" autocomplete="email" required>
+                </div>
+                <button class="btn secondary" type="submit" id="forgotSubmit">Send reset link</button>
+              </form>
+              <p class="callout" id="forgotMessage" role="status" aria-live="polite" style="display:none;margin-top:14px;"></p>
+              <div class="auth-switch"><span>Remembered your password?</span><button class="btn ghost auth-switch-btn" type="button" data-switch="login">Back to login</button></div>
             </div>
 
             <div class="auth-card auth-panel auth-panel-reset secondary-card">
