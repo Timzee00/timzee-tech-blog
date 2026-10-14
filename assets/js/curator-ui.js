@@ -263,7 +263,14 @@ class CuratorManager {
         }
         .post-title { font-weight: 600; line-height: 1.4; }
         .post-meta { font-size: 12px; color: var(--color-text-muted); }
-        .post-actions { display: flex; gap: 8px; }
+        .post-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; min-width: 0; }
+        .post-actions > .btn { min-width: 0; max-width: 100%; width: 100%; white-space: normal; overflow-wrap: anywhere; padding: 10px 8px; }
+        .post-card, .curator-media-editor, .curator-media-editor label { box-sizing:border-box; min-width:0; max-width:100%; }
+        .curator-media-editor textarea, .curator-media-editor input:not([type=checkbox]) { display:block; width:100%; min-width:0; max-width:100%; box-sizing:border-box; overflow-wrap:anywhere; }
+        .curator-media-editor img { width:auto; max-width:100%; height:auto; object-fit:contain; }
+        #postsList { min-width:0; max-width:100%; grid-template-columns: repeat(auto-fit,minmax(min(100%,300px),1fr)) !important; }
+        @media(min-width:750px) { .post-actions { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+        @media(max-width:420px) { .curator-manager { margin:12px 0; } .post-card {padding:12px;} .post-actions > .btn {font-size:13px;} }
       </style>
     `;
 
