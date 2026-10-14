@@ -22,7 +22,7 @@ import {
 import { supabase, getCurrentUserWithRole, getUserRole } from "./supabase.js";
 import { escapeHTML, slugify, isSafeUrl, normalizeHtml } from "./utils.js";
 import { createPost, createPostMedia } from "./data.js";
-import { ROUNDUP_TOPICS, generateRoundupDraft, suggestRoundupIds, trustedExternalUrl, imageUrls, htmlEscape, socialCaption } from "./curator-publishing.mjs";
+import { ROUNDUP_TOPICS, generateRoundupDraft, suggestRoundupIds, trustedExternalUrl, imageUrls, htmlEscape, socialCaption, placeEditorialFigures } from "./curator-publishing.mjs";
 
 class CuratorManager {
   constructor() {
@@ -648,10 +648,10 @@ class CuratorManager {
       '<p class="post-kicker">'+escapeHTML((post.tags||[])[0]||"General")+' · '+escapeHTML(post.source_name||"Curator")+'</p>'+
       '<h1>'+escapeHTML(post.title||"Untitled")+'</h1>'+
       '<p class="post-dek">'+escapeHTML(post.excerpt||"")+'</p>'+
-      (imageHtml?'<div class="curator-preview-gallery" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;">'+imageHtml+'</div>':'')+
+      (media.length?'<div class="curator-preview-cover">'+(imageHtml.split("</figure>")[0]||"")+'</figure></div>':'')+
       (insights.length?'<section class="post-highlights"><h2>Key Takeaways</h2><ul>'+
          insights.map(i=>'<li>'+escapeHTML(i)+'</li>').join("")+'</ul></section>':'')+
-      '<div class="post-content">'+normalizeHtml(post.content||"")+'</div>'+
+      '<div class="post-content">'+normalizeHtml(placeEditorialFigures(post.content||"",media,credited))+'</div>'+
       '<p class="curator-preview-note">'+
       (permitted?'Images marked as rights-verified by editor. ':'Image rights are not confirmed. ')+
       (credited?'Credit: '+escapeHTML(credited)+'. ':'')+
@@ -743,7 +743,7 @@ class CuratorManager {
       const title = curatorPost.title || "Untitled";
       const body=curatorPost.content || (curatorPost.excerpt ? '<p>'+escapeHTML(curatorPost.excerpt)+'</p>' : "");
       const credit=selectedImages.length ? '<p class="curator-image-credit">Images: '+htmlEscape(imageCredit)+'</p>' : "";
-      const content=body+credit;
+      const content=placeEditorialFigures(body,selectedImages,imageCredit)+credit;
       const now = new Date().toISOString();
 
       const result = await createPost({
@@ -769,9 +769,9 @@ class CuratorManager {
       // A published post is never duplicated if attaching gallery media
       // fails. Staff can follow the published link and repair media manually.
       await markCuratorPostAsPosted(curatorPostId,publishedId);
-      const failedMedia=publishedId
-        ? await this.attachMissingGallery(publishedId,selectedImages.slice(1))
-        : ["The published post ID was unavailable."];
+      // Licensed supporting images are already embedded near headings.
+      // Do not add them a second time to the end-of-post gallery.
+      const failedMedia=publishedId?[]:["The published post ID was unavailable."];
       const postUrl=new URL("post.html?id="+encodeURIComponent(publishedId||""),window.location.href).toString();
       if(failedMedia.length) window.appUI.toast("Post published, but some gallery images failed. Repair gallery on "+postUrl,{tone:"error"});
       else window.appUI.toast("Article published. Social caption ready to share.",{tone:"success"});

@@ -73,3 +73,24 @@ export function socialCaption(title,url,topic="news"){
   const link=trustedExternalUrl(url);if(!link)throw Error("A public URL is required.");
   return plainText(title).slice(0,160)+"\n\nRead this "+plainText(topic).slice(0,40)+" update on Timzee Tech Hub, with sources and context:\n"+link;
 }
+
+
+/** Place rights-approved figures after relevant H2 sections of an article.
+ * Placement is evenly spaced by section, never an inference that a particular
+ * photo documents a claim. Editors verify relevance and reuse permission. */
+export function placeEditorialFigures(html,images,credit=""){
+  const urls=imageUrls(images).slice(1);
+  const body=String(html||"");
+  if(!urls.length)return body;
+  const headings=[...body.matchAll(/<\/h2\s*>/gi)];
+  if(!headings.length)return body;
+  const positions=urls.map((url,i)=>{
+    const chosen=Math.min(headings.length-1,Math.floor((i+1)*headings.length/(urls.length+1)));
+    return {
+      position:headings[chosen].index+headings[chosen][0].length,
+      figure:'<figure class="curator-inline-image"><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+htmlEscape(url)+'" alt="Editorial illustration '+(i+2)+'"><figcaption>'+htmlEscape(credit||"Image published with permission")+'</figcaption></figure>'
+    };
+  });
+  return positions.sort((a,b)=>b.position-a.position)
+    .reduce((current,item)=>current.slice(0,item.position)+item.figure+current.slice(item.position),body);
+}
