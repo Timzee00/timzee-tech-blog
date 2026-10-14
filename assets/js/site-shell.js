@@ -1,6 +1,7 @@
 import "./ui-controls.js";
 import "./image-fallback.js";
 import "./nav.js";
+import "./visitor-analytics.js";
 import { pageFileName } from "./route-page.mjs";
 
 const BRAND_TEXT="Powered by Timzee Corp";

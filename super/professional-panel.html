@@ -103,7 +103,7 @@
       <!-- Site Analysis -->
       <section class="admin-card" data-panel="analysis" style="display:none;">
         <h2>📈 Site Analysis</h2>
-        <div class="stats-grid" id="analysisStats"></div>
+        <div class="stats-grid" id="analysisStats"></div><section class="form-card admin-traffic-panel"><div class="admin-management-row"><h3>Site visits</h3><label for="trafficRange">Period</label><select id="trafficRange"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option></select></div><p id="trafficNote" role="status">Loading consent-based traffic data…</p><div class="stats-grid" id="trafficTotals"></div><div class="admin-traffic-chart" id="trafficChart" role="img" aria-label="Daily unique browsers and page views"></div></section>
         <div class="callout" id="analysisTopPosts" style="margin-top:16px;"></div>
       </section>
 
@@ -721,6 +721,35 @@
             });
           }
         }
+        const loadTraffic = async () => {
+          const range=Number(document.getElementById("trafficRange").value);
+          const note=document.getElementById("trafficNote");
+          const totals=document.getElementById("trafficTotals");
+          const chart=document.getElementById("trafficChart");
+          note.textContent="Loading traffic data…";totals.replaceChildren();chart.replaceChildren();
+          try{
+            const res=await fetchWithAuth("/.netlify/functions/site-traffic-report?days="+range);
+            const parsed=await safeParseJson(res);
+            if(!res.ok)throw Error(parsed.data?.error||"Traffic reports are unavailable.");
+            const daily=parsed.data.daily||[];
+            const uniques=daily.reduce((sum,d)=>sum+Number(d.unique_browsers||0),0);
+            const views=daily.reduce((sum,d)=>sum+Number(d.pageviews||0),0);
+            const lifetime=Number(parsed.data.unique_browsers_total||0);
+            const metrics=[["Lifetime unique browsers",lifetime],["Daily uniques combined",uniques],["Pageviews in range",views]];
+            totals.innerHTML=metrics.map(([name,n])=>'<div class="stat-card"><div class="stat-label">'+escapeHTML(name)+'</div><div class="stat-value">'+n.toLocaleString()+'</div></div>').join("");
+            const max=Math.max(1,...daily.map(d=>Number(d.unique_browsers||0)));
+            daily.forEach(d=>{
+              const item=document.createElement("div");item.className="admin-traffic-day";
+              const bar=document.createElement("div");bar.className="admin-traffic-bar";
+              bar.style.height=Math.max(2,Math.round(100*Number(d.unique_browsers||0)/max))+"%";
+              bar.title=d.date+": "+d.unique_browsers+" unique browsers, "+d.pageviews+" pageviews";
+              const date=document.createElement("small");date.textContent=String(d.date).slice(5);
+              item.append(bar,date);chart.append(item);
+            });
+            note.textContent="Deduplicated opted-in browsers per UTC day; repeat page loads increase pageviews, not daily uniques. Devices, not confirmed people. No visits before tracking began.";
+          }catch(error){note.textContent=error.message+" Historical unique visits were not collected before this feature."; }
+        };
+        document.getElementById("trafficRange").addEventListener("change",()=>void loadTraffic());
         const loadAnalysis = async () => {
           const statsEl = document.getElementById("analysisStats");
           const topEl = document.getElementById("analysisTopPosts");
@@ -869,6 +898,7 @@
         await loadAdmins();
         await loadUsers();
         await loadPosts();
+        void loadTraffic();
         await loadAnalysis();
 
         // Danger Zone — real destructive actions, guarded carefully.
