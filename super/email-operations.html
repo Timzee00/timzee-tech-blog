@@ -8,12 +8,12 @@
 <div class="toolbar"><button class="btn" type="button" id="refresh">Refresh metrics</button><button class="btn ghost" type="button" id="verifyBrevo">Verify Brevo connection</button><span id="deliveryState" aria-live="polite"></span></div>
 <p role="status" id="status">Authenticating…</p>
 <div id="metrics" class="metrics" aria-live="polite"></div>
-<p>Metrics reflect queued receipt emails, not Supabase Auth SMTP messages. An empty queue does not prove successful SMTP delivery.</p>
+<p>Metrics cover queued Timzee Tech Hub receipt emails only. “Accepted” is not “delivered.” Provider delivery outcomes depend on webhook activation. Supabase Auth SMTP messages are not included in these job counts.</p>
 </main>
 <script type="module">
 import {supabase,getSession} from "../assets/js/supabase.js";
 const status=document.getElementById("status"),metrics=document.getElementById("metrics"),delivery=document.getElementById("deliveryState");
-const labels={pending:"Pending",processing:"Processing",sent:"Sent",failed:"Failed",suppressed:"Suppressed",sent_last_24h:"Sent (24 hours)",total:"Total jobs"};
+const labels={pending:"Pending",processing:"Processing",sent:"Accepted by Brevo",delivered:"Confirmed delivered",awaiting_delivery_confirmation:"Awaiting delivery update",provider_failed:"Bounced / rejected",failed:"Worker failures",suppressed:"Suppressed",sent_last_24h:"Accepted (24 hours)",total:"Total jobs"};
 async function refresh(){
   const session=await getSession();
   if(!session?.access_token){status.textContent="Sign in as super admin to view email metrics.";return;}
