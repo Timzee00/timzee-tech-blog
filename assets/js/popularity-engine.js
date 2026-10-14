@@ -5,8 +5,22 @@ const TRACK_ID = "popularTrack";
 const LIMIT = 5;
 let requestVersion = 0;
 
+export function plausibleCoverImage(url) {
+  if(!isSafeUrl(url))return false;
+  try {
+    const parsed=new URL(url);
+    const host=parsed.hostname.toLowerCase();
+    const path=decodeURIComponent(parsed.pathname).toLowerCase();
+    if(/\.(?:jpe?g|png|webp|gif|avif|svg)(?:$|\/)/i.test(path))return true;
+    if(host==="images.unsplash.com"||host==="images.pexels.com"||host==="i.imgur.com"||
+      host==="res.cloudinary.com"||host==="cdn.pixabay.com")return true;
+    if(path.includes("/storage/v1/object/public/"))return true;
+    return false;
+  }catch{return false;}
+}
+
 function buildCard(post) {
-  const media = isSafeUrl(post.cover || "")
+  const media = plausibleCoverImage(post.cover || "")
     ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}" loading="lazy">`
     : `<div class="popular-media-fallback" aria-hidden="true"><span>${escapeHTML((post.content_type || "POST").toUpperCase())}</span></div>`;
   const summary = escapeHTML(clampText(stripHTML(post.content || ""), 150));
