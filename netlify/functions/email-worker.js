@@ -17,19 +17,35 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
   const intro=name ? `Hello ${name},` : "Hello,";
   const text=`${intro}\n\n${template.body}\n\nReference: ${reference}\n\nTimzee Tech Hub`;
   const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><h2 style="color:#0f766e">Timzee Tech Hub</h2><p>${escapeHtml(intro)}</p><p>${escapeHtml(template.body)}</p><p><strong>Reference:</strong> ${escapeHtml(reference)}</p><hr><small>Transactional notification regarding your request. Do not reply with passwords or sensitive details.</small></div>`;
-  const res=await fetch("https://api.brevo.com/v3/smtp/email",{
-    method:"POST",signal:timeout(8000),
-    headers:{"api-key":apiKey,"content-type":"application/json","accept":"application/json"},
-    body:JSON.stringify({
-      sender:{email:senderEmail,name:senderName},
-      to:[{email:job.recipient_email}],
-      subject:template.subject,htmlContent:html,
-      headers:{"X-Mailin-custom":"type:transactional",idempotencyKey:job.id}
-    })
-  });
+  let res;
+  try {
+    res=await fetch("https://api.brevo.com/v3/smtp/email",{
+      method:"POST",signal:timeout(8000),
+      headers:{"api-key":apiKey,"content-type":"application/json","accept":"application/json"},
+      body:JSON.stringify({
+        sender:{email:senderEmail,name:senderName},
+        to:[{email:job.recipient_email}],
+        subject:template.subject,htmlContent:html,
+        headers:{"X-Mailin-custom":"type:transactional",idempotencyKey:job.id}
+      })
+    });
+  } catch {
+    const failure=new Error("Brevo response unknown after network failure");
+    failure.outcome="ambiguous";
+    throw failure;
+  }
   let body={};try{body=await res.json()}catch{}
-  if(!res.ok) throw new Error(`Brevo HTTP ${res.status}: ${String(body.message||"Delivery rejected").slice(0,180)}`);
-  return String(body.messageId||"");
+  if(!res.ok) {
+    const failure=new Error(`Brevo HTTP ${res.status}: ${String(body.message||"Request rejected").slice(0,150)}`);
+    const duplicate=body.code==="duplicate_parameter" || String(body.message||"").includes("duplicate_parameter");
+    failure.outcome=duplicate || res.status>=500 ? "ambiguous" : res.status===429 ? "retryable" : "terminal";
+    throw failure;
+  }
+  if(typeof body.messageId!=="string" || !body.messageId.trim()) {
+    const failure=new Error("Brevo accepted request without a usable message ID");
+    failure.outcome="ambiguous";throw failure;
+  }
+  return body.messageId.trim();
 }
 exports.handler=async()=>{
   const url=process.env.SUPABASE_URL;
@@ -67,7 +83,17 @@ exports.handler=async()=>{
     }
     let success=false,providerId=null,errorMessage=null;
     try{providerId=await sendBrevo(job,brevoKey,senderEmail,senderName);success=true;results.sent++;}
-    catch(err){errorMessage=String(err?.message||err);results.failed++;console.warn("Email send failed",job.id,errorMessage);}
+    catch(err){
+      errorMessage=String(err?.message||"Brevo delivery failed");
+      if(err?.outcome!=="retryable") {
+        const held=await supabase.rpc("quarantine_email_job",{p_id:job.id,p_reason:errorMessage});
+        if(held.error || held.data!==true)throw new Error("Could not safely quarantine uncertain email job");
+        results.quarantined=(results.quarantined||0)+1;
+        console.warn("Email job quarantined for review",job.id);
+        continue;
+      }
+      results.failed++;console.warn("Retryable email provider failure",job.id);
+    }
     const {error:finishError}=await supabase.rpc("complete_email_job",{p_id:job.id,p_success:success,p_provider_id:providerId,p_error:errorMessage});
     if(finishError) console.error("Email completion write failed",job.id,finishError.message);
   }
