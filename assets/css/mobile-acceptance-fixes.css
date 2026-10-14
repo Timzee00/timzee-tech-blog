@@ -84,3 +84,27 @@ html[data-theme="dark"] .post-article :where(.post-dek,.post-meta,.post-date) {
   .site-menu .search-box input { min-width:0; width:100%; flex:1 1 auto; }
   .site-menu .search-box > button { flex:0 0 auto; white-space:nowrap; }
 }
+
+/* Externally hosted, editor-approved article images. The source server may
+   block hotlinking; in that case JS removes the broken media tile. */
+.post-article #postGallery.post-gallery,
+.post-article #postGallery{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;margin:22px 0 32px;
+}
+.post-article #postGallery .post-gallery-item{
+  margin:0;min-width:0;overflow:hidden;
+  background:var(--color-surface-muted);
+  border:1px solid var(--color-border);border-radius:12px;
+}
+.post-article #postGallery :where(img,video){
+  display:block;width:100%;height:auto;
+  max-height:450px;object-fit:contain;
+}
+.post-article #postGallery figcaption{
+  padding:8px 12px;font-size:12px;color:var(--color-text-muted);
+}
+.post-article #postGallery a:focus-visible{outline:3px solid var(--color-secondary);outline-offset:-3px;}
+@media(max-width:650px){
+  .post-article #postGallery{grid-template-columns:minmax(0,1fr);gap:10px;}
+}

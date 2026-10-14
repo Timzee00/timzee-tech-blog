@@ -404,15 +404,19 @@ function renderGallery(mediaItems) {
     gallery.innerHTML = "";
     return;
   }
-  gallery.innerHTML = safeItems
-    .map((item) => {
+  gallery.innerHTML = safeItems.slice(0, 12)
+    .map((item, index) => {
       const url = escapeHTML(item.url);
       if (item.media_type === "video") {
-        return `<video controls preload="metadata" src="${url}"></video>`;
+        return `<figure class="post-gallery-item"><video controls playsinline preload="metadata" src="${url}"></video><figcaption>Video ${index + 1}</figcaption></figure>`;
       }
-      return `<img loading="lazy" decoding="async" src="${url}" alt="Post media">`;
+      return `<figure class="post-gallery-item"><a href="${url}" target="_blank" rel="noopener noreferrer" aria-label="Open article image ${index + 1} in new tab"><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${url}" alt="Article image ${index + 1}"></a><figcaption>Image ${index + 1} · opens original file</figcaption></figure>`;
     })
     .join("");
+  gallery.querySelectorAll("img").forEach(image => image.addEventListener("error", () => {
+    image.closest(".post-gallery-item")?.remove();
+    if (!gallery.children.length) gallery.textContent = "Article images could not be loaded from their source.";
+  }, { once: true }));
 }
 
 function updateCounts(post) {
