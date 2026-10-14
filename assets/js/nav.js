@@ -58,6 +58,7 @@ function setupMobileMenu() {
       </div>
       <div class="site-menu-footer-actions">
         <button type="button" class="chip" id="siteMenuThemeChip">&#127768; Theme</button>
+        <button type="button" class="chip" id="siteMenuCookieSettings">Cookie settings</button>
         <a class="chip" href="login.html" id="siteMenuAuthChip">&#128274; Log In</a>
       </div>
     `;
@@ -130,6 +131,18 @@ function setupMobileMenu() {
       document.querySelectorAll("[data-nav-inert]").forEach(node => { node.inert = node.dataset.navInert === "true"; delete node.dataset.navInert; });
     }
   };
+
+  const cookiesButton=menu.querySelector("#siteMenuCookieSettings");
+  cookiesButton?.addEventListener("click",async()=>{
+    setOpen(false);
+    try{
+      const controls=await import("./privacy-consent.js");
+      if(typeof window.openCookieSettings!=="function")throw Error("Consent controls unavailable");
+      window.openCookieSettings();
+    }catch(error){
+      window.appUI?.toast?.("Cookie controls could not load. Refresh the page and try again.",{tone:"error"});
+    }
+  });
 
   menu.inert = window.innerWidth <= 960;
   menu.addEventListener("keydown", event => {
