@@ -8,11 +8,17 @@ function normalizedArticle(response, sourceUrl,sourceName) {
     throw Error("The model did not produce a structured article.");
   const intro=toText(data.introduction,2600), conclusion=toText(data.conclusion,2400);
   if(intro.length<80 || conclusion.length<60)throw Error("The generated opening or conclusion is too short.");
-  const sections=data.sections.map(s=>({
-    heading:toText(s?.heading,110),
-    paragraphs:Array.isArray(s?.paragraphs)?s.paragraphs.map(p=>toText(p,2600)).filter(Boolean).slice(0,4):[]
-  }));
-  if(sections.some(s=>!s.heading || !s.paragraphs.length || s.paragraphs.some(p=>p.length<65)))
+  // Different compatible models return either paragraphs[], a single body
+  // string or objects with 'text'. Normalize before validating substance.
+  const sections=data.sections.map((section,index)=>{
+    const heading=toText(section?.heading||section?.title||"Section "+(index+1),110);
+    const raw=Array.isArray(section?.paragraphs)?section.paragraphs:
+      [section?.body||section?.content||section?.text].filter(Boolean);
+    const paragraphs=raw.map(p=>toText(typeof p==="string"?p:p?.text||p?.content,2600))
+      .filter(p=>p.length>=25).slice(0,4);
+    return {heading,paragraphs};
+  }).filter(section=>section.paragraphs.length);
+  if(sections.length<4)
     throw Error("The generated article has incomplete sections.");
   const contentText=[intro,...sections.flatMap(s=>s.paragraphs),conclusion].join(" ");
   const words=contentText.split(/\s+/).length;
