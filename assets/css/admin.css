@@ -858,3 +858,10 @@ select:focus-visible {
 .admin-panel .admin-card{padding:clamp(12px,3vw,24px)}
 .admin-panel .admin-card .admin-table{font-size:13px}
 }
+
+.admin-request-detail{width:min(650px,calc(100vw - 24px));max-height:calc(100dvh - 36px);overflow-y:auto;box-sizing:border-box;padding:clamp(16px,4vw,30px);border-radius:16px;border:1px solid var(--admin-border-strong);background:var(--admin-bg-2);color:var(--admin-text);box-shadow:0 20px 50px rgba(0,0,0,.22)}
+.admin-request-detail::backdrop{background:rgba(0,0,0,.65)}
+.admin-request-detail .admin-request-field{border-bottom:1px solid var(--admin-border-soft);padding:10px 0;min-width:0}
+.admin-request-detail .admin-request-field strong{text-transform:capitalize}
+.admin-request-detail .admin-request-field p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.6}
+.admin-request-detail .admin-list-actions{margin-top:18px}
