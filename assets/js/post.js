@@ -41,6 +41,7 @@ import {
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
+import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
 
 const state = {
   user: null,
@@ -94,7 +95,7 @@ function updateMeta(post) {
   if (!post) return;
   const title = post.title ? `${post.title} - Timzee Tech Hub` : "Post - Timzee Tech Hub";
   document.title = title;
-  const excerpt = clampText(stripHTML(post.content || ""), 160);
+  const excerpt = clampText(stripHTML(stripEditorialScaffolding(post.content || "")), 160);
   const description = excerpt || "Read the latest post on Timzee Tech Hub.";
   const base = SITE_URL || window.location.origin || "";
   const url = post.id ? `${base}/post.html?id=${post.id}` : `${base}/post.html`;
@@ -283,7 +284,7 @@ function renderPost(data, post) {
     document.getElementById(id)?.addEventListener("click",()=>{
       // Same-origin session storage: do not put article text in the URL,
       // referrer or telemetry. The AI still requires signed-in consent.
-      const article=stripHTML(post.content||"").slice(0,7500);
+      const article=stripHTML(stripEditorialScaffolding(post.content||"")).slice(0,7500);
       const context={title:String(post.title||"Article").slice(0,220),
         url:location.href,excerpt:article,action,created:Date.now()};
       sessionStorage.setItem("timzee:article-ai-context",JSON.stringify(context));
@@ -292,7 +293,7 @@ function renderPost(data, post) {
   }
   const postBody = document.getElementById("postContent");
   if (postBody) {
-    postBody.innerHTML = normalizeHtml(post.content || "");
+    postBody.innerHTML = normalizeHtml(stripEditorialScaffolding(post.content || ""));
   }
 
   const gallery = document.getElementById("postGallery");
