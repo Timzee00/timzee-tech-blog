@@ -284,11 +284,11 @@ export async function createCuratorPost(postData) {
   }
 }
 
-export async function markCuratorPostAsPosted(curatorPostId) {
+export async function markCuratorPostAsPosted(curatorPostId, publishedPostId) {
   try {
     const { data, error } = await supabase
       .from("curator_posts")
-      .update({ status: "posted", updated_at: new Date().toISOString() })
+      .update({ status: "posted", is_posted: true, post_id: publishedPostId, updated_at: new Date().toISOString() })
       .eq("id", curatorPostId)
       .select()
       .single();
@@ -299,6 +299,14 @@ export async function markCuratorPostAsPosted(curatorPostId) {
     console.error("Error marking curator post as posted:", error);
     throw error;
   }
+}
+
+export async function getPublishedCuratorPosts(limit = 20) {
+  const { data, error } = await supabase.from("curator_posts").select("*")
+    .eq("status", "posted").not("post_id", "is", null)
+    .order("updated_at", { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data || [];
 }
 
 export async function deleteCuratorPost(curatorPostId) {

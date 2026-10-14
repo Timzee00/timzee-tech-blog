@@ -10,6 +10,7 @@ import {
   deleteCuratorSource,
   toggleCuratorSourceStatus,
   getUnpostedCuratorPosts,
+  getPublishedCuratorPosts,
   createCuratorPost,
   markCuratorPostAsPosted,
   deleteCuratorPost,
@@ -25,6 +26,7 @@ import { ROUNDUP_TOPICS, generateRoundupDraft, trustedExternalUrl, imageUrls, ht
 
 class CuratorManager {
   constructor() {
+    this.publishedPosts = [];
     this.sources = [];
     this.posts = [];
     this.stats = null;
@@ -170,6 +172,11 @@ class CuratorManager {
           <div id="postsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
             <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--color-text-muted);">Loading articles...</div>
           </div>
+          <section class="curator-published-repairs" aria-labelledby="publishedRepairTitle">
+            <h3 id="publishedRepairTitle">Published article galleries</h3>
+            <p>Repair missing images without duplicating the published article. Only attach images you are licensed to reuse.</p>
+            <div id="publishedMediaRepairs" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;"></div>
+          </section>
         </div>
       </div>
 
@@ -376,11 +383,13 @@ class CuratorManager {
     try {
       this.sources = await getAllCuratorSources();
       this.posts = await getUnpostedCuratorPosts(50);
+      this.publishedPosts = await getPublishedCuratorPosts(20);
       this.stats = await getCuratorStats();
 
       this.renderStats();
       this.renderSources();
       this.renderPosts();
+      this.renderMediaRepairs();
     } catch (error) {
       console.error("Error loading curator data:", error);
     }
@@ -503,6 +512,60 @@ class CuratorManager {
     }catch(error){window.appUI.toast(error.message||"Roundup creation failed.",{tone:"error"});}
   }
 
+  renderMediaRepairs() {
+    const list=this.container.querySelector("#publishedMediaRepairs");
+    if(!list)return;
+    const rows=this.publishedPosts.filter(post=>post.post_id);
+    if(!rows.length){list.textContent="No recently published curator articles.";return;}
+    list.innerHTML=rows.map(post=>`
+      <div class="post-card">
+        <strong>${escapeHTML(post.title || "Curated article")}</strong>
+        <p><a href="post.html?id=${encodeURIComponent(post.post_id)}" target="_blank" rel="noopener noreferrer">View published article</a></p>
+        <label>Approved image URLs (one per line, up to six)
+          <textarea class="field" rows="2" data-repair-images="${post.id}"></textarea>
+        </label>
+        <label>Photographer, license or permission reference
+          <input class="field" data-repair-credit="${post.id}" placeholder="License and image source">
+        </label>
+        <label><input type="checkbox" data-repair-rights="${post.id}"> Rights verified for all images</label>
+        <button type="button" class="btn ghost" data-repair-gallery="${post.id}">Attach missing images</button>
+      </div>`).join("");
+    list.querySelectorAll("[data-repair-gallery]").forEach(btn=>btn.addEventListener("click",()=>void this.repairGallery(btn.dataset.repairGallery,btn)));
+  }
+
+  async attachMissingGallery(postId,urls){
+    const query=await supabase.from("post_media").select("url,sort_order").eq("post_id",postId);
+    if(query.error)throw query.error;
+    const existing=new Set((query.data||[]).map(item=>item.url));
+    let next=Math.max(0,...(query.data||[]).map(item=>Number(item.sort_order)||0))+1;
+    const failed=[];
+    for(const url of urls){
+      if(existing.has(url))continue;
+      const result=await createPostMedia({id:crypto.randomUUID(),post_id:postId,url,media_type:"image",sort_order:next++});
+      if(result.error)failed.push(result.error.message||"Could not attach image");
+      else existing.add(url);
+    }
+    return failed;
+  }
+
+  async repairGallery(curatorId,btn){
+    const post=this.publishedPosts.find(item=>item.id===curatorId);
+    if(!post?.post_id)return;
+    const urls=imageUrls(this.container.querySelector('[data-repair-images="'+curatorId+'"]')?.value||"");
+    const rights=this.container.querySelector('[data-repair-rights="'+curatorId+'"]')?.checked;
+    const credit=this.container.querySelector('[data-repair-credit="'+curatorId+'"]')?.value.trim()||"";
+    if(!urls.length||!rights||credit.length<5){
+      window.appUI.toast("Enter approved images, verify rights, and provide an attribution reference.",{tone:"warning"});return;
+    }
+    btn.disabled=true;
+    try{
+      const failed=await this.attachMissingGallery(post.post_id,urls);
+      if(failed.length)throw Error(failed[0]);
+      window.appUI.toast("Existing images kept; missing gallery images attached.",{tone:"success"});
+    }catch(e){window.appUI.toast("Gallery repair incomplete: "+e.message,{tone:"error"});}
+    finally{btn.disabled=false;}
+  }
+
   async handleSourceAction(e, btn) {
     const sourceId = btn.dataset.sourceId;
     const type = btn.dataset.type;
@@ -617,14 +680,10 @@ class CuratorManager {
       const publishedId=result.data?.id;
       // A published post is never duplicated if attaching gallery media
       // fails. Staff can follow the published link and repair media manually.
-      await markCuratorPostAsPosted(curatorPostId);
-      const failedMedia=[];
-      if(publishedId){
-        for(const [index,url] of selectedImages.slice(1).entries()){
-          const record=await createPostMedia({id:crypto.randomUUID(),post_id:publishedId,url,media_type:"image",sort_order:index+1});
-          if(record.error)failedMedia.push(record.error.message||"media insert error");
-        }
-      }
+      await markCuratorPostAsPosted(curatorPostId,publishedId);
+      const failedMedia=publishedId
+        ? await this.attachMissingGallery(publishedId,selectedImages.slice(1))
+        : ["The published post ID was unavailable."];
       const postUrl=new URL("post.html?id="+encodeURIComponent(publishedId||""),window.location.href).toString();
       if(failedMedia.length) window.appUI.toast("Post published, but some gallery images failed. Repair gallery on "+postUrl,{tone:"error"});
       else window.appUI.toast("Article published. Social caption ready to share.",{tone:"success"});
