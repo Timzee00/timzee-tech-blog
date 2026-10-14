@@ -335,17 +335,21 @@ async function boot() {
   const callbackExchangeError = await getAuthCallbackError();
 
   let initialView = switcher?.dataset.view || "login";
+  let recoveryAuthorized = false;
   if (isRecovery) {
     initialView = "reset";
-    if (accessToken) {
+    if (accessToken && refreshToken) {
       const { error } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken
       });
+      recoveryAuthorized = !error;
       if (error) setMessage(resetMessage, error.message || "Recovery session failed.");
-    } else {
-      const recoverySession = await getSession();
-      if (!recoverySession || callbackExchangeError) setMessage(resetMessage, "Recovery link invalid or expired. Request a new one.");
+    } else if (startedWithOAuthCallback && !callbackExchangeError) {
+      recoveryAuthorized = Boolean(await getSession());
+    }
+    if (!recoveryAuthorized) {
+      setMessage(resetMessage, "Recovery link invalid or expired. Please request a new one.");
     }
     clearHash();
   }
@@ -472,19 +476,18 @@ async function boot() {
   if (resetForm) {
     resetForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const password = document.getElementById("resetPassword").value.trim();
-      const confirm = document.getElementById("resetPasswordConfirm").value.trim();
-      if (!password || password.length < 6) {
-        setMessage(resetMessage, "Password must be at least 6 characters.");
+      const password = document.getElementById("resetPassword").value;
+      const confirm = document.getElementById("resetPasswordConfirm").value;
+      if (!password || password.length < 8) {
+        setMessage(resetMessage, "Password must be at least 8 characters.");
         return;
       }
       if (password !== confirm) {
         setMessage(resetMessage, "Passwords do not match.");
         return;
       }
-      const recoverySession = await getSession();
-      if (!recoverySession) {
-        setMessage(resetMessage, "Recovery session missing or expired. Request a new reset link.");
+      if (!recoveryAuthorized || !await getSession()) {
+        setMessage(resetMessage, "A valid password-reset link is required. Request a new reset email.");
         return;
       }
       const result = await supabase.auth.updateUser({ password });
