@@ -823,3 +823,38 @@ select:focus-visible {
   .admin-shell .admin-nav { gap: 6px; padding: 8px; }
   .admin-shell .admin-nav button { flex: 0 0 auto; min-height: 44px; }
 }
+
+
+/* Super Admin responsive directory and controls */
+.admin-management-controls{margin:16px 0;padding:14px;background:var(--admin-bg-2);border:1px solid var(--admin-border-soft);border-radius:14px;min-width:0}
+.admin-management-controls label{display:block;font-weight:700;margin-bottom:8px}
+.admin-management-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-width:0}
+.admin-management-row input{flex:1 1 210px;min-width:0}
+.admin-management-row select{flex:0 1 165px;max-width:100%}
+.admin-management-controls input,.admin-management-controls select{min-height:44px;padding:10px 12px;background:var(--admin-bg-1);border:1px solid var(--admin-border-strong);border-radius:8px;color:var(--admin-text)}
+.admin-management-controls [role="status"]{color:var(--admin-text-muted);font-size:13px;overflow-wrap:anywhere}
+.admin-list-pager{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:12px;margin:16px 0}
+.admin-list-pager button:disabled{opacity:.4;cursor:not-allowed}
+.admin-compact-list{display:grid;gap:9px;min-width:0}
+.admin-compact-list .form-card{box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px!important;margin:0!important;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;min-width:0;text-align:left;overflow-wrap:anywhere}
+.admin-compact-list .form-card > strong{min-width:0;line-height:1.3}
+.admin-compact-list .form-card > div:not(.admin-list-actions){min-width:0;overflow-wrap:anywhere}
+.admin-list-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center;min-width:0}
+.admin-list-actions .btn{min-height:38px;white-space:normal;overflow-wrap:anywhere}
+.admin-list-actions details{position:relative}
+.admin-list-actions summary{cursor:pointer;padding:9px 12px;border-radius:8px;border:1px solid var(--admin-border-strong);font-size:13px;min-height:36px;box-sizing:border-box}
+.admin-list-actions details[open]>.admin-list-actions{padding:10px 0}
+.admin-panel .admin-nav{overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin;scroll-snap-type:x proximity}
+.admin-panel .admin-nav button{white-space:nowrap;flex-shrink:0;scroll-snap-align:center;min-height:44px}
+.admin-panel .admin-card{min-width:0;overflow-wrap:anywhere}
+.admin-panel .admin-card .table-wrap{overflow-x:auto;overscroll-behavior-x:contain;width:100%;max-width:100%}
+.admin-panel .admin-card .admin-table{min-width:660px;table-layout:auto}
+.admin-panel .admin-card .admin-table :where(td,th){white-space:normal;word-break:normal;overflow-wrap:normal;vertical-align:top;min-width:92px}
+.admin-panel .admin-card .admin-table :where(.status-pill){white-space:nowrap;overflow-wrap:normal;word-break:normal}
+.admin-panel .admin-card .admin-table :where(button,.btn){white-space:nowrap}
+@media(max-width:650px){
+.admin-compact-list .form-card{grid-template-columns:minmax(0,1fr)}
+.admin-management-row .btn{flex:0 1 auto}
+.admin-panel .admin-card{padding:clamp(12px,3vw,24px)}
+.admin-panel .admin-card .admin-table{font-size:13px}
+}
