@@ -188,4 +188,7 @@ document.getElementById("digestPreview").addEventListener("click",async()=>{
 document.getElementById("refreshReviews").addEventListener("click",loadReviews);
 refresh();
 loadReviews();
+if(new URLSearchParams(location.search).get("legacyRecovery")==="1"){
+  document.getElementById("legacyRecovery")?.click();
+}
 </script></body></html>
