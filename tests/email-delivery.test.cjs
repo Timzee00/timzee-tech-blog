@@ -107,3 +107,18 @@ test("webhook records documented invalid_email event and ignores unrelated event
   assert.equal(calls[0][0],"register_email_suppression");
   assert.equal(calls[0][1].p_reason,"invalid");
 });
+
+test("Brevo complaint label triggers spam suppression", async () => {
+  const calls=[];
+  const handler=loadHandler("brevo-webhook",{rpc:async (name,args)=>{
+    calls.push([name,args]);return {data:true,error:null};
+  }},{env:{BREVO_WEBHOOK_TOKEN:"webhook-test"}});
+  const response=await handler({
+    httpMethod:"POST",
+    headers:{authorization:"Bearer webhook-test"},
+    body:JSON.stringify({event:"complaint",email:"example@test.invalid"})
+  });
+  assert.equal(response.statusCode,200);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0][1].p_reason,"spam");
+});
