@@ -271,6 +271,45 @@ class CuratorManager {
         #postsList { min-width:0; max-width:100%; grid-template-columns: repeat(auto-fit,minmax(min(100%,300px),1fr)) !important; }
         @media(min-width:750px) { .post-actions { grid-template-columns:repeat(3,minmax(0,1fr)); } }
         @media(max-width:420px) { .curator-manager { margin:12px 0; } .post-card {padding:12px;} .post-actions > .btn {font-size:13px;} }
+
+        /* The original 1fr/auto header could allocate almost every pixel to
+           two stat cards and make "Content Curator Bot" a 2-character column. */
+        .curator-manager,.curator-manager .tab-content,.curator-manager .post-card,
+        .curator-manager .curator-media-editor,.curator-manager .curator-roundup-controls {
+          min-width:0;max-width:100%;box-sizing:border-box;
+        }
+        .curator-manager .manager-header {grid-template-columns:minmax(0,1fr) auto;}
+        .curator-manager .manager-header > div {min-width:0;}
+        .curator-manager .manager-header :is(h2,p) {overflow-wrap:normal;word-break:normal;}
+        .curator-manager .stats-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
+        .curator-manager .stat-card {min-width:0;overflow-wrap:anywhere;}
+        .curator-manager .stat-label {font-size:clamp(12px,1.9vw,14px);line-height:1.45;}
+        .curator-manager .curator-tabs {max-width:100%;overflow-x:auto;scrollbar-width:thin;overscroll-behavior-inline:contain;}
+        .curator-manager .tab-btn {flex:0 0 auto;min-height:44px;white-space:nowrap;}
+        .curator-manager .curator-roundup-controls {display:flex;flex-wrap:wrap;gap:10px;}
+        .curator-manager .curator-roundup-controls select {max-width:100%;min-width:0;}
+        .curator-manager .curator-media-editor :is(label,textarea,input:not([type=checkbox])) {display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;}
+        .curator-manager .curator-media-editor label {margin:12px 0 7px;line-height:1.55;overflow-wrap:anywhere;}
+        .curator-manager .curator-image-preview {display:block;max-width:100%;height:auto;margin:12px 0;}
+        .curator-manager .curator-media-editor summary {cursor:pointer;min-height:44px;padding:10px 0;}
+        .curator-manager .source-item {grid-template-columns:minmax(0,1fr) auto;gap:12px;}
+        .curator-manager .source-info {min-width:0;overflow-wrap:anywhere;}
+        .curator-manager #postsList {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))!important;}
+        .curator-manager .post-card {overflow-wrap:anywhere;}
+        .curator-manager .post-actions > .btn {min-height:44px;font-size:14px;}
+        @media(max-width:960px) {
+          .curator-manager .manager-header {grid-template-columns:minmax(0,1fr);gap:18px;}
+          .curator-manager .manager-header h2 {font-size:clamp(22px,5vw,29px);line-height:1.24;}
+          .curator-manager .stats-grid {width:100%;}
+          .curator-manager .dashboard-grid {grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));}
+          .curator-manager .source-item {grid-template-columns:minmax(0,1fr);}
+          .curator-manager .source-actions {flex-wrap:wrap;}
+        }
+        @media(max-width:480px) {
+          .curator-manager .curator-roundup-controls > :is(button,select) {flex:1 1 100%;width:100%;}
+          .curator-manager .post-actions {grid-template-columns:repeat(2,minmax(0,1fr));}
+          .curator-manager .curator-media-editor {width:100%;}
+        }
       </style>
     `;
 
