@@ -433,9 +433,15 @@ class CuratorManager {
       if(!response.ok)throw Error(result.error||"The editorial AI diagnostic isn't available in this deploy.");
       const provider=result.provider==="openrouter"?"OpenRouter":"Groq";
       const context=result.deploymentContext||"unknown";
-      status.textContent=result.configured
-        ? provider+" credential detected in "+context+" Functions; actual AI response still needs a connection test."
-        : provider+" credential missing in "+context+" Functions. Check Netlify deploy context, Functions scope, and build a new deploy.";
+      const available=result.available||{};
+      const detail="Groq: "+(available.groq===true?"configured":"missing")+
+        " · OpenRouter: "+(available.openrouter===true?"configured":"missing");
+      status.textContent=(result.configured
+        ? "Default "+provider+" credential detected."
+        : "Default "+provider+" credential missing.")+
+        " "+detail+" · Netlify context: "+context+
+        ". This verifies configuration visibility, not a working model request. "+
+        "If the key exists in Netlify but is missing here, check the Functions scope and the selected deploy context, then deploy again.";
     }catch(error){
       status.textContent=error?.message||"Could not check editorial AI.";
     }finally {button.disabled=false;}
