@@ -9,6 +9,7 @@ import { collectMentionHandles, renderMentionLinks } from "./mention-text.mjs";
 import {placeMentionMenu} from "./mention-viewport.mjs";
 
 let mentionCache = {};
+let friendCache = { id: null, expires: 0, members: [] };
 let activeMentionDropdown = null;
 let activeMentionField = null;
 let currentSearchTerm = "";
@@ -29,10 +30,19 @@ export async function searchUsersForMention(query) {
   try{
     let friends=[];
     if(id!=="guest"){
-      const pairs=await supabase.from("friendships").select("requester_id,addressee_id")
-        .eq("status","accepted")
-        .or("requester_id.eq."+id+",addressee_id.eq."+id).limit(250);
-      friends=(pairs.data||[]).map(pair=>pair.requester_id===id?pair.addressee_id:pair.requester_id);
+      if(friendCache.id===id && Date.now()<friendCache.expires){
+        friends=friendCache.members;
+      }else{
+        const pairs=await supabase.from("friendships").select("requester_id,addressee_id")
+          .eq("status","accepted")
+          .or("requester_id.eq."+id+",addressee_id.eq."+id).limit(250);
+        // An unavailable friendship query should not block public mention search.
+        if(!pairs.error){
+          friends=[...new Set((pairs.data||[]).map(pair=>
+            pair.requester_id===id?pair.addressee_id:pair.requester_id).filter(Boolean))];
+          friendCache={id,expires:Date.now()+60000,members:friends};
+        }
+      }
     }
     let preferred=[];
     if(friends.length){
@@ -59,6 +69,13 @@ export async function searchUsersForMention(query) {
       avatar_url:user.avatar_url,is_friend:friends.includes(user.id)
     }));
     mentionCache[cacheKey]={time:Date.now(),results};
+    // Typing many unique prefixes or changing accounts must not accumulate
+    // unlimited member records in the browser session.
+    const keys=Object.keys(mentionCache);
+    if(keys.length>120){
+      for(const key of keys.sort((a,b)=>mentionCache[b].time-mentionCache[a].time).slice(80))
+        delete mentionCache[key];
+    }
     return results;
   }catch(error){console.warn("Mention search unavailable",error);return [];}
 }
@@ -76,6 +93,7 @@ export function closeMentionDropdown() {
   if(activeMentionField){
     activeMentionField.setAttribute("aria-expanded","false");
     activeMentionField.removeAttribute("aria-controls");
+    activeMentionField.removeAttribute("aria-activedescendant");
   }
   currentSearchTerm = "";
   activeMentionField = null;
@@ -116,7 +134,7 @@ async function showMentionDropdown(field, searchTerm) {
     empty.style.cssText="margin:0;padding:14px;color:var(--color-text-muted,#64748b);font-size:13px;";
     dropdown.appendChild(empty);
   }
-  suggestions.forEach((user) => {
+  suggestions.forEach((user,index) => {
     const item = document.createElement("div");
     item.className = "mention-item";
     item.style.cssText = `
@@ -160,6 +178,8 @@ async function showMentionDropdown(field, searchTerm) {
     });
 
     item.setAttribute("role","option");
+    item.id=dropdown.id+"-"+index;
+    item.setAttribute("aria-selected","false");
     item.setAttribute("aria-label",`Mention @${user.username}`);
     // Android often blurs the editor between pointerdown and click. Choose
     // immediately on pointerdown; keep click for keyboard/accessibility use.
@@ -317,9 +337,11 @@ export function setupMentionInput(field) {
       // Simple cycling through items
       let selected = activeMentionDropdown.querySelector("[data-selected]");
       const current=Array.from(items).indexOf(selected);
-      items.forEach(item=>{item.removeAttribute("data-selected");item.style.background="transparent";});
+      items.forEach(item=>{item.removeAttribute("data-selected");item.setAttribute("aria-selected","false");item.style.background="transparent";});
       const next=(current+(event.key==="ArrowDown"?1:-1)+items.length)%items.length;
       items[next].setAttribute("data-selected","true");
+      items[next].setAttribute("aria-selected","true");
+      field.setAttribute("aria-activedescendant",items[next].id);
       items[next].style.background="var(--color-surface-muted, #e5e7eb)";
       items[next].scrollIntoView({block:"nearest"});
 

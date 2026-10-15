@@ -24,3 +24,15 @@ test("no-result suggestion list must not swallow Enter or caret keys",()=>{
  const arrow=code.slice(code.indexOf('event.key === "ArrowDown"'),code.indexOf('// Handle Enter to select mention'));
  assert.match(arrow,/if \(items\.length === 0\) return;\s*event\.preventDefault\(\);/);
 });
+
+test("friendship lookups are cached only for the viewer and don't block public suggestions",()=>{
+ assert.match(code,/friendCache\.id===id && Date\.now\(\)<friendCache\.expires/);
+ assert.match(code,/friendCache=\{id,expires:Date\.now\(\)\+60000,members:friends\}/);
+ assert.match(code,/if\(!pairs\.error\)/);
+ assert.match(code,/if\(keys\.length>120\)/);
+});
+test("keyboard navigation exposes the selected mention to screen readers",()=>{
+ assert.match(code,/item\.setAttribute\("aria-selected","false"\)/);
+ assert.match(code,/field\.setAttribute\("aria-activedescendant",items\[next\]\.id\)/);
+ assert.match(code,/activeMentionField\.removeAttribute\("aria-activedescendant"\)/);
+});
