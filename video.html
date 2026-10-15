@@ -532,6 +532,13 @@
       .reel-feed-modes button { border:0; background:transparent; color:#cbd5e1; border-radius:999px; padding:9px 15px; min-height:42px; font:700 13px system-ui; cursor:pointer; white-space:nowrap; }
       .reel-feed-modes button.active { color:#fff; background:#0f766e; }
       .reel-feed-modes button:focus-visible { outline:3px solid #7dd3fc; outline-offset:2px; }
+
+      .reel-comment-actions{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:8px}
+      .comment-like-btn{border:0;background:transparent;color:#d2f7ed;font:650 12px system-ui;min-height:36px;padding:5px 0;cursor:pointer}
+      .comment-like-btn[aria-pressed="true"]{color:#ff6a8d}
+      .comment-like-btn:disabled{opacity:.55}
+      .reel-tapzone{pointer-events:auto;touch-action:pan-y}
+      .reel-back{min-width:44px;min-height:44px}
     </style>
   </head>
   <body class="reel-mode">
@@ -1084,6 +1091,7 @@
               const startLen=state.videos.length;
               state.videos.push(...unique);
               const scroller=document.getElementById("scroller");
+              await attachUploaderBadgesAndCounts(unique);
               unique.forEach((v,i)=>scroller?.insertAdjacentHTML("beforeend",itemTemplate(v,startLen+i)));
               wireItems();
             }
@@ -1116,7 +1124,10 @@
               <div class="comment-row" style="margin-left:${Math.min(depth, 4) * 16}px;" data-comment-id="${c.id}">
                 <strong>${escapeHTML(c.author_name || "Anonymous")}</strong>
                 <p>${escapeHTML(c.body || "")}</p>
-                <button class="comment-reply-btn" data-reply-id="${c.id}" data-reply-name="${escapeHTML(c.author_name || "Anonymous")}">Reply</button>
+                <div class="reel-comment-actions">
+                  <button class="comment-reply-btn" data-reply-id="${c.id}" data-reply-name="${escapeHTML(c.author_name || "Anonymous")}">Reply</button>
+                  <button class="comment-like-btn" data-comment-like="${c.id}" aria-pressed="${c.viewer_liked===true}" aria-label="Like comment" type="button">${c.viewer_liked?"♥ Liked":"♡ Like"} <span>${Number(c.like_count||0)}</span></button>
+                </div>
                 ${nested}
               </div>
             `;
@@ -1163,6 +1174,28 @@
             drawerInput.focus();
           });
         });
+        drawerList.querySelectorAll("[data-comment-like]").forEach(btn=>{
+          btn.addEventListener("click",async()=>{
+            if(!state.user){location.href="login.html?next="+encodeURIComponent(location.href);return;}
+            const id=btn.dataset.commentLike;
+            const row=commentRows.find(c=>c.id===id);
+            if(!row||btn.disabled)return;
+            btn.disabled=true;
+            const was=!!row.viewer_liked;
+            try{
+              const action=was
+                ?supabase.from("video_comment_likes").delete().eq("comment_id",id).eq("user_id",state.user.id)
+                :supabase.from("video_comment_likes").insert({comment_id:id,user_id:state.user.id});
+              const {error}=await action;
+              if(error)throw error;
+              row.viewer_liked=!was;
+              row.like_count=Math.max(0,Number(row.like_count||0)+(was?-1:1));
+              btn.setAttribute("aria-pressed",String(row.viewer_liked));
+              btn.innerHTML=(row.viewer_liked?"♥ Liked":"♡ Like")+" <span>"+row.like_count+"</span>";
+            }catch(error){console.warn("Comment like failed",error);}
+            finally{btn.disabled=false;}
+          });
+        });
       }
 
       async function loadCommentPage(videoId, generation) {
@@ -1176,7 +1209,15 @@
             limit: COMMENT_PAGE_SIZE
           });
           if (generation !== commentGeneration || state.commentsOpenFor !== videoId) return;
-          commentRows = [...commentRows, ...page];
+          const counts=page.length?await supabase.rpc("video_comment_like_counts",{
+            p_comment_ids:page.map(c=>c.id)
+          }):{data:[],error:null};
+          if(generation!==commentGeneration||state.commentsOpenFor!==videoId)return;
+          const byId=new Map((counts.data||[]).map(c=>[c.comment_id,c]));
+          commentRows=[...commentRows,...page.map(c=>({
+            ...c,like_count:Number(byId.get(c.id)?.like_count||0),
+            viewer_liked:byId.get(c.id)?.viewer_liked===true
+          }))];
           commentOffset += page.length;
           renderLoadedComments();
           commentLoadMoreBtn.hidden = page.length < COMMENT_PAGE_SIZE;
@@ -1245,8 +1286,17 @@
           if (video && video.user_id && video.user_id !== state.user.id) {
             notifyVideoComment(video.user_id, authorName, state.commentsOpenFor).catch((error) => console.warn("Video-comment notification failed:", error));
           }
-          replyingTo = null;
-          openComments(state.commentsOpenFor);
+          const currentVideoId=state.commentsOpenFor;
+          const counters=await supabase.rpc("video_social_counts",{p_video_ids:[currentVideoId]});
+          const total=Number(counters.data?.[0]?.comment_count||0);
+          const badge=state.videos.findIndex(v=>v.id===currentVideoId);
+          if(badge>=0){
+            state.videos[badge].comment_count=total;
+            const count=document.getElementById("commentcount-"+badge);
+            if(count)count.textContent=String(total);
+          }
+          replyingTo=null;
+          void openComments(currentVideoId);
         }
       });
 
@@ -1268,11 +1318,16 @@
             v.uploader_staff_pick = !!p?.is_staff_pick;
           });
         }
-        await Promise.all(
-          videos.map(async (v) => {
-            v.like_count = await getVideoLikeCount(v.id);
-          })
-        );
+        if(videos.length){
+          const counts=await supabase.rpc("video_social_counts",{
+            p_video_ids:videos.map(v=>v.id).slice(0,50)
+          });
+          const byId=new Map((counts.data||[]).map(row=>[row.video_id,row]));
+          videos.forEach(v=>{
+            v.like_count=Number(byId.get(v.id)?.like_count??v.like_count??0);
+            v.comment_count=Number(byId.get(v.id)?.comment_count??v.comment_count??0);
+          });
+        }
       }
 
       async function bootFeed(includeStartingVideo = false) {
