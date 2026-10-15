@@ -3,6 +3,7 @@ import { loadUserPreferences, mergePreferences } from "./user-preferences.js";
 import { escapeHTML, clampText, stripHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
 import { diversifyFeed, feedCacheKey, cachedFeed } from "./feed-diversity.mjs";
 import {setupMentionInput} from "./mentions.js";
+import {renderSocialText} from "./social-rich-text.mjs";
 
 const state = { user: null, preferences: mergePreferences(), type: "all", mode: "for-you", loading: false };
 const feedCache = new Map();
@@ -66,7 +67,7 @@ function renderRow(row) {
     media+'<div class="fyp-card-body"><div class="fyp-meta"><span class="chip">'+escapeHTML(typeLabel(type))+
     '</span><span>'+escapeHTML(row.category||"")+'</span><span>'+timeAgo(row.created_at)+'</span></div>'+
     '<a href="'+contentHref(row)+'"><h2>'+escapeHTML(row.title||"Untitled")+'</h2></a>'+
-    '<p>'+escapeHTML(body)+'</p>'+social+
+    '<p>'+renderSocialText(body)+'</p>'+social+
     '<div class="fyp-card-foot">'+reason+feedback+'</div></div></article>';
 }
 async function enrichVideoItems(rows){
@@ -143,7 +144,7 @@ async function loadInlineComments(card){
   for(const comment of data){
     const article=document.createElement("article");article.className="fyp-comment-item";
     const name=document.createElement("strong");name.textContent=String(comment.author_name||"Member").replace(/<[^>]*>/g,"").slice(0,70);
-    const body=document.createElement("p");body.textContent=comment.body||"";
+    const body=document.createElement("p");body.innerHTML=renderSocialText(comment.body||"");
     article.append(name,body);list.append(article);
   }
 }
