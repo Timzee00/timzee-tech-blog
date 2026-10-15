@@ -56,7 +56,7 @@
         inset: 0;
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
         background: #000;
       }
 
@@ -69,8 +69,11 @@
 
       .reel-progress {
         position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 3px;
+        top: auto; bottom: max(8px, env(safe-area-inset-bottom));
+        left: 12px; right: 12px;
+        height: 6px;
+        border-radius:999px;
+        touch-action:none;
         background: rgba(255,255,255,0.18);
         z-index: 22;
         cursor: pointer;
@@ -80,13 +83,13 @@
       .reel-progress::before {
         content: "";
         position: absolute;
-        top: -6px;
+        top: -18px;
         left: 0;
         right: 0;
-        bottom: -10px;
+        bottom: -18px;
       }
       .reel-progress.dragging {
-        height: 6px;
+        height: 10px;
       }
       .reel-progress-fill {
         height: 100%;
@@ -106,8 +109,8 @@
         justify-content: space-between;
       }
       .reel-back {
-        width: 38px;
-        height: 38px;
+        width: 44px;
+        height: 44px;
         border-radius: 999px;
         background: var(--reel-glass);
         backdrop-filter: blur(8px);
@@ -214,7 +217,8 @@
 
       .reel-scrub-time {
         position: absolute;
-        top: 20px;
+        top: auto;
+        bottom: 48px;
         left: 50%;
         transform: translateX(-50%);
         background: rgba(0,0,0,0.6);
@@ -664,7 +668,7 @@
             <div class="reel-buffer-spinner" id="spinner-${index}"></div>
             <video class="reel-video" id="video-${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} playsinline loop preload="none" data-video-src="${escapeHTML(src)}"></video>
             <div class="reel-vignette"></div>
-            <div class="reel-tapzone" data-tap="${index}"></div>
+            <div class="reel-tapzone" aria-hidden="true"></div>
             <div class="reel-pause-flash" id="pauseflash-${index}">▶</div>
 
             <div class="reel-topbar">
@@ -690,7 +694,7 @@
                 </button>
                 <button type="button" aria-label="View video comments" class="reel-chip" data-action="comment" data-id="${escapeHTML(video.id)}">
                   <div class="reel-chip-icon">💬</div>
-                  <span class="reel-chip-count" id="commentcount-${index}">${video.comment_count ?? ""}</span>
+                  <span class="reel-chip-count" id="commentcount-${index}">${Number(video.comment_count||0)}</span>
                 </button>
                 <button type="button" aria-label="Share video" class="reel-chip" data-action="share" data-id="${escapeHTML(video.id)}">
                   <div class="reel-chip-icon">↗</div>
@@ -746,42 +750,30 @@
         const scroller = document.getElementById("scroller");
         if (!scroller) return;
 
-        // Tap to play/pause, double-tap to like (Instagram/TikTok style)
-        const tapState = {};
-        scroller.querySelectorAll("[data-tap]:not([data-reel-tap-wired])").forEach((zone) => {
-
-          zone.dataset.reelTapWired="true";
-          zone.addEventListener("click", (e) => {
-            const idx = zone.dataset.tap;
-            const now = Date.now();
-            const last = tapState[idx] || 0;
-            tapState[idx] = now;
-
-            if (now - last < 320) {
-              // Double tap: like (Instagram-style — always likes, never
-              // unlikes on double-tap) + heart burst animation. Cancel the
-              // pending single-tap play/pause action.
-              clearTimeout(zone._tapTimer);
-              tapState[idx] = 0;
-              triggerLikeBurst(idx, e);
-              return;
+        // Whole visual reel receives gestures, including the video above/below
+        // its center. Ignore caption/controls/progress so those still work.
+        const tapState=new Map();
+        scroller.querySelectorAll(".reel-item:not([data-reel-tap-wired])").forEach(item=>{
+          item.dataset.reelTapWired="true";
+          item.addEventListener("click",e=>{
+            if(e.target.closest("button,a,.reel-progress,.reel-caption,.reel-feed-modes,.comment-drawer"))return;
+            const idx=item.dataset.index,now=Date.now();
+            const previous=tapState.get(idx);
+            if(previous && now-previous.at<360){
+              clearTimeout(previous.timer);tapState.delete(idx);
+              triggerLikeBurst(idx,e);return;
             }
-
-            zone._tapTimer = setTimeout(() => {
-              const vid = document.getElementById(`video-${idx}`);
-              const flash = document.getElementById(`pauseflash-${idx}`);
-              if (!vid) return;
-              if (vid.paused) {
-                hydrateNearby(Number(idx));
-                playWithSoundFallback(vid, idx, {explicit:true});
-                flash.textContent = "▶";
-              } else {
-                vid.pause();
-                flash.textContent = "⏸";
-              }
+            const timer=setTimeout(()=>{
+              tapState.delete(idx);
+              const vid=document.getElementById("video-"+idx);
+              const flash=document.getElementById("pauseflash-"+idx);
+              if(!vid)return;
+              if(vid.paused){hydrateNearby(Number(idx));playWithSoundFallback(vid,idx,{explicit:true});flash.textContent="▶";}
+              else{vid.pause();flash.textContent="Ⅱ";}
               flash.classList.add("show");
-              setTimeout(() => flash.classList.remove("show"), 400);
-            }, 260);
+              setTimeout(()=>flash.classList.remove("show"),450);
+            },360);
+            tapState.set(idx,{at:now,timer});
           });
         });
 
@@ -849,8 +841,8 @@
         }
 
         function triggerLikeBurst(idx, event) {
-          const zone = event.currentTarget;
-          const item = zone.closest(".reel-item");
+          const zone = event.target.closest(".reel-item");
+          const item = zone;
           const videoId = item?.dataset.id;
           if (!videoId) return;
 
@@ -862,7 +854,7 @@
           heart.style.left = `${x}px`;
           heart.style.top = `${y}px`;
           heart.textContent = "❤";
-          zone.parentElement.appendChild(heart);
+          zone.appendChild(heart);
           heart.addEventListener("animationend", () => heart.remove());
 
           performLike(videoId, idx, { forceLikeOnly: true }).catch((error) =>
