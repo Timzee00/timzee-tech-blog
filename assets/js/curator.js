@@ -27,6 +27,7 @@
  */
 
 import { supabase } from "./supabase.js";
+import {isDemoFeedUrl} from "./scout-source-health.mjs";
 
 // ============================================================
 // Helpers
@@ -93,9 +94,8 @@ export async function getActiveCuratorSources() {
 export async function createCuratorSource(sourceData) {
   try {
     const feedUrl = pickFeedUrl(sourceData);
-    if (!feedUrl) {
-      throw new Error("Feed URL is required. Paste a valid RSS feed URL.");
-    }
+    if (!feedUrl) throw Error("Feed URL is required.");
+    if(isDemoFeedUrl(feedUrl))throw Error("This is an example feed URL. Add a real publisher RSS address.");
 
     const isActive =
       typeof sourceData?.is_active === "boolean"

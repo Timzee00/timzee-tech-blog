@@ -3,7 +3,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { requireRole } = require("./_lib/auth-role.js");
 const { randomUUID } = require("crypto");
 const { isScheduledInvocation } = require("./_lib/scheduled-event.cjs");
-const { clampScoutItems, scheduleScoutSources, classifyScoutSource, normalizeScoutDate, normalizeScoutArticleUrl, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
+const { clampScoutItems, scheduleScoutSources, classifyScoutSource, normalizeScoutDate, normalizeScoutArticleUrl, isDemoFeedUrl, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
 const {rankScoutItems, topicFor} = require("./_lib/scout-ranking.cjs");
 
 const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(payload) });
@@ -88,13 +88,16 @@ exports.handler = async (event) => {
   const perSource = clampScoutItems(settingsResult.data?.posts_per_source || 5);
 
   const sourcesResult = await supabase.from("curator_sources").select("*").eq("enabled", true)
-    .order("last_fetched_at", { ascending: true, nullsFirst: true }).limit(12);
+    .order("last_fetched_at", { ascending: true, nullsFirst: true }).limit(48);
   if (sourcesResult.error) return jsonResponse(500, { error: sourcesResult.error.message || "Unable to load curator sources." });
   const fetchedSources = sourcesResult.data || [];
+  const ignoredDemoSources=fetchedSources.filter(src=>isDemoFeedUrl(src.feed_url||src.url)).map(src=>src.name||src.feed_url).slice(0,20);
   const envFeedUrls = parseEnvFeeds(process.env.NEWS_FEEDS);
   const envTipUrls = parseEnvFeeds(process.env.NEWS_TIPS_FEEDS);
   const knownUrls = new Set(fetchedSources.flatMap((source) => [source.feed_url, source.url]).filter(Boolean));
-  const combinedEnv = [...new Set([...envFeedUrls, ...envTipUrls])].slice(0, 12);
+  const envUrls=[...new Set([...envFeedUrls,...envTipUrls])].slice(0,12);
+  const combinedEnv=envUrls.filter(url=>!isDemoFeedUrl(url));
+  const ignoredEnvDemoCount=envUrls.length-combinedEnv.length;
   const fallbackSources = combinedEnv.filter((url) => !knownUrls.has(url)).map((url, index) => ({
     name: `Env source ${index + 1}`,
     source_type: "rss",
@@ -243,7 +246,7 @@ exports.handler = async (event) => {
     last_started_at: startedAt,
     ...(failed ? {last_failed_at:finishedAt} : {last_succeeded_at:finishedAt}),
     last_result: { reviewed_drafts_created: posted.length, sources_checked: finalSources.length, sources_fetched: sourcesFetched,
-      source_errors: feedErrors.length, source_outcomes: sourceOutcomes, status, max_sources_per_run: SCOUT_LIMITS.MAX_SOURCES },
+      source_errors: feedErrors.length, source_outcomes: sourceOutcomes, status, ignored_demo_sources:ignoredDemoSources, ignored_env_demo_count:ignoredEnvDemoCount, max_sources_per_run: SCOUT_LIMITS.MAX_SOURCES },
     last_error: failed ? "All checked feeds failed." : feedErrors.length ? "Some sources failed; inspect feed errors." : null,
     updated_at: finishedAt
   }, { onConflict: "job_name" });
@@ -254,7 +257,7 @@ exports.handler = async (event) => {
   if (legacyStatus.error) console.warn("Curator settings status update failed:",legacyStatus.error.message);
   if (failed) {
     console.error("All curator feeds failed:", feedErrors.map(entry=>({source:entry.source,error:entry.error})));
-    return jsonResponse(502,{ok:false,error:"All checked news sources failed. Review source errors and try again.",feedErrors,sourceOutcomes,sourcesChecked:finalSources.length});
+    return jsonResponse(502,{ok:false,error:"All checked news sources failed. Review source errors and try again.",feedErrors,sourceOutcomes,sourcesChecked:finalSources.length,ignoredDemoSources,ignoredEnvDemoCount});
   }
-  return jsonResponse(200,{ok:true,status,posted,feedErrors,sourceOutcomes,sourcesChecked:finalSources.length});
+  return jsonResponse(200,{ok:true,status,posted,feedErrors,sourceOutcomes,sourcesChecked:finalSources.length,ignoredDemoSources,ignoredEnvDemoCount});
 };

@@ -22,6 +22,7 @@ import {
 import { supabase, getCurrentUserWithRole, getUserRole } from "./supabase.js";
 import { escapeHTML, slugify, isSafeUrl, normalizeHtml } from "./utils.js";
 import { createPost, createPostMedia } from "./data.js";
+import {isDemoFeedUrl} from "./scout-source-health.mjs";
 import { ROUNDUP_TOPICS, generateRoundupDraft, suggestRoundupIds, trustedExternalUrl, imageUrls, htmlEscape, socialCaption, placeEditorialFigures, parseEditorialImageRows } from "./curator-publishing.mjs";
 import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
 
@@ -403,8 +404,9 @@ class CuratorManager {
       const count = result.posted ? result.posted.length : 0;
       const status=result.status || "unknown";
       const errorCount = result.feedErrors ? result.feedErrors.length : 0;
+      const demoCount=(result.ignoredDemoSources?.length||0)+(result.ignoredEnvDemoCount||0);
       if (lastSync) {
-        lastSync.textContent = `Sync ${status} at ${new Date().toLocaleTimeString()} — ${count} new draft${count === 1 ? "" : "s"}${errorCount ? `, ${errorCount} source error${errorCount === 1 ? "" : "s"}` : ""}`;
+        lastSync.textContent = `Sync ${status} at ${new Date().toLocaleTimeString()} — ${count} new draft${count === 1 ? "" : "s"}${errorCount ? `, ${errorCount} source error${errorCount === 1 ? "" : "s"}` : ""}${demoCount ? ` · ${demoCount} example feed(s) ignored` : ""}`;
       }
       await this.load();
       void this.loadScoutHealth();
@@ -514,6 +516,7 @@ class CuratorManager {
       const checkedAt = source.last_fetched_at
         ? new Date(source.last_fetched_at).toLocaleString() : "Never checked";
       // Source failure details are escaped, and only displayed to staff.
+      const isDemo=isDemoFeedUrl(source.feed_url||source.url);
       const lastError = source.last_error
         ? `<p class="curator-source-error" role="status">Last error: ${escapeHTML(String(source.last_error).slice(0, 250))}</p>`
         : "";
@@ -524,7 +527,7 @@ class CuratorManager {
           <p>${escapeHTML(source.feed_url || source.query || 'No feed URL')}</p>
           <p style="font-size: 11px; color: var(--color-primary);">📡 ${escapeHTML(String(source.source_type || '').toUpperCase())} • 📄 Up to ${escapeHTML(String(source.max_items ?? 30))} articles per sync</p>
           <p style="font-size:12px;color:var(--color-text-muted);">Last checked: ${escapeHTML(checkedAt)} · ${failures} failure${failures === 1 ? "" : "s"}</p>
-          ${lastError}
+          ${isDemo ? '<p class="curator-source-error" role="status"><strong>Example feed ignored.</strong> Replace it with a real RSS feed or delete this source.</p>' : lastError}
         </div>
         <div class="source-actions">
           <button class="btn ${active ? "btn-ghost" : "btn-danger"}" data-source-id="${source.id}" data-type="toggle-source">

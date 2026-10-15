@@ -2,6 +2,12 @@
 const MAX_SOURCES = 4;
 const MAX_ITEMS_PER_SOURCE = 6;
 const MAX_ARTICLES_INSPECTED = 30;
+function isDemoFeedUrl(value) {
+ try {const u=new URL(String(value||"").trim()),h=u.hostname.toLowerCase(),p=u.pathname.replace(/\/$/,"");
+  return h.endsWith(".example")||["example.com","example.net","example.org"].includes(h)||
+   (h==="site1.com"&&p==="/rss")||(h==="site2.com"&&p==="/feed")||(h==="site3.com"&&p==="/tips.rss");
+ }catch{return false;}
+}
 function clampScoutItems(value) {
   const n = Math.trunc(Number(value));
   return Number.isFinite(n) ? Math.max(1, Math.min(MAX_ITEMS_PER_SOURCE, n)) : 5;
@@ -9,7 +15,7 @@ function clampScoutItems(value) {
 function scheduleScoutSources(sources, maxSources = MAX_SOURCES) {
   const unique = new Map();
   for (const source of sources || []) {
-    if (!source?.id || source.enabled === false || !source.feed_url) continue;
+    if (!source?.id || source.enabled === false || !source.feed_url || isDemoFeedUrl(source.feed_url)) continue;
     if (!unique.has(source.id)) unique.set(source.id, source);
   }
   return [...unique.values()].sort((a,b) => {
@@ -49,4 +55,4 @@ function normalizeScoutArticleUrl(raw) {
     return url.toString();
   } catch { return ""; }
 }
-module.exports={clampScoutItems,scheduleScoutSources,classifyScoutSource,normalizeScoutDate,normalizeScoutArticleUrl,SCOUT_LIMITS};
+module.exports={clampScoutItems,scheduleScoutSources,classifyScoutSource,normalizeScoutDate,normalizeScoutArticleUrl,isDemoFeedUrl,SCOUT_LIMITS};
