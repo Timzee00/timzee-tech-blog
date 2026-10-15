@@ -33,6 +33,7 @@ class CuratorManager {
     this.stats = null;
     this.currentUser = null;
     this.roundupIds = new Set();
+    this.cardDrafts = new Map();
   }
 
   async init(containerId) {
@@ -535,8 +536,58 @@ class CuratorManager {
     });
   }
 
+  captureCardDrafts(){
+    const list=this.container.querySelector("#postsList");
+    if(!list)return;
+    list.querySelectorAll("[data-curator-images]").forEach(field=>{
+      const id=field.dataset.curatorImages;
+      if(!id)return;
+      const input=attr=>list.querySelector('['+attr+'="'+id+'"]');
+      const images=field.closest("details");
+      const reporting=input("data-curator-reporting")?.closest("details");
+      const note=input("data-editorial-state");
+      this.cardDrafts.set(id,{
+        images:field.value,
+        credit:input("data-curator-image-credit")?.value||"",
+        rights:input("data-curator-image-rights")?.checked||false,
+        reporting:input("data-curator-reporting")?.value||"",
+        reportingUrl:input("data-curator-reporting-source")?.value||"",
+        reportingChecked:input("data-curator-reporting-checked")?.checked||false,
+        provider:input("data-curator-provider")?.value||"auto",
+        imagesOpen:images?.open||false,
+        reportingOpen:reporting?.open||false,
+        lastError:note?.getAttribute("role")==="alert"?note.textContent:""
+      });
+    });
+  }
+
+  restoreCardDrafts(){
+    const list=this.container.querySelector("#postsList");
+    if(!list)return;
+    for(const [id,data] of this.cardDrafts){
+      const input=attr=>list.querySelector('['+attr+'="'+id+'"]');
+      const images=input("data-curator-images");
+      if(!images)continue;
+      images.value=data.images;
+      const setValue=(attr,val)=>{const field=input(attr);if(field)field.value=val;};
+      const setChecked=(attr,val)=>{const field=input(attr);if(field)field.checked=val;};
+      setValue("data-curator-image-credit",data.credit);
+      setChecked("data-curator-image-rights",data.rights);
+      setValue("data-curator-reporting",data.reporting);
+      setValue("data-curator-reporting-source",data.reportingUrl);
+      setChecked("data-curator-reporting-checked",data.reportingChecked);
+      setValue("data-curator-provider",data.provider);
+      if(images.closest("details"))images.closest("details").open=data.imagesOpen;
+      const notes=input("data-curator-reporting");
+      if(notes?.closest("details"))notes.closest("details").open=data.reportingOpen;
+      const status=input("data-editorial-state");
+      if(data.lastError && status){status.textContent=data.lastError;status.setAttribute("role","alert");}
+    }
+  }
+
   renderPosts() {
     const list = this.container.querySelector("#postsList");
+    this.captureCardDrafts();
     if (!this.posts.length) {
       list.innerHTML = "<div style='grid-column: 1/-1; text-align: center; padding: 40px; color: var(--color-text-muted);'>No pending articles</div>";
       return;
@@ -580,6 +631,13 @@ class CuratorManager {
           </label>
           <label class="curator-reporting-confirm"><input type="checkbox" data-curator-reporting-checked="${post.id}"> I reviewed this source and will fact-check the generated draft before publication.</label>
         </details>
+        <label class="curator-provider-choice">AI writing provider
+          <select class="field" data-curator-provider="${post.id}">
+            <option value="auto">Automatic (server preference)</option>
+            <option value="groq">Groq</option>
+            <option value="openrouter">OpenRouter</option>
+          </select>
+        </label>
         <div class="post-actions">
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-preview">Preview post</button>
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-translate">Translate to English</button>
@@ -590,6 +648,7 @@ class CuratorManager {
       </div>
     `}).join("");
 
+    this.restoreCardDrafts();
     list.querySelectorAll(".btn").forEach(btn => {
       btn.addEventListener("click", (e) => this.handlePostAction(e, btn));
     });
@@ -826,7 +885,7 @@ class CuratorManager {
       const response=await fetch("/.netlify/functions/curator-expand-article",{
         method:"POST",
         headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
-        body:JSON.stringify({id,mode:"translate"})
+        body:JSON.stringify({id,mode:"translate",provider:this.container.querySelector('[data-curator-provider="'+id+'"]')?.value||"auto"})
       });
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(payload.error||"English translation failed.");
@@ -862,7 +921,7 @@ class CuratorManager {
       if(!token) throw new Error("Sign in again to use the editorial assistant.");
       const res=await fetch("/.netlify/functions/curator-expand-article",{
         method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
-        body:JSON.stringify({id:curatorPostId,reporting,reportingUrl})
+        body:JSON.stringify({id:curatorPostId,reporting,reportingUrl,provider:this.container.querySelector('[data-curator-provider="'+curatorPostId+'"]')?.value||"auto"})
       });
       const payload=await res.json().catch(()=>({}));
       if(!res.ok)throw new Error(payload.error||"Could not expand the article.");

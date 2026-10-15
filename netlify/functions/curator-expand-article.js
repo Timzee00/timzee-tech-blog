@@ -21,7 +21,12 @@ exports.handler=async(event)=>{
   const db=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
   const role=await requireRole(db,token,["admin","super"],"Only editors can expand article drafts.");
   if(role.error)return respond(403,{error:role.error});
-  const requested=process.env.CURATOR_AI_PROVIDER==="openrouter"?"openrouter":"groq";
+  // Staff may choose a supported provider per request, never arbitrary
+  // endpoints or client-supplied keys. "auto" uses deployment preference.
+  const choice=isPost?String(args?.provider||"auto"):"auto";
+  if(!["auto","groq","openrouter"].includes(choice))return respond(400,{error:"Unsupported editorial AI provider."});
+  const requested=choice!=="auto"?choice:
+    process.env.CURATOR_AI_PROVIDER==="openrouter"?"openrouter":"groq";
   const provider=requested==="groq" && !process.env.GROQ_API_KEY?.trim() && process.env.OPENROUTER_API_KEY?.trim()
     ? "openrouter" : requested;
   const apiKey=provider==="openrouter"?process.env.OPENROUTER_API_KEY?.trim():process.env.GROQ_API_KEY?.trim();
