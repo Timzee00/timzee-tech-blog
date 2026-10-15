@@ -783,12 +783,37 @@ class CuratorManager {
       image.replaceWith(placeholder);
     },{once:true}));
     document.body.append(dialog);
-    const close=()=>dialog.close();
+    // Android keyboards and browser bars change the *visual* viewport.
+    // Keep the dialog centered in the visible area, not the obscured layout viewport.
+    const viewport=window.visualViewport;
+    const fitPreview=()=>{
+      const width=viewport?.width||window.innerWidth;
+      const height=viewport?.height||window.innerHeight;
+      dialog.style.left=((viewport?.offsetLeft||0)+width/2)+"px";
+      dialog.style.top=((viewport?.offsetTop||0)+height/2)+"px";
+      dialog.style.width=Math.max(0,Math.min(760,width-20))+"px";
+      dialog.style.maxWidth=Math.max(0,width-20)+"px";
+      dialog.style.height=Math.max(0,Math.min(900,height-16))+"px";
+      dialog.style.maxHeight=Math.max(0,height-16)+"px";
+    };
+    fitPreview();
+    viewport?.addEventListener("resize",fitPreview);
+    viewport?.addEventListener("scroll",fitPreview);
+    const close=()=>{if(typeof dialog.close==="function"&&dialog.open)dialog.close();else dialog.remove();};
     dialog.querySelector(".curator-preview-close")?.addEventListener("click",close);
     dialog.addEventListener("close",()=>dialog.remove(),{once:true});
+    const cleanup=()=>{
+      viewport?.removeEventListener("resize",fitPreview);
+      viewport?.removeEventListener("scroll",fitPreview);
+    };
+    dialog.addEventListener("close",cleanup,{once:true});
     dialog.addEventListener("click",e=>{if(e.target===dialog)close();});
     if(typeof dialog.showModal==="function")dialog.showModal();
     else dialog.setAttribute("open","");
+    const removed=new MutationObserver(()=>{
+      if(!dialog.isConnected){cleanup();removed.disconnect();}
+    });
+    removed.observe(document.body,{childList:true});
   }
 
   async translateCuratorPost(id,button) {
@@ -807,7 +832,12 @@ class CuratorManager {
       if(!response.ok)throw Error(payload.error||"English translation failed.");
       window.appUI.toast("English translation saved as a source brief; review it before expansion.",{tone:"success"});
       await this.load();
-    }catch(error){window.appUI.toast(error.message||"Translation failed.",{tone:"error"});}
+    }catch(error){
+      const message=String(error?.message||"Translation failed.").slice(0,340);
+      const note=this.container.querySelector('[data-editorial-state="'+id+'"]');
+      if(note){note.textContent="Translation failed: "+message;note.setAttribute("role","alert");}
+      window.appUI.toast(message,{tone:"error"});
+    }
     finally{button.disabled=false;button.textContent=label;}
   }
 
@@ -842,7 +872,10 @@ class CuratorManager {
       window.appUI.toast("AI-assisted article saved as a draft. Verify each factual claim and source before publishing.",{tone:"success"});
       await this.load();
     } catch(error) {
-      window.appUI.toast(error?.message||"Editorial expansion failed. Add verified context and retry, or keep it as a source brief.",{tone:"error"});
+      const message=String(error?.message||"Editorial expansion failed. Add verified reporting and retry.").slice(0,380);
+      const note=this.container.querySelector('[data-editorial-state="'+curatorPostId+'"]');
+      if(note){note.textContent="Expansion failed: "+message;note.setAttribute("role","alert");}
+      window.appUI.toast(message,{tone:"error"});
     } finally {
       btn.disabled=false;btn.textContent=label;
     }
