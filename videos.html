@@ -477,7 +477,9 @@
         trimStatus.style.display = "none";
         state.trimmedFile = null;
         state.selectedFilterCSS = "none";
+        state.editorRevision=0;
         const markChanged=()=>{
+          state.editorRevision++;
           state.editorDirty=true;
           state.trimmedFile=null;
           resetBtn.style.display="inline-flex";
@@ -658,10 +660,14 @@
           trimStatus.style.display = "block";
           if(state.editRenderInProgress)return;
           state.editRenderInProgress=true;
+          const renderRevision=state.editorRevision;
+          const sourceFile=videoFile.files[0];
           trimStatus.textContent = "Rendering edited clip. Do not upload until this completes...";
           trimStatus.style.color = "#0f766e";
           try {
             const blob = await renderEditedVideo(trimPreview, drawCanvas, state.textOverlays, state.selectedFilterCSS, start, end);
+            if(renderRevision!==state.editorRevision||videoFile.files[0]!==sourceFile)
+              throw Error("Video or edits changed during rendering. Please apply edits again.");
             if(!blob?.size)throw Error("Edited recording is empty");
             const editedFile=new File([blob],"edited-clip.webm",{type:blob.type||"video/webm"});
             const verifiedDuration=await detectVideoDuration(editedFile);
@@ -686,6 +692,8 @@
         };
 
         resetBtn.onclick = () => {
+          if(state.editRenderInProgress)return;
+          state.editorRevision++;
           state.trimmedFile = null;
           state.editorDirty=false;
           resetBtn.style.display = "none";
@@ -840,6 +848,7 @@
           window.appUI.toast("Please log in to upload");
           return;
         }
+        if(!uploadForm.reportValidity())return;
 
         const status = document.getElementById("uploadStatus");
         const btn = uploadForm.querySelector("button");
