@@ -184,7 +184,8 @@ function renderPeopleResults() {
          (friend||alreadyMessaging?"Message":"Message as staff")+'</button>':"";
        const request=blocked?'<span class="chip">Blocked</span>':
          pending?'<span class="chip">Request pending</span>':
-         friend?'':'<button class="btn ghost sm" data-people-action="request" data-id="'+p.id+'">Add friend</button>';
+         friend?'':p.allow_requests===false?'<span class="chip">Requests closed</span>':
+           '<button class="btn ghost sm" data-people-action="request" data-id="'+p.id+'">Add friend</button>';
        return '<div class="chat-request-row"><img src="'+escapeHTML(p.avatar_url||DEFAULT_AVATAR)+'" alt="">'+
          '<div><strong>'+escapeHTML(p.display_name||p.username||"Member")+'</strong>'+
          '<small>'+escapeHTML(p.username||"")+'</small></div><div class="inline-actions">'+
@@ -203,7 +204,7 @@ async function searchPeople(query) {
     // Quote PostgREST filter values and escape LIKE wildcards; search public
     // names only. Email addresses are not a discovery directory.
     const pattern = JSON.stringify(`%${query.replace(/[\\%_]/g, character => `\\${character}`)}%`);
-    const result = await supabase.from('public_profiles').select('id,display_name,username,avatar_url,allow_messages')
+    const result = await supabase.from('public_profiles').select('id,display_name,username,avatar_url,allow_messages,allow_requests')
       .neq('id', state.user.id).or(`display_name.ilike.${pattern},username.ilike.${pattern}`).limit(20);
     if (version !== state.peopleRequest || query !== $("peopleSearch").value.trim()) return;
     if (result.error) throw result.error;
