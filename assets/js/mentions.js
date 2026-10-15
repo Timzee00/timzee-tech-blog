@@ -18,8 +18,8 @@ let mentionRequest = 0;
  */
 export async function searchUsersForMention(query) {
   if (query.length > 32 || !/^[a-z0-9_]*$/i.test(query)) return [];
-  const {data:sessionInfo}=await supabase.auth.getUser();
-  const id=sessionInfo?.user?.id||"guest";
+  const {data:sessionInfo}=await supabase.auth.getSession();
+  const id=sessionInfo?.session?.user?.id||"guest";
   const cacheKey=id+":"+query.toLowerCase();
   if(mentionCache[cacheKey] && Date.now()-mentionCache[cacheKey].time<30000)
     return mentionCache[cacheKey].results;
