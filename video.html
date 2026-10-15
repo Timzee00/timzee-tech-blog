@@ -311,6 +311,7 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
+      .reel-caption-more{background:transparent;color:#e3f4f0;border:0;text-decoration:underline;font:700 12px system-ui;padding:4px 0 8px;min-height:36px;cursor:pointer}
       .reel-caption.expanded {
         -webkit-line-clamp: unset;
         overflow:visible;
@@ -698,6 +699,7 @@
                   ${verified}${staff}
                 </div>
                 <p class="reel-caption" id="caption-${index}">${renderSocialText(video.title || "")}${video.description ? " — " + renderSocialText(video.description) : ""}</p>
+                <button type="button" class="reel-caption-more" data-action="expand-caption" data-index="${index}" aria-expanded="false">More caption</button>
                 <div class="reel-tags">${tags}</div>
               </div>
               <div class="reel-rail">
@@ -708,6 +710,9 @@
                 <button type="button" aria-label="View video comments" class="reel-chip" data-action="comment" data-id="${escapeHTML(video.id)}">
                   <div class="reel-chip-icon">💬</div>
                   <span class="reel-chip-count" id="commentcount-${index}">${Number(video.comment_count||0)}</span>
+                </button>
+                <button type="button" aria-label="Rewind video 10 seconds" class="reel-chip" data-action="rewind" data-index="${index}">
+                  <div class="reel-chip-icon">↺</div><span class="reel-chip-count">10s back</span>
                 </button>
                 <button type="button" aria-label="Share video" class="reel-chip" data-action="share" data-id="${escapeHTML(video.id)}">
                   <div class="reel-chip-icon">↗</div>
@@ -887,6 +892,25 @@
           });
         });
 
+        scroller.querySelectorAll('[data-action="rewind"]:not([data-reel-rewind-wired])').forEach(btn=>{
+          btn.dataset.reelRewindWired="true";
+          btn.addEventListener("click",event=>{
+            event.stopPropagation();
+            const idx=btn.dataset.index,video=document.getElementById("video-"+idx);
+            if(video && Number.isFinite(video.duration))video.currentTime=Math.max(0,(video.currentTime||0)-10);
+          });
+        });
+        scroller.querySelectorAll('[data-action="expand-caption"]:not([data-reel-expand-wired])').forEach(btn=>{
+          btn.dataset.reelExpandWired="true";
+          btn.addEventListener("click",event=>{
+            event.stopPropagation();
+            const caption=document.getElementById("caption-"+btn.dataset.index);
+            if(!caption)return;
+            const expanded=caption.classList.toggle("expanded");
+            btn.textContent=expanded?"Less caption":"More caption";
+            btn.setAttribute("aria-expanded",String(expanded));
+          });
+        });
         // Comment drawer
         scroller.querySelectorAll('[data-action="comment"]:not([data-reel-comment-wired])').forEach((btn) => {
 
