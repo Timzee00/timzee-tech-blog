@@ -33,6 +33,7 @@ const state = {
   friendCount: null,
   friendSummary: [],
   followsCreator: false,
+  staffMessageAccess: false,
   followersCount: 0,
   followingCount: 0,
   activity: {
@@ -858,6 +859,16 @@ function renderProfileActions() {
   creatorFollow.addEventListener("click",()=>void toggleCreatorFollow(creatorFollow));
   actions.append(creatorFollow);
 
+  // Staff outreach is independent of friendship. Role eligibility is
+  // verified by a server-owned Supabase function, never editable metadata.
+  if(state.staffMessageAccess && allowMessages && state.friendship?.status!=="accepted"){
+    const staffChat=document.createElement("a");
+    staffChat.className="btn";
+    staffChat.href="chat.html?user="+encodeURIComponent(state.viewingId);
+    staffChat.textContent="Message as staff";
+    staffChat.setAttribute("aria-label","Start an official staff conversation");
+    actions.append(staffChat);
+  }
   if (!state.friendship) {
     const addBtn = document.createElement("button");
     addBtn.className = "btn";
@@ -1291,6 +1302,10 @@ async function boot() {
   }
 
   await loadFriendship();
+  if(state.user && state.viewingId!==state.user.id){
+    const permission=await supabase.rpc("can_start_staff_dm");
+    state.staffMessageAccess=permission.data===true&&!permission.error;
+  }
   await loadFriendSummary();
   await loadCreatorFollows();
   await loadActivity();
