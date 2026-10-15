@@ -21,13 +21,25 @@
 import {supabase,getSession} from "../assets/js/supabase.js";
 const status=document.getElementById("status"),metrics=document.getElementById("metrics"),delivery=document.getElementById("deliveryState");
 const labels={pending:"Pending",processing:"Processing",sent:"Accepted by Brevo",delivered:"Confirmed delivered",awaiting_delivery_confirmation:"Awaiting delivery update",provider_failed:"Bounced / rejected",failed:"Failed jobs",quarantined:"Needs manual review",reviewed_cases:"Reviewed / closed",suppressed:"Suppressed",sent_last_24h:"Accepted (24 hours)",total:"Total jobs"};
+async function readOperationsResponse(response){
+  let data=null;
+  try{data=await response.json();}catch{}
+  if(!data){
+    if(response.status===404)throw Error("Email function is missing from this Netlify deploy. Rebuild the updated branch when credits return.");
+    if(response.status===401||response.status===403)throw Error("Your admin session has expired or this account lacks access.");
+    throw Error("Email service response is unavailable (HTTP "+response.status+"). Check deployed Functions.");
+  }
+  if(!response.ok)throw Error((data.error||"Email service unavailable")+
+    (data.diagnostic_code?" ["+data.diagnostic_code+"]":""));
+  return data;
+}
 async function refresh(){
   const session=await getSession();
   if(!session?.access_token){status.textContent="Sign in as super admin to view email metrics.";return;}
   status.textContent="Loading…";
   try{
     const response=await fetch("/.netlify/functions/email-operations",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});
-    const body=await response.json();
+    const body=await readOperationsResponse(response);
     if(!response.ok)throw new Error(body.error||"Metrics unavailable");
     delivery.textContent=body.delivery_enabled?"Delivery enabled":"Delivery paused";
     metrics.replaceChildren();
@@ -51,7 +63,7 @@ document.getElementById("verifyBrevo").addEventListener("click",async()=>{
     const response=await fetch("/.netlify/functions/email-operations?verifyProvider=1",{
       headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
     });
-    const result=await response.json();
+    const result=await readOperationsResponse(response);
     status.textContent=result.authenticated?"Brevo API authentication successful. No email was sent.":
       (result.error||result.message||"Brevo connection could not be verified.");
   }catch(error){status.textContent="Connection test failed: "+(error?.message||"Network error");}
@@ -66,7 +78,7 @@ async function loadReviews(){
   feedback.textContent="Loading review queue…";list.replaceChildren();
   try{
     const response=await fetch("/.netlify/functions/email-operations?review=1",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});
-    const data=await response.json();
+    const data=await readOperationsResponse(response);
     if(!response.ok)throw new Error(data.error||"Could not load reviews");
     const cases=Array.isArray(data.cases)?data.cases:[];
     feedback.textContent=cases.length? `${cases.length} awaiting review (up to 25 shown)`:"No uncertain deliveries awaiting review";
@@ -108,7 +120,7 @@ async function loadReviews(){
             method:"POST",cache:"no-store",headers:{Authorization:`Bearer ${latestSession.access_token}`,"Content-Type":"application/json"},
             body:JSON.stringify({job_id:item.id,decision:select.value,note:note.value.trim()})
           });
-          const result=await response.json();
+          const result=await readOperationsResponse(response);
           if(!response.ok)throw new Error(result.error||"Review could not be saved");
           feedback.textContent="Decision recorded. No email was sent.";
           await loadReviews();
@@ -127,7 +139,7 @@ document.getElementById("legacyRecovery").addEventListener("click",async()=>{
     const response=await fetch("/.netlify/functions/email-operations?legacyRecovery=1",{
       headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
     });
-    const result=await response.json();
+    const result=await readOperationsResponse(response);
     if(!response.ok)throw Error(result.error||"Recovery overview unavailable");
     const labels={
       total_members:"Registered members",email_confirmed:"Verified email",
@@ -164,7 +176,7 @@ document.getElementById("inactivityPreview").addEventListener("click",async()=>{
     const response=await fetch("/.netlify/functions/email-operations?inactivityPreview=1",{
       headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
     });
-    const result=await response.json();
+    const result=await readOperationsResponse(response);
     if(!response.ok)throw Error(result.error||"Inactivity preview unavailable");
     status.textContent=`${Number(result.eligible||0)} opted-in members eligible for a check-in. Sending ${result.enabled?"configured":"paused"}. No emails queued or sent.`;
   }catch(error){status.textContent=error.message||"Inactivity preview failed";}
@@ -179,7 +191,7 @@ document.getElementById("digestPreview").addEventListener("click",async()=>{
     const response=await fetch("/.netlify/functions/email-operations?digestPreview=1",{
       headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
     });
-    const result=await response.json();
+    const result=await readOperationsResponse(response);
     if(!response.ok)throw Error(result.error||"Digest preview unavailable");
     status.textContent=`${Number(result.eligible||0)} eligible digest groups. Dispatch ${result.enabled?"configured":"disabled"}. No emails queued or sent.`;
   }catch(error){status.textContent=error.message||"Digest preview failed";}
