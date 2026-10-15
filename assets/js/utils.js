@@ -95,7 +95,7 @@ export function linkifyReferences(text) {
   let output = escapeHTML(text);
   // General #hashtags link to a real public explorer. Preserve special
   // #topic:<uuid> and #post:<uuid> references handled below.
-  output = output.replace(/(^|[^\\w#])#([a-zA-Z0-9_]{1,32})(?!:)(?=$|[^\\w])/g,
+  output = output.replace(/(^|[^\w#])#([a-zA-Z0-9_]{1,32})(?!:)(?=$|[^\w])/g,
     (match,prefix,tag)=>prefix+'<a class="hashtag-link" href="hashtags.html?tag='+
       encodeURIComponent(tag.toLowerCase())+'">#'+tag+'</a>');
   output = output.replace(/(^|\s)@([a-zA-Z0-9_]{2,32})/g, (match, prefix, handle) => {
