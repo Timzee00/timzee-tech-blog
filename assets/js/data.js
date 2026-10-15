@@ -14,14 +14,17 @@ export async function fetchCategories() {
   return normalizeResponse(result);
 }
 
-export async function fetchPosts({ status, contentType } = {}) {
+export async function fetchPosts({ status, contentType, limit = null, offset = 0 } = {}) {
   let query = supabase.from("posts").select("*").order("created_at", { ascending: false });
   let normalized = "";
   if (status) {
     normalized = String(status).toLowerCase();
     if (normalized === "published") {
-      // Treat NULL status as published for legacy/manual inserts.
-      query = query.or("status.is.null,status.ilike.published,status.ilike.scheduled");
+      // Filter future scheduled posts *on the server*, before range/limit:
+      // otherwise one page of future drafts can crowd out published articles.
+      // publish_at is stored as a UTC timestamp without timezone.
+      const nowUtc = new Date().toISOString().slice(0, 19);
+      query = query.or(`status.is.null,status.ilike.published,and(status.ilike.scheduled,publish_at.lte.${nowUtc})`);
     } else {
       query = query.eq("status", status);
     }
@@ -29,13 +32,21 @@ export async function fetchPosts({ status, contentType } = {}) {
   if (contentType) {
     query = query.eq("content_type", contentType);
   }
+  // A public home feed must not download every full-length post ever written.
+  // Other privileged callers retain their existing behavior until migrated.
+  if (limit !== null && limit !== undefined) {
+    const pageSize = Math.max(1, Math.min(50, Math.trunc(Number(limit) || 24)));
+    const start = Math.max(0, Math.trunc(Number(offset) || 0));
+    query = query.range(start, start + pageSize - 1);
+  }
   const result = await query;
   let rows = normalizeResponse(result);
   if (normalized === "published") {
     const now = Date.now();
     rows = rows.filter((post) => {
-      if (!post.status || post.status === "published") return true;
-      if (post.status === "scheduled") {
+      const status = String(post.status || "").toLowerCase();
+      if (!status || status === "published") return true;
+      if (status === "scheduled") {
         if (!post.publish_at) return false;
         return new Date(post.publish_at).getTime() <= now;
       }
@@ -512,14 +523,14 @@ export async function fetchUnreadNotificationCount(userId) {
   if (!userId) return 0;
   const result = await supabase
     .from("notifications")
-    .select("id")
+    .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .is("read_at", null);
   if (result.error) {
     console.warn("Notification count failed", result.error);
     return 0;
   }
-  return (result.data || []).length;
+  return result.count || 0;
 }
 
 export async function fetchProfilesByUsernames(usernames = []) {

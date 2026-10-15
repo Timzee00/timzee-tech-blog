@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Support - Timzee Tech Hub</title>
   <meta name="description" content="Get help and support for your Timzee Tech Hub account and community features.">
-  <meta name="robots" content="index, follow"><meta name="theme-color" content="#0f766e">
+  <meta name="robots" content="index, follow"><meta name="theme-color" content="#087f73">
   <link rel="canonical" href="https://timzee-tech-blog.netlify.app/support.html">
   <link rel="stylesheet" href="assets/css/styles.css"><script defer src="assets/js/theme-init.js"></script>
 </head>
@@ -24,7 +24,7 @@
     <article class="feature-card" data-reveal><div class="feature-icon">GUIDE</div><h3>Setup guidance</h3><p>Ask about available publishing, moderation, profile, or community workflows.</p></article>
   </div>
   <section style="margin-top:24px" id="faqBlock"><h2>FAQ</h2><p style="color:#666">Frequently asked questions from community members. Select a question to expand the answer.</p><div id="faqList">Loading FAQs...</div></section>
-  <form class="form-grid" style="margin-top:24px" id="supportForm"><input type="text" name="name" placeholder="Full name" required><input type="email" name="email" placeholder="Email address" required><input type="text" name="issue" placeholder="What do you need help with?" required><textarea name="message" placeholder="Describe the issue..." required></textarea><button class="btn" type="submit">Submit Support Request</button></form>
+  <form novalidate class="form-grid" style="margin-top:24px" id="supportForm"><input type="text" name="name" placeholder="Full name" required><input type="email" name="email" placeholder="Email address" required><input type="text" name="issue" placeholder="What do you need help with?" required><textarea name="message" placeholder="Describe the issue..." required class="resize-none"></textarea><button class="btn" type="submit">Submit Support Request</button></form>
   <div class="callout" id="supportStatus" style="margin-top:18px;display:none"></div>
   <div class="callout" style="margin-top:12px"><strong>Operated by Timzee Corp.</strong> Support route: this form. Email: support@timzeetechhub.com.</div>
   <script type="module">
@@ -33,9 +33,9 @@
     (async()=>{try{const box=document.getElementById('faqList');const faqs=await getPublishedFaqs();if(!faqs.length){box.innerHTML='<p style="color:#666">No FAQs available yet.</p>';return;}box.innerHTML=faqs.map(f=>`<details style="margin-bottom:12px;padding:12px;border:1px solid #eee;border-radius:6px"><summary style="font-weight:600;cursor:pointer">${escapeHtml(f.question)}</summary><div style="margin-top:8px;color:#333">${escapeHtml(f.answer).replace(/\n/g,'<br>')}</div></details>`).join('');}catch(err){console.error('FAQ load failed',err);document.getElementById('faqList').innerHTML='<p style="color:#f00">Failed to load FAQs</p>';}})();
   </script>
 </section></div></main>
-<a class="floating-action whatsapp" id="whatsappSupportBtn" href="#" target="_blank" rel="noopener" style="display:none"><span>Chat on WhatsApp</span></a>
+<a class="floating-action whatsapp" id="whatsappSupportBtn" target="_blank" rel="noopener" style="display:none"><span>Chat on WhatsApp</span></a>
 <button class="floating-action donate" id="donationBtn" type="button" style="display:none"><span>Donate</span></button>
-<div class="donation-modal" id="donationModal" aria-hidden="true"><div class="donation-card"><div class="donation-header"><h3 id="donationTitle">Support Timzee Tech Hub</h3><button class="btn ghost" id="donationClose" type="button">Close</button></div><p id="donationDetails">Thanks for supporting our community.</p><a class="btn" id="donationLink" href="#" target="_blank" rel="noopener">Donate now</a></div></div>
+<div class="donation-modal" id="donationModal" aria-hidden="true"><div class="donation-card"><div class="donation-header"><h3 id="donationTitle">Support Timzee Tech Hub</h3><button class="btn ghost" id="donationClose" type="button">Close</button></div><p id="donationDetails">Thanks for supporting our community.</p><a class="btn" id="donationLink" target="_blank" rel="noopener">Donate now</a></div></div>
 <footer class="footer"><div class="container"><div class="footer-links"><a href="contact.html">Contact Us</a><a href="newsletter.html">Newsletter</a><a href="ads.html">Advertise</a><a href="discussion.html">Discussion</a></div></div></footer>
 <script type="module" src="assets/js/forms.js"></script>
 </body></html>

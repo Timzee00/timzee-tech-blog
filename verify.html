@@ -4,9 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Apply for Verification - Timzee Tech Hub</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -117,12 +114,12 @@
           </div>
         </div>
 
-        <form id="verificationForm">
+        <form novalidate id="verificationForm">
           <div id="statusBox" class="status-box" role="status" aria-live="polite"></div>
 
           <div class="form-section">
             <h3>Why should you be verified?</h3>
-            <textarea id="reason" placeholder="Tell us about your contributions to the community..." style="min-height: 100px;"></textarea>
+            <textarea id="reason" placeholder="Tell us about your contributions to the community..." style="min-height: 100px;" class="resize-none"></textarea>
             <small style="color: #999;">Minimum 20 characters</small>
           </div>
 

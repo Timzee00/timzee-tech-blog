@@ -1,9 +1,10 @@
+const { parseJsonObject } = require("./_lib/request.js");
 const { createClient } = require("@supabase/supabase-js");
 const { requireRole } = require("./_lib/auth-role.js");
 
 const jsonResponse = (statusCode, payload) => ({
   statusCode,
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   body: JSON.stringify(payload)
 });
 
@@ -14,43 +15,42 @@ exports.handler = async (event) => {
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
 
-  const authHeader = event.headers.authorization || event.headers.Authorization || "";
+  const authHeader = event.headers?.authorization || event.headers?.Authorization || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const guard = await requireRole(supabase, token, ["super"], "Only super admins can create admins.");
   if (guard.error) return jsonResponse(guard.error === "Missing auth token." || guard.error === "Invalid auth token." ? 401 : 403, { error: guard.error });
 
-  let payload = {};
-  try { payload = JSON.parse(event.body || "{}"); }
-  catch { return jsonResponse(400, { error: "Invalid JSON body." }); }
+  const parsed = parseJsonObject(event);
+  if (parsed.error) return jsonResponse(parsed.statusCode, { error: parsed.error });
+  const payload = parsed.payload;
 
   const { email, password, displayName, username } = payload;
-  if (!email) return jsonResponse(400, { error: "Email is required." });
+  if (typeof email !== "string" || !email.includes("@")) return jsonResponse(400, { error: "Email is required." });
 
   const now = new Date().toISOString();
   const normalizedUsername = username || email.split("@")[0];
 
   const findExistingUser = async () => {
-    let page = 1;
-    const perPage = 200;
-    while (page <= 5) {
-      const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-      if (error) break;
-      const match = (data?.users || []).find((user) => user.email?.toLowerCase() === email.toLowerCase());
-      if (match) return match;
-      if ((data?.users || []).length < perPage) break;
-      page += 1;
-    }
-    if (normalizedUsername) {
-      const profileLookup = await supabase.from("profiles").select("id,email").eq("username", normalizedUsername).maybeSingle();
-      if (profileLookup.data?.id) return profileLookup.data;
-    }
-    return null;
+    // Indexed profile lookup avoids scanning the first 1,000 Auth users.
+    // Confirm the returned UUID against Auth before changing permissions.
+    const lookup=await supabase.from("profiles").select("id,email")
+      .ilike("email",email.trim()).limit(2);
+    if(lookup.error)throw new Error("Cannot verify registered account.");
+    if(!lookup.data?.length)return null;
+    if(lookup.data.length!==1)throw new Error("Ambiguous account email; contact support.");
+    const userResult=await supabase.auth.admin.getUserById(lookup.data[0].id);
+    if(userResult.error||!userResult.data?.user)throw new Error("Registered account unavailable.");
+    if(userResult.data.user.email?.toLowerCase()!==email.trim().toLowerCase())throw new Error("Profile email does not match Auth email.");
+    return userResult.data.user;
   };
-
   const promoteExisting = async (userId, existingUser = {}) => {
     const currentMeta = existingUser.user_metadata || {};
     const currentAppMeta = existingUser.app_metadata || {};
+    const {data: existingProfile,error: existingProfileError}=await supabase.from("profiles").select("role").eq("id",userId).maybeSingle();
+    if(existingProfileError || !existingProfile)return jsonResponse(409,{error:"Could not verify existing account role. No changes made."});
+    if(existingProfile.role==="super")return jsonResponse(409,{error:"Account is already Super Admin; use the authorized role-management flow instead."});
+    if(existingProfile.role==="admin")return jsonResponse(200,{ok:true,userId,mode:"already_admin"});
     const updatedMeta = {
       ...currentMeta,
       role: "admin",
@@ -63,7 +63,7 @@ exports.handler = async (event) => {
     });
     if (error) return jsonResponse(400, { error: error.message });
 
-    await supabase.from("profiles").upsert({
+    const profile = await supabase.from("profiles").upsert({
       id: userId,
       display_name: updatedMeta.display_name,
       username: updatedMeta.username,
@@ -71,10 +71,13 @@ exports.handler = async (event) => {
       role: "admin",
       updated_at: now
     });
+    if (profile.error) return jsonResponse(500, { error: "Auth role changed, but profile synchronization failed. Retry after checking the account." });
     return jsonResponse(200, { ok: true, userId, mode: "promoted" });
   };
 
-  const existingUser = await findExistingUser();
+  let existingUser;
+  try{existingUser=await findExistingUser();}
+  catch(error){return jsonResponse(409,{error:error.message||"Unable to verify account."});}
   if (existingUser && !password) return promoteExisting(existingUser.id, existingUser);
   if (!password) return jsonResponse(400, { error: "Password required to create a new admin." });
 
@@ -94,7 +97,7 @@ exports.handler = async (event) => {
     return jsonResponse(400, { error: createError.message });
   }
 
-  await supabase.from("profiles").upsert({
+  const profile = await supabase.from("profiles").upsert({
     id: created.user.id,
     display_name: displayName || email.split("@")[0],
     username: normalizedUsername,
@@ -103,5 +106,6 @@ exports.handler = async (event) => {
     created_at: now
   });
 
+  if (profile.error) return jsonResponse(500, { error: "Account created, but profile synchronization failed. Repair the profile before granting access." });
   return jsonResponse(200, { ok: true, userId: created.user.id, mode: "created" });
 };

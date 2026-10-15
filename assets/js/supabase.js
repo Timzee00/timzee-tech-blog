@@ -1,4 +1,6 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/+esm";
+import { createClient } from "../vendor/supabase.mjs";
+import { singleFlight } from "./single-flight.mjs";
+import { getAuthRedirectOrigin, makeAuthRedirect } from "./auth-redirects.mjs";
 import "./app-hardening.js";
 import "./site-shell.js";
 import "./privacy-consent.js";
@@ -74,11 +76,11 @@ if (typeof window !== "undefined") {
   import("./notifications-ui.js").catch((error) => {
     console.warn("Realtime notification UI failed to load:", error);
   });
-  import("./announcement-banner.js").catch((error) => {
-    console.warn("Announcement banner failed to load:", error);
-  });
 }
 
+// Preserve the callback intent before asynchronous PKCE exchange strips ?code=.
+export const hadOAuthCallback = typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).has("code");
 const authCallbackPromise = (() => {
   if (typeof window === "undefined") return Promise.resolve(null);
   const code = new URLSearchParams(window.location.search).get("code");
@@ -99,6 +101,11 @@ const authCallbackPromise = (() => {
     return { data: null, error };
   });
 })();
+
+export async function getAuthCallbackError() {
+  const result = await authCallbackPromise;
+  return result?.error || null;
+}
 
 export async function getSession() {
   await authCallbackPromise;
@@ -183,18 +190,43 @@ async function resolveTrustedRole(user) {
   return role;
 }
 
-export async function getCurrentUser() {
+// Share simultaneous UI auth lookups without caching identity across requests.
+// Authorization always remains enforced by Supabase/RLS and privileged APIs.
+const fetchCurrentUserOnce = singleFlight(async () => {
   await authCallbackPromise;
+  // Avoid a needless /auth/v1/user request (and misleading session warning)
+  // on anonymous public pages. Session presence is NOT proof of identity:
+  // authenticated users are still verified by getUser() and server RLS.
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData?.session) {
+    if (sessionError) console.warn("Session lookup failed:", sessionError);
+    if (typeof window !== "undefined") delete window.__timzeeCurrentUserId;
+    return null;
+  }
   const { data, error } = await supabase.auth.getUser();
   if (error) {
     console.warn("User fetch failed", error);
     return null;
   }
   const user = data.user;
-  if (!user) return null;
+  if (!user) {
+    if (typeof window !== "undefined") delete window.__timzeeCurrentUserId;
+    return null;
+  }
   if (typeof window !== "undefined") window.__timzeeCurrentUserId = user.id;
   await resolveTrustedRole(user);
+  // Invitation is optional and deferred; never delays sign-in or page loading.
+  const created=Date.parse(user.created_at||"");
+  if(Number.isFinite(created)&&Date.now()-created>=30*24*60*60*1000){
+    void import("./member-recovery-invite.js")
+      .then(module=>module.maybeInviteReturningMember({user,supabase}))
+      .catch(()=>{});
+  }
   return user;
+});
+
+export function getCurrentUser() {
+  return fetchCurrentUserOnce();
 }
 
 export async function signIn(email, password) {
@@ -216,7 +248,7 @@ export async function signInWithProvider(provider, redirectTo) {
     return await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: redirectTo || `${SITE_URL}/login.html`
+        redirectTo: redirectTo || makeAuthRedirect(getAuthRedirectOrigin(window.location?.origin, SITE_URL))
       }
     });
   } catch (error) {
@@ -241,7 +273,7 @@ export async function signUp(email, password, displayName = "") {
           display_name: displayName,
           username: displayName ? displayName.toLowerCase().replace(/\s+/g, "") : fallbackUsername
         },
-        emailRedirectTo: SITE_URL ? `${SITE_URL}/login.html` : undefined
+        emailRedirectTo: makeAuthRedirect(getAuthRedirectOrigin(window.location?.origin, SITE_URL))
       }
     });
   } catch (error) {
@@ -285,7 +317,38 @@ export function hasRole(user, roles = []) {
 
 export async function resetPassword(email, redirectTo) {
   if (!email) return { error: { message: "Email is required." } };
-  const target = redirectTo || (SITE_URL ? `${SITE_URL}/login.html` : "");
+  const target = redirectTo || makeAuthRedirect(getAuthRedirectOrigin(window.location?.origin, SITE_URL));
   const options = target ? { redirectTo: target } : undefined;
   return supabase.auth.resetPasswordForEmail(email, options);
+}
+
+
+/**
+ * Record a signed-in visit for user-requested inactivity reminders.
+ * At most one RPC per member per six hours per browser; server enforces the
+ * same limit. No activity is tracked for anonymous visitors through this RPC.
+ */
+if (typeof window !== "undefined" && typeof document !== "undefined") {
+  let visitRunning = false;
+  const recordVisit = async () => {
+    if (visitRunning || document.visibilityState === "hidden") return;
+    visitRunning = true;
+    try {
+      await authCallbackPromise;
+      const { data, error } = await supabase.auth.getSession();
+      const userId = data?.session?.user?.id;
+      if (error || !userId) return;
+      const key = "timzee_member_visit_v1:" + userId;
+      const previous = Number(localStorage.getItem(key) || 0);
+      if (Number.isFinite(previous) && Date.now() - previous < 6 * 60 * 60 * 1000 && previous <= Date.now()) return;
+      const result = await supabase.rpc("record_my_site_visit");
+      if (!result.error && result.data === true) localStorage.setItem(key, String(Date.now()));
+    } catch { /* Best-effort activity signal; never block page rendering. */ }
+    finally { visitRunning = false; }
+  };
+  window.setTimeout(recordVisit, 1600);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void recordVisit();
+  });
+  window.addEventListener("pageshow", () => { void recordVisit(); });
 }

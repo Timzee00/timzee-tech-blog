@@ -1,9 +1,10 @@
+const { parseJsonObject } = require("./_lib/request.js");
 const { createClient } = require("@supabase/supabase-js");
 const { requireRole } = require("./_lib/auth-role.js");
 
 const jsonResponse = (statusCode, payload) => ({
   statusCode,
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   body: JSON.stringify(payload)
 });
 
@@ -14,14 +15,14 @@ exports.handler = async (event) => {
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return jsonResponse(500, { error: "Server misconfigured." });
 
-  let payload = {};
-  try { payload = JSON.parse(event.body || "{}"); }
-  catch { return jsonResponse(400, { error: "Invalid JSON body." }); }
+  const parsed = parseJsonObject(event);
+  if (parsed.error) return jsonResponse(parsed.statusCode, { error: parsed.error });
+  const payload = parsed.payload;
 
   const { action, userId, password } = payload;
   if (!action || !userId) return jsonResponse(400, { error: "Missing action or userId." });
 
-  const authHeader = event.headers.authorization || event.headers.Authorization || "";
+  const authHeader = event.headers?.authorization || event.headers?.Authorization || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const guard = await requireRole(supabase, token, ["super"], "Only super admins can access this.");

@@ -5,6 +5,7 @@ import { setupReveal } from "./reveal.js";
 import { extractErrorMessage, reportAppError } from "./utils.js";
 import { mountFormConsent } from "./form-consent.js";
 import "./nav.js";
+import { validateForm } from "./ui-controls.js";
 
 async function applySiteTheme(settings) {
   if (settings?.themeId) {
@@ -51,12 +52,11 @@ function bindForm({ formId, statusId, table, map }) {
   const status = document.getElementById(statusId);
   if (!form) return;
 
+  let submitting = false;
+  if (status) status.setAttribute("role", "status");
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (form.matches(":invalid")) {
-      form.reportValidity();
-      return;
-    }
+    if (submitting || !validateForm(form)) return;
     const data = Object.fromEntries(new FormData(form).entries());
     if (form.dataset.requiresConsent === "true" && data.consent !== "yes") {
       if (status) { status.textContent = "Please review the privacy notice and give consent before submitting."; status.style.display = "block"; }
@@ -64,13 +64,24 @@ function bindForm({ formId, statusId, table, map }) {
     }
     const payload = map(data);
     if (form.dataset.requiresConsent === "true") payload.consent_at = new Date().toISOString();
-    const result = await supabase.from(table).insert(payload);
-    if (result.error) {
-      if (status) { status.textContent = result.error.message || "Submission failed."; status.style.display = "block"; }
-      return;
+    submitting = true;
+    const button = form.querySelector('button[type="submit"]');
+    const original = button?.textContent;
+    if (button) { button.disabled = true; button.textContent = "Sending…"; }
+    form.setAttribute("aria-busy", "true");
+    if (status) { status.textContent = "Sending your request…"; status.style.display = "block"; }
+    try {
+      const result = await supabase.from(table).insert(payload);
+      if (result.error) throw result.error;
+      form.reset();
+      if (status) status.textContent = "Thanks! We received your submission.";
+    } catch (error) {
+      console.error("Form submission failed:", error);
+      if (status) status.textContent = "We could not send this. Your details are still here; check your connection and try again.";
+    } finally {
+      submitting = false; form.setAttribute("aria-busy", "false");
+      if (button) { button.disabled = false; button.textContent = original; }
     }
-    form.reset();
-    if (status) { status.textContent = "Thanks! We received your submission."; status.style.display = "block"; }
   });
 }
 

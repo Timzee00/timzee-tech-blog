@@ -154,7 +154,7 @@ create or replace function public.protect_profile_privileged_fields()
 returns trigger
 language plpgsql
 set search_path to 'pg_catalog', 'public'
-as $
+as $$
 begin
   if (select auth.uid()) is not null then
     if tg_op = 'INSERT' then
@@ -191,7 +191,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop policy if exists "Profiles are public" on public.profiles;
 drop policy if exists "Profile owners and staff read full profiles" on public.profiles;

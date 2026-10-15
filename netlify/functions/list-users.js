@@ -3,7 +3,7 @@ const { requireRole, roleFromUser } = require("./_lib/auth-role.js");
 
 const jsonResponse = (statusCode, payload) => ({
   statusCode,
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   body: JSON.stringify(payload)
 });
 
@@ -17,11 +17,11 @@ exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
   const rawSearch = params.search ? String(params.search) : "";
   const search = rawSearch.toLowerCase().trim();
-  const perPage = Math.min(Number.parseInt(params.perPage || "200", 10) || 200, 200);
-  const maxPages = Math.min(Number.parseInt(params.maxPages || "5", 10) || 5, 10);
+  const perPage = Math.max(1, Math.min(Number.parseInt(params.perPage || "200", 10) || 200, 200));
+  const maxPages = Math.max(1, Math.min(Number.parseInt(params.maxPages || "5", 10) || 5, 10));
   const requestedPage = Number.parseInt(params.page || "0", 10);
 
-  const authHeader = event.headers.authorization || event.headers.Authorization || "";
+  const authHeader = event.headers?.authorization || event.headers?.Authorization || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const guard = await requireRole(supabase, token, ["admin", "super"], "Only admins can access this.");

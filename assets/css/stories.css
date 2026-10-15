@@ -10,6 +10,10 @@
 }
 
 .story-avatar {
+  padding: 0;
+  font: inherit;
+  color: var(--color-text);
+  appearance: none;
   display: grid;
   justify-items: center;
   gap: 6px;
@@ -254,3 +258,51 @@
 @media (max-width: 480px) {
   .story-tap-zone { top: 70px; bottom: 90px; }
 }
+
+/* Static shared action styles replace the guest-visible, handlerless widget. */
+.story-create-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4, 16px);
+  padding: 14px 16px;
+  margin: 0 0 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 14px);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.story-create-action:hover { border-color: var(--color-primary); background: var(--color-surface-muted); }
+.story-create-action-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  font-size: 24px;
+  font-weight: 700;
+}
+.story-create-action-copy { min-width: 0; }
+.story-create-action-copy strong, .story-create-action-copy small { display: block; }
+.story-create-action-copy small { margin-top: 2px; color: var(--color-text-muted); font-size: 13px; }
+.story-avatar:focus-visible, .story-create-action:focus-visible { outline: 3px solid var(--color-secondary); outline-offset: 3px; }
+
+/* Readable failure state for missing/unplayable story media. */
+.story-media-error {
+  max-width: 34ch;
+  margin: 24px;
+  padding: 18px 22px;
+  color: #fff;
+  background: rgba(18, 25, 35, .9);
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 12px;
+  text-align: center;
+  line-height: 1.6;
+}
+.story-viewer-media video { background: #080b10; }

@@ -4,9 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Listing - Timzee Tech Hub</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -76,7 +73,7 @@
             <div>
               <div class="seller-info">
                 <div class="seller-header">
-                  <a class="seller-avatar" id="sellerAvatar" href="#" aria-label="View seller profile"></a>
+                  <a class="seller-avatar" id="sellerAvatar" href="profile.html" aria-label="View seller profile"></a>
                   <div>
                     <div class="seller-name" id="sellerName"></div>
                     <span id="sellerVerifiedBadge"></span>
@@ -112,10 +109,11 @@
             <p class="description-text" id="description"></p>
           </div>
 
+          <div id="contactSellerFeedback" role="status" aria-live="polite" class="market-contact-feedback" hidden></div>
           <div id="inquiryContainer" class="inquiry-section" style="display: none;">
             <h3>Interested? Send an Inquiry</h3>
-            <form id="inquiryForm" class="inquiry-form">
-              <textarea id="inquiryMessage" placeholder="What would you like to know?" required maxlength="2000" style="min-height: 100px;"></textarea>
+            <form novalidate id="inquiryForm" class="inquiry-form">
+              <textarea id="inquiryMessage" placeholder="What would you like to know?" required maxlength="2000" style="min-height: 100px;" class="resize-none"></textarea>
               <button class="btn" type="submit">Send Inquiry</button>
               <div id="inquiryStatus" role="status" aria-live="polite" style="display: none;"></div>
             </form>
@@ -149,6 +147,7 @@
       import { incrementMarketplaceView, createMarketplaceInquiry, getSellerRating } from "./assets/js/videos-marketplace.js";
       import { createContentReport } from "./assets/js/data.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+      import { formatMarketplacePrice as formatCurrency } from "./assets/js/marketplace-currency.mjs";
 
       const state = {
         user: null,
@@ -163,24 +162,6 @@
       const canLoadListing = !!state.itemId;
       if (!canLoadListing) {
         document.getElementById("loadingState").textContent = "No listing ID provided";
-      }
-
-      const currencySymbols = {
-        NGN: "₦",
-        USD: "$",
-        GBP: "£",
-        EUR: "€",
-        GHS: "₵",
-        KES: "KSh "
-      };
-
-      function formatCurrency(price, currencyCode) {
-        const currency = String(currencyCode || "USD").toUpperCase();
-        const symbol = currencySymbols[currency] || `${currency} `;
-        const amount = Number(price);
-        return Number.isFinite(amount)
-          ? `${symbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : "Price unavailable";
       }
 
       function setInquiryStatus(message, tone = "muted") {
@@ -227,6 +208,9 @@
 
           renderListing();
           setupEventListeners();
+          if(new URLSearchParams(window.location.search).get("contact")==="1"){
+            document.getElementById("contactBtn")?.click();
+          }
         } catch (error) {
           console.error("Load error:", error);
           document.getElementById("loadingState").textContent = "Unable to load this listing right now.";
@@ -244,7 +228,7 @@
         document.getElementById("description").textContent = listing.description || "No description provided.";
         document.getElementById("viewCount").textContent = listing.view_count || 0;
 
-        const sellerName = seller?.display_name || listing.seller_name || "Seller";
+        const sellerName = (String(seller?.display_name || listing.seller_name || "Seller").replace(/<[^>]*>/g,"").replace(/[<>]/g,"").trim().slice(0,80)) || "Seller";
         document.getElementById("sellerName").textContent = sellerName;
         const sellerAvatarEl = document.getElementById("sellerAvatar");
         if (sellerAvatarEl) {
@@ -405,19 +389,25 @@
 
       function setupEventListeners() {
         document.getElementById("contactBtn").addEventListener("click", async () => {
+          const sellerId = state.listing?.user_id;
+          const feedback=document.getElementById("contactSellerFeedback");
+          const messageUser=(text)=>{
+            if(feedback){feedback.hidden=false;feedback.textContent=text;feedback.scrollIntoView({behavior:"smooth",block:"nearest"});}
+          };
+          if(!state.listing){messageUser("Listing is still loading. Please try again.");return;}
           if (!state.user) {
-            const next = encodeURIComponent(`listing.html?id=${state.itemId}`);
-            window.location.href = `login.html?next=${next}`;
+            messageUser("Sign in to send an inquiry to this seller.");
+            const next=encodeURIComponent("listing.html?id="+state.itemId+"&contact=1");
+            window.location.href="login.html?next="+next;
             return;
           }
 
-          const sellerId = state.listing.user_id;
           if (!sellerId) {
-            setInquiryStatus("Seller contact is unavailable for this listing.", "error");
+            messageUser("Seller contact is unavailable for this listing.");
             return;
           }
           if (sellerId === state.user.id) {
-            setInquiryStatus("This is your own listing.", "muted");
+            messageUser("This is your own listing.");
             return;
           }
           const whatsapp = String(state.sellerProfile?.marketplace_whatsapp || "").replace(/[^\d+]/g, "");
@@ -429,19 +419,22 @@
           }
 
           if (state.sellerProfile && state.sellerProfile.allow_messages === false) {
-            setInquiryStatus("This seller is not accepting direct messages. You can still send a marketplace inquiry below.", "muted");
-            document.getElementById("inquiryContainer")?.scrollIntoView({ behavior: "smooth", block: "center" });
+            const inquiry=document.getElementById("inquiryContainer");
+            if(inquiry){
+              inquiry.style.display="block";
+              inquiry.scrollIntoView({behavior:"smooth",block:"center"});
+              document.getElementById("inquiryMessage")?.focus();
+            }
+            messageUser("Direct chat is disabled, but you can still send a marketplace inquiry below.");
             return;
           }
 
-          const friendship = await supabase
-            .from("friendships")
-            .select("id,status")
-            .or(`and(requester_id.eq.${state.user.id},addressee_id.eq.${sellerId}),and(requester_id.eq.${sellerId},addressee_id.eq.${state.user.id})`)
-            .maybeSingle();
-
-          if (!friendship.error && friendship.data?.status === "accepted") {
-            window.location.href = `chat.html?user=${encodeURIComponent(sellerId)}`;
+          messageUser("Checking available contact options…");
+          // Use the same database-owned permission as Chat. This also allows
+          // official staff DMs without assuming a friendship must exist.
+          const permission=await supabase.rpc("can_send_direct_message",{p_recipient:sellerId});
+          if(!permission.error&&permission.data===true){
+            window.location.href=`chat.html?user=${encodeURIComponent(sellerId)}`;
             return;
           }
 
@@ -450,7 +443,7 @@
             inquiry.style.display = "block";
             inquiry.scrollIntoView({ behavior: "smooth", block: "center" });
             document.getElementById("inquiryMessage")?.focus();
-            setInquiryStatus("Start an inquiry to contact this seller.", "muted");
+            messageUser("Write your inquiry below, then tap Send Inquiry.");
           }
         });
 
@@ -460,7 +453,7 @@
             window.location.href = `login.html?next=${next}`;
             return;
           }
-          const reason = prompt("Why are you reporting this listing?");
+          const reason = await window.appUI.prompt("Why are you reporting this listing?");
           if (reason === null || !reason.trim()) return;
           try {
             const result = await createContentReport({

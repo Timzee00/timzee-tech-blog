@@ -11,44 +11,53 @@ let activeMentionDropdown = null;
 let activeMentionField = null;
 let currentSearchTerm = "";
 let cursorAtMention = false;
+let mentionRequest = 0;
 
 /**
  * Search for users to mention
  */
 export async function searchUsersForMention(query) {
-  if (!query || query.length < 2) return [];
-  
-  // Check cache first
-  const cacheKey = `mention_${query.toLowerCase()}`;
-  if (mentionCache[cacheKey]) {
-    return mentionCache[cacheKey];
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from("public_profiles")
-      .select("id, username, display_name, avatar_url")
-      .ilike("username", `%${query}%`)
-      .limit(10);
-
-    if (error) {
-      console.error("User search error:", error);
-      return [];
+  if (query.length > 32 || !/^[a-z0-9_]*$/i.test(query)) return [];
+  const {data:sessionInfo}=await supabase.auth.getSession();
+  const id=sessionInfo?.session?.user?.id||"guest";
+  const cacheKey=id+":"+query.toLowerCase();
+  if(mentionCache[cacheKey] && Date.now()-mentionCache[cacheKey].time<30000)
+    return mentionCache[cacheKey].results;
+  try{
+    let friends=[];
+    if(id!=="guest"){
+      const pairs=await supabase.from("friendships").select("requester_id,addressee_id")
+        .eq("status","accepted")
+        .or("requester_id.eq."+id+",addressee_id.eq."+id).limit(250);
+      friends=(pairs.data||[]).map(pair=>pair.requester_id===id?pair.addressee_id:pair.requester_id);
     }
-
-    const results = (data || []).map(user => ({
-      id: user.id,
-      username: user.username,
-      display_name: user.display_name,
-      avatar_url: user.avatar_url
+    let preferred=[];
+    if(friends.length){
+      let request=supabase.from("public_profiles")
+        .select("id,username,display_name,avatar_url").in("id",friends.slice(0,250)).limit(12);
+      if(query)request=request.or("username.ilike."+query+"%,display_name.ilike."+query+"%");
+      const result=await request;
+      preferred=result.data||[];
+    }
+    // If a member does not have matching friends, still find other people.
+    let publicRequest=supabase.from("public_profiles")
+      .select("id,username,display_name,avatar_url")
+      .limit(12);
+    if(query)publicRequest=publicRequest.or("username.ilike."+query+"%,display_name.ilike."+query+"%");
+    else publicRequest=publicRequest.order("username",{ascending:true});
+    const {data,error}=await publicRequest;
+    if(error)throw error;
+    const seen=new Set();
+    const results=[...preferred,...(data||[])].filter(user=>{
+      if(!user.id||!user.username||seen.has(user.id))return false;
+      seen.add(user.id);return true;
+    }).slice(0,10).map(user=>({
+      id:user.id,username:user.username,display_name:user.display_name,
+      avatar_url:user.avatar_url,is_friend:friends.includes(user.id)
     }));
-
-    mentionCache[cacheKey] = results;
+    mentionCache[cacheKey]={time:Date.now(),results};
     return results;
-  } catch (error) {
-    console.error("Mention search failed:", error);
-    return [];
-  }
+  }catch(error){console.warn("Mention search unavailable",error);return [];}
 }
 
 /**
@@ -61,6 +70,7 @@ export function closeMentionDropdown() {
   }
   currentSearchTerm = "";
   activeMentionField = null;
+  mentionRequest++;
 }
 
 /**
@@ -69,22 +79,33 @@ export function closeMentionDropdown() {
 async function showMentionDropdown(field, searchTerm) {
   // Remove existing dropdown
   closeMentionDropdown();
-
+  const request = ++mentionRequest;
   const suggestions = await searchUsersForMention(searchTerm);
-  if (suggestions.length === 0) return;
+  if (request !== mentionRequest || !field.isConnected || document.activeElement !== field || !suggestions.length) return;
 
   const rect = field.getBoundingClientRect();
+  // Android's virtual keyboard reduces visualViewport, not always innerHeight.
+  const viewport=window.visualViewport;
+  const viewTop=viewport?.offsetTop || 0;
+  const viewBottom=viewTop+(viewport?.height || window.innerHeight);
+  const menuHeight=Math.min(260,Math.max(100,viewBottom-viewTop-20));
+  const roomBelow=viewBottom-rect.bottom;
+  const top=roomBelow>=160 ? rect.bottom+5 : Math.max(viewTop+8,rect.top-menuHeight-6);
   const dropdown = document.createElement("div");
   dropdown.className = "mention-dropdown";
+  dropdown.setAttribute("role","listbox");
+  dropdown.setAttribute("aria-label","Mention a community member");
   dropdown.style.cssText = `
     position: fixed;
-    top: ${rect.bottom + 5}px;
-    left: ${rect.left}px;
-    background: white;
+    top: ${Math.min(top,viewBottom-70)}px;
+    left: ${Math.max(8,Math.min(rect.left,innerWidth-Math.min(300,innerWidth-16)-8))}px;
+    width: min(300px, calc(100vw - 16px));
+    background: var(--color-surface, #ffffff);
+    color: var(--color-text, #111827);
     border: 1px solid #ddd;
     border-radius: 8px;
     max-width: 300px;
-    max-height: 300px;
+    max-height: ${menuHeight}px;
     overflow-y: auto;
     z-index: 10000;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -119,6 +140,11 @@ async function showMentionDropdown(field, searchTerm) {
     handle.style.cssText = "font-size: 12px; color: #999;";
     handle.textContent = `@${user.username || ""}`;
     copy.append(name, handle);
+    if(user.is_friend){
+      const badge=document.createElement("small");badge.textContent="Friend";
+      badge.style.cssText="color:var(--color-primary,#0f766e);font-weight:700";
+      copy.append(badge);
+    }
     item.append(img, copy);
 
     item.addEventListener("mouseover", () => {
@@ -128,6 +154,10 @@ async function showMentionDropdown(field, searchTerm) {
       item.style.background = "transparent";
     });
 
+    item.setAttribute("role","option");
+    item.setAttribute("aria-label",`Mention @${user.username}`);
+    // Keep the textarea focused so its caret position is preserved.
+    item.addEventListener("pointerdown",event=>event.preventDefault());
     item.addEventListener("click", () => {
       insertMention(field, user.username, searchTerm);
       closeMentionDropdown();
@@ -148,9 +178,12 @@ export function insertMention(field, username, searchTerm) {
   const text = field.value;
   const cursorPos = field.selectionStart;
   
-  // Find the @ symbol
-  let atIndex = text.lastIndexOf("@", cursorPos - 1);
-  if (atIndex === -1) atIndex = 0;
+  // Only replace the mention token immediately before the caret. Never
+  // overwrite an unrelated earlier @ mention or an email address.
+  const prefix=text.slice(0,cursorPos);
+  const match=prefix.match(/(^|[^\w@])@([a-z0-9_]*)$/i);
+  if (!match) return;
+  const atIndex=cursorPos-match[2].length-1;
 
   // Replace the @ with mention
   const before = text.substring(0, atIndex);
@@ -237,10 +270,13 @@ export function setupMentionInput(field) {
       
       // Simple cycling through items
       let selected = activeMentionDropdown.querySelector("[data-selected]");
-      if (!selected && event.key === "ArrowDown") {
-        items[0].setAttribute("data-selected", "true");
-        items[0].style.background = "#f0f0f0";
-      }
+      const current=Array.from(items).indexOf(selected);
+      items.forEach(item=>{item.removeAttribute("data-selected");item.style.background="transparent";});
+      const next=(current+(event.key==="ArrowDown"?1:-1)+items.length)%items.length;
+      items[next].setAttribute("data-selected","true");
+      items[next].style.background="var(--color-surface-muted, #e5e7eb)";
+      items[next].scrollIntoView({block:"nearest"});
+
     }
 
     // Handle Enter to select mention

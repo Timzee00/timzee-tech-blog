@@ -22,7 +22,9 @@ import {
   reportAppError
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
+import { safeNotificationPath } from "./notification-links.mjs";
 import "./nav.js";
+import { submitModerationReport } from "./moderation-reports.mjs";
 
 const state = {
   user: null,
@@ -31,6 +33,10 @@ const state = {
   friendship: null,
   friendCount: null,
   friendSummary: [],
+  followsCreator: false,
+  staffMessageAccess: false,
+  followersCount: 0,
+  followingCount: 0,
   activity: {
     topics: [],
     comments: [],
@@ -62,6 +68,61 @@ async function isUsernameAvailable(username, currentId) {
 }
 
 let setActiveProfileSection = null;
+const VIDEO_PAGE = 24;
+let profileVideoOffset = 0;
+let profileVideosLoaded = false;
+let profileVideosLoading = false;
+async function loadProfileVideos({ append = false } = {}) {
+  const target=document.getElementById("profileVideoGallery");
+  const more=document.getElementById("profileVideoMore");
+  if(!target || profileVideosLoading || !state.viewingId) return;
+  profileVideosLoading=true;
+  if(more)more.disabled=true;
+  const offset=append?profileVideoOffset:0;
+  try {
+    const {data,error}=await supabase.from("videos")
+      .select("id,title,thumbnail_url,view_count,created_at")
+      .eq("user_id",state.viewingId).eq("is_public",true)
+      .order("created_at",{ascending:false})
+      .range(offset,offset+VIDEO_PAGE-1);
+    if(error)throw error;
+    const rows=data||[];
+    if(!append)target.replaceChildren();
+    if(!append && !rows.length) {
+      const empty=document.createElement("div");empty.className="callout";
+      empty.textContent="No public videos yet.";
+      target.append(empty);
+    }
+    for(const video of rows) {
+      const link=document.createElement("a");
+      link.className="profile-video-tile";
+      link.href="video.html?id="+encodeURIComponent(video.id);
+      const media=document.createElement("div");media.className="profile-video-tile-media";
+      if(video.thumbnail_url && isSafeUrl(video.thumbnail_url)){
+        const img=document.createElement("img");img.src=video.thumbnail_url;
+        img.alt="";img.loading="lazy";media.append(img);
+      } else {
+        const fallback=document.createElement("span");fallback.textContent="Video";media.append(fallback);
+      }
+      const views=document.createElement("span");views.className="profile-video-tile-views";
+      views.textContent="▶ "+Number(video.view_count||0).toLocaleString();
+      media.append(views);
+      const title=document.createElement("span");title.className="profile-video-tile-title";
+      title.textContent=video.title||"Untitled video";
+      link.append(media,title);target.append(link);
+    }
+    profileVideoOffset=offset+rows.length;
+    profileVideosLoaded=true;
+    if(more)more.hidden=rows.length<VIDEO_PAGE;
+  }catch(error){
+    console.warn("Profile videos could not be loaded:",error);
+    const note=document.createElement("div");note.className="callout";note.textContent="Videos could not load. Try again.";
+    if(!append)target.replaceChildren(note);else target.append(note);
+    if(more)more.hidden=false;
+  }finally {profileVideosLoading=false;if(more)more.disabled=false;}
+}
+document.getElementById("profileVideoMore")?.addEventListener("click",()=>void loadProfileVideos({append:true}));
+
 
 function renderAuthActions() {
   const actions = document.getElementById("authActions");
@@ -259,6 +320,31 @@ function renderProfileFriends() {
     .join("");
 }
 
+function plainDisplayName(value) {
+  const raw=String(value||"Member");
+  const cleaned=raw.replace(/<[^>]*>/g,"").replace(/[<>]/g,"").trim();
+  return cleaned && !/^(?:img\s+src|onerror\s*=)/i.test(cleaned) ? cleaned.slice(0,80) : "Member";
+}
+function setupProfilePhotoViewer(){
+  const modal=document.getElementById("profileImageDialog");
+  const image=document.getElementById("profileImageFull");
+  if(!modal||!image)return;
+  document.querySelectorAll("[data-profile-image]").forEach(button=>button.addEventListener("click",()=>{
+    const kind=button.dataset.profileImage;
+    const source=document.getElementById(kind==="cover"?"profileCoverImg":"profileAvatar");
+    const url=source?.currentSrc||source?.src;
+    if(!url || !isSafeUrl(url))return;
+    image.src=url;
+    image.alt=kind==="cover"?"Full cover photo":"Full profile photo";
+    document.getElementById("profileImageCaption").textContent=kind==="cover"?"Cover photo":"Profile photo";
+    if(!modal.open)modal.showModal();
+  }));
+  document.getElementById("closeProfileImage")?.addEventListener("click",()=>modal.close());
+  modal.addEventListener("click",event=>{if(event.target===modal)modal.close();});
+  modal.addEventListener("close",()=>image.removeAttribute("src"));
+}
+setupProfilePhotoViewer();
+
 function renderProfile() {
   const avatar = document.getElementById("profileAvatar");
   const cover = document.getElementById("profileCoverImg");
@@ -274,7 +360,7 @@ function renderProfile() {
     cover.src = state.profile?.cover_url || "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1200&q=80";
   }
   if (name) {
-    const displayName = state.profile?.display_name || "Member";
+    const displayName = plainDisplayName(state.profile?.display_name || "Member");
     const badge = state.profile?.is_verified
       ? `<span class="verified-badge" title="Verified">✓</span>`
       : "";
@@ -355,7 +441,12 @@ function setupProfileTabs() {
     if (!isSelf && ["settings", "bookmarks", "notifications"].includes(tabId)) {
       tabId = "overview";
     }
-    tabs.forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tabId));
+    tabs.forEach((btn) => {
+      const active=btn.dataset.tab===tabId;
+      btn.classList.toggle("active",active);
+      btn.setAttribute("aria-pressed",String(active));
+    });
+    if(tabId==="videos" && !profileVideosLoaded) void loadProfileVideos();
     sections.forEach((section) => {
       section.classList.toggle("active", section.dataset.profileSection === tabId);
     });
@@ -371,6 +462,50 @@ function setupProfileTabs() {
   setActive(defaultTab);
 }
 
+async function loadCreatorFollows() {
+  if (!state.viewingId) return;
+  const followerQuery=supabase.from("follows").select("id",{count:"exact",head:true})
+    .eq("target_type","author").eq("target_id",state.viewingId);
+  const followingQuery=supabase.from("follows").select("id",{count:"exact",head:true})
+    .eq("follower_id",state.viewingId).eq("target_type","author");
+  const ownQuery=state.user?.id && state.user.id!==state.viewingId
+    ? supabase.from("follows").select("id").eq("follower_id",state.user.id)
+        .eq("target_type","author").eq("target_id",state.viewingId).maybeSingle()
+    : Promise.resolve({data:null,error:null});
+  const [followers,following,own]=await Promise.all([followerQuery,followingQuery,ownQuery]);
+  if(followers.error || following.error || own.error) {
+    console.warn("Follow summary is unavailable",followers.error||following.error||own.error);
+    return;
+  }
+  state.followersCount=followers.count||0;
+  state.followingCount=following.count||0;
+  state.followsCreator=Boolean(own.data);
+}
+
+async function toggleCreatorFollow(button) {
+  if(!state.user || state.user.id===state.viewingId)return;
+  button.disabled=true;
+  const wasFollowing=state.followsCreator;
+  try{
+    const query=supabase.from("follows");
+    const result=wasFollowing
+      ? await query.delete().eq("follower_id",state.user.id)
+          .eq("target_type","author").eq("target_id",state.viewingId)
+      : await query.insert({
+          id:crypto.randomUUID(),follower_id:state.user.id,
+          target_type:"author",target_id:state.viewingId
+        });
+    if(result.error)throw result.error;
+    state.followsCreator=!wasFollowing;
+    state.followersCount=Math.max(0,state.followersCount+(wasFollowing?-1:1));
+    renderProfileStats();renderProfileActions();
+  }catch(error) {
+    console.warn("Creator follow update failed",error);
+    window.appUI?.toast?.("Could not update creator follow. Please retry.",{type:"error"});
+    button.disabled=false;
+  }
+}
+
 function renderProfileStats() {
   const stats = document.getElementById("profileStats");
   if (!stats) return;
@@ -381,6 +516,8 @@ function renderProfileStats() {
     { label: "Topics", value: state.activity.topics.length },
     { label: "Comments", value: state.activity.comments.length },
     { label: "Shares", value: state.activity.shares.length },
+    { label: "Followers", value: state.followersCount },
+    { label: "Following", value: state.followingCount },
     { label: "Friends", value: friendValue },
     { label: "Reputation", value: `${points} · ${level}` }
   ]
@@ -542,8 +679,8 @@ function renderNotifications() {
       const title = escapeHTML(note.title || "Notification");
       const body = escapeHTML(note.body || "");
       const timeLabel = timeAgo(note.created_at);
-      const linkTarget = note.link || note.link_url || "";
-      const link = linkTarget ? `<a href="${linkTarget}">Open</a>` : "";
+      const linkTarget = safeNotificationPath(note.link || note.link_url || "", location.origin);
+      const link = linkTarget ? `<a href="${escapeHTML(linkTarget)}">Open</a>` : "";
       return `
         <div class="notification-item ${unread ? "unread" : ""}" data-id="${note.id}">
           <strong>${title}</strong>
@@ -617,7 +754,7 @@ async function declineFriendRequest() {
 
 async function removeFriendship() {
   if (!state.friendship) return;
-  if (!confirm("Remove this friend?")) return;
+  if (!await window.appUI.confirm("Remove this friend?")) return;
   await supabase.from("friendships").delete().eq("id", state.friendship.id);
   state.friendship = null;
   renderProfileActions();
@@ -625,7 +762,7 @@ async function removeFriendship() {
 
 async function blockUser() {
   if (!state.user || !state.viewingId) return;
-  if (!confirm("Block this user? You will no longer receive messages.")) return;
+  if (!await window.appUI.confirm("Block this user? You will no longer receive messages.")) return;
   const now = new Date().toISOString();
   if (state.friendship) {
     await supabase
@@ -691,9 +828,30 @@ function renderProfileActions() {
     chat.textContent = "Open Chat";
     actions.appendChild(edit);
     actions.appendChild(chat);
+    const videosLink=document.createElement("a");videosLink.href="profile.html?tab=videos";
+    videosLink.className="btn ghost";videosLink.textContent="My videos";
+    actions.appendChild(videosLink);
     return;
   }
 
+  const reportUserBtn=document.createElement("button");
+  reportUserBtn.type="button";
+  reportUserBtn.className="btn ghost";
+  reportUserBtn.textContent="Report user";
+  reportUserBtn.addEventListener("click",async()=>{
+    const reason=await window.appUI.prompt("Why are you reporting this account? Please describe the issue.","");
+    if(reason===null)return;
+    reportUserBtn.disabled=true;
+    try {
+      await submitModerationReport({
+        reporterId:state.user.id,contentType:"user",contentId:state.viewingId,reason
+      });
+      window.appUI.toast("Account report submitted for moderator review.",{tone:"success"});
+    } catch(error) {
+      window.appUI.toast(error.message||"Could not submit report.",{tone:"error"});
+    } finally{reportUserBtn.disabled=false;}
+  });
+  actions.append(reportUserBtn);
   const allowRequests = state.profile?.allow_requests !== false;
   const allowMessages = state.profile?.allow_messages !== false;
 
@@ -713,6 +871,23 @@ function renderProfileActions() {
     return;
   }
 
+  const creatorFollow=document.createElement("button");
+  creatorFollow.type="button";creatorFollow.className=state.followsCreator?"btn ghost":"btn";
+  creatorFollow.textContent=state.followsCreator?"Following ✓":"Follow creator";
+  creatorFollow.setAttribute("aria-pressed",String(state.followsCreator));
+  creatorFollow.addEventListener("click",()=>void toggleCreatorFollow(creatorFollow));
+  actions.append(creatorFollow);
+
+  // Staff outreach is independent of friendship. Role eligibility is
+  // verified by a server-owned Supabase function, never editable metadata.
+  if(state.staffMessageAccess && allowMessages && state.friendship?.status!=="accepted"){
+    const staffChat=document.createElement("a");
+    staffChat.className="btn";
+    staffChat.href="chat.html?user="+encodeURIComponent(state.viewingId);
+    staffChat.textContent="Message as staff";
+    staffChat.setAttribute("aria-label","Start an official staff conversation");
+    actions.append(staffChat);
+  }
   if (!state.friendship) {
     const addBtn = document.createElement("button");
     addBtn.className = "btn";
@@ -1146,7 +1321,12 @@ async function boot() {
   }
 
   await loadFriendship();
+  if(state.user && state.viewingId!==state.user.id){
+    const permission=await supabase.rpc("can_start_staff_dm");
+    state.staffMessageAccess=permission.data===true&&!permission.error;
+  }
   await loadFriendSummary();
+  await loadCreatorFollows();
   await loadActivity();
   await loadBookmarks();
   await loadNotifications();
@@ -1159,6 +1339,7 @@ async function boot() {
   renderActivity();
   renderBookmarks();
   renderNotifications();
+  document.getElementById("profileVideoUpload").hidden = !state.user || state.user.id !== state.viewingId;
   setupProfileTabs();
   setupNotificationTabs();
   renderProfileActions();

@@ -3,6 +3,8 @@ import {
   SITE_URL,
   getCurrentUser,
   getSession,
+  getAuthCallbackError,
+  hadOAuthCallback,
   signIn,
   signInWithProvider,
   signUp,
@@ -15,6 +17,7 @@ import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import { setupReveal } from "./reveal.js";
 import { extractErrorMessage, reportAppError } from "./utils.js";
 import "./nav.js";
+import { getAuthRedirectOrigin, safeAuthNext, makeAuthRedirect } from "./auth-redirects.mjs";
 
 function setMessage(target, message, show = true) {
   if (!target) return;
@@ -51,6 +54,7 @@ function setupPasswordToggles() {
       const label = visible ? "Hide password" : "Show password";
       toggle.setAttribute("aria-label", label);
       toggle.setAttribute("title", label);
+      toggle.setAttribute("aria-pressed", String(visible));
     };
 
     toggle.addEventListener("click", () => {
@@ -84,10 +88,10 @@ function normalizeAuthError(error, context = "generic") {
 
   if (context === "oauth") {
     if (lower.includes("provider is not enabled")) {
-      return "This sign-in provider is not enabled in Supabase yet. Enable it under Authentication → Providers.";
+      return "This sign-in option is unavailable. Please use your email and password.";
     }
     if (lower.includes("redirect")) {
-      return "The sign-in redirect URL is not configured correctly in Supabase. Check Authentication → URL Configuration.";
+      return "This sign-in option is unavailable. Please use your email and password.";
     }
     if (lower.includes("access_denied") || lower.includes("cancel")) {
       return "Sign-in was cancelled. You can try again whenever you're ready.";
@@ -141,23 +145,11 @@ function clearHash() {
 }
 
 function getSafeNextUrl(rawNext) {
-  if (!rawNext) return "index.html";
-  try {
-    const siteOrigin = new URL(SITE_URL).origin;
-    const candidate = new URL(rawNext, `${SITE_URL}/`);
-    if (candidate.origin !== siteOrigin) return "index.html";
-    if (candidate.protocol !== "https:" && candidate.protocol !== "http:") return "index.html";
-    const path = `${candidate.pathname}${candidate.search}${candidate.hash}`;
-    return path.startsWith("/") ? path.slice(1) || "index.html" : path || "index.html";
-  } catch {
-    return "index.html";
-  }
+  return safeAuthNext(rawNext, window.location.origin);
 }
 
 function buildOAuthRedirect(nextUrl) {
-  const target = new URL(`${SITE_URL}/login.html`);
-  if (nextUrl && nextUrl !== "index.html") target.searchParams.set("next", nextUrl);
-  return target.toString();
+  return makeAuthRedirect(getAuthRedirectOrigin(window.location.origin, SITE_URL), nextUrl);
 }
 
 function isOAuthCallback() {
@@ -285,6 +277,9 @@ async function handleOAuthSignIn(provider, button, loginMessage, nextUrl) {
 }
 
 async function boot() {
+  // Capture the callback before any awaited settings request: the Supabase
+  // PKCE exchange may remove ?code= from the URL while settings are loading.
+  const startedWithOAuthCallback = hadOAuthCallback || isOAuthCallback();
   setupReveal();
   setupPasswordToggles();
   const settings = await fetchSettings();
@@ -310,7 +305,9 @@ async function boot() {
   const resetMessage = document.getElementById("resetMessage");
   const googleSignIn = document.getElementById("googleSignIn");
   const appleSignIn = document.getElementById("appleSignIn");
-  const redirectTo = SITE_URL ? `${SITE_URL}/login.html?recovery=1` : undefined;
+  const recoveryRedirect = new URL(makeAuthRedirect(getAuthRedirectOrigin(window.location.origin, SITE_URL)));
+  recoveryRedirect.searchParams.set("recovery", "1");
+  const redirectTo = recoveryRedirect.toString();
 
   const setView = (view) => {
     if (!switcher) return;
@@ -323,6 +320,9 @@ async function boot() {
     if (signupPanel) signupPanel.setAttribute("aria-hidden", view !== "signup");
     if (resetPanel) resetPanel.setAttribute("aria-hidden", view !== "reset");
     if (forgotPanel) forgotPanel.setAttribute("aria-hidden", view !== "forgot");
+    [loginPanel, signupPanel, resetPanel, forgotPanel].forEach(panel => { if (panel) panel.inert = panel.getAttribute("aria-hidden") === "true"; });
+    const currentPanel = switcher.querySelector(`.auth-panel-${view}`);
+    if (document.activeElement?.closest(".auth-switcher")) currentPanel?.querySelector("input")?.focus();
   };
 
   const hashParams = getHashParams();
@@ -331,20 +331,25 @@ async function boot() {
   const accessToken = hashParams.get("access_token");
   const refreshToken = hashParams.get("refresh_token");
   const isRecovery = recoveryType === "recovery" || recoveryType === "password_recovery" || queryParams.get("recovery") === "1";
-  const oauthCallback = isOAuthCallback() && !isRecovery;
+  const oauthCallback = startedWithOAuthCallback && !isRecovery;
+  const callbackExchangeError = await getAuthCallbackError();
 
   let initialView = switcher?.dataset.view || "login";
+  let recoveryAuthorized = false;
   if (isRecovery) {
     initialView = "reset";
-    if (accessToken) {
+    if (accessToken && refreshToken) {
       const { error } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken
       });
+      recoveryAuthorized = !error;
       if (error) setMessage(resetMessage, error.message || "Recovery session failed.");
-    } else {
-      const recoverySession = await getSession();
-      if (!recoverySession) setMessage(resetMessage, "Recovery link invalid or expired. Request a new one.");
+    } else if (startedWithOAuthCallback && !callbackExchangeError) {
+      recoveryAuthorized = Boolean(await getSession());
+    }
+    if (!recoveryAuthorized) {
+      setMessage(resetMessage, "Recovery link invalid or expired. Please request a new one.");
     }
     clearHash();
   }
@@ -354,8 +359,8 @@ async function boot() {
     hashParams.get("error") ||
     queryParams.get("error_description") ||
     queryParams.get("error");
-  if (callbackError) {
-    setMessage(loginMessage, normalizeAuthError({ message: callbackError }, "oauth"));
+  if (callbackError || callbackExchangeError) {
+    setMessage(loginMessage, normalizeAuthError(callbackExchangeError || { message: callbackError }, "oauth"));
     clearHash();
     if (window.location.search.includes("error")) {
       const clean = new URL(window.location.href);
@@ -372,7 +377,7 @@ async function boot() {
     if (profileCheck?.blocked) {
       await signOut();
       setMessage(loginMessage, profileCheck.message || "Account access is restricted.");
-    } else if (oauthCallback) {
+    } else if (oauthCallback && !callbackError && !callbackExchangeError) {
       clearHash();
       window.location.replace(nextUrl);
       return;
@@ -419,8 +424,8 @@ async function boot() {
   if (forgotToggle && forgotForm) {
     forgotToggle.addEventListener("click", () => {
       setMessage(forgotMessage, "", false);
-      const loginEmail = document.getElementById("loginEmail")?.value.trim();
-      if (loginEmail) document.getElementById("forgotEmail").value = loginEmail;
+      const previousEmail = document.getElementById("loginEmail")?.value.trim();
+      if (previousEmail) document.getElementById("forgotEmail").value = previousEmail;
       setView("forgot");
       document.getElementById("forgotEmail")?.focus();
     });
@@ -438,7 +443,7 @@ async function boot() {
           setMessage(forgotMessage, normalizeAuthError(result.error, "forgot"));
           return;
         }
-        setMessage(forgotMessage, "If an account exists for this email, a password reset link will arrive shortly. Check your inbox and spam folder.");
+        setMessage(forgotMessage, "If this email belongs to an account, a reset link will arrive shortly. Check your inbox and spam folder.");
       } catch (error) {
         setMessage(forgotMessage, normalizeAuthError(error, "forgot"));
       } finally {
@@ -471,19 +476,18 @@ async function boot() {
   if (resetForm) {
     resetForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const password = document.getElementById("resetPassword").value.trim();
-      const confirm = document.getElementById("resetPasswordConfirm").value.trim();
-      if (!password || password.length < 6) {
-        setMessage(resetMessage, "Password must be at least 6 characters.");
+      const password = document.getElementById("resetPassword").value;
+      const confirm = document.getElementById("resetPasswordConfirm").value;
+      if (!password || password.length < 8) {
+        setMessage(resetMessage, "Password must be at least 8 characters.");
         return;
       }
       if (password !== confirm) {
         setMessage(resetMessage, "Passwords do not match.");
         return;
       }
-      const recoverySession = await getSession();
-      if (!recoverySession) {
-        setMessage(resetMessage, "Recovery session missing or expired. Request a new reset link.");
+      if (!recoveryAuthorized || !await getSession()) {
+        setMessage(resetMessage, "A valid password-reset link is required. Request a new reset email.");
         return;
       }
       const result = await supabase.auth.updateUser({ password });
@@ -494,6 +498,9 @@ async function boot() {
       await signOut();
       resetForm.reset();
       setMessage(loginMessage, "Password updated successfully. Please sign in with your new password.");
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("recovery");
+      history.replaceState({}, document.title, clean.pathname + clean.search);
       setView("login");
     });
   }

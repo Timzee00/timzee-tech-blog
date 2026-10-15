@@ -6,13 +6,13 @@ function tokenMatches(actual,expected){
   const a=Buffer.from(actual),b=Buffer.from(expected);
   return a.length===b.length && timingSafeEqual(a,b);
 }
-const suppressedEventKinds={
-  hard_bounce:"hard_bounce",
-  hardbounce:"hard_bounce",
-  spam:"spam",
-  invalid:"invalid",
-  blocked:"blocked"
-};
+const eventKinds=Object.freeze({
+  delivered:"delivered",hard_bounce:"hard_bounce",hardbounce:"hard_bounce",
+  soft_bounce:"soft_bounce",softbounce:"soft_bounce",
+  invalid_email:"invalid",invalid:"invalid",
+  spam:"spam",complaint:"spam",complained:"spam",
+  blocked:"blocked",deferred:"deferred"
+});
 exports.handler=async event=>{
   if(event.httpMethod!=="POST")return reply(405,{error:"Method not allowed"});
   const expected=process.env.BREVO_WEBHOOK_TOKEN;
@@ -28,14 +28,26 @@ exports.handler=async event=>{
   const batch=Array.isArray(events)?events:[events];
   if(batch.length>50)return reply(413,{error:"Too many events"});
   const supabase=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
-  let suppressed=0,ignored=0;
+  let suppressed=0,ignored=0,processed=0;
   for(const item of batch){
-    const kind=suppressedEventKinds[String(item?.event||"").toLowerCase()];
+    const kind=eventKinds[String(item?.event||"").toLowerCase().trim()];
     const email=String(item?.email||"").toLowerCase().trim();
     if(!kind||!email||email.length>320){ignored++;continue;}
-    const result=await supabase.rpc("register_email_suppression",{p_email:email,p_reason:kind});
-    if(result.error){console.error("Email suppression event persistence failed",result.error.message);return reply(503,{error:"Suppression update failed"});}
-    if(result.data)suppressed++;else ignored++;
+    const providerId=String(item["message-id"]||item.messageId||item.message_id||"").trim().slice(0,255);
+    // Brevo ts_event/ts are in seconds. ts_epoch may be milliseconds.
+    const rawTime=Number(item.ts_event ?? item.ts ?? item.ts_epoch);
+    const epochSeconds=rawTime>=1_000_000_000_000 ? Math.floor(rawTime/1000) : rawTime;
+    const eventEpoch=Number.isSafeInteger(epochSeconds) && epochSeconds>0 ? epochSeconds : null;
+    const result=await supabase.rpc("record_brevo_delivery_event",{
+      p_event:kind,p_email:email,p_message_id:providerId,p_event_epoch:eventEpoch
+    });
+    if(result.error){
+      console.error("Brevo delivery event persistence failed",result.error.message);
+      return reply(503,{error:"Provider event could not be recorded"});
+    }
+    if(result.data?.handled!==true){ignored++;continue;}
+    processed++;
+    if(result.data.suppressed) suppressed++;
   }
-  return reply(200,{ok:true,suppressed,ignored});
+  return reply(200,{ok:true,processed,suppressed,ignored});
 };

@@ -187,16 +187,22 @@ export async function getUserForPromotion(userId) {
 
 // Search users for promotion
 export async function searchUsersForPromotion(query) {
+  const search=String(query||"").trim();
+  if(search.length<2)return [];
   try {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, username, display_name, email, avatar_url")
-      .or(`username.ilike.%${query}%,display_name.ilike.%${query}%,email.ilike.%${query}%`)
-      .limit(10);
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error("Error searching users:", error);
+    const {data:session}=await supabase.auth.getSession();
+    const token=session?.session?.access_token;
+    if(!token)return [];
+    const response=await fetch("/.netlify/functions/search-staff-users?"+
+      new URLSearchParams({search,page:"1"}),{headers:{Authorization:"Bearer "+token},cache:"no-store"});
+    const body=await response.json();
+    if(!response.ok)throw Error(body.error||"User lookup unavailable");
+    return (body.users||[]).map(user=>({
+      id:user.id,display_name:user.display_name||"",username:user.username||"",
+      email:user.email||"",avatar_url:user.avatar_url||""
+    }));
+  } catch(error) {
+    console.warn("Staff user lookup failed:",error);
     return [];
   }
 }

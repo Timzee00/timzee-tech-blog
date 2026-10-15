@@ -1,9 +1,10 @@
+import { createSignedMediaCache } from "./signed-media-cache.mjs";
+import { getChatMediaPath } from "./chat-media-path.mjs";
 import { supabase, getCurrentUser } from "./supabase.js";
 
 const PUBLIC_BUCKET = "media";
 const CHAT_BUCKET = "chat-media";
 const CHAT_FOLDER = "direct-messages";
-const SIGNED_URL_TTL = 60 * 60;
 const REFRESH_BEFORE_SECONDS = 10 * 60;
 
 function getExtension(filename = "") {
@@ -18,18 +19,6 @@ function isChatMediaUrl(value = "") {
     return url.pathname.includes(`/storage/v1/object/sign/${CHAT_BUCKET}/`);
   } catch (_) {
     return false;
-  }
-}
-
-function getChatMediaPath(value = "") {
-  try {
-    const url = new URL(value, window.location.origin);
-    const marker = `/storage/v1/object/sign/${CHAT_BUCKET}/`;
-    const index = url.pathname.indexOf(marker);
-    if (index === -1) return "";
-    return decodeURIComponent(url.pathname.slice(index + marker.length));
-  } catch (_) {
-    return "";
   }
 }
 
@@ -48,11 +37,7 @@ function getTokenExpiry(urlValue = "") {
   }
 }
 
-async function requestChatSignedUrl(path) {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const accessToken = sessionData?.session?.access_token;
-  if (!accessToken) return "";
-
+async function signChatMedia(path, accessToken) {
   const response = await fetch("/.netlify/functions/chat-media-sign", {
     method: "POST",
     headers: {
@@ -60,6 +45,7 @@ async function requestChatSignedUrl(path) {
       Authorization: `Bearer ${accessToken}`
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(15000),
     body: JSON.stringify({ path })
   });
 
@@ -75,6 +61,19 @@ async function requestChatSignedUrl(path) {
   }
 
   return payload.signedUrl;
+}
+
+const signedMediaCache = createSignedMediaCache({
+  sign: signChatMedia,
+  expiresAt: url => getTokenExpiry(url) * 1000
+});
+supabase.auth.onAuthStateChange((_event, session) => {
+  signedMediaCache.setSession(session?.access_token || '');
+});
+async function requestChatSignedUrl(path) {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return signedMediaCache.get(path, data?.session?.access_token);
 }
 
 async function refreshChatMediaElement(element) {
@@ -94,12 +93,16 @@ async function refreshChatMediaElement(element) {
   try {
     const signedUrl = await requestChatSignedUrl(path);
     if (!signedUrl || !element.isConnected) return;
+    // The same DOM node may have been reused while signing was pending.
+    if ((element.getAttribute("src") || element.getAttribute("href") || "") !== source) return;
     if (element.hasAttribute("src")) element.setAttribute("src", signedUrl);
     if (element.hasAttribute("href")) element.setAttribute("href", signedUrl);
   } catch (error) {
     console.warn("Chat media refresh failed:", error);
   } finally {
     delete element.dataset.chatMediaRefreshing;
+    const current = element.getAttribute("src") || element.getAttribute("href") || "";
+    if (element.isConnected && current !== source) void refreshChatMediaElement(element);
   }
 }
 

@@ -68,7 +68,10 @@ export function mergePreferences(value) { return deepMerge(DEFAULT_USER_PREFEREN
 export function readLocalPreferences(userId = "guest") { try { return mergePreferences(JSON.parse(localStorage.getItem(storageKey(userId)) || "{}")); } catch (_) { return mergePreferences(); } }
 export function writeLocalPreferences(userId, preferences) {
   const merged = mergePreferences(preferences);
-  try { localStorage.setItem(storageKey(userId || "guest"), JSON.stringify(merged)); } catch (_) {}
+  try {
+    localStorage.setItem(storageKey(userId || "guest"), JSON.stringify(merged));
+    localStorage.setItem("timzee-ui-appearance", JSON.stringify(merged.appearance || {}));
+  } catch (_) {}
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("timzee:preferences", { detail: merged }));
   return merged;
 }

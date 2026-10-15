@@ -201,3 +201,15 @@
 }
 
 .level-card.selected { border-color: var(--color-primary, #0f766e); background: rgba(15,118,110,0.06); }
+
+/* Editorial figures remain contained and legible in previews and public posts. */
+.curator-inline-image, .curator-preview-cover {max-width:100%;min-width:0;margin:clamp(16px,3vw,28px) 0;}
+.curator-inline-image img, .curator-preview-cover img {display:block;width:100%;height:auto;max-width:100%;max-height:540px;object-fit:contain;border-radius:12px;}
+.curator-inline-image figcaption {font-size:12px;line-height:1.55;color:var(--color-text-muted);margin-top:8px;}
+.curator-post-preview-dialog .post-shell,.curator-post-preview-dialog .post-content,
+.curator-post-preview-dialog .post-article,.curator-post-preview-dialog .curator-preview-gallery {
+  box-sizing:border-box;min-width:0;max-width:100%;overflow-wrap:anywhere;
+}
+.curator-post-preview-dialog iframe,.curator-post-preview-dialog video {
+  display:block;width:100%;max-width:100%;aspect-ratio:16/9;height:auto;
+}

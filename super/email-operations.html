@@ -2,25 +2,44 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Email Operations | Timzee Tech Hub</title>
 <link rel="stylesheet" href="../assets/css/admin.css"><script defer src="../assets/js/theme-init.js"></script>
-<style>body{font-family:system-ui,sans-serif}main{max-width:1000px;margin:30px auto;padding:0 20px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0}.metric{padding:22px;border:1px solid #c7d4d4;border-radius:14px;background:var(--card-solid,#fff);color:var(--ink,#152e32)}.metric strong{display:block;font-size:2rem;margin-top:8px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}button{cursor:pointer}#status{margin:18px 0}</style></head>
+<style>body{font-family:system-ui,sans-serif}main{max-width:1000px;margin:30px auto;padding:0 20px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0}.metric{padding:22px;border:1px solid #c7d4d4;border-radius:14px;background:var(--card-solid,#fff);color:var(--ink,#152e32)}.metric strong{display:block;font-size:2rem;margin-top:8px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}button{cursor:pointer}#status{margin:18px 0}.review-panel{margin-top:28px}.review-list{display:grid;gap:14px}.review-card{border:1px solid #9ca3af70;border-radius:14px;padding:18px;background:var(--card-solid,#fff);color:var(--ink,#152e32)}.review-card header{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}.review-card p{overflow-wrap:anywhere}.review-form{display:grid;gap:10px;margin-top:14px}.review-form label{font-weight:600;display:grid;gap:4px}.review-form select,.review-form textarea{width:100%;font:inherit;color:inherit;background:var(--card-solid,#fff);padding:10px;border:1px solid #96a3a3;border-radius:9px}.review-form textarea{min-height:90px;resize:vertical}.review-form button{justify-self:start}.review-id{font:inherit;word-break:break-all;font-size:.84rem;opacity:.8}.review-help{font-size:.88rem;opacity:.85}</style></head>
 <body class="admin-shell">
 <main><a href="panel.html">← Back to Super Admin</a><h1>Email Operations</h1><p>Read-only operational dashboard. Campaign sending is not enabled here.</p>
-<div class="toolbar"><button class="btn" type="button" id="refresh">Refresh metrics</button><span id="deliveryState" aria-live="polite"></span></div>
+<div class="toolbar"><button class="btn" type="button" id="refresh">Refresh metrics</button><button class="btn ghost" type="button" id="verifyBrevo">Verify Brevo connection</button><button class="btn ghost" type="button" id="digestPreview">Preview eligible digests</button><button class="btn ghost" type="button" id="inactivityPreview">Preview inactive members</button><button class="btn ghost" type="button" id="legacyRecovery">Existing-user recovery overview</button><span id="deliveryState" aria-live="polite"></span></div>
 <p role="status" id="status">Authenticating…</p>
 <div id="metrics" class="metrics" aria-live="polite"></div>
-<p>Metrics reflect queued receipt emails, not Supabase Auth SMTP messages. An empty queue does not prove successful SMTP delivery.</p>
+<section id="legacyRecoveryPanel" class="review-panel" hidden><h2>Existing member recovery overview</h2><p>Read-only counts based on available activity signals, not proof that someone stopped visiting. Newsletter consent does not authorize inactivity marketing. No emails are queued.</p><div id="legacyRecoveryMetrics" class="metrics" aria-live="polite"></div><p id="legacyRecoveryNote" role="status"></p></section>
+<p>Metrics cover queued Timzee Tech Hub receipt emails only. “Accepted” is not “delivered.” Provider delivery outcomes depend on webhook activation. Supabase Auth SMTP messages are not included in these job counts.</p>
+<section class="review-panel" aria-labelledby="reviewHeading">
+<h2 id="reviewHeading">Manual delivery reconciliation</h2>
+<p>Review uncertain sends against Brevo transaction logs before recording a decision. This review does not queue, resend, or delete emails.</p>
+<div class="toolbar"><button class="btn ghost" type="button" id="refreshReviews">Refresh review queue</button><span id="reviewStatus" role="status" aria-live="polite">Not loaded</span></div>
+<div id="reviewList" class="review-list" aria-live="polite"></div>
+</section>
 </main>
 <script type="module">
 import {supabase,getSession} from "../assets/js/supabase.js";
 const status=document.getElementById("status"),metrics=document.getElementById("metrics"),delivery=document.getElementById("deliveryState");
-const labels={pending:"Pending",processing:"Processing",sent:"Sent",failed:"Failed",suppressed:"Suppressed",sent_last_24h:"Sent (24 hours)",total:"Total jobs"};
+const labels={pending:"Pending",processing:"Processing",sent:"Accepted by Brevo",delivered:"Confirmed delivered",awaiting_delivery_confirmation:"Awaiting delivery update",provider_failed:"Bounced / rejected",failed:"Failed jobs",quarantined:"Needs manual review",reviewed_cases:"Reviewed / closed",suppressed:"Suppressed",sent_last_24h:"Accepted (24 hours)",total:"Total jobs"};
+async function readOperationsResponse(response){
+  let data=null;
+  try{data=await response.json();}catch{}
+  if(!data){
+    if(response.status===404)throw Error("Email function is missing from this Netlify deploy. Rebuild the updated branch when credits return.");
+    if(response.status===401||response.status===403)throw Error("Your admin session has expired or this account lacks access.");
+    throw Error("Email service response is unavailable (HTTP "+response.status+"). Check deployed Functions.");
+  }
+  if(!response.ok)throw Error((data.error||"Email service unavailable")+
+    (data.diagnostic_code?" ["+data.diagnostic_code+"]":""));
+  return data;
+}
 async function refresh(){
   const session=await getSession();
   if(!session?.access_token){status.textContent="Sign in as super admin to view email metrics.";return;}
   status.textContent="Loading…";
   try{
     const response=await fetch("/.netlify/functions/email-operations",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});
-    const body=await response.json();
+    const body=await readOperationsResponse(response);
     if(!response.ok)throw new Error(body.error||"Metrics unavailable");
     delivery.textContent=body.delivery_enabled?"Delivery enabled":"Delivery paused";
     metrics.replaceChildren();
@@ -34,5 +53,154 @@ async function refresh(){
   }catch(error){metrics.replaceChildren();status.textContent=error.message||"Unable to load email metrics";}
 }
 document.getElementById("refresh").addEventListener("click",refresh);
+document.getElementById("verifyBrevo").addEventListener("click",async()=>{
+  const button=document.getElementById("verifyBrevo");
+  const session=await getSession();
+  if(!session?.access_token){status.textContent="Sign in as super admin first.";return;}
+  button.disabled=true;button.textContent="Verifying…";
+  status.textContent="Checking Brevo API credentials securely (no email will be sent)…";
+  try{
+    const response=await fetch("/.netlify/functions/email-operations?verifyProvider=1",{
+      headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
+    });
+    const result=await readOperationsResponse(response);
+    status.textContent=result.authenticated?"Brevo API authentication successful. No email was sent.":
+      (result.error||result.message||"Brevo connection could not be verified.");
+  }catch(error){status.textContent="Connection test failed: "+(error?.message||"Network error");}
+  finally{button.disabled=false;button.textContent="Verify Brevo connection";}
+});
+
+async function loadReviews(){
+  const list=document.getElementById("reviewList");
+  const feedback=document.getElementById("reviewStatus");
+  const session=await getSession();
+  if(!session?.access_token){feedback.textContent="Sign in as super admin to review cases.";return;}
+  feedback.textContent="Loading review queue…";list.replaceChildren();
+  try{
+    const response=await fetch("/.netlify/functions/email-operations?review=1",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});
+    const data=await readOperationsResponse(response);
+    if(!response.ok)throw new Error(data.error||"Could not load reviews");
+    const cases=Array.isArray(data.cases)?data.cases:[];
+    feedback.textContent=cases.length? `${cases.length} awaiting review (up to 25 shown)`:"No uncertain deliveries awaiting review";
+    for(const item of cases){
+      const card=document.createElement("article");card.className="review-card";
+      const header=document.createElement("header");
+      const title=document.createElement("strong");title.textContent=item.template||"Transactional email";
+      const date=document.createElement("time");date.textContent=item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable";
+      header.append(title,date);card.append(header);
+      const ref=document.createElement("p");ref.className="review-id";ref.textContent="Case: "+String(item.id||"");
+      const details=document.createElement("p");details.textContent="Attempts: "+Number(item.attempts||0)+" · Delivery: "+String(item.delivery_state||"unconfirmed")+" · Last review: "+String(item.last_decision||"unreviewed");
+      const reason=document.createElement("p");reason.textContent="Reason: "+String(item.reason||"Outcome uncertain");
+      card.append(ref,details,reason);
+      const form=document.createElement("form");form.className="review-form";
+      const actionLabel=document.createElement("label");actionLabel.textContent="Review decision";
+      const select=document.createElement("select");select.required=true;
+      const options=[
+        ["needs_investigation","Still investigating (keep open)"],
+        ["provider_delivery_confirmed","Brevo confirms delivered"],
+        ["provider_not_sent_confirmed","Brevo confirms not sent"],
+        ["closed_no_retry","Close without retry"]
+      ];
+      for(const [value,title] of options){const option=document.createElement("option");option.value=value;option.textContent=title;select.append(option);}
+      actionLabel.append(select);
+      const noteLabel=document.createElement("label");noteLabel.textContent="Audit note (reference what you checked)";
+      const note=document.createElement("textarea");note.required=true;note.minLength=15;note.maxLength=1000;note.placeholder="Record the Brevo transaction evidence or why you need more time.";noteLabel.append(note);
+      const hint=document.createElement("span");hint.className="review-help";hint.textContent="No email is sent. Enter no passwords or unnecessary personal information.";
+      const button=document.createElement("button");button.type="submit";button.className="btn";button.textContent="Record review";
+      form.append(actionLabel,noteLabel,hint,button);
+      form.addEventListener("submit",async(event)=>{
+        event.preventDefault();
+        if(!form.reportValidity())return;
+        if(!window.confirm("Save this audited decision? It will not resend the email."))return;
+        const latestSession=await getSession();
+        if(!latestSession?.access_token){feedback.textContent="Session expired. Sign in again.";return;}
+        button.disabled=true;button.textContent="Saving…";
+        try{
+          const response=await fetch("/.netlify/functions/email-operations",{
+            method:"POST",cache:"no-store",headers:{Authorization:`Bearer ${latestSession.access_token}`,"Content-Type":"application/json"},
+            body:JSON.stringify({job_id:item.id,decision:select.value,note:note.value.trim()})
+          });
+          const result=await readOperationsResponse(response);
+          if(!response.ok)throw new Error(result.error||"Review could not be saved");
+          feedback.textContent="Decision recorded. No email was sent.";
+          await loadReviews();
+        }catch(error){feedback.textContent=error.message||"Could not save review";button.disabled=false;button.textContent="Record review";}
+      });
+      card.append(form);list.append(card);
+    }
+  }catch(error){feedback.textContent=error.message||"Review queue unavailable";}
+}
+document.getElementById("legacyRecovery").addEventListener("click",async()=>{
+  const button=document.getElementById("legacyRecovery");
+  const session=await getSession();
+  if(!session?.access_token){status.textContent="Sign in as super admin first.";return;}
+  button.disabled=true;button.textContent="Checking…";
+  try{
+    const response=await fetch("/.netlify/functions/email-operations?legacyRecovery=1",{
+      headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
+    });
+    const result=await readOperationsResponse(response);
+    if(!response.ok)throw Error(result.error||"Recovery overview unavailable");
+    const labels={
+      total_members:"Registered members",email_confirmed:"Verified email",
+      no_recent_activity_30d:"Activity proxy older than 30 days",
+      no_recent_activity_60d:"Activity proxy older than 60 days",
+      no_recent_activity_90d:"Activity proxy older than 90 days",
+      has_visit_tracking:"With visit tracking",
+      documented_newsletter_consent:"Newsletter entries with a consent timestamp",
+      documented_newsletter_and_inactive_30d:"Timestamp evidence + 30-day activity proxy",
+      inactivity_reminder_opted_in:"Explicit reminder opt-ins"
+    };
+    const panel=document.getElementById("legacyRecoveryPanel");
+    const cards=document.getElementById("legacyRecoveryMetrics");
+    cards.replaceChildren();
+    for(const [key,label] of Object.entries(labels)){
+      const card=document.createElement("div");card.className="metric";
+      const name=document.createElement("span");name.textContent=label;
+      const value=document.createElement("strong");value.textContent=Number(result.counts?.[key]||0).toLocaleString();
+      card.append(name,value);cards.append(card);
+    }
+    document.getElementById("legacyRecoveryNote").textContent=
+      "No emails have been scheduled. Existing users without recorded permission must not be automatically added to marketing campaigns.";
+    panel.hidden=false;
+    status.textContent="Existing-user recovery overview loaded. No emails queued or sent.";
+  }catch(error){status.textContent=error.message||"Could not load recovery counts";}
+  finally{button.disabled=false;button.textContent="Existing-user recovery overview";}
+});
+document.getElementById("inactivityPreview").addEventListener("click",async()=>{
+  const button=document.getElementById("inactivityPreview");
+  const session=await getSession();
+  if(!session?.access_token){status.textContent="Sign in as super admin first.";return;}
+  button.disabled=true;button.textContent="Checking…";
+  try{
+    const response=await fetch("/.netlify/functions/email-operations?inactivityPreview=1",{
+      headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
+    });
+    const result=await readOperationsResponse(response);
+    if(!response.ok)throw Error(result.error||"Inactivity preview unavailable");
+    status.textContent=`${Number(result.eligible||0)} opted-in members eligible for a check-in. Sending ${result.enabled?"configured":"paused"}. No emails queued or sent.`;
+  }catch(error){status.textContent=error.message||"Inactivity preview failed";}
+  finally{button.disabled=false;button.textContent="Preview inactive members";}
+});
+document.getElementById("digestPreview").addEventListener("click",async()=>{
+  const button=document.getElementById("digestPreview");
+  const session=await getSession();
+  if(!session?.access_token){status.textContent="Sign in as super admin first.";return;}
+  button.disabled=true;button.textContent="Checking…";
+  try{
+    const response=await fetch("/.netlify/functions/email-operations?digestPreview=1",{
+      headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
+    });
+    const result=await readOperationsResponse(response);
+    if(!response.ok)throw Error(result.error||"Digest preview unavailable");
+    status.textContent=`${Number(result.eligible||0)} eligible digest groups. Dispatch ${result.enabled?"configured":"disabled"}. No emails queued or sent.`;
+  }catch(error){status.textContent=error.message||"Digest preview failed";}
+  finally{button.disabled=false;button.textContent="Preview eligible digests";}
+});
+document.getElementById("refreshReviews").addEventListener("click",loadReviews);
 refresh();
+loadReviews();
+if(new URLSearchParams(location.search).get("legacyRecovery")==="1"){
+  document.getElementById("legacyRecovery")?.click();
+}
 </script></body></html>

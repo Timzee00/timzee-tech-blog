@@ -62,7 +62,7 @@ function dismiss(id, banner) {
 }
 
 function renderAnnouncement(announcement) {
-  if (!announcement?.id || wasDismissed(announcement.id)) return;
+  if (!announcement?.id || wasDismissed(announcement.id) || document.getElementById("siteAnnouncementBanner")) return;
   injectStyles();
 
   const banner = document.createElement("aside");

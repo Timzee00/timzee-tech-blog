@@ -1,3 +1,4 @@
+const { parseJsonObject } = require("./_lib/request.js");
 const { createClient } = require("@supabase/supabase-js");
 const { requireRole } = require("./_lib/auth-role.js");
 
@@ -23,10 +24,12 @@ exports.handler = async (event) => {
   const guard = await requireRole(supabase, getBearerToken(event), ["moderator", "admin", "super"], "Only moderators or admins can access this.");
   if (guard.error) return jsonResponse(guard.error === "Missing auth token." || guard.error === "Invalid auth token." ? 401 : 403, { error: guard.error });
 
-  let payload;
-  try { payload = JSON.parse(event.body || "{}"); } catch { return jsonResponse(400, { error: "Invalid JSON body." }); }
+  const parsed = parseJsonObject(event);
+  if (parsed.error) return jsonResponse(parsed.statusCode, { error: parsed.error });
+  const payload = parsed.payload;
   const action = String(payload.action || ""), type = String(payload.type || ""), id = String(payload.id || "");
-  const definition = ACTIONS[type]?.[action];
+  const definition = Object.hasOwn(ACTIONS, type) && Object.hasOwn(ACTIONS[type], action)
+    ? ACTIONS[type][action] : null;
   if (!definition || !id) return jsonResponse(400, { error: "Invalid action, content type, or id." });
 
   try {

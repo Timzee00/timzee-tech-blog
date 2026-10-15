@@ -41,6 +41,7 @@ import {
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
+import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
 
 const state = {
   user: null,
@@ -94,7 +95,7 @@ function updateMeta(post) {
   if (!post) return;
   const title = post.title ? `${post.title} - Timzee Tech Hub` : "Post - Timzee Tech Hub";
   document.title = title;
-  const excerpt = clampText(stripHTML(post.content || ""), 160);
+  const excerpt = clampText(stripHTML(stripEditorialScaffolding(post.content || "")), 160);
   const description = excerpt || "Read the latest post on Timzee Tech Hub.";
   const base = SITE_URL || window.location.origin || "";
   const url = post.id ? `${base}/post.html?id=${post.id}` : `${base}/post.html`;
@@ -253,10 +254,10 @@ function renderPost(data, post) {
   if (reportBtn) {
     reportBtn.addEventListener("click", async () => {
       if (!state.user) {
-        alert("Please log in to report.");
+        window.appUI.toast("Please log in to report.");
         return;
       }
-      const reason = prompt("Why are you reporting this post?");
+      const reason = await window.appUI.prompt("Why are you reporting this post?");
       if (reason === null) return;
       const result = await createContentReport({
         reporterId: state.user.id,
@@ -265,9 +266,9 @@ function renderPost(data, post) {
         reason: reason.trim()
       });
       if (result?.error) {
-        alert(result.error.message || "Failed to submit report.");
+        window.appUI.toast(result.error.message || "Failed to submit report.");
       } else {
-        alert("Report submitted. Thank you.");
+        window.appUI.toast("Report submitted. Thank you.");
       }
     });
   }
@@ -279,9 +280,20 @@ function renderPost(data, post) {
         ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}">`
         : "";
   }
+  for (const [id,action] of [["summarizePostAi","summarize"],["chatPostAi","chat"]]) {
+    document.getElementById(id)?.addEventListener("click",()=>{
+      // Same-origin session storage: do not put article text in the URL,
+      // referrer or telemetry. The AI still requires signed-in consent.
+      const article=stripHTML(stripEditorialScaffolding(post.content||"")).slice(0,7500);
+      const context={title:String(post.title||"Article").slice(0,220),
+        url:location.href,excerpt:article,action,created:Date.now()};
+      sessionStorage.setItem("timzee:article-ai-context",JSON.stringify(context));
+      window.location.assign("ai-chat.html?articleContext=1");
+    });
+  }
   const postBody = document.getElementById("postContent");
   if (postBody) {
-    postBody.innerHTML = normalizeHtml(post.content || "");
+    postBody.innerHTML = normalizeHtml(stripEditorialScaffolding(post.content || ""));
   }
 
   const gallery = document.getElementById("postGallery");
@@ -298,15 +310,15 @@ function renderPost(data, post) {
 }
 
 function buildTakeaways(post) {
-  const text = stripHTML(post.content || "");
-  const sentences = text
-    .split(/[.!?]\s+/)
-    .map((sentence) => sentence.trim())
-    .filter((sentence) => sentence.length > 30);
-  if (sentences.length) return sentences.slice(0, 3);
-  const tags = normalizeTags(post.tags);
-  if (!tags.length) return [];
-  return tags.slice(0, 3).map((tag) => `Tagged with ${tag}.`);
+  // An editorial Key Takeaways box is not the first three article sentences.
+  // Old articles without authored takeaways simply omit the box.
+  const tag=String(post.content||"").match(/data-timzee-takeaways="([^"]+)"/);
+  if(!tag)return [];
+  try {
+    const parsed=JSON.parse(decodeURIComponent(tag[1].replace(/&amp;/g,"&")));
+    return Array.isArray(parsed) ? parsed
+      .filter(x=>typeof x==="string"&&x.trim().length>=25).slice(0,4) : [];
+  } catch { return []; }
 }
 
 function renderTakeaways(post) {
@@ -404,15 +416,19 @@ function renderGallery(mediaItems) {
     gallery.innerHTML = "";
     return;
   }
-  gallery.innerHTML = safeItems
-    .map((item) => {
+  gallery.innerHTML = safeItems.slice(0, 12)
+    .map((item, index) => {
       const url = escapeHTML(item.url);
       if (item.media_type === "video") {
-        return `<video controls preload="metadata" src="${url}"></video>`;
+        return `<figure class="post-gallery-item"><video controls playsinline preload="metadata" src="${url}"></video><figcaption>Video ${index + 1}</figcaption></figure>`;
       }
-      return `<img loading="lazy" decoding="async" src="${url}" alt="Post media">`;
+      return `<figure class="post-gallery-item"><a href="${url}" target="_blank" rel="noopener noreferrer" aria-label="Open article image ${index + 1} in new tab"><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${url}" alt="Article image ${index + 1}"></a><figcaption>Image ${index + 1} · opens original file</figcaption></figure>`;
     })
     .join("");
+  gallery.querySelectorAll("img").forEach(image => image.addEventListener("error", () => {
+    image.closest(".post-gallery-item")?.remove();
+    if (!gallery.children.length) gallery.textContent = "Article images could not be loaded from their source.";
+  }, { once: true }));
 }
 
 function updateCounts(post) {
@@ -549,10 +565,10 @@ function bindCommentReportButtons() {
   list.querySelectorAll(".report-comment-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       if (!state.user) {
-        alert("Please log in to report.");
+        window.appUI.toast("Please log in to report.");
         return;
       }
-      const reason = prompt("Why are you reporting this comment?");
+      const reason = await window.appUI.prompt("Why are you reporting this comment?");
       if (reason === null) return;
       const result = await createContentReport({
         reporterId: state.user.id,
@@ -561,9 +577,9 @@ function bindCommentReportButtons() {
         reason: reason.trim()
       });
       if (result?.error) {
-        alert(result.error.message || "Failed to submit report.");
+        window.appUI.toast(result.error.message || "Failed to submit report.");
       } else {
-        alert("Report submitted. Thank you.");
+        window.appUI.toast("Report submitted. Thank you.");
       }
     });
   });
@@ -614,7 +630,7 @@ function setupLike(post) {
   updateLabel();
   likeBtn.addEventListener("click", async () => {
     if (!state.user) {
-      alert("Please log in to like posts.");
+      window.appUI.toast("Please log in to like posts.");
       window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       return;
     }
@@ -639,7 +655,7 @@ function setupShare(post) {
 
   const requireLogin = () => {
     if (!state.user) {
-      alert("Please log in to share posts.");
+      window.appUI.toast("Please log in to share posts.");
       window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       return false;
     }
@@ -675,7 +691,7 @@ function setupShare(post) {
           console.warn("Share canceled", error);
         }
       } else {
-        alert("Sharing is not supported here. Use copy link instead.");
+        window.appUI.toast("Sharing is not supported here. Use copy link instead.");
       }
     });
   }
@@ -694,7 +710,7 @@ function setupShare(post) {
           copyBtn.textContent = "Copy Link";
         }, 1500);
       } catch (error) {
-        alert("Copy failed. Please copy the URL manually.");
+        window.appUI.toast("Copy failed. Please copy the URL manually.");
       }
     });
   }
@@ -710,7 +726,7 @@ function setupBookmark(post) {
   updateLabel();
   btn.addEventListener("click", async () => {
     if (!state.user) {
-      alert("Please log in to save posts.");
+      window.appUI.toast("Please log in to save posts.");
       window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       return;
     }
@@ -729,7 +745,7 @@ function setupFollowAuthor(post) {
   updateLabel();
   btn.addEventListener("click", async () => {
     if (!state.user) {
-      alert("Please log in to follow authors.");
+      window.appUI.toast("Please log in to follow authors.");
       window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       return;
     }
@@ -1056,7 +1072,8 @@ async function boot() {
       console.warn("⚠️ Post not found for id:", postId, "slug:", slug);
       document.getElementById("postTitle").textContent = "Post not found";
       document.getElementById("postContent").innerHTML =
-        "<p>This post does not exist. Return to the homepage.</p>";
+        '<p>This post is unavailable or may have been removed.</p><a class="btn" href="/index.html">Explore the latest posts</a>';
+      document.querySelectorAll("#commentForm, #comments, .post-actions, .post-review").forEach(node => { node.hidden = true; });
       return;
     }
 

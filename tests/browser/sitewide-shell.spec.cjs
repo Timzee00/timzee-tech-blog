@@ -1,0 +1,413 @@
+const { test, expect } = require("@playwright/test");
+const { mockSite } = require("./helpers/fixtures.cjs");
+
+test("public pages include one versioned shared shell and staff pages do not", async ({ request }) => {
+  for (const route of ["/", "/chat.html", "/stories.html", "/marketplace.html"]) {
+    const response = await request.get(route);
+    expect(response.status()).toBe(200);
+    const html = await response.text();
+    expect((html.match(/src="\/assets\/js\/site-shell\.js\?v=[0-9a-f]+"/g) || []).length).toBe(1);
+  }
+  const staff = await (await request.get("/admin/dashboard.html")).text();
+  expect(staff).not.toContain("site-shell.js");
+});
+
+test("shared shell exposes cookie settings and a usable footer", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/");
+  const footer = page.locator("footer.footer");
+  await expect(footer.getByRole("button", { name: "Cookie settings" })).toBeVisible();
+  await expect(footer).toContainText("Powered by Timzee Corp");
+  await footer.getByRole("button", { name: "Cookie settings" }).click();
+  await expect(page.getByRole("dialog", { name: "Cookie preferences" })).toBeVisible();
+});
+
+test("anonymous chat and stories never start with empty avatar URLs", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/chat.html");
+  await expect(page.locator("#chatAvatar")).toHaveAttribute("src", "/assets/img/avatar-placeholder.svg");
+  await expect(page.locator("#infoAvatar")).toHaveAttribute("src", "/assets/img/avatar-placeholder.svg");
+  await page.goto("/stories.html");
+  await expect(page.locator("#ownStoryAvatar")).toHaveAttribute("src", "/assets/img/avatar-placeholder.svg");
+});
+
+
+test("nonfatal ResizeObserver diagnostics do not display an app failure", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/chat.html");
+  await page.evaluate(() => {
+    document.getElementById("appToastRoot")?.replaceChildren();
+    window.dispatchEvent(new ErrorEvent("error", {
+      message: "ResizeObserver loop completed with undelivered notifications."
+    }));
+  });
+  await expect(page.locator("#appToastRoot .app-toast.error")).toHaveCount(0);
+});
+
+
+test("new marketplace listing keeps the currency the seller selected", async ({ page }) => {
+  await mockSite(page, { role: "user" });
+  let created = null;
+  await page.route("**/rest/v1/marketplace_items*", route => {
+    if (route.request().method() !== "POST") return route.fallback();
+    created = route.request().postDataJSON();
+    return route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify(created),
+      headers: { "access-control-allow-origin": "*" }
+    });
+  });
+  await page.goto("/marketplace.html");
+  await page.locator("#createSection").evaluate(element => { element.style.display = "block"; });
+  await expect(page.locator("#listingCurrency")).toHaveValue("NGN");
+  await page.locator("#listingTitle").fill("Test keyboard");
+  await page.locator("#listingPrice").fill("15000");
+  await page.locator("#listingCurrency").selectOption("NGN");
+  await page.locator("#marketplaceWhatsapp").fill("+2348012345678");
+  await page.locator("#createForm button[type=submit]").click();
+  await expect.poll(() => created?.currency || "").toBe("NGN");
+  await expect.poll(() => created?.price).toBe(15000);
+  await expect(page.locator("#createStatus")).toContainText("Listing created successfully.");
+});
+
+
+test("anonymous pages do not trigger a missing-session server-user lookup", async ({ page }) => {
+  await mockSite(page);
+  let userLookups = 0;
+  page.on("request", request => {
+    if (request.url().includes(".supabase.co/auth/v1/user")) userLookups++;
+  });
+  await page.goto("/");
+  await page.waitForTimeout(300);
+  expect(userLookups).toBe(0);
+});
+
+
+test("unavailable social images use local fallbacks instead of broken icons", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/");
+  await page.evaluate(() => {
+    const img = document.createElement("img");
+    img.id = "testBrokenArticleImage";
+    img.src = "/missing-image-for-regression-test.png";
+    img.alt = "Article cover";
+    document.body.append(img);
+  });
+  await expect(page.locator("#testBrokenArticleImage")).toHaveAttribute("src", "/assets/img/media-placeholder.svg");
+  await expect(page.locator("#testBrokenArticleImage")).toHaveAttribute("data-fallback-applied", "true");
+});
+
+
+test("stories, communities and profiles use a single accessible page heading", async ({ page }) => {
+  await mockSite(page);
+  for (const [url, text] of [["/stories.html", "Stories"], ["/discussion.html", "Communities"], ["/profile.html", null]]) {
+    await page.goto(url);
+    const heading = page.getByRole("heading", { level: 1 });
+    await expect(heading).toHaveCount(1);
+    if (text) await expect(heading).toHaveText(text);
+  }
+});
+
+test("public pages share typography, surfaces, and the primary palette", async ({ page }) => {
+  await mockSite(page);
+  let baseline;
+  for (const route of ["/login.html", "/marketplace.html", "/stories.html", "/discussion.html", "/settings.html"]) {
+    await page.goto(route);
+    const tokens = await page.evaluate(() => {
+      const style = getComputedStyle(document.documentElement);
+      return {
+        bodyFont: getComputedStyle(document.body).fontFamily,
+        background: style.getPropertyValue("--color-bg").trim(),
+        surface: style.getPropertyValue("--color-surface").trim(),
+        primary: style.getPropertyValue("--color-primary").trim()
+      };
+    });
+    expect(tokens.bodyFont).toBeTruthy();
+    if (baseline) expect(tokens).toEqual(baseline);
+    else baseline = tokens;
+  }
+});
+
+test("cookie consent stays in document flow below the header on phones", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockSite(page);
+  await page.goto("/login.html");
+  await expect(page.locator("#timzee-consent-banner")).toBeVisible();
+  const position = await page.locator("#timzee-consent-banner").evaluate(node => {
+    const banner = node.getBoundingClientRect();
+    const header = document.querySelector(".site-header").getBoundingClientRect();
+    const css = getComputedStyle(node);
+    return { position: css.position, bannerTop: banner.top, headerBottom: header.bottom, bannerWidth: banner.width, viewport: window.innerWidth };
+  });
+  expect(position.position).toBe("relative");
+  expect(position.bannerTop).toBeGreaterThanOrEqual(position.headerBottom - 1);
+  expect(position.bannerWidth).toBeLessThanOrEqual(position.viewport);
+  await expect(page.locator("#loginEmail")).toBeVisible();
+});
+
+test("staff dashboards use the public brand surface and accessible focus", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/admin/login.html");
+  const colors = await page.evaluate(() => {
+    const computed = getComputedStyle(document.querySelector(".login-shell"));
+    const root = getComputedStyle(document.documentElement);
+    return { background: computed.backgroundColor, text: computed.color, body: root.getPropertyValue("--color-bg").trim() };
+  });
+  expect(colors.body).toBeTruthy();
+  expect(colors.background).not.toBe("rgba(0, 0, 0, 0)");
+  await expect(page.locator(".login-card")).toBeVisible();
+});
+
+
+test("settings and For You links show active navigation, and dynamic brand reaches the footer", async ({ page }) => {
+  await mockSite(page, { role: "user" });
+  await page.goto("/settings.html");
+  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+  const footer = page.locator(".footer-wordmark");
+  await expect(footer).toBeVisible();
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent("timzee:branding-updated", { detail: { siteName: "Example Tech Community" } })));
+  await expect(footer).toHaveText("Example Tech Community");
+  await page.goto("/fyp.html");
+  await expect(page.locator(".nav-pill a[href$='fyp.html']")).toHaveAttribute("aria-current", "page");
+});
+
+test("story creation is keyboard-accessible and guests have no dead action", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/stories.html");
+  await expect(page.getByRole("heading", { level: 1, name: "Stories" })).toBeVisible();
+  await expect(page.locator("#createStatusAction")).toBeHidden();
+  await expect(page.locator("#addStoryBtn")).toBeHidden();
+  await expect(page.locator("#storiesLoginNotice")).toBeVisible();
+});
+
+test("authenticated story creation buttons open the same composer", async ({ page }) => {
+  await mockSite(page, { role: "user" });
+  await page.goto("/stories.html");
+  const create = page.getByRole("button", { name: "Create a new story" });
+  await expect(create).toBeVisible();
+  await create.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#storyComposer")).toBeVisible();
+  await page.locator("#composerCloseBtn").click();
+  await page.locator("#addStoryBtn").focus();
+  await page.keyboard.press("Space");
+  await expect(page.locator("#storyComposer")).toBeVisible();
+});
+
+test("story tiles use safe text and the same order as the viewer", async ({ page }) => {
+  await mockSite(page);
+  await page.route("**/rest/v1/stories*", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify([
+      { id: "33333333-3333-4333-8333-333333333331", user_id: "11111111-1111-4111-8111-111111111111", media_url: "/assets/img/avatar-placeholder.svg", media_type: "image", created_at: new Date().toISOString() },
+      { id: "33333333-3333-4333-8333-333333333332", user_id: "22222222-2222-4222-8222-222222222222", media_url: "/assets/img/avatar-placeholder.svg", media_type: "image", created_at: new Date().toISOString() }
+    ])
+  }));
+  await page.route("**/rest/v1/public_profiles*", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify([
+      {id:"11111111-1111-4111-8111-111111111111",display_name:"First author",avatar_url:"/assets/img/avatar-placeholder.svg"},
+      {id:"22222222-2222-4222-8222-222222222222",display_name:'<img src=x onerror=alert(1)>',avatar_url:'https://example.org/" onerror="alert(1)'}
+    ])
+  }));
+  await page.goto("/stories.html");
+  const tiles = page.locator("#storiesRail button.story-avatar:not(.story-avatar-add)");
+  await expect(tiles).toHaveCount(2);
+  await expect(tiles.nth(0)).toContainText("First author");
+  await expect(tiles.nth(1)).toContainText("<img src=x onerror=alert(1)>");
+  await expect(tiles.nth(1).locator("img")).toHaveAttribute("src", "/assets/img/media-placeholder.svg");
+  await expect(page.locator('#storiesRail img[onerror]')).toHaveCount(0);
+  await tiles.nth(0).click();
+  await expect(page.getByRole("dialog", { name: "Story viewer" })).toBeVisible();
+  await expect(page.locator("#viewerName")).toHaveText("First author");
+});
+
+test("Story viewer and composer manage keyboard focus and Escape", async ({ page }) => {
+  await mockSite(page, { role: "user" });
+  await page.goto("/stories.html");
+  const create = page.getByRole("button", { name: "Create a new story" });
+  await create.click();
+  await expect(page.locator("#composerCloseBtn")).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.locator("#storySubmitBtn")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#storyComposer")).toBeHidden();
+  await expect(create).toBeFocused();
+});
+
+test("AI assistant and immersive reels have primary headings and meaningful landmarks", async ({ page }) => {
+  await mockSite(page, { role: "user" });
+  await page.goto("/ai-chat.html");
+  await expect(page.getByRole("heading", { level: 1, name: "Timzee AI Assistant" })).toHaveCount(1);
+  await page.goto("/video.html");
+  await expect(page.locator("main#main-content")).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 1, name: "Timzee Reels" })).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "Skip to videos" })).toHaveCount(1);
+});
+
+test("shared footer keeps listing-specific actions without duplicating the brand", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/listing.html");
+  const footer = page.locator("footer.footer");
+  await expect(footer.locator(".footer-context-links a", { hasText: "Back to Marketplace" })).toHaveAttribute("href", /marketplace\.html$/);
+  await expect(footer.locator(".footer-context-links a", { hasText: "Report Problem" })).toHaveAttribute("href", /contact\.html$/);
+  await expect(footer.locator(".footer-brand")).toHaveCount(1);
+  await expect(footer.getByRole("button", { name: "Cookie settings" })).toHaveCount(1);
+  const script = await page.locator('script[src*="site-shell.js"]').getAttribute("src");
+  await page.evaluate(async src => { (await import(src)).ensureSiteFooter(); }, script);
+  await expect(footer.locator(".footer-brand")).toHaveCount(1);
+  await expect(footer.locator(".footer-context-links a")).toHaveCount(2);
+});
+
+test("footer cookie preferences remain actionable during lazy module loading", async ({ page }) => {
+  await mockSite(page);
+  await page.goto("/listing.html");
+  await page.locator(".footer-cookie-settings").click();
+  await expect(page.getByRole("dialog", { name: "Cookie preferences" })).toBeVisible();
+});
+
+test("failed Story video displays recoverable media feedback instead of hanging", async ({ page }) => {
+  await mockSite(page);
+  await page.route("**/rest/v1/stories*", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify([{
+      id: "33333333-3333-4333-8333-333333333331",
+      user_id: "11111111-1111-4111-8111-111111111111",
+      media_url: "/nonexistent-story-video.webm",
+      media_type: "video",
+      created_at: new Date().toISOString()
+    }])
+  }));
+  await page.goto("/stories.html");
+  await page.locator("#storiesRail button.story-avatar:not(.story-avatar-add)").first().click();
+  await expect(page.locator(".story-media-error")).toContainText("cannot be played");
+  await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
+});
+
+test("video comments are paged, with a retryable Load More action", async ({ page }) => {
+  await mockSite(page, { populated: true });
+  let requested = [];
+  await page.route("**/rest/v1/video_comments*", route => {
+    const url = new URL(route.request().url());
+    const offset = Number(url.searchParams.get("offset") || 0);
+    const range = route.request().headers()["range"] || "";
+    requested.push({ offset, range, url: url.href });
+    const first = offset === 0 && !range.startsWith("40-");
+    const start = first ? 0 : 40;
+    const rows = Array.from({length: first ? 40 : 3}, (_, i) => ({
+      id: "33333333-3333-4333-8333-" + String(start + i).padStart(12, "0"),
+      video_id: "33333333-3333-4333-8333-333333333333",
+      author_name: "Viewer", body: "Comment " + (start + i),
+      created_at: new Date().toISOString()
+    }));
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(rows) });
+  });
+  await page.goto("/video.html");
+  await page.locator('.reel-chip[data-action="comment"]').first().click();
+  await expect(page.locator("#commentDrawer .comment-row")).toHaveCount(40);
+  await expect(page.locator("#commentLoadMoreBtn")).toBeVisible();
+  await page.locator("#commentLoadMoreBtn").click();
+  await expect(page.locator("#commentDrawer .comment-row")).toHaveCount(43);
+  await expect(page.locator("#commentLoadMoreBtn")).toBeHidden();
+  expect(requested.length).toBe(2);
+});
+
+test("homepage limits first post batch and provides a Load More control", async ({ page }) => {
+  await mockSite(page, { populated: true });
+  let postCalls = [];
+  await page.route("**/rest/v1/posts*", route => {
+    const u = new URL(route.request().url());
+    if (route.request().method() !== "GET") return route.fallback();
+    postCalls.push(u);
+    return route.fulfill({ status:200, contentType:"application/json",body:JSON.stringify([]) });
+  });
+  await page.goto("/");
+  await expect(page.locator("#loadMorePostsBtn")).toHaveCount(1);
+  await expect.poll(() => postCalls.length).toBeGreaterThan(0);
+  expect(postCalls.some(u => Number(u.searchParams.get("limit")) <= 24 ||
+    (u.searchParams.has("offset") && u.searchParams.get("offset")==="0"))).toBeTruthy();
+});
+
+
+test("For You and Following switches are accessible and use distinct RPCs", async ({ page }) => {
+  await mockSite(page, { role: "user", populated: true });
+  const names = [];
+  page.on("request", request => {
+    if (request.url().includes("/rpc/get_personalized_feed")) names.push("for-you");
+    if (request.url().includes("/rpc/get_following_feed")) names.push("following");
+  });
+  await page.goto("/fyp.html");
+  const personalized = page.getByRole("button", { name: "For You", exact: true });
+  const following = page.getByRole("button", { name: "Following", exact: true });
+  await expect(personalized).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".fyp-card")).toHaveCount(1);
+  await following.click();
+  await expect(following).toHaveAttribute("aria-pressed", "true");
+  await expect(personalized).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator(".fyp-card")).toHaveCount(1);
+  expect(names).toContain("for-you");
+  expect(names).toContain("following");
+});
+
+test("Not interested changes the visible feed and Undo restores it", async ({ page }) => {
+  await mockSite(page, { role: "user", populated: true });
+  let feedbackWrites = 0;
+  let feedbackDeletes = 0;
+  await page.route("**/rest/v1/user_content_feedback*", async route => {
+    if (route.request().method() === "POST") feedbackWrites++;
+    if (route.request().method() === "DELETE") feedbackDeletes++;
+    return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.goto("/fyp.html");
+  await expect(page.locator(".fyp-card")).toHaveCount(1);
+  await page.getByRole("button", { name: "Not interested" }).click();
+  await expect(page.locator(".fyp-card")).toHaveCount(0);
+  await expect(page.locator("#fypFeedbackStatus")).toContainText("hidden");
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.locator(".fyp-card")).toHaveCount(1);
+  expect(feedbackWrites).toBe(1);
+  expect(feedbackDeletes).toBe(1);
+});
+
+
+test("Video discovery exposes For You / Following modes on grid and full-screen views", async ({ page }) => {
+  await mockSite(page, { role: "user", populated: true });
+  const videoId="33333333-3333-4333-8333-333333333333";
+  await page.route("**/rpc/get_*feed*", async route => {
+    const u=new URL(route.request().url());
+    const isVideo=route.request().postDataJSON()?.p_content_type==="video";
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(
+      isVideo?[{content_type:"video",content_id:videoId,author_id:"11111111-1111-4111-8111-111111111111"}]:[]
+    )});
+  });
+  await page.goto("/videos.html");
+  await page.getByRole("button", { name: "Reject optional" }).click();
+  const following=page.locator('[data-video-mode="following"]');
+  const fyp=page.locator('[data-video-mode="for-you"]');
+  await expect(fyp).toHaveAttribute("aria-pressed","true");
+  await following.click();
+  await expect(following).toHaveAttribute("aria-pressed","true");
+  await page.goto("/video.html");
+  await expect(page.locator('[data-reel-mode="for-you"]')).toHaveCount(1);
+  await expect(page.locator('[data-reel-mode="following"]')).toHaveCount(1);
+  await page.locator('[data-reel-mode="following"]').click();
+  await expect(page.locator('[data-reel-mode="following"]')).toHaveAttribute("aria-pressed","true");
+});
+
+test("Narrow-screen menu remains accessible and on-screen at 390px", async ({ page }) => {
+  await page.setViewportSize({width:390,height:844});
+  await mockSite(page);
+  await page.goto("/");
+  await page.getByRole("button",{name:/menu/i}).first().click();
+  const menu=page.locator("#siteMenu");
+  await expect(menu).toBeVisible();
+  const bounds=await menu.evaluate(node=>{
+    const rect=node.getBoundingClientRect();
+    return {left:rect.left,right:rect.right,width:rect.width,scrollWidth:node.scrollWidth,clientWidth:node.clientWidth};
+  });
+  expect(bounds.left).toBeGreaterThanOrEqual(-1);
+  expect(bounds.right).toBeLessThanOrEqual(391);
+  expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.clientWidth+2);
+  await expect(menu.getByRole("link",{name:"For You"})).toBeVisible();
+});

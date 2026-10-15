@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Explore Hashtags | Timzee Tech Hub</title><meta name="description" content="Find community posts, videos and discussions by hashtag.">
+<link rel="stylesheet" href="assets/css/styles.css"><script defer src="assets/js/theme-init.js"></script>
+<style>
+main{width:min(980px,100% - 32px);margin:30px auto 100px}h1{font-size:clamp(1.5rem,4vw,2.5rem)}.tag-search{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}
+.tag-search input{min-width:180px;flex:1;font:inherit;padding:13px;border-radius:12px;border:1px solid var(--color-border-strong,#9bafae);background:var(--color-surface,#fff);color:var(--color-text,#172e31)}
+.tag-search button{min-height:44px}.tag-results{display:grid;gap:14px}
+.tag-result{display:block;padding:18px;border-radius:15px;background:var(--color-surface,#fff);border:1px solid var(--color-border,#dde4e3);text-decoration:none;color:inherit}
+.tag-result h2{margin:6px 0;font-size:1.12rem}.tag-result p{margin:0;color:var(--color-text-muted,#5d6b71);overflow-wrap:anywhere}
+.tag-type{color:var(--color-primary,#0f766e);font:700 12px system-ui}
+</style></head>
+<body><a class="skip-link" href="#main-content">Skip to main content</a><header style="padding:16px;border-bottom:1px solid var(--color-border,#dde4e3)"><a href="index.html">← Timzee Tech Hub</a></header>
+<main id="main-content"><h1 id="heading">Explore community hashtags</h1>
+<p>Find published posts, public videos and community discussions about a topic.</p>
+<form class="tag-search" id="search"><label for="tag">Hashtag</label><input id="tag" name="tag" maxlength="32" placeholder="#javascript" required><button class="btn" type="submit">Explore</button></form>
+<p id="status" role="status" aria-live="polite">Enter a hashtag to explore.</p><div class="tag-results" id="results"></div>
+</main><script type="module">
+import {supabase} from "./assets/js/supabase.js";
+const params=new URLSearchParams(location.search),input=document.getElementById("tag"),
+ resultNode=document.getElementById("results"),status=document.getElementById("status");
+function showResult(type,row,url){
+ const card=document.createElement("a");card.className="tag-result";card.href=url;
+ const kind=document.createElement("span");kind.className="tag-type";kind.textContent=type;
+ const title=document.createElement("h2");title.textContent=row.title||"Untitled";
+ const excerpt=document.createElement("p");
+ excerpt.textContent=String(row.description||"").replace(/<[^>]*>/g,"").slice(0,180);
+ card.append(kind,title,excerpt);resultNode.append(card);
+}
+async function searchTag(raw){
+ const tag=String(raw||"").replace(/^#/,"").toLowerCase().trim();
+ if(!/^[a-z0-9_]{1,32}$/.test(tag)){status.textContent="Use 1–32 letters, numbers or underscores.";return;}
+ input.value="#"+tag;resultNode.replaceChildren();status.textContent="Looking for #"+tag+"…";
+ history.replaceState({},"","hashtags.html?tag="+encodeURIComponent(tag));
+ const [posts,postContent,videos,videoDescription,discussions,videoComments,discussionComments]=await Promise.all([
+  supabase.from("posts").select("id,title,tags").eq("status","published").contains("tags",[tag]).limit(20),
+  supabase.from("posts").select("id,title").eq("status","published").ilike("content","%#"+tag+"%").limit(20),
+  supabase.from("videos").select("id,title,description,tags").eq("is_public",true).contains("tags",[tag]).limit(20),
+  supabase.from("videos").select("id,title,description").eq("is_public",true).ilike("description","%#"+tag+"%").limit(20),
+  supabase.from("discussion_topics").select("id,title,description").or("title.ilike.%23"+tag+"%,description.ilike.%23"+tag+"%").limit(20),
+  supabase.from("video_comments").select("id,video_id,body").ilike("body","%#"+tag+"%").limit(20),
+  supabase.from("discussion_messages").select("id,topic_id,body").ilike("body","%#"+tag+"%").limit(20)
+ ]);
+ if([posts,postContent,videos,videoDescription,discussions,videoComments,discussionComments].some(r=>r.error))
+   status.textContent="Some results are temporarily unavailable. Showing what loaded.";
+ const shown=new Set();
+ for(const p of [...(posts.data||[]),...(postContent.data||[])]){
+   if(shown.has("p"+p.id))continue;shown.add("p"+p.id);
+   showResult("Post",p,"post.html?id="+encodeURIComponent(p.id));
+ }
+ for(const v of [...(videos.data||[]),...(videoDescription.data||[])]){
+   if(shown.has("v"+v.id))continue;shown.add("v"+v.id);
+   showResult("Video",v,"video.html?id="+encodeURIComponent(v.id));
+ }
+ for(const d of discussions.data||[])showResult("Discussion",d,"discussion.html?topic="+encodeURIComponent(d.id));
+ for(const c of videoComments.data||[])
+   showResult("Video comment",{title:"Comment on a video",description:c.body},"video.html?id="+encodeURIComponent(c.video_id));
+ for(const c of discussionComments.data||[])
+   showResult("Discussion reply",{title:"Community reply",description:c.body},"discussion.html?topic="+encodeURIComponent(c.topic_id));
+ if(!resultNode.childElementCount)status.textContent="No public results yet for #"+tag+".";
+ else status.textContent=resultNode.childElementCount+" result(s) for #"+tag+".";
+}
+document.getElementById("search").addEventListener("submit",e=>{e.preventDefault();void searchTag(input.value);});
+if(params.has("tag"))void searchTag(params.get("tag"));
+</script></body></html>

@@ -26,23 +26,17 @@ function applyNovelPreferences(preferences) {
 }
 
 function applyVideoPreferences(preferences) {
+  const prepared = new WeakSet();
   const settings = preferences.videos || {};
   const sync = () => document.querySelectorAll("video").forEach((video) => {
+    if (prepared.has(video)) return;
+    prepared.add(video);
     video.muted = settings.mutedByDefault !== false;
     if (settings.autoplay === false) { video.autoplay = false; video.removeAttribute("autoplay"); }
     if (settings.dataSaver === true) video.setAttribute("preload", "metadata");
   });
   sync();
   const observer = new MutationObserver(sync); observer.observe(document.body, { childList: true, subtree: true });
-}
-
-function applyChatPreferences(preferences) {
-  const chat = preferences.chat || {};
-  document.documentElement.dataset.chatCompact = chat.compact === true ? "true" : "false";
-  try {
-    const current = JSON.parse(localStorage.getItem("timzee_chat_settings_v2") || "{}");
-    localStorage.setItem("timzee_chat_settings_v2", JSON.stringify({ ...current, notifications: chat.notifications !== false, sounds: chat.sounds !== false, enterToSend: chat.enterToSend !== false, compact: chat.compact === true }));
-  } catch (_) {}
 }
 
 function applyDiscussionPreferences(preferences) {
@@ -88,13 +82,16 @@ async function boot() {
   const path = window.location.pathname.toLowerCase();
   if (path.endsWith("/novel.html")) applyNovelPreferences(preferences);
   if (path.endsWith("/video.html") || path.endsWith("/videos.html")) applyVideoPreferences(preferences);
-  if (path.endsWith("/chat.html")) applyChatPreferences(preferences);
   if (path.endsWith("/discussion.html")) applyDiscussionPreferences(preferences);
   if (path.endsWith("/listing.html")) applyMarketplacePreferences(preferences);
   window.timzeePreferences = preferences;
 }
 
 if (typeof window !== "undefined") {
+  window.addEventListener("timzee:preferences", event => {
+    applyAppearancePreferences(event.detail);
+    window.timzeePreferences = event.detail;
+  });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => void boot(), { once: true });
   else void boot();
 }

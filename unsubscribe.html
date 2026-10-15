@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>Email preferences | Timzee Tech Hub</title><link rel="stylesheet" href="/assets/css/styles.css"><style>main{max-width:540px;margin:8vh auto;padding:24px}.card{padding:28px}button{min-height:44px}#feedback{min-height:24px}</style></head>
+<body><a class="skip-link" href="#main-content">Skip to main content</a><main id="main-content"><section class="card"><h1>Stop inactivity reminders</h1><p>This link disables future “we haven't seen you in a while” check-in emails for the account that received the message. It does not change security or password-reset emails.</p><button class="btn" id="confirm" type="button">Stop these emails</button><p role="status" aria-live="polite" id="feedback"></p><p><a href="/settings.html#email">Manage other email preferences</a></p></section></main>
+<script type="module">
+const button=document.getElementById("confirm");
+const feedback=document.getElementById("feedback");
+const token=new URLSearchParams(window.location.search).get("token");
+if(!token||token.length>1024){button.disabled=true;feedback.textContent="This link is missing or invalid. You can also disable reminders in Settings.";}
+button.addEventListener("click",async()=>{
+  button.disabled=true;feedback.textContent="Saving your preference…";
+  try{
+    const response=await fetch("/.netlify/functions/email-opt-out",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token}),cache:"no-store"});
+    const data=await response.json();
+    if(!response.ok)throw Error(data.error||"Could not save your preference");
+    feedback.textContent="Inactivity reminders are switched off for this account.";
+    button.textContent="Unsubscribed";
+    window.history.replaceState({},document.title,window.location.pathname);
+  }catch(error){feedback.textContent=error.message||"Please try again.";button.disabled=false;}
+});
+</script></body></html>

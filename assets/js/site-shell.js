@@ -1,12 +1,117 @@
-import "./boot-loader.js";
+import "./ui-controls.js";
+import "./image-fallback.js";
+import "./nav.js";
+import "./visitor-analytics.js";
+import { pageFileName } from "./route-page.mjs";
 
 const BRAND_TEXT="Powered by Timzee Corp";
 const LEGAL_LINKS=[["Privacy","privacy.html"],["Terms","terms.html"],["Refund Policy","refund-policy.html"],["Cookies","cookies.html"],["Accessibility","accessibility.html"]];
-function currentSitePath(){return window.location.pathname||"";}
-function appendStylesheet(id,href){if(document.querySelector(`link[data-site-style="${id}"],link[href="${href}"]`))return;const link=document.createElement("link");link.rel="stylesheet";link.href=href;link.dataset.siteStyle=id;document.head.appendChild(link);}
-function ensureProductNavigation(){const menu=document.querySelector(".nav-more-menu");if(!menu)return;const addLink=(href,label)=>{if(menu.querySelector(`a[href="${href}"]`))return;const link=document.createElement("a");link.href=href;link.textContent=label;menu.insertBefore(link,menu.firstChild);};addLink("fyp.html","For You");addLink("settings.html","Settings");}
-export function ensureSiteFooter(){const footer=document.querySelector("footer.footer");if(!footer)return;const container=footer.querySelector(".container")||footer;let brand=container.querySelector("[data-site-brand]");if(!brand){brand=document.createElement("div");brand.dataset.siteBrand="true";brand.className="footer-brand";container.insertBefore(brand,container.firstChild);}brand.textContent=BRAND_TEXT;let legal=container.querySelector("[data-site-legal]");if(!legal){legal=document.createElement("nav");legal.dataset.siteLegal="true";legal.className="footer-legal-links";legal.setAttribute("aria-label","Legal and accessibility information");container.appendChild(legal);}legal.replaceChildren(...LEGAL_LINKS.map(([label,href])=>{const link=document.createElement("a");link.href=href;link.textContent=label;return link;}));const path=currentSitePath().toLowerCase();Array.from(container.querySelectorAll("div,p,span")).forEach(node=>{if(node===brand||node.closest("[data-site-legal]"))return;if((node.textContent||"").includes("Powered by Timzee-Tech"))node.textContent=BRAND_TEXT;});if(/\/(privacy|terms|refund-policy|cookies|accessibility)\.html$/.test(path))brand.setAttribute("aria-current","page");}
-function loadPageStyles(){appendStylesheet("design-system","assets/css/design-system.css");appendStylesheet("site-ux-fixes","assets/css/site-ux-fixes.css");appendStylesheet("fyp","assets/css/fyp.css");appendStylesheet("settings","assets/css/settings.css");appendStylesheet("discussion-enhancements","assets/css/discussion-enhancements.css");appendStylesheet("chat-context-menu","assets/css/chat-context-menu.css");if(/\/chat\.html$/i.test(currentSitePath())){appendStylesheet("chat-v2","assets/css/chat-v2.css");appendStylesheet("chat-fixes","assets/css/chat-fixes.css");}}
-async function loadPageEnhancements(){const path=currentSitePath().toLowerCase();const home=path==="/"||path.endsWith("/index.html")||path==="";const imports=[import("./experience-preferences.js")];if(home&&document.getElementById("popularTrack")){imports.push(import("./popularity-engine.js"),import("./trending-engine.js"),import("./semantic-labels.js"));}if(path.endsWith("/discussion.html"))imports.push(import("./discussion-discovery.js"));if(path.endsWith("/chat.html"))imports.push(import("./chat-context-menu.js"));if(path.endsWith("/ai-chat.html"))imports.push(import("./ai-context.js"));if(imports.length)await Promise.allSettled(imports);}
+function currentSitePath(){return pageFileName(window.location.pathname||"");}
+function ensureProductNavigation(){
+  const menu = document.querySelector(".nav-more-menu");
+  if (!menu) return;
+  const current = currentSitePath();
+  const addLink = (href, label) => {
+    let link = [...menu.querySelectorAll("a[href]")].find(node => pageFileName(new URL(node.href).pathname) === href);
+    if (!link) {
+      link = document.createElement("a");
+      link.href = "/" + href;
+      link.textContent = label;
+      menu.insertBefore(link, menu.firstChild);
+    }
+    if (href === current) {
+      link.classList.add("active");
+      link.setAttribute("aria-current", "page");
+      menu.closest(".nav-more")?.querySelector(".nav-more-toggle")?.classList.add("active-parent");
+    }
+  };
+  addLink("fyp.html", "For You");
+  addLink("settings.html", "Settings");
+}
+function updateFooterBrand(name) {
+  const wordmark = document.querySelector(".footer-wordmark");
+  if (!wordmark) return;
+  const parts = String(name || "Timzee Tech Hub").trim().split(/\s+/).filter(Boolean);
+  const first = parts.shift() || "Timzee";
+  const remaining = parts.join(" ");
+  const children = [document.createTextNode(first)];
+  if (remaining) {
+    const accent = document.createElement("span");
+    accent.textContent = remaining;
+    children.push(document.createTextNode(" "), accent);
+  }
+  wordmark.replaceChildren(...children);
+}
+document.addEventListener("timzee:branding-updated", event => {
+  if (event.detail?.siteName) updateFooterBrand(event.detail.siteName);
+});
+
+export function ensureSiteFooter() {
+  const footer = document.querySelector("footer.footer");
+  if (!footer) return;
+  const container = footer.querySelector(".container") || footer;
+  if (footer.dataset.timzeeShellReady === "true") {
+    updateFooterBrand(window.__timzeeSiteBrandName || document.getElementById("siteName")?.textContent || "Timzee Tech Hub");
+    return;
+  }
+  // Preserve feature-specific destinations such as "Back to Marketplace" or
+  // "Report Problem" before replacing legacy link markup with common chrome.
+  const standardLabels = new Set(["discussion", "newsletter", "contact", "contact us", "support", "advertise"]);
+  const contextualLinks = [];
+  const seen = new Set();
+  for (const link of footer.querySelectorAll(".footer-links a[href]")) {
+    const label = link.textContent.trim();
+    if (!label || standardLabels.has(label.toLowerCase())) continue;
+    try {
+      const destination = new URL(link.getAttribute("href"), document.baseURI);
+      if (destination.origin !== location.origin || !["https:", "http:"].includes(destination.protocol)) continue;
+      const key = label.toLowerCase() + "|" + destination.href;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      contextualLinks.push({ label, href: destination.href });
+    } catch { /* Ignore malformed footer links. */ }
+    if (contextualLinks.length >= 8) break;
+  }
+  container.innerHTML = `<div class="footer-top"><a class="footer-wordmark" href="/index.html">Timzee <span>Tech Hub</span></a><p>A place for curious minds. Built around community.</p></div><nav class="footer-links" aria-label="Community links"><a href="/fyp.html">For You</a><a href="/video.html">Reels</a><a href="/discussion.html">Discussion</a><a href="/marketplace.html">Marketplace</a><a href="/newsletter.html">Newsletter</a><a href="/contact.html">Contact</a><a href="/support.html">Support</a></nav>`;
+  footer.dataset.timzeeShellReady = "true";
+  updateFooterBrand(window.__timzeeSiteBrandName || document.getElementById("siteName")?.textContent || "Timzee Tech Hub");
+  if (contextualLinks.length) {
+    const contextual = document.createElement("nav");
+    contextual.className = "footer-context-links";
+    contextual.setAttribute("aria-label", "Page actions");
+    for (const { href, label } of contextualLinks) {
+      const link = document.createElement("a");
+      link.href = href;
+      link.textContent = label;
+      contextual.appendChild(link);
+    }
+    container.append(contextual);
+  }
+  const legal = document.createElement("nav"); legal.className = "footer-legal-links"; legal.setAttribute("aria-label", "Legal and accessibility information");
+  LEGAL_LINKS.forEach(([label, path]) => { const link = document.createElement("a"); link.href = "/" + path; link.textContent = label; legal.append(link); });
+  const cookies = document.createElement("button");
+  cookies.type = "button";
+  cookies.className = "footer-cookie-settings";
+  cookies.textContent = "Cookie settings";
+  cookies.addEventListener("click", async () => {
+    // Dynamic module loading must complete before attempting to open the modal.
+    try {
+      await import("./privacy-consent.js");
+      if (typeof window.openCookieSettings !== "function") throw Error("Consent controls unavailable");
+      window.openCookieSettings();
+    } catch (error) {
+      console.warn("Cookie preferences could not load:", error);
+      const status = document.createElement("span");
+      status.className = "footer-cookie-error";
+      status.setAttribute("role", "status");
+      status.textContent = "Cookie settings are unavailable. Reload this page to try again.";
+      cookies.after(status);
+    }
+  });
+  legal.append(cookies);
+  container.append(legal);
+  const brand = document.createElement("small"); brand.className = "footer-brand"; brand.textContent = BRAND_TEXT; container.append(brand);
+}
+async function loadPageEnhancements(){const path=currentSitePath();const imports=[import("./experience-preferences.js")];if(path==="discussion.html")imports.push(import("./discussion-discovery.js"));if(path==="chat.html")imports.push(import("./chat-context-menu.js"));if(path==="ai-chat.html")imports.push(import("./ai-context.js"));if(imports.length)await Promise.allSettled(imports);}
 function scheduleIdle(task){if(typeof window.requestIdleCallback==="function")window.requestIdleCallback(task,{timeout:900});else window.setTimeout(task,220);}
-if(typeof window!=="undefined"){const start=()=>{loadPageStyles();ensureProductNavigation();ensureSiteFooter();void import("./privacy-consent.js");scheduleIdle(()=>void loadPageEnhancements());};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();}
+if(typeof window!=="undefined"){const start=()=>{ensureProductNavigation();ensureSiteFooter();void import("./privacy-consent.js");scheduleIdle(()=>void loadPageEnhancements());};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();}

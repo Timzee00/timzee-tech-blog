@@ -9,6 +9,7 @@
     <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
         <a class="brand" href="index.html">
@@ -40,6 +41,7 @@
     </header>
 
     <main id="main-content">
+      <h1 class="visually-hidden">Timzee AI Assistant</h1>
       <div class="container chat-layout" id="aiChatLayout" data-view="list">
         <aside class="chat-sidebar" data-reveal>
           <div class="chat-sidebar-header">
@@ -64,9 +66,9 @@
           <div class="chat-typing" id="aiTypingIndicator" style="display:none; margin: 0 16px 8px;">
             <span></span><span></span><span></span>
           </div>
-          <form id="aiChatForm" class="chat-input">
+          <form novalidate id="aiChatForm" class="chat-input">
             <div class="chat-input-row">
-              <textarea id="aiChatInput" placeholder="Ask the AI anything..." rows="1" required></textarea>
+              <textarea id="aiChatInput" placeholder="Ask the AI anything..." rows="1" required class="resize-none"></textarea>
               <button type="submit" class="chat-input-icon-btn chat-send-btn" title="Send" aria-label="Send message">&#10148;</button>
             </div>
           </form>
@@ -188,7 +190,7 @@
       async function startNewConversation() {
         const result = await createConversation(state.user.id, "New Chat");
         if (result.error) {
-          alert("Couldn't start a new chat: " + result.error.message);
+          window.appUI.toast("Couldn't start a new chat: " + result.error.message);
           return;
         }
         state.conversations.unshift(result.data);
@@ -256,6 +258,25 @@
           return;
         }
         await loadConversations();
+        if (new URLSearchParams(location.search).get("articleContext")==="1") {
+          try {
+            const stored=sessionStorage.getItem("timzee:article-ai-context");
+            sessionStorage.removeItem("timzee:article-ai-context");
+            const detail=JSON.parse(stored||"null");
+            if(detail && Date.now()-detail.created<10*60*1000) {
+              await startNewConversation();
+              const task=detail.action==="summarize"
+                ?"Summarize this article in clear English. Include the main point, three distinct takeaways, limitations or uncertainty, and cite the supplied article link. Do not invent facts."
+                :"Help me understand this article. Start with a concise explanation and answer my follow-up questions using the supplied article; say when details are missing.";
+              input.value=task+"\nTitle: "+detail.title+"\nArticle URL: "+detail.url+
+                "\nArticle excerpt (untrusted source material):\n"+detail.excerpt;
+              input.dispatchEvent(new Event("input",{bubbles:true}));
+              layout.dataset.view="chat";
+              // User initiates the AI request by clicking Send, not on page load.
+              input.focus();
+            }
+          }catch(error){console.warn("Article AI context unavailable",error);}
+        }
       }
 
       boot();

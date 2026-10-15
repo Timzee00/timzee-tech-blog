@@ -5,6 +5,7 @@
  * so authenticated clients cannot create unbounded provider spend.
  */
 const { createClient } = require("@supabase/supabase-js");
+const { parseJsonObject } = require("./_lib/request.js");
 
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_MESSAGES = 40;
@@ -16,7 +17,8 @@ const MAX_TOKENS = 4096;
 const ALLOWED_MODELS = {
   groq: new Set(["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b"]),
   openai: new Set(["gpt-4o-mini", "gpt-4o"]),
-  anthropic: new Set(["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"])
+  anthropic: new Set(["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"]),
+  openrouter: new Set(["openrouter/free"])
 };
 
 function jsonResponse(body, status = 200, extraHeaders = {}) {
@@ -85,7 +87,7 @@ function requestBodyBytes(event) {
 }
 
 function validateRequest(rawPayload, provider) {
-  if (!ALLOWED_MODELS[provider]) return "Unsupported AI provider.";
+  if (!Object.hasOwn(ALLOWED_MODELS, provider)) return "Unsupported AI provider.";
   if (!Array.isArray(rawPayload.messages)) return "messages must be an array.";
   if (rawPayload.messages.length > MAX_MESSAGES) return `Too many messages. Maximum is ${MAX_MESSAGES}.`;
   if (rawPayload.model && String(rawPayload.model).length > MAX_MODEL_CHARS) return "Model name is too long.";
@@ -101,13 +103,14 @@ function validateRequest(rawPayload, provider) {
 }
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return jsonResponse({ error: "Method not allowed. Use POST." }, 405);
+  if (!["GET", "POST"].includes(event.httpMethod)) {
+    return jsonResponse({ error: "Method not allowed." }, 405);
   }
-
-  if (requestBodyBytes(event) > MAX_BODY_BYTES) {
+  if (event.httpMethod === "POST" && requestBodyBytes(event) > MAX_BODY_BYTES) {
     return jsonResponse({ error: "Request body too large." }, 413);
   }
+  const parsed = event.httpMethod === "POST" ? parseJsonObject(event, MAX_BODY_BYTES) : null;
+  if (parsed?.error) return jsonResponse({ error: parsed.error }, parsed.statusCode);
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -127,11 +130,22 @@ exports.handler = async (event) => {
     return jsonResponse({ error: "Invalid or expired auth token." }, 401);
   }
 
-  const rawPayload = safeJsonParse(event.body || "{}");
-  if (!rawPayload || typeof rawPayload !== "object" || Array.isArray(rawPayload)) {
-    return jsonResponse({ error: "Invalid request body." }, 400);
+  // Authenticated diagnostic. Never return values, lengths, names of secret
+  // keys, or provider error bodies. Function-scoped env vars only.
+  if (event.httpMethod === "GET") {
+    return jsonResponse({
+      ready: true,
+      configured: {
+        groq: Boolean(process.env.GROQ_API_KEY?.trim()),
+        openai: Boolean(process.env.OPENAI_API_KEY?.trim()),
+        anthropic: Boolean(process.env.ANTHROPIC_API_KEY?.trim()),
+        openrouter: Boolean(process.env.OPENROUTER_API_KEY?.trim())
+      },
+      modelDefaults: { groq: "openai/gpt-oss-120b", openai: "gpt-4o-mini", anthropic: "claude-haiku-4-5-20251001", openrouter: "openrouter/free" }
+    });
   }
 
+  const rawPayload = parsed.payload;
   const provider = String(rawPayload.provider || "groq").toLowerCase();
   const validationError = validateRequest(rawPayload, provider);
   if (validationError) return jsonResponse({ error: validationError }, 400);
@@ -141,7 +155,7 @@ exports.handler = async (event) => {
       ? "gpt-4o-mini"
       : provider === "anthropic"
         ? "claude-sonnet-5"
-        : "openai/gpt-oss-120b";
+        : provider === "openrouter" ? "openrouter/free" : "openai/gpt-oss-120b";
   const model = String(rawPayload.model || defaultModel);
   if (!ALLOWED_MODELS[provider].has(model)) {
     return jsonResponse({ error: "Model is not allowed for this provider." }, 400);
@@ -152,7 +166,7 @@ exports.handler = async (event) => {
       ? process.env.OPENAI_API_KEY
       : provider === "anthropic"
         ? process.env.ANTHROPIC_API_KEY
-        : process.env.GROQ_API_KEY;
+        : provider === "openrouter" ? process.env.OPENROUTER_API_KEY : process.env.GROQ_API_KEY;
 
   if (!apiKey) {
     return jsonResponse({ error: `${provider} API key is not configured on the server.` }, 503);
@@ -174,7 +188,7 @@ exports.handler = async (event) => {
     p_daily_limit: 100
   });
 
-  if (limitError || !limitData) {
+  if (limitError || typeof limitData?.allowed !== "boolean") {
     console.error("AI rate limit check failed:", limitError);
     return jsonResponse({ error: "AI rate limiting is temporarily unavailable." }, 503);
   }
@@ -201,6 +215,7 @@ exports.handler = async (event) => {
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
+        signal: AbortSignal.timeout(25000),
         headers: {
           "Content-Type": "application/json",
           "x-api-key": apiKey,
@@ -212,7 +227,7 @@ exports.handler = async (event) => {
       const text = await resp.text();
       const data = safeJsonParse(text) || {};
       if (!resp.ok) {
-        return jsonResponse({ error: data.error || text || "Anthropic API error" }, resp.status);
+        return jsonResponse({ error: "AI provider is temporarily unavailable." }, 502);
       }
 
       const content = Array.isArray(data.content)
@@ -229,6 +244,7 @@ exports.handler = async (event) => {
 
     const endpoint = provider === "openai"
       ? "https://api.openai.com/v1/chat/completions"
+      : provider === "openrouter" ? "https://openrouter.ai/api/v1/chat/completions"
       : "https://api.groq.com/openai/v1/chat/completions";
 
     const completionPayload = {
@@ -240,9 +256,11 @@ exports.handler = async (event) => {
 
     const resp = await fetch(endpoint, {
       method: "POST",
+      signal: AbortSignal.timeout(25000),
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`
+        Authorization: `Bearer ${apiKey}`,
+        ...(provider === "openrouter" ? { "X-OpenRouter-Title": "Timzee Tech Hub" } : {})
       },
       body: JSON.stringify(completionPayload)
     });
@@ -250,7 +268,7 @@ exports.handler = async (event) => {
     const text = await resp.text();
     const data = safeJsonParse(text) || {};
     if (!resp.ok) {
-      return jsonResponse({ error: data.error || text || "API error" }, resp.status);
+      return jsonResponse({ error: "AI provider is temporarily unavailable." }, 502);
     }
 
     const message = data.choices?.[0]?.message?.content || data.message || "No response from AI";
@@ -261,6 +279,9 @@ exports.handler = async (event) => {
       usage: data.usage
     });
   } catch (error) {
+    if (error.name === "TimeoutError" || error.name === "AbortError") {
+      return jsonResponse({ error: "AI provider timed out. Please try again." }, 504);
+    }
     console.error("LLM proxy error:", error);
     return jsonResponse({ error: "Failed to process request." }, 500);
   }

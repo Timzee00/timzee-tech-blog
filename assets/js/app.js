@@ -1,9 +1,12 @@
-import { getCurrentUser, getCurrentUserWithRole, getDisplayName, getUserRole, signOut } from "./supabase.js";
+import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
+import { renderTrending } from "./trending-engine.js";
+import { renderPopular as renderPopularRanking } from "./popularity-engine.js";
+import { fetchPostEngagement } from "./post-engagement.mjs";
+import { bindSearch } from "./search-input.js";
+import { supabase as supabaseForEngagement, getCurrentUser, getCurrentUserWithRole, getDisplayName, getUserRole, signOut } from "./supabase.js";
 import {
   fetchCategories,
   fetchPosts,
-  fetchComments,
-  fetchPostLikes,
   fetchAds,
   fetchDiscussionTopics,
   fetchDiscussionMessages,
@@ -32,14 +35,17 @@ import {
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 
+const POSTS_PAGE_SIZE = 24;
 const state = {
   activeCategory: "all",
   searchTerm: "",
   categories: [],
   posts: [],
+  postsOffset: 0,
+  hasMorePosts: false,
+  loadingMorePosts: false,
   filteredPosts: null,
-  comments: [],
-  likes: [],
+  engagement: null,
   likeCounts: {},
   commentCounts: {},
   userLikes: new Set(),
@@ -54,17 +60,17 @@ const state = {
 };
 
 function formatBrandName(name) {
-  const parts = name.split(" ").filter(Boolean);
-  if (parts.length < 2) return name;
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return escapeHTML(parts.join(" "));
   const techIndex = parts.findIndex((part) => part.toLowerCase() === "tech");
   if (techIndex !== -1) {
     const highlighted = parts[techIndex];
     const before = parts.slice(0, techIndex).join(" ");
     const after = parts.slice(techIndex + 1).join(" ");
-    return `${before ? `${before} ` : ""}<span>${highlighted}</span>${after ? ` ${after}` : ""}`;
+    return `${before ? `${escapeHTML(before)} ` : ""}<span>${escapeHTML(highlighted)}</span>${after ? ` ${escapeHTML(after)}` : ""}`;
   }
   const last = parts.pop();
-  return `${parts.join(" ")} <span>${last}</span>`;
+  return `${escapeHTML(parts.join(" "))} <span>${escapeHTML(last)}</span>`;
 }
 
 function applyTheme(settings) {
@@ -158,6 +164,7 @@ function renderNav(categories) {
   allLink.href = "#latest";
   allLink.textContent = "All";
   allLink.dataset.category = "all";
+  allLink.setAttribute("aria-current", "true");
   nav.appendChild(allLink);
   categories.forEach((cat) => {
     const link = document.createElement("a");
@@ -171,7 +178,8 @@ function renderNav(categories) {
     if (!target) return;
     event.preventDefault();
     state.activeCategory = target.dataset.category || "all";
-    renderTrending();
+    nav.querySelectorAll("a").forEach(link => { if (link === target) link.setAttribute("aria-current", "true"); else link.removeAttribute("aria-current"); });
+    renderTrending(state.activeCategory);
     renderPopular();
     renderPopularTopics();
     renderLists();
@@ -184,22 +192,10 @@ function renderNav(categories) {
 }
 
 function hydrateCounts() {
-  const commentCounts = {};
-  state.comments.forEach((comment) => {
-    commentCounts[comment.post_id] = (commentCounts[comment.post_id] || 0) + 1;
-  });
-  state.commentCounts = commentCounts;
-
-  const likeCounts = {};
-  const userLikes = new Set();
-  state.likes.forEach((like) => {
-    likeCounts[like.post_id] = (likeCounts[like.post_id] || 0) + 1;
-    if (state.user && like.user_id === state.user.id) {
-      userLikes.add(like.post_id);
-    }
-  });
-  state.likeCounts = likeCounts;
-  state.userLikes = userLikes;
+  // Merge so a slower initial request cannot erase stats for newly loaded posts.
+  Object.assign(state.commentCounts, state.engagement?.commentCounts || {});
+  Object.assign(state.likeCounts, state.engagement?.likeCounts || {});
+  for (const id of state.engagement?.likedPostIds || []) state.userLikes.add(id);
 }
 
 function showLoadingPlaceholders() {
@@ -209,9 +205,7 @@ function showLoadingPlaceholders() {
     { id: "popularTopicsTrack", message: "Gathering discussions..." },
     { id: "categoryGrid", message: "Loading forum boards..." },
     { id: "latestPosts", message: "Loading latest posts..." },
-    { id: "hotList", message: "Identifying highlights..." },
-    { id: "leaderboardList", message: "Updating leaderboard..." },
-    { id: "statsList", message: "Syncing stats..." }
+    { id: "leaderboardList", message: "Updating leaderboard..." }
   ];
   placeholders.forEach(({ id, message }) => {
     const element = document.getElementById(id);
@@ -219,11 +213,6 @@ function showLoadingPlaceholders() {
       element.innerHTML = `<div class="callout">${escapeHTML(message)}</div>`;
     }
   });
-}
-
-function getPostScore(post) {
-  const likes = state.likeCounts[post.id] || 0;
-  return likes * 2 + (post.views || 0);
 }
 
 function fallbackFilterPosts(posts, query = "", tags = []) {
@@ -234,35 +223,19 @@ function fallbackFilterPosts(posts, query = "", tags = []) {
     const matchesTags = !activeTags.length || activeTags.every((tag) => postTags.includes(tag));
     const matchesQuery =
       !search ||
-      [post.title, stripHTML(post.content || ""), post.summary, postTags.join(" ")].some((text) =>
+      [post.title, stripHTML(stripEditorialScaffolding(post.content || "")), post.summary, postTags.join(" ")].some((text) =>
         (text || "").toLowerCase().includes(search)
       );
     return matchesTags && matchesQuery;
   });
 }
 
-function renderStats() {
-  const statsList = document.getElementById("statsList");
-  if (!statsList) return;
-  const totalLikes = state.likes.length;
-  statsList.innerHTML = [
-    { label: "Total Posts", value: state.posts.length },
-    { label: "Replies", value: state.comments.length },
-    { label: "Reactions", value: totalLikes },
-    { label: "Categories", value: state.categories.length }
-  ]
-    .map(
-      (stat) =>
-        `<div class="stats-item"><span>${escapeHTML(stat.label)}</span><strong>${stat.value}</strong></div>`
-    )
-    .join("");
-}
-
 function buildPostCard(post, compact = false) {
   const category = state.categories.find((cat) => cat.id === post.category_id);
   const categoryName = category ? category.name : "General";
-  const commentCount = state.commentCounts[post.id] || 0;
-  const likeCount = state.likeCounts[post.id] || 0;
+  // A dash means the exact counter has not loaded; never report a fabricated 0.
+  const commentCount = Object.hasOwn(state.commentCounts, post.id) ? state.commentCounts[post.id] : "—";
+  const likeCount = Object.hasOwn(state.likeCounts, post.id) ? state.likeCounts[post.id] : "—";
   const liked = state.userLikes.has(post.id);
   const tags = normalizeTags(post.tags)
     .slice(0, 3)
@@ -270,9 +243,9 @@ function buildPostCard(post, compact = false) {
     .join("");
   const publishedAt = post.publish_at || post.created_at;
   const title = compact ? clampText(post.title || "", 60) : post.title || "";
-  const excerptText = clampText(stripHTML(post.content || ""), 140);
+  const excerptText = clampText(stripHTML(stripEditorialScaffolding(post.content || "")), 140);
   const excerpt = compact ? "" : `<div class="post-card-excerpt">${escapeHTML(excerptText)}</div>`;
-  const pin = post.pinned ? `<span class="chip">Popular</span>` : "";
+  const pin = post.pinned ? `<span class="chip">Pinned</span>` : "";
   const authorName = post.author_name || "Timzee Tech Hub";
   const initial = authorName.trim().charAt(0).toUpperCase() || "T";
 
@@ -308,87 +281,8 @@ function buildPostCard(post, compact = false) {
   `;
 }
 
-function renderTrending() {
-  const target = document.getElementById("trendingList");
-  if (!target) return;
-  const sourcePosts = state.filteredPosts || state.posts;
-  const categoryFiltered = state.activeCategory === "all" 
-    ? sourcePosts 
-    : sourcePosts.filter((post) => post.category_id === state.activeCategory);
-  const sorted = [...categoryFiltered]
-    .sort((a, b) => getPostScore(b) - getPostScore(a))
-    .slice(0, 3);
-  if (!sorted.length) {
-    target.innerHTML = "<div class=\"callout\">No trending posts yet — be the first to post.</div>";
-    return;
-  }
-  target.innerHTML = sorted.map((post) => buildPostCard(post, true)).join("");
-  setupReveal(target);
-}
-
 function renderPopular() {
-  const track = document.getElementById("popularTrack");
-  if (!track) return;
-  const sourcePosts = state.filteredPosts || state.posts;
-  const categoryFiltered = state.activeCategory === "all" 
-    ? sourcePosts 
-    : sourcePosts.filter((post) => post.category_id === state.activeCategory);
-  const withCover = categoryFiltered.filter((post) => !!post.cover);
-  const pinned = withCover
-    .filter((post) => post.pinned)
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  const scored = withCover
-    .filter((post) => !post.pinned)
-    .sort((a, b) => getPostScore(b) - getPostScore(a));
-  const topPosts = [...pinned, ...scored].slice(0, 5);
-  if (!topPosts.length) {
-    track.innerHTML = "<div class=\"callout\">No popular posts yet — be the first to post.</div>";
-    return;
-  }
-
-  track.innerHTML = topPosts
-    .map((post) => {
-      const summary = clampText(stripHTML(post.content || ""), 140);
-      const category = state.categories.find((cat) => cat.id === post.category_id);
-      const categoryName = category ? category.name : "General";
-      const likes = state.likeCounts[post.id] || 0;
-      const comments = state.commentCounts[post.id] || 0;
-      const liked = state.userLikes.has(post.id);
-      return `
-        <article class="popular-card" data-reveal>
-          <a class="popular-media" href="post.html?id=${post.id}">
-            ${post.cover && isSafeUrl(post.cover) ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}">` : ""}
-          </a>
-          <div class="popular-body">
-            <div class="popular-meta">
-              <span>${escapeHTML(categoryName)}</span>
-              <span data-like-count="${post.id}">${likes} likes</span>
-              <span>${comments} replies</span>
-            </div>
-            <a href="post.html?id=${post.id}">
-              <h3>${escapeHTML(post.title || "")}</h3>
-            </a>
-            <div class="popular-summary">${escapeHTML(summary)}</div>
-            <div class="post-icon-row">
-              <button class="post-icon-btn${liked ? " active" : ""}" data-action="like" data-id="${post.id}" data-like-button="${post.id}" aria-label="Like">
-                <span class="post-icon">${liked ? "&#10084;" : "&#9825;"}</span>
-                <span data-like-count-inline="${post.id}">${likes}</span>
-              </button>
-              <a class="post-icon-btn" data-action="comment" href="post.html?id=${post.id}#comments" aria-label="Comments">
-                <span class="post-icon">&#128172;</span>${comments}
-              </a>
-              <button class="post-icon-btn" data-action="share" data-id="${post.id}" aria-label="Share">
-                <span class="post-icon">&#8663;</span>Share
-              </button>
-            </div>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-
-  setupReveal(track);
-  setupPopularNav();
+  void renderPopularRanking(state.activeCategory).then(setupPopularNav);
 }
 
 function renderPopularTopics() {
@@ -424,7 +318,7 @@ function renderPopularTopics() {
             : "";
       return `
         <article class="popular-card topic-card" data-reveal>
-          <a class="popular-media" href="discussion.html?topic=${topic.id}">
+          <a class="popular-media" aria-label="${escapeHTML(topic.title || 'Open discussion')}" href="discussion.html?topic=${topic.id}">
             ${media}
           </a>
           <div class="popular-body">
@@ -458,21 +352,24 @@ function renderCategories() {
     .map((cat) => {
       const postCount = state.posts.filter((post) => post.category_id === cat.id).length;
       return `
-        <div class="category-card" data-reveal style="border-left: 4px solid ${cat.color};">
+        <a class="category-card" href="#latest" data-category="${escapeHTML(cat.id)}" data-reveal>
           <h3>${escapeHTML(cat.name)}</h3>
           <div>${escapeHTML(cat.description || "")}</div>
-          <div class="category-meta"><span>${postCount} topics</span><span>Join the talk</span></div>
-        </div>
+          <div class="category-meta"><span>${postCount} recent posts</span><span>Browse posts →</span></div>
+        </a>
       `;
     })
     .join("");
+  grid.querySelectorAll("[data-category]").forEach(link => link.addEventListener("click", event => {
+    event.preventDefault();
+    document.querySelector(`#categoryNav [data-category="${CSS.escape(link.dataset.category)}"]`)?.click();
+  }));
   setupReveal(grid);
 }
 
 function renderLists() {
   const latestTarget = document.getElementById("latestPosts");
-  const hotTarget = document.getElementById("hotList");
-  if (!latestTarget || !hotTarget) return;
+  if (!latestTarget) return;
 
   const sourcePosts = state.filteredPosts || state.posts;
   const filtered = sourcePosts
@@ -504,17 +401,47 @@ function renderLists() {
     }
   }
   setupReveal(latestTarget);
+  const loadMoreBtn = document.getElementById("loadMorePostsBtn");
+  if (loadMoreBtn) loadMoreBtn.hidden = !state.hasMorePosts || Boolean(state.filteredPosts);
+}
 
-  const hotPosts = state.filteredPosts || state.posts;
-  const hotCategoryFiltered = state.activeCategory === "all" 
-    ? hotPosts 
-    : hotPosts.filter((post) => post.category_id === state.activeCategory);
-  const hotList = [...hotCategoryFiltered].sort((a, b) => getPostScore(b) - getPostScore(a)).slice(0, 4);
-  hotTarget.innerHTML = hotList.map((post) => buildPostCard(post, true)).join("");
-  if (!hotList.length) {
-    hotTarget.innerHTML = "<div class=\"callout\">No highlights yet — spark the first one.</div>";
+async function loadMoreHomePosts() {
+  const button = document.getElementById("loadMorePostsBtn");
+  const status = document.getElementById("loadMorePostsStatus");
+  if (state.loadingMorePosts || !state.hasMorePosts) return;
+  state.loadingMorePosts = true;
+  if (button) { button.disabled = true; button.textContent = "Loading more posts…"; }
+  if (status) status.textContent = "";
+  try {
+    const page = await fetchPosts({ status: "published", limit: POSTS_PAGE_SIZE, offset: state.postsOffset });
+    state.postsOffset += page.length;
+    state.hasMorePosts = page.length === POSTS_PAGE_SIZE;
+    const seen = new Set(state.posts.map(post => post.id));
+    const newlyVisible = [];
+    for (const post of page) if (!seen.has(post.id)) { state.posts.push(post); seen.add(post.id); newlyVisible.push(post.id); }
+    renderTagFilters();
+    renderCategories();
+    renderLists();
+    if (newlyVisible.length) {
+      // More articles appear immediately; exact counts resolve independently.
+      void fetchPostEngagement(supabaseForEngagement, newlyVisible, state.user?.id)
+        .then(engagement => {
+          Object.assign(state.likeCounts, engagement.likeCounts);
+          Object.assign(state.commentCounts, engagement.commentCounts);
+          for (const id of engagement.likedPostIds) state.userLikes.add(id);
+          renderLists();
+        }).catch(error => {
+          console.warn("Post engagement could not be refreshed:", error);
+          if (status) status.textContent = "Posts loaded, but reaction counts may be temporarily unavailable.";
+        });
+    }
+  } catch (error) {
+    if (status) status.textContent = "Could not load more posts. Please retry.";
+    console.warn("Additional posts failed:", error);
+  } finally {
+    state.loadingMorePosts = false;
+    if (button) { button.disabled = false; button.textContent = "Load more posts"; }
   }
-  setupReveal(hotTarget);
 }
 
 function updateLikeDisplays(postId) {
@@ -538,7 +465,7 @@ function updateLikeDisplays(postId) {
 
 function requireAuthForAction(action) {
   if (state.user) return true;
-  alert(`Please log in to ${action} posts.`);
+  window.appUI.toast(`Please log in to ${action} posts.`);
   const next = encodeURIComponent(window.location.pathname + window.location.search);
   window.location.href = `login.html?next=${next}`;
   return false;
@@ -611,7 +538,7 @@ function setupPostActionButtons() {
             button.textContent = label;
           }, 1500);
         } catch (error) {
-          prompt("Copy this link:", shareUrl);
+          await window.appUI.prompt("Copy this link:", shareUrl);
         }
       }
     }
@@ -680,28 +607,8 @@ function setupTopicNav() {
 function setupSearch() {
   const input = document.getElementById("searchInput");
   if (!input) return;
-  let timer = null;
-  
-  input.addEventListener("input", (event) => {
-    state.searchTerm = (event.target.value || "").trim();
-    if (timer) clearTimeout(timer);
-    
-    // Immediately show results for short delays
-    if (state.searchTerm.length >= 2) {
-      timer = setTimeout(() => {
-        performSearch();
-      }, 250);
-    } else if (state.searchTerm.length === 0) {
-      // Clear search immediately
-      performSearch();
-    }
-  });
-  
-  // Also bind to the search go button if it exists (support span or the new button)
-  const goBtn = document.querySelector(".search-box span") || document.getElementById("searchBtn");
-  if (goBtn) {
-    goBtn.addEventListener("click", performSearch);
-  }
+  const run = bindSearch(input, value => { state.searchTerm = value.trim(); void performSearch(); });
+  document.getElementById("searchBtn")?.addEventListener("click", () => { run(); document.getElementById("latest")?.scrollIntoView({ behavior: "smooth" }); });
 }
 
 function collectTags(posts) {
@@ -734,6 +641,7 @@ function setupTagFilters() {
   }
   if (clearBtn) {
     clearBtn.addEventListener("click", () => {
+      searchRequest++;
       state.activeTags = [];
       if (select) select.value = "";
       if (state.searchTerm) {
@@ -742,7 +650,7 @@ function setupTagFilters() {
         state.searchTerm = "";
       }
       state.filteredPosts = null;
-      renderTrending();
+      renderTrending(state.activeCategory);
       renderPopular();
       renderPopularTopics();
       renderLists();
@@ -750,10 +658,14 @@ function setupTagFilters() {
   }
 }
 
+let searchRequest = 0;
 async function performSearch() {
+  const request = ++searchRequest;
+  const query = state.searchTerm;
+  const tags = [...state.activeTags];
   if (!state.searchTerm && !state.activeTags.length) {
     state.filteredPosts = null;
-    renderTrending();
+    renderTrending(state.activeCategory);
     renderPopular();
     renderPopularTopics();
     renderLists();
@@ -761,15 +673,16 @@ async function performSearch() {
   }
 
   const fallback = () => {
-    state.filteredPosts = fallbackFilterPosts(state.posts, state.searchTerm, state.activeTags);
+    state.filteredPosts = fallbackFilterPosts(state.posts, query, tags);
   };
 
   try {
     const results = await searchPosts({
-      query: state.searchTerm,
-      tags: state.activeTags
+      query,
+      tags
     });
 
+    if (request !== searchRequest || query !== state.searchTerm) return;
     if (results && Array.isArray(results)) {
       state.filteredPosts = results;
       if (!results.length) fallback();
@@ -777,14 +690,15 @@ async function performSearch() {
       fallback();
     }
 
-    renderTrending();
+    renderTrending(state.activeCategory);
     renderPopular();
     renderPopularTopics();
     renderLists();
   } catch (error) {
+    if (request !== searchRequest) return;
     console.error("Search error:", error);
     fallback();
-    renderTrending();
+    renderTrending(state.activeCategory);
     renderPopular();
     renderPopularTopics();
     renderLists();
@@ -796,7 +710,7 @@ async function handleContentRequest() {
   if (!topic) return;
   let email = "";
   if (!state.user) {
-    email = prompt("Enter your email so we can notify you (optional):") || "";
+    email = await window.appUI.prompt("Enter your email so we can notify you (optional):") || "";
   }
   const payload = {
     id: crypto.randomUUID(),
@@ -809,10 +723,10 @@ async function handleContentRequest() {
   };
   const result = await createContentRequest(payload);
   if (result.error) {
-    alert(result.error.message || "Request failed. Please try again.");
+    window.appUI.toast(result.error.message || "Request failed. Please try again.");
     return;
   }
-  alert("Request sent to the admins. Thanks!");
+  window.appUI.toast("Request sent to the admins. Thanks!");
 }
 
 function renderSuggestedPeople() {
@@ -922,6 +836,7 @@ function renderCustomAds(target, ads, limit = 1) {
   if (!target) return false;
   const activeAds = ads.filter(isAdActive).slice(0, limit);
   if (!activeAds.length) return false;
+  target.hidden = false;
   target.innerHTML = activeAds.map((ad) => buildAdCard(ad)).join("");
   return true;
 }
@@ -946,7 +861,7 @@ function renderAds(settings) {
   }
 
   const buildAd = (slotId) => {
-    if (!slotId) return "<div class=\"ad-slot\">Ad slot not configured</div>";
+    if (!slotId) return "";
     return `
       <ins class="adsbygoogle"
         style="display:block"
@@ -960,10 +875,12 @@ function renderAds(settings) {
   let usedAdsense = false;
   if (!filledTop) {
     homeTop.innerHTML = buildAd(settings.adSense.slots.homeTop);
+    homeTop.hidden = !settings.adSense.slots.homeTop;
     usedAdsense = true;
   }
   if (!filledSidebar) {
     homeSidebar.innerHTML = buildAd(settings.adSense.slots.homeSidebar);
+    homeSidebar.hidden = !settings.adSense.slots.homeSidebar;
     usedAdsense = true;
   }
 
@@ -985,31 +902,34 @@ function renderAds(settings) {
 
 async function boot() {
   showLoadingPlaceholders();
-  state.user = await getCurrentUserWithRole();
-  state.settings = await fetchSettings();
+  // Authentication and global settings are independent; avoid serial network
+  // waits before rendering the public homepage.
+  [state.user, state.settings] = await Promise.all([getCurrentUserWithRole(), fetchSettings()]);
   applyTheme(state.settings);
   if (state.settings.themeId) {
     const theme = await fetchThemeById(state.settings.themeId);
     if (theme) applyThemeVariables(theme);
   }
 
-  const softTimeout = (promise, fallback, label, ms = 2800) =>
-    Promise.race([
-      Promise.resolve(promise),
-      new Promise((resolve) => window.setTimeout(() => {
+  const softTimeout = (promise, fallback, label, ms = 2800) => {
+    let timer;
+    const timeout = new Promise((resolve) => {
+      timer = window.setTimeout(() => {
         console.warn(`Homepage data timed out: ${label}`);
         resolve(fallback);
-      }, ms))
-    ]).catch((error) => {
-      console.warn(`Homepage data failed: ${label}`, error);
-      return fallback;
+      }, ms);
     });
+    return Promise.race([Promise.resolve(promise), timeout])
+      .catch((error) => {
+        console.warn(`Homepage data failed: ${label}`, error);
+        return fallback;
+      })
+      .finally(() => window.clearTimeout(timer));
+  };
 
   const [
     categories,
     posts,
-    comments,
-    likes,
     ads,
     discussionTopics,
     discussionMessages,
@@ -1017,9 +937,7 @@ async function boot() {
     suggestedPeople
   ] = await Promise.all([
     softTimeout(fetchCategories(), [], "categories"),
-    softTimeout(fetchPosts({ status: "published" }), [], "posts"),
-    softTimeout(fetchComments({ status: "approved" }), [], "comments"),
-    softTimeout(fetchPostLikes(), [], "likes"),
+    softTimeout(fetchPosts({ status: "published", limit: POSTS_PAGE_SIZE }), [], "posts"),
     softTimeout(fetchAds({ status: "active" }), [], "ads"),
     softTimeout(fetchDiscussionTopics(), [], "discussion topics"),
     softTimeout(fetchDiscussionMessages(), [], "discussion messages"),
@@ -1029,8 +947,9 @@ async function boot() {
 
   state.categories = categories;
   state.posts = posts;
-  state.comments = comments;
-  state.likes = likes;
+  state.postsOffset = posts.length;
+  state.hasMorePosts = posts.length === POSTS_PAGE_SIZE;
+  state.engagement = null;
   state.ads = ads;
   state.discussionTopics = discussionTopics;
   state.discussionMessages = discussionMessages;
@@ -1041,12 +960,24 @@ async function boot() {
   renderAuthActions();
   showAdminLinks();
   renderNav(state.categories);
-  renderStats();
-  renderTrending();
+  renderTrending(state.activeCategory);
   renderPopular();
   renderPopularTopics();
   renderCategories();
   renderLists();
+  // Visible articles must not wait behind exact-count queries, especially
+  // while a deployment is using the compatibility fallback.
+  void fetchPostEngagement(supabaseForEngagement, posts.map(post => post.id), state.user?.id)
+    .then(engagement => {
+      state.engagement = engagement;
+      hydrateCounts();
+      renderLists();
+    }).catch(error => {
+      console.warn("Post engagement could not be loaded:", error);
+      const status = document.getElementById("loadMorePostsStatus");
+      if (status) status.textContent = "Reaction counts are temporarily unavailable.";
+    });
+  document.getElementById("loadMorePostsBtn")?.addEventListener("click", () => void loadMoreHomePosts());
   renderTagFilters();
   setupTagFilters();
   renderLeaderboard();

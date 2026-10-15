@@ -24,7 +24,7 @@ const askForText = async (message, options = {}) => {
   if (window.appUI?.prompt) {
     return window.appUI.prompt(message, options);
   }
-  return window.prompt(message);
+  return await window.appUI.prompt(message);
 };
 
 const state = {

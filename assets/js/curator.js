@@ -106,6 +106,9 @@ export async function createCuratorSource(sourceData) {
 
     const payload = {
       name: cleanText(sourceData?.name) || "Untitled Feed",
+      // The live curator_sources table has a NOT NULL url column and a
+      // feed_url compatibility column. Both must stay in sync.
+      url: feedUrl,
       feed_url: feedUrl,
       source_type: cleanText(sourceData?.source_type) || "rss",
       query: cleanText(sourceData?.query),
@@ -153,6 +156,7 @@ export async function updateCuratorSource(sourceId, sourceData) {
 
     const feedUrl = pickFeedUrl(sourceData);
     if (feedUrl) {
+      updatePayload.url = feedUrl;
       updatePayload.feed_url = feedUrl;
     }
 
@@ -280,11 +284,11 @@ export async function createCuratorPost(postData) {
   }
 }
 
-export async function markCuratorPostAsPosted(curatorPostId) {
+export async function markCuratorPostAsPosted(curatorPostId, publishedPostId) {
   try {
     const { data, error } = await supabase
       .from("curator_posts")
-      .update({ status: "posted", updated_at: new Date().toISOString() })
+      .update({ status: "posted", is_posted: true, post_id: publishedPostId, updated_at: new Date().toISOString() })
       .eq("id", curatorPostId)
       .select()
       .single();
@@ -295,6 +299,14 @@ export async function markCuratorPostAsPosted(curatorPostId) {
     console.error("Error marking curator post as posted:", error);
     throw error;
   }
+}
+
+export async function getPublishedCuratorPosts(limit = 20) {
+  const { data, error } = await supabase.from("curator_posts").select("*")
+    .eq("status", "posted").not("post_id", "is", null)
+    .order("updated_at", { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data || [];
 }
 
 export async function deleteCuratorPost(curatorPostId) {
@@ -449,7 +461,7 @@ export async function triggerScoutSync() {
   const token = sessionData?.session?.access_token;
   if (!token) throw new Error("You must be signed in to run the bot.");
 
-  const response = await fetch("/.netlify/functions/scout-news", {
+  const response = await fetch("/.netlify/functions/scout-news-manual", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` }
   });

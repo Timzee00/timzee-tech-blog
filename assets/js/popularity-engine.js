@@ -1,18 +1,32 @@
 import { supabase } from "./supabase.js";
+import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
 import { escapeHTML, stripHTML, clampText, isSafeUrl, timeAgo } from "./utils.js";
 
 const TRACK_ID = "popularTrack";
 const LIMIT = 5;
-let rendering = false;
-let refreshTimer = null;
+let requestVersion = 0;
+
+export function plausibleCoverImage(url) {
+  if(!isSafeUrl(url))return false;
+  try {
+    const parsed=new URL(url);
+    const host=parsed.hostname.toLowerCase();
+    const path=decodeURIComponent(parsed.pathname).toLowerCase();
+    if(/\.(?:jpe?g|png|webp|gif|avif|svg)(?:$|\/)/i.test(path))return true;
+    if(host==="images.unsplash.com"||host==="images.pexels.com"||host==="i.imgur.com"||
+      host==="res.cloudinary.com"||host==="cdn.pixabay.com")return true;
+    if(path.includes("/storage/v1/object/public/"))return true;
+    return false;
+  }catch{return false;}
+}
 
 function buildCard(post) {
-  const media = isSafeUrl(post.cover || "")
+  const media = plausibleCoverImage(post.cover || "")
     ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}" loading="lazy">`
     : `<div class="popular-media-fallback" aria-hidden="true"><span>${escapeHTML((post.content_type || "POST").toUpperCase())}</span></div>`;
-  const summary = escapeHTML(clampText(stripHTML(post.content || ""), 150));
+  const summary = escapeHTML(clampText(stripHTML(stripEditorialScaffolding(post.content || "")), 150));
   return `<article class="popular-card" data-popular-score="${escapeHTML(String(post.popularity_score || 0))}">
-      <a class="popular-media" href="post.html?id=${encodeURIComponent(post.id)}">${media}</a>
+      <a class="popular-media" aria-label="${escapeHTML(post.title || 'Read post')}" href="post.html?id=${encodeURIComponent(post.id)}">${media}</a>
       <div class="popular-body">
         <div class="popular-meta"><span>${Number(post.like_count || 0)} likes</span><span>${Number(post.comment_count || 0)} replies</span><span>${Number(post.share_count || 0)} shares</span></div>
         <a href="post.html?id=${encodeURIComponent(post.id)}"><h3>${escapeHTML(post.title || "Untitled post")}</h3></a>
@@ -22,48 +36,41 @@ function buildCard(post) {
     </article>`;
 }
 
-async function renderPopular(categoryId = null) {
+function installMediaFallbacks(track) {
+  track.querySelectorAll(".popular-media img").forEach((image) => {
+    image.addEventListener("error", () => {
+      const fallback = document.createElement("div");
+      fallback.className = "popular-media-fallback";
+      const label = document.createElement("span");
+      label.textContent = "Article";
+      fallback.appendChild(label);
+      image.replaceWith(fallback);
+    }, { once: true });
+    // Cached failed image responses may have completed before we attached a listener.
+    if (image.complete && image.naturalWidth === 0) image.dispatchEvent(new Event("error"));
+  });
+}
+
+export async function renderPopular(categoryId = null) {
   const track = document.getElementById(TRACK_ID);
-  if (!track || rendering) return;
-  rendering = true;
+  if (!track) return;
+  const version = ++requestVersion;
   track.setAttribute("aria-busy", "true");
   track.dataset.popularitySource = "automated";
   try {
     const category = categoryId && categoryId !== "all" ? categoryId : null;
     const result = await supabase.rpc("get_popular_posts", { limit_count: LIMIT, category_filter: category });
+    if (version !== requestVersion) return;
     if (result.error) throw result.error;
     const rows = result.data || [];
     track.innerHTML = rows.length ? rows.map(buildCard).join("") : `<div class="callout">No published posts have enough activity to surface yet.</div>`;
+    installMediaFallbacks(track);
   } catch (error) {
+    if (version !== requestVersion) return;
+    track.innerHTML = `<div class="callout">This section is unavailable right now. Try refreshing the page.</div>`;
     console.warn("Automated popular ranking failed; retaining current content:", error);
   } finally {
-    track.setAttribute("aria-busy", "false");
-    rendering = false;
+    if (version === requestVersion) track.setAttribute("aria-busy", "false");
+
   }
 }
-
-function scheduleRefresh(categoryId = null) {
-  if (refreshTimer) clearTimeout(refreshTimer);
-  refreshTimer = setTimeout(() => { refreshTimer = null; void renderPopular(categoryId); }, 120);
-}
-
-function boot() {
-  const track = document.getElementById(TRACK_ID);
-  if (!track) return;
-  scheduleRefresh();
-  const categoryNav = document.getElementById("categoryNav");
-  categoryNav?.addEventListener("click", (event) => {
-    const link = event.target.closest("[data-category]");
-    if (link) scheduleRefresh(link.dataset.category || "all");
-  });
-
-  const observer = new MutationObserver(() => {
-    if (rendering) return;
-    /* app.js can re-render the homepage after its initial settings load. Re-assert the database ranking instead of allowing manual labels/content to win. */
-    scheduleRefresh();
-  });
-  observer.observe(track, { childList: true, subtree: true });
-}
-
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
-else boot();

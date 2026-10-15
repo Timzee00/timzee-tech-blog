@@ -169,7 +169,7 @@ function bindModerationActions() {
       await moderateContent(action, type, id);
       await refreshAll();
     } catch (err) {
-      alert(err.message || "Action failed.");
+      window.appUI.toast(err.message || "Action failed.");
     } finally {
       button.disabled = false;
     }
@@ -185,7 +185,7 @@ function bindModerationActions() {
       await updateReportStatus(reportId, button.dataset.action === "resolve-report" ? "resolved" : "dismissed");
       await loadReports();
     } catch (err) {
-      alert(err.message || "Report update failed.");
+      window.appUI.toast(err.message || "Report update failed.");
     } finally {
       button.disabled = false;
     }

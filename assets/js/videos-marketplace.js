@@ -156,12 +156,12 @@ export async function fetchVideos({ category = null, limit = 20, offset = 0, use
     const result = await query;
     if (result && result.error) {
       console.error("fetchVideos error:", result.error);
-      return [];
+      throw result.error;
     }
     return result.data || [];
   } catch (err) {
     console.error("fetchVideos exception:", err);
-    return [];
+    throw err;
   }
 }
 
@@ -183,10 +183,10 @@ export async function fetchVideoById(videoId) {
   }
 }
 
-export async function searchVideos({ query, limit = 20, offset = 0 } = {}) {
+export async function searchVideos({ query, category = null, limit = 20, offset = 0 } = {}) {
   if (!query) return [];
   try {
-    const result = await supabase
+    let request = supabase
       .from("videos")
       .select("*")
       .textSearch("search_vector", query, { type: "websearch", config: "english" })
@@ -194,40 +194,36 @@ export async function searchVideos({ query, limit = 20, offset = 0 } = {}) {
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
+    if (category) request = request.eq("category", category);
+    const result = await request;
     if (result && result.error) {
       console.error("searchVideos error:", result.error);
-      return [];
+      throw result.error;
     }
     return result.data || [];
   } catch (err) {
     console.error("searchVideos exception:", err);
-    return [];
+    throw err;
   }
 }
 
 export async function likeVideo(videoId, userId) {
-  const existing = await supabase
-    .from("video_likes")
-    .select("id")
-    .eq("video_id", videoId)
-    .eq("user_id", userId)
-    .single();
-
-  if (!existing.error && existing.data) {
-    // Already liked, unlike
-    await supabase.from("video_likes").delete().eq("id", existing.data.id);
-    return { liked: false };
+  if(!videoId||!userId)return {liked:false,error:{message:"Sign in to like videos."}};
+  const existing=await supabase.from("video_likes").select("id")
+    .eq("video_id",videoId).eq("user_id",userId).maybeSingle();
+  if(existing.error)return {liked:false,error:existing.error};
+  if(existing.data){
+    const removed=await supabase.from("video_likes").delete()
+      .eq("id",existing.data.id).eq("user_id",userId);
+    if(removed.error)return {liked:true,error:removed.error};
+    return {liked:false};
   }
-
-  // Like video
-  await supabase.from("video_likes").insert({
-    id: crypto.randomUUID(),
-    video_id: videoId,
-    user_id: userId,
-    created_at: new Date().toISOString()
+  const inserted=await supabase.from("video_likes").insert({
+    id:crypto.randomUUID(),video_id:videoId,user_id:userId,
+    created_at:new Date().toISOString()
   });
-
-  return { liked: true };
+  if(inserted.error)return {liked:false,error:inserted.error};
+  return {liked:true};
 }
 
 export async function getVideoLikeCount(videoId) {
@@ -279,31 +275,61 @@ export async function commentOnVideo(videoId, userId, authorName, body, replyTo 
   }).select().single();
 }
 
-export async function getVideoComments(videoId) {
+const VIDEO_COMMENT_PAGE_SIZE = 40;
+
+// One page at a time. The UI must never request a video's entire comment
+// history; the database can return millions of rows for a popular video.
+export async function fetchVideoCommentPage(videoId, { offset = 0, limit = VIDEO_COMMENT_PAGE_SIZE } = {}) {
+  if (!videoId) return [];
+  const pageSize = Math.max(1, Math.min(60, Math.trunc(Number(limit) || VIDEO_COMMENT_PAGE_SIZE)));
+  const start = Math.max(0, Math.trunc(Number(offset) || 0));
+  const { data, error } = await supabase
+    .from("video_comments")
+    .select("id,video_id,user_id,author_name,body,reply_to,created_at")
+    .eq("video_id", videoId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(start, start + pageSize - 1);
+  if (error) throw error;
+  return data || [];
+}
+
+// Keep legacy callers compatible while bounding their network payloads.
+export async function getVideoComments(videoId, options) {
   try {
-    const result = await supabase
-      .from("video_comments")
-      .select("*")
-      .eq("video_id", videoId)
-      .order("created_at", { ascending: true });
-    if (result && result.error) {
-      console.error("getVideoComments error:", result.error);
-      return [];
-    }
-    return result.data || [];
-  } catch (err) {
-    console.error("getVideoComments exception:", err);
+    return await fetchVideoCommentPage(videoId, options);
+  } catch (error) {
+    console.error("getVideoComments error:", error);
     return [];
   }
 }
 
+// Public videos are not updatable by ordinary viewers (correct RLS).
+// Never use client-side read/modify/write counters: it loses concurrent views
+// and silently fails for non-owners. The staging-reviewed RPC atomically counts
+// at most one authenticated view per user/video/UTC day.
+let viewCounterRpcAvailable = true;
 export async function incrementVideoView(videoId) {
-  const video = await fetchVideoById(videoId);
-  if (video) {
-    await supabase
-      .from("videos")
-      .update({ view_count: (video.view_count || 0) + 1 })
-      .eq("id", videoId);
+  if (!videoId || !viewCounterRpcAvailable) return false;
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session?.user?.id) return false;
+    const { data, error } = await supabase.rpc("record_video_view", { p_video_id: videoId });
+    if (error) {
+      // Until the reviewed migration is deployed, skip metric updates
+      // rather than bypassing owners' RLS or logging an error per video.
+      if (["PGRST202", "42883"].includes(String(error.code || ""))) {
+        viewCounterRpcAvailable = false;
+        console.warn("Atomic video view tracking is pending the server migration.");
+      } else {
+        console.warn("Video view tracking failed:", error);
+      }
+      return false;
+    }
+    return data === true;
+  } catch (error) {
+    console.warn("Video view tracking unavailable:", error);
+    return false;
   }
 }
 
@@ -398,14 +424,14 @@ export async function fetchMarketplaceItems({
     const result = await query;
     if (result && result.error) {
       console.error("fetchMarketplaceItems error:", result.error);
-      return [];
+      throw result.error;
     }
     const items = result.data || [];
     await attachSellerVerification(items);
     return items;
   } catch (err) {
     console.error("fetchMarketplaceItems exception:", err);
-    return [];
+    throw err;
   }
 }
 
@@ -451,12 +477,12 @@ export async function searchMarketplace({ query, category = null, limit = 20, of
     const result = await request;
     if (result && result.error) {
       console.error("searchMarketplace error:", result.error);
-      return [];
+      throw result.error;
     }
     return result.data || [];
   } catch (err) {
     console.error("searchMarketplace exception:", err);
-    return [];
+    throw err;
   }
 }
 

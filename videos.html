@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Videos - Timzee Tech Hub</title>
     <meta name="description" content="Watch tech videos from our community">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>
@@ -39,7 +36,7 @@
           <div class="search-box">
             <input type="search" id="videoSearch" placeholder="Search videos...">
           </div>
-          <a class="btn" href="#upload" id="uploadBtnHeader" style="display: none;">Upload Video</a>
+          <a class="btn" href="#uploadSection" id="uploadBtnHeader" style="display: none;">Upload Video</a>
           <a class="icon-btn" href="stories.html" data-label="Stories" aria-label="Stories" title="Stories">&#128247;</a>
           <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
           <div class="auth-actions" id="authActions"></div>
@@ -52,26 +49,30 @@
         <h1>Videos</h1>
         <p class="tagline">Discover tech tutorials, demos, and community content</p>
 
+        <div class="video-mode-switch" role="group" aria-label="Choose video feed">
+          <button class="filter-btn active" type="button" data-video-mode="for-you" aria-pressed="true">For You</button>
+          <button class="filter-btn" type="button" data-video-mode="following" aria-pressed="false">Following</button>
+          <button class="filter-btn" type="button" data-video-mode="latest" aria-pressed="false">Latest</button>
+          <a class="btn ghost sm" href="video.html">Full-screen viewer</a>
+        </div>
         <!-- Category Tabs -->
-        <div class="nav-pill" id="categoryTabs" style="margin: 20px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
-          <a href="#all" data-category="all">All</a>
-          <a href="#tutorial" data-category="tutorial">Tutorials</a>
-          <a href="#demo" data-category="demo">Demos</a>
-          <a href="#review" data-category="review">Reviews</a>
-          <a href="#news" data-category="news">News</a>
+        <div class="category-filter" id="categoryTabs" aria-label="Video categories">
+          <button type="button" class="filter-btn active" aria-pressed="true" data-category="all">All</button>
+          <button type="button" class="filter-btn" data-category="tutorial">Tutorials</button>
+          <button type="button" class="filter-btn" data-category="demo">Demos</button>
+          <button type="button" class="filter-btn" data-category="review">Reviews</button>
+          <button type="button" class="filter-btn" data-category="news">News</button>
         </div>
 
         <!-- Upload Section (For Logged In Users) -->
         <div id="uploadSection" style="display: none; margin-bottom: 40px;">
           <h2>Upload Video</h2>
-          <div class="upload-area" id="uploadArea">
-            <div style="font-size: 48px; margin-bottom: 12px;">📹</div>
-            <p><strong>Drag and drop your video here</strong></p>
-            <p style="color: #666; font-size: 12px; margin: 8px 0;">or click to browse (MP4, WebM, OGG)</p>
-            <input type="file" id="videoFile" accept="video/*" style="display: none;">
-          </div>
-          
-          <form id="uploadForm" style="display: none;">
+          <button type="button" class="upload-area" id="uploadArea">
+            <strong>Choose a video</strong><span>Or drag and drop an MP4, WebM or OGG file here</span>
+          </button>
+          <input type="file" id="videoFile" accept="video/*" hidden aria-label="Video file">
+
+          <form novalidate id="uploadForm" style="display: none;">
             <div id="trimEditor" style="display:none; margin-bottom: 16px; padding: 14px; border: 1px solid var(--color-border, rgba(15,23,42,0.12)); border-radius: var(--radius-sm, 12px);">
               <p style="margin: 0 0 8px; font-weight: 600;">Trim &amp; edit your video (optional)</p>
               <div id="editorStage" style="position: relative; width: 100%; max-height: 260px; border-radius: 8px; overflow: hidden; background: #000; touch-action: none;">
@@ -116,8 +117,19 @@
                 Trimming/filters/drawings/text re-encode to WebM and require a browser that supports it (Chrome/Edge/Firefox). If unsupported, skip editing and the original file uploads as-is.
               </p>
             </div>
+            <section style="margin:12px 0;padding:14px;border:1px solid var(--color-border,#d6e2e0);border-radius:12px">
+              <strong>First-frame and caption preview</strong>
+              <p style="font-size:12px">Choose a cover moment, and preview how your title and caption appear. The selected frame is saved as your thumbnail unless you upload a separate image.</p>
+              <label for="coverMoment">Cover position (seconds)</label>
+              <input type="range" id="coverMoment" min="0" max="1" step=".1" value=".1" style="display:block;width:100%">
+              <output id="coverMomentLabel" for="coverMoment">0.1 seconds</output>
+              <div style="margin-top:10px;background:#07151b;border-radius:10px;padding:12px;color:#fff">
+                <img id="autoCoverPreview" style="display:none;max-height:260px;max-width:100%;object-fit:contain;margin:auto" alt="Selected cover frame preview">
+                <p id="captionPreview" style="white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0">Your caption will appear here.</p>
+              </div>
+            </section>
             <input type="text" id="videoTitle" placeholder="Video title" required>
-            <textarea id="videoDescription" placeholder="Video description" style="margin-top: 8px;"></textarea>
+            <textarea id="videoDescription" placeholder="Video description" style="margin-top: 8px;" class="resize-none"></textarea>
             <select id="videoCategory" style="margin-top: 8px;">
               <option value="tutorial">Tutorial</option>
               <option value="demo">Demo</option>
@@ -161,22 +173,29 @@
 
     <script type="module" src="assets/js/nav.js"></script>
     <script type="module">
+      import { icon } from "./assets/js/icons.js";
+      import { bindSearch } from "./assets/js/search-input.js";
       import { 
         fetchVideos, 
         searchVideos, 
         uploadVideo,
         detectVideoDuration
       } from "./assets/js/videos-marketplace.js";
-      import { getCurrentUser, signOut } from "./assets/js/supabase.js";
+      import { getCurrentUser, signOut, supabase } from "./assets/js/supabase.js";
+      import { fetchVideoDiscoveryPage } from "./assets/js/video-discovery.mjs";
+      import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+      import {setupMentionInput} from "./assets/js/mentions.js";
 
       let state = {
         user: null,
         videos: [],
         offset: 0,
         category: "all",
+        mode: new URLSearchParams(location.search).get("mode") === "following" ? "following" : "for-you",
         limit: 20,
-        selectedVideoDuration: 0
+        selectedVideoDuration: 0,
+        editorDirty:false,editRenderInProgress:false,selectedThumbnailTime:null
       };
 
       // Setup auth
@@ -194,7 +213,8 @@
             await signOut();
             window.location.reload();
           });
-          document.getElementById("uploadSection").style.display = "block";
+          document.getElementById("uploadBtnHeader").addEventListener("click", () => { document.getElementById("uploadSection").style.display = "block"; });
+          if (location.hash === "#uploadSection") document.getElementById("uploadSection").style.display = "block";
           document.getElementById("uploadBtnHeader").style.display = "inline-flex";
         } else {
           authActions.innerHTML = `<a class="btn ghost" href="login.html?next=${encodeURIComponent('videos.html')}">Log In</a>`;
@@ -202,25 +222,38 @@
       }
 
       // Load videos
+      let listVersion = 0;
+      let loading = false;
       async function loadVideos() {
+        const version = ++listVersion;
+        const offset = state.offset;
+        const query = document.getElementById("videoSearch").value.trim();
+        const category = state.category === "all" ? null : state.category;
+        const container = document.getElementById("videosContainer");
+        const more = document.getElementById("loadMoreBtn");
+        loading = true; more.disabled = true; container.setAttribute("aria-busy", "true");
         try {
-          const videos = await fetchVideos({
-            category: state.category === "all" ? null : state.category,
-            limit: state.limit,
-            offset: state.offset
-          });
-
-          if (state.offset === 0) {
-            state.videos = videos;
-          } else {
-            state.videos.push(...videos);
+          if(state.mode==="following" && !state.user){
+            container.innerHTML='<div class="callout">Sign in to discover videos from followed creators. <a href="login.html?next=videos.html%3Fmode%3Dfollowing">Log in</a></div>';
+            more.style.display="none";return;
           }
-
+          const rows = query || category || state.mode==="latest"
+            ? await (query ? searchVideos : fetchVideos)({ query, category, limit: state.limit, offset })
+            : await fetchVideoDiscoveryPage(supabase,{
+                mode:state.mode,userId:state.user?.id,limit:state.limit,offset
+              });
+          if (version !== listVersion || query !== document.getElementById("videoSearch").value.trim()) return;
+          state.videos = offset === 0 ? rows : [...state.videos, ...rows];
           renderVideos();
-          document.getElementById("loadMoreBtn").style.display = videos.length === state.limit ? "inline-flex" : "none";
+          more.style.display = rows.length === state.limit ? "inline-flex" : "none";
         } catch (error) {
-          console.error("Load error:", error);
-          document.getElementById("videosContainer").innerHTML = `<div class="callout">Failed to load videos</div>`;
+          if (version !== listVersion) return;
+          console.error("Could not load videos:", error);
+          if (offset) state.offset = Math.max(0, offset - state.limit);
+          else container.innerHTML = '<div class="callout" role="status">We couldn’t load videos. <button type="button" class="btn ghost" data-retry-list>Try again</button></div>';
+          container.querySelector("[data-retry-list]")?.addEventListener("click", () => loadVideos());
+        } finally {
+          if (version === listVersion) { loading = false; more.disabled = false; container.setAttribute("aria-busy", "false"); }
         }
       }
 
@@ -229,14 +262,14 @@
         const container = document.getElementById("videosContainer");
         
         if (!state.videos.length) {
-          container.innerHTML = `<div class="callout">No videos yet in this category</div>`;
+          container.innerHTML = `<div class="callout">No videos here yet. Try another category or check back soon.</div>`;
           return;
         }
 
         container.innerHTML = `<div class="video-grid">${state.videos.map(v => `
-          <div class="video-card" data-id="${escapeHTML(v.id || '')}">
+          <a class="video-card" href="video.html?id=${encodeURIComponent(v.id)}">
             <div class="video-thumbnail">
-              ${v.thumbnail_url && isSafeUrl(v.thumbnail_url) ? `<img src="${v.thumbnail_url}" alt="${escapeHTML(v.title || '')}">` : '📹'}
+              ${v.thumbnail_url && isSafeUrl(v.thumbnail_url) ? `<img src="${escapeHTML(v.thumbnail_url)}" loading="lazy" alt="${escapeHTML(v.title || '')}">` : icon('videos')}
               <div class="video-duration">${escapeHTML(String(v.duration || 0))}s</div>
             </div>
             <div class="video-info">
@@ -246,49 +279,56 @@
                 <span>❤ ${escapeHTML(String(v.like_count || 0))}</span>
               </div>
             </div>
-          </div>
+          </a>
         `).join("")}</div>`;
 
-        // Add click handlers
-        container.querySelectorAll(".video-card").forEach(card => {
-          card.addEventListener("click", () => {
-            const videoId = card.dataset.id;
-            window.location.href = `video.html?id=${videoId}`;
-          });
+
+      }
+
+      function updateVideoModes(){
+        document.querySelectorAll("[data-video-mode]").forEach(button=>{
+          const active=button.dataset.videoMode===state.mode;
+          button.classList.toggle("active",active);
+          button.setAttribute("aria-pressed",String(active));
         });
       }
+      document.querySelectorAll("[data-video-mode]").forEach(button=>button.addEventListener("click",()=>{
+        if(state.mode===button.dataset.videoMode)return;
+        state.mode=button.dataset.videoMode;
+        // Do not label category/search results as personalized or Following.
+        // Switching modes resets those separate discovery constraints.
+        const search=document.getElementById("videoSearch");
+        if(search)search.value="";
+        state.category="all";
+        document.querySelectorAll("#categoryTabs [data-category]").forEach(item=>{
+          const active=item.dataset.category==="all";
+          item.classList.toggle("active",active);
+          item.setAttribute("aria-pressed",String(active));
+        });
+        state.offset=0;updateVideoModes();
+        const url=new URL(location.href);url.searchParams.set("mode",state.mode);
+        history.replaceState({}, "", url.pathname+url.search);
+        void loadVideos();
+      }));
+      updateVideoModes();
 
       // Category tabs
       document.getElementById("categoryTabs").addEventListener("click", (e) => {
         if (e.target.dataset.category) {
+          e.preventDefault();
+          document.querySelectorAll("#categoryTabs [data-category]").forEach(button => { button.classList.toggle("active", button === e.target); button.setAttribute("aria-pressed", String(button === e.target)); });
           state.category = e.target.dataset.category;
+          if (state.category !== "all") {state.mode="latest";updateVideoModes();}
           state.offset = 0;
           loadVideos();
         }
       });
 
-      // Search
-      let searchTimer;
-      document.getElementById("videoSearch").addEventListener("input", async (e) => {
-        clearTimeout(searchTimer);
-        const term = e.target.value.trim();
-        
-        if (term.length < 2) {
-          state.offset = 0;
-          loadVideos();
-          return;
+      bindSearch(document.getElementById("videoSearch"), () => {
+        if(document.getElementById("videoSearch").value.trim()){
+          state.mode="latest";updateVideoModes();
         }
-
-        searchTimer = setTimeout(async () => {
-          try {
-            const results = await searchVideos({ query: term, limit: state.limit });
-            state.videos = results;
-            state.offset = 0;
-            renderVideos();
-          } catch (error) {
-            console.error("Search error:", error);
-          }
-        }, 300);
+        state.offset=0;void loadVideos();
       });
 
       // Upload handlers
@@ -321,6 +361,36 @@
       });
 
       const videoThumbnail = document.getElementById("videoThumbnail");
+      const coverMoment=document.getElementById("coverMoment");
+      const coverMomentLabel=document.getElementById("coverMomentLabel");
+      const autoCoverPreview=document.getElementById("autoCoverPreview");
+      let coverPreviewUrl=null;
+      function updateCaptionPreview(){
+        const title=document.getElementById("videoTitle").value.trim();
+        const description=document.getElementById("videoDescription").value.trim();
+        document.getElementById("captionPreview").textContent=
+          [title,description].filter(Boolean).join(" — ")||"Your caption will appear here.";
+      }
+      ["videoTitle","videoDescription"].forEach(id=>{
+        document.getElementById(id).addEventListener("input",updateCaptionPreview);
+      });
+      setupMentionInput(document.getElementById("videoDescription"));
+      async function previewCover(){
+        const file=state.trimmedFile||videoFile.files[0];
+        if(!file)return;
+        coverMomentLabel.textContent=Number(coverMoment.value).toFixed(1)+" seconds";
+        const frame=await captureVideoFrame(file,Number(coverMoment.value));
+        if(!frame)return;
+        if(coverPreviewUrl)URL.revokeObjectURL(coverPreviewUrl);
+        coverPreviewUrl=URL.createObjectURL(frame);
+        autoCoverPreview.src=coverPreviewUrl;
+        autoCoverPreview.style.display="block";
+      }
+      let coverPreviewTimer;
+      coverMoment.addEventListener("input",()=>{
+        clearTimeout(coverPreviewTimer);
+        coverPreviewTimer=setTimeout(()=>{void previewCover();},250);
+      });
       const thumbnailPreview = document.getElementById("thumbnailPreview");
       videoThumbnail.addEventListener("change", () => {
         const file = videoThumbnail.files[0];
@@ -339,6 +409,8 @@
           uploadForm.style.display = "block";
           state.selectedVideoDuration = 0;
           state.trimmedFile = null;
+          state.editorDirty=false;
+          state.selectedThumbnailTime=null;
           const status = document.getElementById("uploadStatus");
           if (status) {
             status.style.display = "block";
@@ -362,6 +434,9 @@
               status.style.color = "#f59e0b";
             }
           }
+          coverMoment.max=Math.max(0.1,(state.selectedVideoDuration||1)-0.1);
+          coverMoment.value=Math.min(.5,Number(coverMoment.max));
+          void previewCover();
           setupTrimEditor(file);
         }
       }
@@ -374,6 +449,12 @@
       // back gracefully (whole editor hidden) if the browser can't do it.
       // ------------------------------------------------------------------
       function setupTrimEditor(file) {
+        state.editorController?.abort();
+        const controller=new AbortController();
+        state.editorController=controller;
+        const withSignal=(element,type,listener,options={})=>
+          element.addEventListener(type,listener,{...options,signal:controller.signal});
+        if(state.editorObjectUrl)URL.revokeObjectURL(state.editorObjectUrl);
         const trimEditor = document.getElementById("trimEditor");
         const trimPreview = document.getElementById("trimPreview");
         const trimStart = document.getElementById("trimStart");
@@ -396,6 +477,17 @@
         trimStatus.style.display = "none";
         state.trimmedFile = null;
         state.selectedFilterCSS = "none";
+        state.editorRevision=0;
+        const markChanged=()=>{
+          state.editorRevision++;
+          state.editorDirty=true;
+          state.trimmedFile=null;
+          resetBtn.style.display="inline-flex";
+          trimStatus.style.display="block";
+          trimStatus.style.color="#b45309";
+          trimStatus.textContent="Edits changed. Tap Apply Trim & Edits before uploading, or Use Original.";
+        };
+        [trimStart,trimEnd].forEach(input=>withSignal(input,"input",markChanged));
         state.textOverlays = []; // [{ text, xPct, yPct, color }]
         textLayer.innerHTML = "";
         const drawCtx = drawCanvas.getContext("2d");
@@ -403,9 +495,10 @@
         let drawingEnabled = false;
 
         const objectUrl = URL.createObjectURL(file);
+        state.editorObjectUrl=objectUrl;
         trimPreview.src = objectUrl;
         trimPreview.style.filter = "none";
-        trimPreview.addEventListener(
+        withSignal(trimPreview,
           "loadedmetadata",
           () => {
             trimStart.value = 0;
@@ -423,9 +516,10 @@
 
         // ---------------- Filters ----------------
         document.querySelectorAll("#trimEditor [data-filter]").forEach((btn) => {
-          btn.addEventListener("click", () => {
+          withSignal(btn,"click", () => {
             const value = btn.dataset.filter;
             state.selectedFilterCSS = value;
+            markChanged();
             trimPreview.style.filter = value === "none" ? "none" : value;
             document
               .querySelectorAll("#trimEditor [data-filter]")
@@ -435,7 +529,7 @@
 
         // ---------------- Pen / draw ----------------
         const drawToolBtn = document.getElementById("drawToolBtn");
-        drawToolBtn.addEventListener("click", () => {
+        withSignal(drawToolBtn,"click", () => {
           drawingEnabled = !drawingEnabled;
           drawToolBtn.classList.toggle("active", drawingEnabled);
           drawCanvas.style.pointerEvents = drawingEnabled ? "auto" : "none";
@@ -452,7 +546,7 @@
             y: (event.clientY - rect.top) * scaleY
           };
         }
-        drawCanvas.addEventListener("pointerdown", (e) => {
+        withSignal(drawCanvas,"pointerdown", (e) => {
           if (!drawingEnabled) return;
           isDrawing = true;
           const p = canvasPointFromEvent(e);
@@ -460,32 +554,35 @@
           drawCtx.lineWidth = Math.max(3, drawCanvas.width * 0.006);
           drawCtx.lineCap = "round";
           drawCtx.lineJoin = "round";
+          markChanged();
           drawCtx.beginPath();
           drawCtx.moveTo(p.x, p.y);
           drawCanvas.setPointerCapture(e.pointerId);
         });
-        drawCanvas.addEventListener("pointermove", (e) => {
+        withSignal(drawCanvas,"pointermove", (e) => {
           if (!drawingEnabled || !isDrawing) return;
           const p = canvasPointFromEvent(e);
           drawCtx.lineTo(p.x, p.y);
           drawCtx.stroke();
         });
         ["pointerup", "pointercancel", "pointerleave"].forEach((evt) =>
-          drawCanvas.addEventListener(evt, () => {
+          withSignal(drawCanvas,evt, () => {
             isDrawing = false;
           })
         );
 
-        document.getElementById("clearDrawBtn").addEventListener("click", () => {
+        withSignal(document.getElementById("clearDrawBtn"),"click", () => {
           drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+          markChanged();
         });
 
         // ---------------- Text tool ----------------
-        document.getElementById("addTextBtn").addEventListener("click", () => {
-          const text = prompt("Text to add:");
+        withSignal(document.getElementById("addTextBtn"),"click", async () => {
+          const text = await window.appUI.prompt("Text to add:");
           if (!text || !text.trim()) return;
           const overlay = { text: text.trim(), xPct: 50, yPct: 50, color: drawColor.value };
           state.textOverlays.push(overlay);
+          markChanged();
           renderTextOverlayEl(overlay);
         });
 
@@ -502,27 +599,29 @@
           textLayer.appendChild(el);
 
           let dragging = false;
-          el.addEventListener("pointerdown", (e) => {
+          withSignal(el,"pointerdown", (e) => {
             dragging = true;
             el.style.cursor = "grabbing";
             el.setPointerCapture(e.pointerId);
           });
-          el.addEventListener("pointermove", (e) => {
+          withSignal(el,"pointermove", (e) => {
             if (!dragging) return;
             const stageRect = document.getElementById("editorStage").getBoundingClientRect();
             const xPct = Math.min(96, Math.max(4, ((e.clientX - stageRect.left) / stageRect.width) * 100));
             const yPct = Math.min(96, Math.max(4, ((e.clientY - stageRect.top) / stageRect.height) * 100));
+            markChanged();
             overlay.xPct = xPct;
             overlay.yPct = yPct;
             el.style.left = `${xPct}%`;
             el.style.top = `${yPct}%`;
           });
-          el.addEventListener("pointerup", () => {
+          withSignal(el,"pointerup", () => {
             dragging = false;
             el.style.cursor = "grab";
           });
-          el.addEventListener("dblclick", () => {
+          withSignal(el,"dblclick", () => {
             state.textOverlays = state.textOverlays.filter((o) => o !== overlay);
+            markChanged();
             el.remove();
           });
         }
@@ -545,7 +644,7 @@
               trimPreview.removeEventListener("timeupdate", stopAt);
             }
           };
-          trimPreview.addEventListener("timeupdate", stopAt);
+          withSignal(trimPreview,"timeupdate", stopAt);
         };
 
         // ---------------- Apply (render final clip) ----------------
@@ -559,24 +658,47 @@
             return;
           }
           trimStatus.style.display = "block";
-          trimStatus.textContent = "Rendering...";
+          if(state.editRenderInProgress)return;
+          state.editRenderInProgress=true;
+          const renderRevision=state.editorRevision;
+          const sourceFile=videoFile.files[0];
+          trimStatus.textContent = "Rendering edited clip. Do not upload until this completes...";
           trimStatus.style.color = "#0f766e";
           try {
             const blob = await renderEditedVideo(trimPreview, drawCanvas, state.textOverlays, state.selectedFilterCSS, start, end);
-            state.trimmedFile = new File([blob], "edited-clip.webm", { type: blob.type || "video/webm" });
-            state.selectedVideoDuration = Math.round(end - start);
+            if(renderRevision!==state.editorRevision||videoFile.files[0]!==sourceFile)
+              throw Error("Video or edits changed during rendering. Please apply edits again.");
+            if(!blob?.size)throw Error("Edited recording is empty");
+            const editedFile=new File([blob],"edited-clip.webm",{type:blob.type||"video/webm"});
+            const verifiedDuration=await detectVideoDuration(editedFile);
+            if(!Number.isFinite(verifiedDuration)||verifiedDuration<.3)
+              throw Error("Edited video failed validation; original kept safely.");
+            state.trimmedFile=editedFile;
+            state.editorDirty=false;
+            state.selectedVideoDuration=Math.round(verifiedDuration);
+            coverMoment.max=Math.max(.1,verifiedDuration-.1);
+            coverMoment.value=.1;
+            void previewCover();
             trimStatus.textContent = `Ready — ${state.selectedVideoDuration}s clip with your edits will be uploaded.`;
             trimStatus.style.color = "#10b981";
             resetBtn.style.display = "inline-flex";
           } catch (trimError) {
             console.warn("Render failed:", trimError);
-            trimStatus.textContent = "Could not render edits in this browser. Original file will upload instead.";
-            trimStatus.style.color = "#f59e0b";
-          }
+            state.editorDirty=true;
+            state.trimmedFile=null;
+            trimStatus.textContent = "Edits could not be saved. Fix the issue or select Use Original before uploading.";
+            trimStatus.style.color = "#b91c1c";
+          } finally {state.editRenderInProgress=false;}
         };
 
         resetBtn.onclick = () => {
+          if(state.editRenderInProgress)return;
+          state.editorRevision++;
           state.trimmedFile = null;
+          state.editorDirty=false;
+          state.selectedVideoDuration=Math.round(trimPreview.duration||0);
+          coverMoment.max=Math.max(.1,(trimPreview.duration||1)-.1);
+          void previewCover();
           resetBtn.style.display = "none";
           trimStatus.style.display = "block";
           trimStatus.textContent = "Edits discarded — original file will upload.";
@@ -726,9 +848,10 @@
         e.preventDefault();
         
         if (!state.user) {
-          alert("Please log in to upload");
+          window.appUI.toast("Please log in to upload");
           return;
         }
+        if(!uploadForm.reportValidity())return;
 
         const status = document.getElementById("uploadStatus");
         const btn = uploadForm.querySelector("button");
@@ -739,11 +862,13 @@
         status.style.color = "#0f766e";
 
         try {
+          if(state.editRenderInProgress||state.editorDirty)
+            throw Error("Your video has unapplied edits. Apply and verify them or choose Use Original before posting.");
           const fileToUpload = state.trimmedFile || videoFile.files[0];
           let thumbnailFile = videoThumbnail.files[0] || null;
           if (!thumbnailFile && fileToUpload) {
             status.textContent = "Capturing thumbnail...";
-            thumbnailFile = await captureVideoFrame(fileToUpload);
+            thumbnailFile = await captureVideoFrame(fileToUpload,Number(coverMoment.value)||.1);
             status.textContent = "Uploading...";
           }
 
@@ -756,7 +881,7 @@
               title: document.getElementById("videoTitle").value,
               description: document.getElementById("videoDescription").value,
               category: document.getElementById("videoCategory").value,
-              tags: document.getElementById("videoTags").value.split(",").map(t => t.trim()).filter(Boolean),
+              tags: [...new Set(document.getElementById("videoTags").value.split(/[\s,]+/).map(t => t.trim().replace(/^#/,"").toLowerCase()).filter(t=>/^[a-z0-9_]{1,32}$/.test(t)))],
               duration: state.selectedVideoDuration || 0
             }
           );
@@ -773,6 +898,7 @@
             uploadForm.style.display = "none";
             state.selectedVideoDuration = 0;
             state.trimmedFile = null;
+            state.editorDirty=false;
             document.getElementById("trimEditor").style.display = "none";
             setTimeout(() => {
               state.offset = 0;
@@ -789,13 +915,22 @@
 
       // Load more
       document.getElementById("loadMoreBtn").addEventListener("click", () => {
+        if (loading) return;
         state.offset += state.limit;
         loadVideos();
       });
 
-      // Init
-      setupAuth();
-      loadVideos();
+      // Initialize user and preferences before requesting personalized videos.
+      void (async()=>{
+        try{
+          await setupAuth();
+          const preferences=mergePreferences(await loadUserPreferences(state.user));
+          if(state.mode==="for-you" && preferences.feed.showRecommendations===false){
+            state.mode="following";updateVideoModes();
+          }
+        }catch(error){console.warn("Video preferences could not load:",error);}
+        await loadVideos();
+      })();
     </script>
   </body>
 </html>

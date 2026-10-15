@@ -7,7 +7,7 @@
 html,
 body {
   max-width: 100%;
-  overflow-x: clip;
+  overflow-x: visible;
 }
 
 img,
@@ -46,7 +46,7 @@ iframe {
 
 @media (max-width: 900px) {
   main,
-  .page-shell { overflow-x: clip !important; }
+  .page-shell { overflow-x: visible; }
 }
 
 @media (max-width: 768px) {

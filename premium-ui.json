@@ -1,0 +1,9 @@
+{
+  "profile": "product-admin",
+  "canonicalMap": "UX-CONTRACT.md",
+  "ownership": { "Select/Listbox": "native", "Date": "native" },
+  "requiredCapabilities": ["Table Selection", "Select/Listbox", "Date", "Form", "Scrollbar", "Toast", "CRUD"],
+  "requiredCommands": ["build", "test", "browser"],
+  "commands": { "build": "npm run build", "test": "npm test", "browser": "npm run test:browser" },
+  "evidence": { "failurePaths": "tests/browser/experience.spec.cjs" }
+}

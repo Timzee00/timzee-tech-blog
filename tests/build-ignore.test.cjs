@@ -1,0 +1,22 @@
+const { test, before, after } = require("node:test");
+const assert = require("node:assert/strict");
+const { mkdtempSync, rmSync } = require("node:fs");
+const { tmpdir } = require("node:os");
+const { join, resolve } = require("node:path");
+const { execFileSync, spawnSync } = require("node:child_process");
+let directory, skipCommit, normalCommit;
+const script = resolve(__dirname, "../scripts/netlify-ignore-build.mjs");
+const git = args => execFileSync("git", args, { cwd: directory, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+before(() => {
+  directory = mkdtempSync(join(tmpdir(), "timzee-build-ignore-"));
+  git(["init"]);
+  git(["-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "commit", "--allow-empty", "-m", "Review [skip netlify]"]);
+  skipCommit = git(["rev-parse", "HEAD"]);
+  git(["-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "commit", "--allow-empty", "-m", "Release", "-m", "The earlier review used [skip netlify]."]);
+  normalCommit = git(["rev-parse", "HEAD"]);
+});
+after(() => rmSync(directory, { recursive: true, force: true }));
+const run = ref => spawnSync(process.execPath, [script], { cwd: directory, env: { ...process.env, COMMIT_REF: ref }, encoding: "utf8" });
+test("Netlify stops review builds carrying the explicit subject marker", () => { assert.equal(run(skipCommit).status, 0); });
+test("an ordinary release continues even if its body quotes a skip marker", () => { assert.equal(run(normalCommit).status, 1); });
+test("missing Git history does not silently skip a release", () => { assert.equal(run("missing-fixture-ref").status, 1); });
