@@ -141,11 +141,24 @@ async function loadInlineComments(card){
   list.replaceChildren();
   if(error){list.textContent="Comments couldn't load right now.";return;}
   if(!(data||[]).length){list.textContent="No comments yet. Start the conversation.";return;}
+  let likeIndex=new Map();
+  if(type==="video"){
+    const counts=await supabase.rpc("video_comment_like_counts",{p_comment_ids:data.map(c=>c.id)});
+    likeIndex=new Map((counts.data||[]).map(c=>[c.comment_id,c]));
+  }
   for(const comment of data){
     const article=document.createElement("article");article.className="fyp-comment-item";
     const name=document.createElement("strong");name.textContent=String(comment.author_name||"Member").replace(/<[^>]*>/g,"").slice(0,70);
     const body=document.createElement("p");body.innerHTML=renderSocialText(comment.body||"");
-    article.append(name,body);list.append(article);
+    article.append(name,body);
+    if(type==="video"){
+      const social=likeIndex.get(comment.id),count=Number(social?.like_count||0);
+      const like=document.createElement("button");like.type="button";like.className="btn ghost sm";
+      like.dataset.fypCommentLike=comment.id;like.setAttribute("aria-pressed",String(social?.viewer_liked===true));
+      like.textContent=(social?.viewer_liked?"♥ Liked":"♡ Like")+" · "+count;
+      article.append(like);
+    }
+    list.append(article);
   }
 }
 async function submitInlineComment(card,form){
@@ -164,6 +177,11 @@ async function submitInlineComment(card,form){
     if(error)throw error;
     form.reset();
     status.textContent=isVideo?"Comment posted.":isDiscussion?"Reply posted.":"Comment submitted for moderation.";
+    if(isVideo){
+      const counts=await supabase.rpc("video_social_counts",{p_video_ids:[id]});
+      const counter=card.querySelector(".fyp-comment-count");
+      if(counter && !counts.error)counter.textContent=Number(counts.data?.[0]?.comment_count||0);
+    }
     await loadInlineComments(card);
   }catch(error){status.textContent="Couldn't post your comment. Please try again.";reportAppError(error,"Inline comment failed");}
   finally{submit.disabled=false;}
@@ -326,6 +344,23 @@ function wire() {
   document.querySelectorAll("[data-fyp-filter]").forEach((button) => button.addEventListener("click", () => { state.type = button.dataset.fypFilter || "all"; saveRemembered(); updateUrl(); applyActiveControls(); void loadFeed(); }));
   $("refreshFypBtn")?.addEventListener("click", () => void loadFeed({ force: true }));
   $("fypGrid")?.addEventListener("click",async event=>{
+    const commentLike=event.target.closest("[data-fyp-comment-like]");
+    if(commentLike){
+      event.preventDefault();
+      if(!state.user?.id)return;
+      const id=commentLike.dataset.fypCommentLike;
+      const active=commentLike.getAttribute("aria-pressed")==="true";
+      commentLike.disabled=true;
+      try{
+        const action=active?supabase.from("video_comment_likes").delete()
+          .eq("comment_id",id).eq("user_id",state.user.id):
+          supabase.from("video_comment_likes").insert({comment_id:id,user_id:state.user.id});
+        const {error}=await action;
+        if(error)throw error;
+        await loadInlineComments(commentLike.closest(".fyp-card"));
+      }catch(error){console.warn("FYP comment like failed",error);commentLike.disabled=false;}
+      return;
+    }
     const button=event.target.closest("[data-fyp-action]");
     if(!button)return;
     const card=button.closest(".fyp-card");if(!card)return;
