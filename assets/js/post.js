@@ -295,6 +295,21 @@ function renderPost(data, post) {
   const postBody = document.getElementById("postContent");
   if (postBody) {
     postBody.innerHTML = normalizeHtml(stripEditorialScaffolding(post.content || ""));
+    postBody.querySelectorAll("img").forEach(image=>{
+      image.loading="lazy";
+      image.decoding="async";
+      image.referrerPolicy="no-referrer";
+      image.addEventListener("error",()=>{
+        const link=document.createElement("a");
+        const url=image.currentSrc||image.src;
+        if(isSafeUrl(url)){
+          link.href=url;link.target="_blank";link.rel="noopener noreferrer";
+          link.textContent="Image unavailable here — open it at the original source";
+        }else{link.textContent="This image is unavailable.";}
+        link.className="curator-image-unavailable";
+        image.replaceWith(link);
+      },{once:true});
+    });
   }
 
   const gallery = document.getElementById("postGallery");
