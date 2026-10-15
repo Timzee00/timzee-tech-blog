@@ -696,6 +696,9 @@
           state.editorRevision++;
           state.trimmedFile = null;
           state.editorDirty=false;
+          state.selectedVideoDuration=Math.round(trimPreview.duration||0);
+          coverMoment.max=Math.max(.1,(trimPreview.duration||1)-.1);
+          void previewCover();
           resetBtn.style.display = "none";
           trimStatus.style.display = "block";
           trimStatus.textContent = "Edits discarded — original file will upload.";
