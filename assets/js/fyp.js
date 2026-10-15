@@ -226,6 +226,7 @@ async function loadFeed({ force = false } = {}) {
       : `<div class="fyp-empty card"><h2>${mode === "following" ? "Nothing from followed creators yet" : "No recommendations yet"}</h2><p>${mode === "following" ? "Follow creators or communities to see their updates here." : "Like posts, follow people and choose Not interested to improve future recommendations."}</p><a class="btn" href="index.html">Explore the community</a></div>`;
     if(visible.length){
       void hydrateLikes(target);
+      bindFypVideoGestures(target);
       target.querySelectorAll(".fyp-comment-form textarea").forEach(field=>setupMentionInput(field));
     }
   } catch (error) {
@@ -286,6 +287,39 @@ async function markNotInterested(card) {
     delete card.dataset.feedbackPending;
   }
 }
+function bindFypVideoGestures(root){
+  root.querySelectorAll("[data-fyp-video-gestures]").forEach(zone=>{
+    if(zone.dataset.wired==="true")return;
+    zone.dataset.wired="true";
+    const card=zone.closest(".fyp-card"),stage=zone.closest(".fyp-video-stage");
+    const video=stage?.querySelector("video"),flash=stage?.querySelector(".fyp-video-flash");
+    if(!card||!video)return;
+    let lastTap=0,pending=null;
+    const showIcon=value=>{
+      if(!flash)return;
+      flash.textContent=value;flash.classList.remove("show");
+      void flash.offsetWidth;flash.classList.add("show");
+    };
+    const handleTap=event=>{
+      const now=Date.now();
+      if(now-lastTap<360){
+        clearTimeout(pending);pending=null;lastTap=0;
+        const button=card.querySelector('[data-fyp-action="like"]');
+        if(button && button.getAttribute("aria-pressed")!=="true")void toggleLike(card,button);
+        showIcon("♥");return;
+      }
+      lastTap=now;
+      pending=setTimeout(()=>{
+        if(video.paused){video.play().catch(()=>{});showIcon("▶");}
+        else{video.pause();showIcon("Ⅱ");}
+      },360);
+    };
+    zone.addEventListener("click",handleTap);
+    zone.addEventListener("keydown",event=>{
+      if(event.key==="Enter"||event.key===" "){event.preventDefault();handleTap(event);}
+    });
+  });
+}
 function wire() {
   document.querySelectorAll("[data-fyp-mode]").forEach((button) => button.addEventListener("click", () => { state.mode = button.dataset.fypMode || "for-you"; saveRemembered(); updateUrl(); applyActiveControls(); void loadFeed(); }));
   document.querySelectorAll("[data-fyp-filter]").forEach((button) => button.addEventListener("click", () => { state.type = button.dataset.fypFilter || "all"; saveRemembered(); updateUrl(); applyActiveControls(); void loadFeed(); }));
@@ -295,6 +329,16 @@ function wire() {
     if(!button)return;
     const card=button.closest(".fyp-card");if(!card)return;
     event.preventDefault();
+    if(button.dataset.fypAction==="fullscreen"){
+      const video=card.querySelector(".fyp-inline-video");
+      if(!video)return;
+      try{
+        if(typeof video.requestFullscreen==="function")await video.requestFullscreen();
+        else if(typeof video.webkitEnterFullscreen==="function")video.webkitEnterFullscreen();
+        else window.location.href=contentHref({content_type:"video",content_id:card.dataset.contentId});
+      }catch{window.location.href=contentHref({content_type:"video",content_id:card.dataset.contentId});}
+      return;
+    }
     if(button.dataset.fypAction==="like"){await toggleLike(card,button);return;}
     if(button.dataset.fypAction==="comments"){
       const panel=card.querySelector(".fyp-comments");if(!panel)return;
