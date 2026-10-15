@@ -10,6 +10,27 @@
 - AI editorial `consume_ai_rate_limit` RPC exists with five parameters, including `p_now`. Production API keys, deployed provider access, Brevo SMTP and Webhooks have **not been verified end-to-end**.
 - No verified passing full `npm run check`, `npm test`, `npm run build`, Playwright or staged load test has been collected for this branch. No CI status was reported for the inspected main commit.
 
+## Netlify environment security classification (metadata only)
+
+Read-only site-variable inspection found `GROQ_API_KEY` present and scoped
+to Functions including deploy-preview contexts. The October preview that
+reported "key unavailable" was not built from the current source and its
+configuration must be verified **at runtime after a fresh isolated build**.
+`OPENROUTER_API_KEY` is not among the site's listed keys.
+
+`SUPABASE_SERVICE_ROLE_KEY`, `BREVO_API_KEY`, `BREVO_WEBHOOK_TOKEN`,
+`EMAIL_UNSUBSCRIBE_SECRET` and `NETLIFY_EMAILS_SECRET` are present but
+**not classified as secret** in returned variable metadata; several are
+scoped to builds/post-processing as well as Functions. This increases the
+risk of exposure to authorized dashboard users and accidental build logs.
+No secret value was read into this audit report or changed. Before release,
+have the account owner back up the names/context mapping (never paste secret
+values into chat), rotate exposed/high-value credentials, and recreate
+sensitive variables as encrypted secret values with minimum needed scopes,
+taking care that updating an existing Netlify variable **does not change**
+its secret flag or scopes. Test each deployment context afterward; never
+delete production credentials before verified replacement.
+
 ## Read-only public-browser check
 A 390×844 mobile browser check at `https://timzee-tech-blog.netlify.app/` found no horizontal overflow, a working menu and a readable footer. The cookie panel occupies much of the initial viewport. The public article at `/post.html?id=b21aaa8a-e08a-47ea-93a4-81918943a5a9` loaded its body after a visible generic loading state; this branch reduces that delay and uses meaningful loading text. The device-specific grey broken-image strip was **not reproduced** in the controlled browser. The check did **not** exercise authenticated or production-write workflows.
 
