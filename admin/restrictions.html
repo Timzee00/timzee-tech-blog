@@ -1,0 +1,13 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Account Restrictions · Timzee Tech Hub</title><link rel="stylesheet" href="../assets/css/admin.css"><script defer src="../assets/js/theme-init.js"></script></head>
+<body class="admin-shell"><a href="#main-content" class="skip-link">Skip to content</a>
+<div class="topbar"><div class="container inline-actions"><a class="btn ghost" href="dashboard.html">← Admin</a><h1>Account restrictions</h1></div></div>
+<main id="main-content" class="container admin-panel">
+<section class="admin-card"><h2>Review user restrictions</h2><p>Use a verified user UUID. Restrictions are temporary, explained to the user, logged and appealable. Do not restrict users based only on unverified reports.</p>
+<form id="lookupForm" class="admin-form"><label>User UUID <input id="targetId" type="text" required autocomplete="off" spellcheck="false" placeholder="Account UUID"></label><button class="btn" type="submit">Load restrictions</button></form><div id="records" role="status" aria-live="polite"></div></section>
+<section class="admin-card"><h2>New timed restriction</h2><form id="restrictionForm" class="admin-form">
+<label>Feature <select id="scope" required><option value="all">All publishing / messaging actions</option><option value="posts">Blog posts</option><option value="comments">Comments and discussions</option><option value="videos">Video uploads</option><option value="marketplace">Marketplace listings</option><option value="messages">Direct messages</option></select></label>
+<label>Reason <select id="reason" required><option value="spam">Spam</option><option value="harassment">Harassment</option><option value="fraud">Suspected fraud</option><option value="impersonation">Impersonation</option><option value="abuse">Abuse</option><option value="security">Account security</option><option value="other">Other</option></select></label>
+<label>Duration <select id="hours" required><option value="1">1 hour</option><option value="24">24 hours</option><option value="72">3 days</option><option value="168">7 days</option><option value="720">30 days</option></select></label>
+<label>Reason shown to user <textarea id="explanation" minlength="8" maxlength="1000" required placeholder="Explain which rule was violated and why this action is necessary."></textarea></label>
+<button class="btn" type="submit">Apply restriction</button></form><p id="result" role="status" aria-live="polite"></p></section>
+</main><script type="module" src="../assets/js/account-restrictions-admin.js"></script></body></html>
