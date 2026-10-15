@@ -52,3 +52,21 @@ test("multiple figures assigned to one section retain editor-supplied order",asy
  const result=placeEditorialFigures("<h2>Findings</h2><p>Details.</p>",rows,"Approved");
  assert.ok(result.indexOf("one.png")<result.indexOf("two.png"));
 });
+
+test("additional images remain visible even when an article has no H2 headings",async()=>{
+  const {parseEditorialImageRows,placeEditorialFigures}=await helpers;
+  const selected=parseEditorialImageRows("https://example.com/cover.jpg\nhttps://example.com/a.jpg | Background | A credited photo\nhttps://example.com/b.jpg");
+  const output=placeEditorialFigures("<p>An introduction without sections.</p>",selected,"Photographer with permission");
+  assert.match(output,/Additional images/);
+  assert.match(output,/a\.jpg/);
+  assert.match(output,/b\.jpg/);
+  assert.ok(!output.includes("cover.jpg"));
+});
+test("an image with a missing section stays supplemental rather than being misattributed",async()=>{
+  const {parseEditorialImageRows,placeEditorialFigures}=await helpers;
+  const selected=parseEditorialImageRows("https://example.com/cover.png\nhttps://example.com/missing.png | Application deadline | Official deadline graphic");
+  const output=placeEditorialFigures("<h2>Eligibility</h2><p>Verify the requirements.</p>",selected,"Licensed");
+  assert.ok(output.indexOf("missing.png")>output.indexOf("</p>"));
+  assert.match(output,/Additional images/);
+  assert.ok(!output.includes("<h2>Eligibility</h2><figure"));
+});

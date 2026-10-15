@@ -22,3 +22,10 @@ test("video feed mode pages and creator gallery are present",()=>{
   assert.match(grid,/data-video-mode="for-you"/);
   assert.match(profile,/id="profileVideoGallery"/);
 });
+
+test("Netlify AI proxy accepts legacy service-role secret alias without exposing it",()=>{
+ const fs=require("node:fs");
+ const code=fs.readFileSync(require("node:path").join(__dirname,"../netlify/functions/llm-proxy.js"),"utf8");
+ assert.match(code,/SUPABASE_SERVICE_ROLE_KEY\s*\|\|\s*process\.env\.SERVICE_ROLE_KEY/);
+ assert.match(code,/Boolean\(process\.env\.GROQ_API_KEY/);
+});
