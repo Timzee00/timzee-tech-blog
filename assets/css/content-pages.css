@@ -213,3 +213,12 @@
 .curator-post-preview-dialog iframe,.curator-post-preview-dialog video {
   display:block;width:100%;max-width:100%;aspect-ratio:16/9;height:auto;
 }
+
+/* Accessible progressive article hydration. No misleading template title. */
+#post-app[aria-busy="true"] .post-reader-loading {
+  color: var(--color-text-muted);
+  padding: clamp(12px,2vw,24px) 0;
+  min-height: 80px;
+  font-size: 1rem;
+}
+#post-app[aria-busy="true"] #postTitle { color: var(--color-text); }

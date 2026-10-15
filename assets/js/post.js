@@ -608,12 +608,12 @@ async function loadCommentAuthors(comments) {
   const ids = Array.from(
     new Set(comments.map((comment) => comment.author_id).filter(Boolean))
   );
-  if (!ids.length) {
-    state.commentAuthors = {};
-    return;
-  }
-  const profiles = await fetchProfilesByIds(ids);
-  const map = {};
+  if (!ids.length) return;
+  // Older comment pagination must retain authors from already loaded pages.
+  const missing=ids.filter(id=>!state.commentAuthors[id]);
+  if(!missing.length)return;
+  const profiles = await fetchProfilesByIds(missing);
+  const map = {...state.commentAuthors};
   profiles.forEach((profile) => {
     if (profile?.id) {
       map[profile.id] = profile;
@@ -1079,19 +1079,16 @@ function renderAds(settings) {
 
 async function boot() {
   try {
-    state.user = await getCurrentUserWithRole();
-    state.settings = await fetchSettings();
-    applyTheme(state.settings);
-    if (state.settings.themeId) {
-      const theme = await fetchThemeById(state.settings.themeId);
-      if (theme) applyThemeVariables(theme);
-    }
-    renderAuthActions();
-    showAdminLinks();
-
+    // Start the article request independently of auth and personalization.
+    // Visitors should see the public article while secondary page data loads.
     const postId = getQueryParam("id");
     const slug = getQueryParam("slug");
-
+    const authPromise=getCurrentUserWithRole().catch(error=>{
+      console.warn("Optional article auth unavailable",error);return null;
+    });
+    const settingsPromise=fetchSettings().catch(error=>{
+      console.warn("Optional site settings unavailable",error);return {};
+    });
     const post = await fetchPostByIdOrSlug({ id: postId, slug });
 
     if (!post) {
@@ -1104,6 +1101,19 @@ async function boot() {
     }
 
     updateMeta(post);
+    // Display the title and body immediately instead of showing placeholders
+    // while waiting for authentication, comments, and reaction counts.
+    renderPost({categories:[]},post);
+    document.getElementById("post-app")?.setAttribute("aria-busy","false");
+    const [user,siteSettings]=await Promise.all([authPromise,settingsPromise]);
+    state.user=user;
+    state.settings=siteSettings||{};
+    applyTheme(state.settings);
+    if(state.settings.themeId)void fetchThemeById(state.settings.themeId)
+      .then(theme=>{if(theme)applyThemeVariables(theme);})
+      .catch(error=>console.warn("Theme styling could not load",error));
+    renderAuthActions();
+    showAdminLinks();
 
     const [categories, relatedPosts, comments, likeSummary, ads, postMedia, authorCount] = await Promise.all([
       fetchCategories(),
@@ -1161,6 +1171,7 @@ async function boot() {
     subscribeToComments(post.id);
     setupReveal();
   } catch (err) {
+    document.getElementById("post-app")?.setAttribute("aria-busy","false");
     reportAppError(err, "Post load failed");
     const message = extractErrorMessage(err, "Something went wrong while loading this post.");
     document.getElementById("postTitle").textContent = "Error loading post";
