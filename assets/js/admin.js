@@ -1567,10 +1567,57 @@ function inspectRequest(kind,id){
     section.append(label,value);dialog.append(section);
   }
   const actions=document.createElement("div");actions.className="admin-list-actions";
-  if(item.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item.email)){
-    const reply=document.createElement("a");reply.className="btn";
-    reply.href="mailto:"+encodeURIComponent(item.email)+"?subject="+encodeURIComponent("Re: Timzee Tech Hub "+kind+" request");
-    reply.textContent="Reply via email";actions.append(reply);
+  if(["contact","support","ads"].includes(kind) && item.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item.email)){
+    const reply=document.createElement("button");reply.className="btn";reply.type="button";
+    reply.textContent="Reply with Brevo";actions.append(reply);
+    reply.addEventListener("click",()=>{
+      if(dialog.querySelector(".admin-inline-email-form"))return;
+      const form=document.createElement("form");form.className="admin-inline-email-form";
+      form.style.cssText="display:grid;gap:12px;margin-top:18px;padding:16px;border:1px solid var(--color-border,#cad4d4);border-radius:12px";
+      const heading=document.createElement("h4");heading.textContent="Send an in-site email reply";
+      const address=document.createElement("p");address.textContent="To: "+item.email;
+      const subjectLabel=document.createElement("label");subjectLabel.textContent="Subject";
+      const subject=document.createElement("input");subject.type="text";subject.required=true;subject.maxLength=180;
+      subject.value="Re: Timzee Tech Hub "+kind+" request";
+      subject.style.cssText="display:block;width:100%;font:inherit;padding:10px";
+      subjectLabel.append(subject);
+      const bodyLabel=document.createElement("label");bodyLabel.textContent="Your reply";
+      const message=document.createElement("textarea");message.required=true;message.maxLength=5000;
+      message.rows=6;message.placeholder="Write your response here. Do not include passwords or private security details.";
+      message.style.cssText="display:block;width:100%;font:inherit;padding:10px;resize:vertical";
+      bodyLabel.append(message);
+      const status=document.createElement("p");status.setAttribute("role","status");
+      const send=document.createElement("button");send.className="btn";send.type="submit";send.textContent="Send through Brevo";
+      form.append(heading,address,subjectLabel,bodyLabel,status,send);
+      let clientRequestId=crypto.randomUUID();
+      form.addEventListener("submit",async event=>{
+        event.preventDefault();if(!form.reportValidity())return;
+        if(!window.confirm("Send this email through Timzee Tech Hub to the original requester's address?"))return;
+        send.disabled=true;send.textContent="Submitting…";status.textContent="Submitting your reply securely…";
+        try{
+          const session=await getSession();
+          if(!session?.access_token)throw Error("Admin session expired. Sign in again.");
+          const response=await fetch("/.netlify/functions/admin-reply-email",{
+            method:"POST",headers:{"content-type":"application/json",Authorization:"Bearer "+session.access_token},
+            body:JSON.stringify({kind,request_id:item.id,client_request_id:clientRequestId,
+              subject:subject.value.trim(),message:message.value.trim()}),cache:"no-store"
+          });
+          let result={};try{result=await response.json()}catch{
+            throw Error(response.status===404?"Email reply function has not been deployed yet.":"Email response unavailable.");
+          }
+          if(!response.ok)throw Error(result.error||"Could not submit this email.");
+          status.textContent=result.message||"Brevo accepted the reply. Delivery confirmation is pending.";
+          send.textContent="Reply submitted";
+        }catch(error){
+          status.textContent=error.message||"Could not send email.";
+          // Don't automatically generate another request id; network uncertainty
+          // must be reconciled before resending.
+          send.disabled=false;send.textContent="Check status before retry";
+        }
+      });
+      actions.after(form);
+      subject.focus();
+    });
   }
   const copy=document.createElement("button");copy.className="btn ghost";copy.textContent="Copy details";
   copy.type="button";copy.addEventListener("click",()=>void navigator.clipboard.writeText(fields.filter(k=>item[k]!=null).map(k=>k+": "+String(item[k])).join("\n")).then(()=>window.appUI.toast("Copied request details.")).catch(()=>window.appUI.toast("Unable to copy.")));
