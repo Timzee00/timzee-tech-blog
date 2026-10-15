@@ -82,6 +82,14 @@ exports.handler=async event=>{
     }
   }
   const {data,error}=await db.rpc("email_delivery_statistics");
-  if(error)return reply(503,{error:"Email stats not activated"});
+  if(error){
+    const safeCode=String(error.code||"DB_ERROR").replace(/[^A-Z0-9_]/gi,"").slice(0,24);
+    console.error("Email operations aggregate failed",safeCode);
+    const likelyCache=["PGRST202","PGRST301","42501"].includes(safeCode);
+    return reply(503,{error:likelyCache?
+      "Email statistics are installed in Supabase, but this deployed function cannot access them. Check Function credentials, schema cache and deployment.":
+      "Email statistics are temporarily unavailable. Check the function logs or deployment configuration.",
+      diagnostic_code:safeCode});
+  }
   return reply(200,{statistics:data,delivery_enabled:process.env.EMAIL_DELIVERY_ENABLED==="true"});
 };
