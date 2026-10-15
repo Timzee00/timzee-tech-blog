@@ -44,3 +44,11 @@ Not complete until a fresh Netlify Deploy Preview can be rebuilt and browser-tes
 - Confirm Email Operations endpoint diagnostic codes in Netlify Functions and fix any actual returned code, rather than enabling sending to mask the error.
 
 No secrets were copied between projects or disclosed. No live messages, campaigns or emails were sent. The development branch is \`fix/sitewide-shell-20261010\` (not \`main\`).
+
+## Additional regressions repaired in this pass
+
+- Existing `likeVideo()` helper in `assets/js/videos-marketplace.js` previously returned success without checking insertion and deletion errors. It now returns an explicit error and the Reels screen in `video.html` leaves like counts and notifications unchanged if the database write fails.
+- `tests/video-like-safety.test.cjs` covers failed like and unlike operations; synthetic tests produced expected failure status without false UI state.
+- Marketplace **Contact Seller** now persists `&contact=1` through login, reveals the previously hidden inquiry form for sellers who disabled direct chat, and uses the secure `can_send_direct_message` RPC to open legitimate ordinary or staff direct conversations before falling back to an inquiry.
+- `tests/marketplace-contact-contract.test.cjs` verifies these navigation and inquiry safeguards. Supabase marketplace inquiry RLS was confirmed to allow buyers to insert and only the buyer or listing's seller to read the inquiry.
+- Full tests remain pending a runnable GitHub Actions environment and fresh Netlify browser validation.
