@@ -1362,24 +1362,30 @@
         } catch(error) {
           result={error};
         } finally {if(submit)submit.disabled=false;}
-        if(result?.error){
-          if(status)status.textContent="Could not post comment: "+String(result.error.message||"Try again.").slice(0,160);
+        if(!result || result.error){
+          if(status)status.textContent="Could not post comment: "+String(result?.error?.message||"Try again.").slice(0,160);
           return;
         }
-        if (result?.error === undefined || !result.error) {
+        if (result) {
           if(status)status.textContent="Comment posted.";
           drawerInput.value = "";
           // The database trigger delivers owner and reply notifications
           // once the comment is persisted. No duplicate browser insert.
           const currentVideoId=state.commentsOpenFor;
-          const counters=await supabase.rpc("video_social_counts",{p_video_ids:[currentVideoId]});
-          const total=Number(counters.data?.[0]?.comment_count||0);
-          const badge=state.videos.findIndex(v=>v.id===currentVideoId);
-          if(badge>=0){
-            state.videos[badge].comment_count=total;
-            const count=document.getElementById("commentcount-"+badge);
-            if(count)count.textContent=String(total);
-          }
+          // A failed optional count refresh must never convert a successful
+          // comment into a misleading send failure.
+          try {
+            const counters=await supabase.rpc("video_social_counts",{p_video_ids:[currentVideoId]});
+            if(!counters.error){
+              const total=Number(counters.data?.[0]?.comment_count||0);
+              const badge=state.videos.findIndex(v=>v.id===currentVideoId);
+              if(badge>=0){
+                state.videos[badge].comment_count=total;
+                const count=document.getElementById("commentcount-"+badge);
+                if(count)count.textContent=String(total);
+              }
+            }
+          } catch(error){console.warn("Optional video comment count refresh failed",error);}
           replyingTo=null;
           void openComments(currentVideoId);
         }

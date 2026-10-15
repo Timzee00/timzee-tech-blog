@@ -27,7 +27,11 @@ exports.handler=async(event)=>{
   if(!["auto","groq","openrouter"].includes(choice))return respond(400,{error:"Unsupported editorial AI provider."});
   const requested=choice!=="auto"?choice:
     process.env.CURATOR_AI_PROVIDER==="openrouter"?"openrouter":"groq";
-  const provider=requested==="groq" && !process.env.GROQ_API_KEY?.trim() && process.env.OPENROUTER_API_KEY?.trim()
+  // Auto mode may fall back when a provider is *not configured*.
+  // An explicit choice must be honoured; never silently use a different
+  // provider after an editor selected Groq or OpenRouter.
+  const provider=choice==="auto" && requested==="groq" &&
+    !process.env.GROQ_API_KEY?.trim() && process.env.OPENROUTER_API_KEY?.trim()
     ? "openrouter" : requested;
   const apiKey=provider==="openrouter"?process.env.OPENROUTER_API_KEY?.trim():process.env.GROQ_API_KEY?.trim();
   if(!isPost) return respond(200,{
