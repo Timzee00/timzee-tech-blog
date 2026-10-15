@@ -251,3 +251,12 @@
  .article-ai-panel-heading .btn{flex-shrink:0;padding:9px;}
  .article-ai-message{max-width:100%;}
 }
+
+/* Reader AI provider controls remain visible without widening the article. */
+.article-ai-provider-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 14px;}
+.article-ai-provider-row label{font-weight:650;font-size:13px;color:var(--color-text);}
+.article-ai-provider-row select{min-width:0;max-width:100%;flex:1 1 180px;background:var(--color-surface);
+  border:1px solid var(--color-border-strong);border-radius:10px;color:var(--color-text);
+  min-height:44px;padding:8px 10px;font:inherit;font-size:14px;}
+.article-ai-provider-row .btn{min-height:44px;white-space:normal;}
+@media(max-width:480px){.article-ai-provider-row select{flex-basis:100%;}.article-ai-provider-row .btn{width:100%;}}

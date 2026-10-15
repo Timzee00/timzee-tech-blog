@@ -99,6 +99,17 @@
               <div><h2>Ask Timzee AI about this article</h2><p>Answers use this article as context. Check the original sources for important details.</p></div>
               <button id="closeArticleAi" type="button" class="btn ghost" aria-label="Close article AI panel">Close</button>
             </div>
+            <div class="article-ai-provider-row">
+              <label for="articleAiProvider">AI provider</label>
+              <select id="articleAiProvider" aria-describedby="articleAiStatus">
+                <option value="auto">Auto (available provider)</option>
+                <option value="groq">Groq</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+              </select>
+              <button id="articleAiCheckProvider" type="button" class="btn ghost">Check connection</button>
+            </div>
             <div id="articleAiTranscript" class="article-ai-transcript" role="log" aria-live="polite" aria-relevant="additions text"></div>
             <form id="articleAiForm" class="article-ai-form">
               <label class="sr-only" for="articleAiQuestion">Your question about the article</label>
