@@ -629,21 +629,30 @@ function setupLike(post) {
     likeBtn.textContent = state.hasLiked ? "Liked" : "Like";
   };
   updateLabel();
+  let busy=false;
+  likeBtn.setAttribute("aria-pressed",String(state.hasLiked));
   likeBtn.addEventListener("click", async () => {
+    if(busy)return;
     if (!state.user) {
       window.appUI.toast("Please log in to like posts.");
       window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       return;
     }
-    const result = await togglePostLike(post.id, state.user.id);
-    state.hasLiked = result.liked;
-    if (result.liked) {
-      state.likeCount += 1;
-    } else {
-      state.likeCount = Math.max(0, state.likeCount - 1);
-    }
-    updateLabel();
-    updateCounts(post);
+    busy=true;likeBtn.disabled=true;
+    try{
+      const result=await togglePostLike(post.id,state.user.id);
+      if(result.error)throw result.error;
+      if(state.hasLiked !== result.liked){
+        state.likeCount=Math.max(0,state.likeCount+(result.liked?1:-1));
+      }
+      state.hasLiked=result.liked;
+      likeBtn.setAttribute("aria-pressed",String(state.hasLiked));
+      updateLabel();
+      updateCounts(post);
+    }catch(error){
+      console.warn("Post like failed",error);
+      window.appUI?.toast?.("Could not save your like. Try again.",{tone:"error"});
+    }finally{busy=false;likeBtn.disabled=false;}
   });
 }
 
@@ -1092,7 +1101,8 @@ async function boot() {
     const post = await fetchPostByIdOrSlug({ id: postId, slug });
 
     if (!post) {
-      console.warn("⚠️ Post not found for id:", postId, "slug:", slug);
+      document.getElementById("post-app")?.setAttribute("aria-busy","false");
+      console.warn("Post unavailable for requested identifier");
       document.getElementById("postTitle").textContent = "Post not found";
       document.getElementById("postContent").innerHTML =
         '<p>This post is unavailable or may have been removed.</p><a class="btn" href="/index.html">Explore the latest posts</a>';
@@ -1118,8 +1128,12 @@ async function boot() {
     const [categories, relatedPosts, comments, likeSummary, ads, postMedia, authorCount] = await Promise.all([
       fetchCategories(),
       fetchRelatedPosts(post,{limit:4}),
-      fetchRecentPostComments(post.id,{limit:40}),
-      fetchPostLikeSummary(post.id,state.user?.id),
+      fetchRecentPostComments(post.id,{limit:40}).catch(error=>{
+        console.warn("Article comments unavailable",error);return [];
+      }),
+      fetchPostLikeSummary(post.id,state.user?.id).catch(error=>{
+        console.warn("Article like count unavailable",error);return {count:0,hasLiked:false};
+      }),
       fetchAds({ status: "active" }),
       fetchPostMedia(post.id),
       fetchPublishedAuthorCount(post.author_id)

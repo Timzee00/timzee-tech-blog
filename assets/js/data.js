@@ -290,14 +290,14 @@ export async function togglePostLike(postId, userId) {
 
   if (existing.error) {
     console.warn("Like lookup failed", existing.error);
-    return { liked: false };
+    return { liked: false, error: existing.error };
   }
 
   if (existing.data) {
     const removed = await supabase.from("post_likes").delete().eq("id", existing.data.id);
     if (removed.error) {
       console.warn("Like removal failed", removed.error);
-      return { liked: true };
+      return { liked: true, error: removed.error };
     }
     return { liked: false };
   }
@@ -309,7 +309,7 @@ export async function togglePostLike(postId, userId) {
   });
   if (inserted.error) {
     console.warn("Like insert failed", inserted.error);
-    return { liked: false };
+    return { liked: false, error: inserted.error };
   }
   return { liked: true };
 }
