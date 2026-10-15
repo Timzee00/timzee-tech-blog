@@ -7,7 +7,7 @@ const profile=fs.readFileSync("assets/js/profile.js","utf8");
 const sql=fs.readFileSync("supabase/migrations/20261015114500_staff_direct_messaging_permission.sql","utf8");
 const me="11111111-1111-4111-8111-111111111111";
 const other="22222222-2222-4222-8222-222222222222";
-function peopleUI({staff=false,relation=null,previous=false,allowMessages=true}={}){
+function peopleUI({staff=false,relation=null,previous=false,allowMessages=true,allowRequests=true}={}){
   const start=chat.indexOf("function renderPeopleResults()");
   const end=chat.indexOf("async function searchPeople(",start);
   assert.ok(start>=0&&end>start);
@@ -16,7 +16,7 @@ function peopleUI({staff=false,relation=null,previous=false,allowMessages=true}=
   const state={user:{id:me},staffDMAllowed:staff,friendships:relation?[{
     requester_id:me,addressee_id:other,status:relation
   }]:[],directPartners:previous?[other]:[],peopleTerm:"other",
-    peopleResults:[{id:other,display_name:"Other",username:"other",avatar_url:"",allow_messages:allowMessages}]};
+    peopleResults:[{id:other,display_name:"Other",username:"other",avatar_url:"",allow_messages:allowMessages,allow_requests:allowRequests}]};
   const escape=s=>String(s).replace(/[&<>"']/g,c=>({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   }[c]));
@@ -79,4 +79,17 @@ test("the browser checks server-owned messaging permission and checks again befo
   assert.match(profile,/staffMessageAccess=permission\.data===true/);
   assert.match(profile,/Message as staff/);
   assert.match(profile,/Add Friend/);
+});
+
+test("closed friend requests do not disable authorized staff contact",()=>{
+  const html=peopleUI({staff:true,allowRequests:false});
+  assert.match(html,/Message as staff/);
+  assert.match(html,/Requests closed/);
+  assert.doesNotMatch(html,/data-people-action="request"/);
+});
+test("direct-message notification routes to a sender profile, not an unsupported thread query",()=>{
+  const migration=fs.readFileSync("supabase/migrations/20261015120000_direct_message_notification_links.sql","utf8");
+  assert.match(migration,/\/chat\.html\?user=/);
+  assert.match(migration,/New staff message/);
+  assert.doesNotMatch(migration,/\/chat\.html\?thread=/);
 });
