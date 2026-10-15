@@ -228,7 +228,7 @@
         document.getElementById("description").textContent = listing.description || "No description provided.";
         document.getElementById("viewCount").textContent = listing.view_count || 0;
 
-        const sellerName = seller?.display_name || listing.seller_name || "Seller";
+        const sellerName = (String(seller?.display_name || listing.seller_name || "Seller").replace(/<[^>]*>/g,"").replace(/[<>]/g,"").trim().slice(0,80)) || "Seller";
         document.getElementById("sellerName").textContent = sellerName;
         const sellerAvatarEl = document.getElementById("sellerAvatar");
         if (sellerAvatarEl) {
