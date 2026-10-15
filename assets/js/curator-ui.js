@@ -776,6 +776,12 @@ class CuratorManager {
       media.style.maxWidth="100%";media.style.width="100%";media.style.height="auto";
       media.style.objectFit="contain";
     });
+    dialog.querySelectorAll("img").forEach(image=>image.addEventListener("error",()=>{
+      const placeholder=document.createElement("p");
+      placeholder.className="curator-preview-note";
+      placeholder.textContent="This image host blocked embedding or the image is unavailable. Check the URL, license and hosting before publishing.";
+      image.replaceWith(placeholder);
+    },{once:true}));
     document.body.append(dialog);
     const close=()=>dialog.close();
     dialog.querySelector(".curator-preview-close")?.addEventListener("click",close);
