@@ -76,7 +76,7 @@ exports.handler = async (event) => {
     const authHeader = headers.authorization || headers.Authorization || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");
     if (!token) return jsonResponse(403, { error: "Missing auth token." });
-    const guard = await requireRole(supabase, token, ["super"], "Only super admins can run manually.");
+    const guard = await requireRole(supabase, token, ["admin", "super"], "Only active administrators can run Scout manually.");
     if (guard.error) return jsonResponse(403, { error: guard.error });
   }
 

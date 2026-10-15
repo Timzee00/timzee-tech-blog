@@ -216,59 +216,12 @@
         </div>
       </section>
 
-      <section class="admin-card" data-panel="curator" style="display:none;">
-        <h2>🤖 Curator Bot Settings</h2>
-        <p class="hint">Manage automated content curation and RSS feeds</p>
-        
-        <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
-          <h3 style="margin:0;">Add RSS Feed Source</h3>
-          <button class="btn btn-ghost" id="importFeedsAdminBtn" style="margin-left:12px;">Import Recommended Feeds</button>
+      <section class="admin-card" data-panel="curator" style="display:none;" aria-label="Curator newsroom">
+        <h2 class="visually-hidden">Curator Newsroom</h2>
+        <p class="hint">Admins and Super Admins can discover stories, inspect Scout health, edit sources, expand and preview articles, build roundups, and approve publication. All actions are recorded against your signed-in account.</p>
+        <div id="adminCuratorManager" role="region" aria-label="Curator newsroom" aria-live="polite">
+          <p class="callout">Open the Curator tab to load your newsroom.</p>
         </div>
-        <form novalidate id="curatorSourceForm" class="admin-form">
-          <input type="text" id="curatorSourceName" placeholder="Source name (e.g., TechCrunch)" required>
-          <input type="url" id="curatorSourceUrl" placeholder="RSS feed URL" required>
-          <select id="curatorSourceCategory" required></select>
-          <textarea id="curatorSourceDescription" placeholder="Description of this source" rows="3" class="resize-none"></textarea>
-          <div class="inline-actions">
-            <button class="btn" type="submit">Add Source</button>
-            <button class="btn ghost" type="button" id="resetCuratorBtn">Reset</button>
-          </div>
-        </form>
-
-        <h3 style="margin-top: 30px;">Active Sources</h3>
-        <div class="table-wrap">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Source Name</th>
-                <th>Category</th>
-                <th>Feed URL</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="curatorSourcesTable"></tbody>
-          </table>
-        </div>
-
-        <h3 style="margin-top: 30px;">Bot Settings</h3>
-        <form novalidate id="botSettingsForm" class="admin-form">
-          <label class="badge">Check Interval (hours)</label>
-          <input type="number" id="botCheckInterval" value="6" min="1" max="24">
-          
-          <label class="badge">Auto-publish curated posts</label>
-          <input type="checkbox" id="botAutoPublish">
-          
-          <label class="badge">Automatically approve comments</label>
-          <input type="checkbox" id="botAutoApprove">
-          
-          <label class="badge">Max posts per day</label>
-          <input type="number" id="botMaxPostsPerDay" value="5" min="1" max="100">
-          
-          <div class="inline-actions">
-            <button class="btn" type="submit">Save Bot Settings</button>
-          </div>
-        </form>
       </section>
 
       <section class="admin-card" data-panel="users" style="display:none;">

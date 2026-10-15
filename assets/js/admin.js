@@ -331,6 +331,24 @@ function handleLogin() {
   return bindStaffLogin({ formId: "adminLoginForm", roles: ["admin", "super"], destination: "dashboard.html" });
 }
 
+let curatorManagerPromise = null;
+// Use the exact same role-checked editor in both Admin and Super Admin workspaces.
+// Load on demand so routine admin pages do not request curator sources or AI code.
+function ensureCuratorManager() {
+  if (curatorManagerPromise) return curatorManagerPromise;
+  const host = document.getElementById("adminCuratorManager");
+  if (!host) return Promise.resolve();
+  host.textContent = "Loading curator newsroom…";
+  curatorManagerPromise = import("./curator-ui.js")
+    .then(({ default: CuratorManager }) => new CuratorManager().init("adminCuratorManager"))
+    .catch(error => {
+      console.error("Curator newsroom could not load:", error);
+      host.textContent = "Curator newsroom failed to load. Select the tab again to retry.";
+      curatorManagerPromise = null;
+    });
+  return curatorManagerPromise;
+}
+
 function setupTabs() {
   const buttons = document.querySelectorAll(".admin-nav button");
   const panels = document.querySelectorAll("[data-panel]");
@@ -341,6 +359,7 @@ function setupTabs() {
       panels.forEach((panel) => {
         panel.style.display = panel.dataset.panel === button.dataset.tab ? "block" : "none";
       });
+      if (button.dataset.tab === "curator") void ensureCuratorManager();
     });
   });
 }
@@ -2006,9 +2025,12 @@ async function bootDashboard() {
   renderProfile();
   setupAnnouncementForm();
   await renderAnnouncementsTable();
-  await setupCuratorBot();
+  // The modern curator editor is initialized lazily from the Curator tab.
   await setupFaq();
   handleLogout();
+  if (new URLSearchParams(location.search).get("tab") === "curator") {
+    document.querySelector('.admin-nav button[data-tab="curator"]')?.click();
+  }
 }
 
 if (!handleLogin()) {

@@ -1,4 +1,4 @@
-// Read-only scout diagnostics; accessible to active Super Admins only.
+// Read-only scout diagnostics; accessible to active Admins and Super Admins only.
 // Never report credentials, feed URLs, tokens, or arbitrary upstream errors.
 const { createClient } = require("@supabase/supabase-js");
 const { requireRole } = require("./_lib/auth-role.js");
@@ -25,7 +25,7 @@ exports.handler = async (event = {}) => {
   const supabase = createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false }
   });
-  const guard = await requireRole(supabase, token, ["super"], "Super Admin permissions required.");
+  const guard = await requireRole(supabase, token, ["admin", "super"], "Administrator permissions required.");
   if (guard.error) return json(403, { error: guard.error });
 
   const [settings, sources, drafts, job] = await Promise.all([

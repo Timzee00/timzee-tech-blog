@@ -754,10 +754,16 @@
         const attempt = vid.play();
         if (attempt && typeof attempt.catch === "function") {
           attempt.catch(() => {
+            // An autoplay policy rejection applies to the whole feed.
+            // Preserve the effective sound state for every subsequent reel.
             vid.muted = true;
             state.sessionMuted = true;
-            const btn = document.getElementById(`mute-${idx}`);
-            if (btn) btn.textContent = "🔇";
+            try { sessionStorage.setItem("timzee:reels-muted","true"); } catch {}
+            document.querySelectorAll(".reel-video").forEach(item=>{item.muted=true;});
+            document.querySelectorAll(".reel-mute").forEach(button=>{
+              button.textContent="🔇";
+              button.setAttribute("aria-label","Unmute videos");
+            });
             vid.play().catch(() => {});
           });
         }

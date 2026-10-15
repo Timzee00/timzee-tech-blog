@@ -1,4 +1,4 @@
-// A regular HTTP entrypoint for authenticated Super Admins.
+// A regular HTTP entrypoint for authenticated Admins and Super Admins.
 // Netlify scheduled functions cannot be invoked directly by URL.
 // The same scout workflow is reused, but scheduling headers are stripped
 // so no public request can claim to be an internal cron invocation.
@@ -20,7 +20,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ error: "Use POST to run the curator." }) };
   }
   // scout-news checks the bearer token against current, trusted profile
-  // roles. Only a Super Admin may trigger a manual run.
+  // roles. Admins and Super Admins can trigger a manual run.
   const { handler } = require("./scout-news.js");
   return handler(safe, context);
 };
