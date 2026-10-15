@@ -208,6 +208,9 @@
 
           renderListing();
           setupEventListeners();
+          if(new URLSearchParams(window.location.search).get("contact")==="1"){
+            document.getElementById("contactBtn")?.click();
+          }
         } catch (error) {
           console.error("Load error:", error);
           document.getElementById("loadingState").textContent = "Unable to load this listing right now.";
