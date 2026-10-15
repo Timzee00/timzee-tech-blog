@@ -7,6 +7,7 @@ import { uploadMedia } from "./media.js";
 import { getChatMediaPath } from "./chat-media-path.mjs";
 import { loadUserPreferences, saveUserPreferences } from "./user-preferences.js";
 import { escapeHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
+import { submitModerationReport } from "./moderation-reports.mjs";
 
 const DEFAULT_AVATAR = "/assets/img/avatar-placeholder.svg";
 const DEFAULT_GROUP_AVATAR = "/assets/img/group-placeholder.svg";
@@ -110,6 +111,20 @@ function threadForFriend(id) { return [state.user.id,id].sort().join("_"); }
 function activeGroup() { return state.groups.find((g)=>g.id===state.activeGroupId) || null; }
 function isOwnerOfActiveGroup() { return Boolean(state.activeGroupId && activeGroup()?.created_by===state.user?.id); }
 
+async function reportActiveConversation(){
+  if(!state.user?.id)throw Error("Sign in to submit reports.");
+  const group=activeGroup();
+  const subject=group ? "group" : "user";
+  const contentId=group?.id || state.activeFriendId;
+  if(!contentId)throw Error("Open a private chat or group before reporting.");
+  const reason=await window.appUI.prompt("Explain why you are reporting this "+subject+" (at least 8 characters):","");
+  if(reason===null)return;
+  await submitModerationReport({
+    reporterId:state.user.id,contentType:group?"chat_group":"user",contentId,reason,
+    metadata:group?{}:{threadId:state.activeThreadId}
+  });
+  window.siteToast?.("Report submitted for moderator review.",{type:"success",title:"Report sent"});
+}
 async function loadProfiles(ids) {
   const unique=[...new Set(ids.filter(Boolean))]; if(!unique.length)return;
   const result=await supabase.from("public_profiles").select("*").in("id",unique); if(result.error)throw result.error;
@@ -523,7 +538,7 @@ function setupEvents(){
     if (event.target === panel && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) panel.close();
   });
   $("chatMenuToggle")?.addEventListener('click',e=>{e.stopPropagation();$("chatHeaderMenu").hidden?openHeaderMenu():closeHeaderMenu();}); document.addEventListener('click',e=>{if(!e.target.closest('.chat-header-actions'))closeHeaderMenu();});
-  $("chatHeaderMenu")?.addEventListener('click',async e=>{const a=e.target.closest('[data-chat-menu]')?.dataset.chatMenu;if(!a)return;closeHeaderMenu();if(a==='search'){state.messageSearchTerm=await window.appUI.prompt('Search in this chat:',state.messageSearchTerm)||'';renderMessages();}if(a==='settings'){defaultSettingsUI();openModal('chatSettingsModal');}if(a==='mute'||a==='pin')await toggleChatMemberFlag(a);if(a==='report')location.href='contact.html?subject='+encodeURIComponent('Chat report');});
+  $("chatHeaderMenu")?.addEventListener('click',async e=>{const a=e.target.closest('[data-chat-menu]')?.dataset.chatMenu;if(!a)return;closeHeaderMenu();if(a==='search'){state.messageSearchTerm=await window.appUI.prompt('Search in this chat:',state.messageSearchTerm)||'';renderMessages();}if(a==='settings'){defaultSettingsUI();openModal('chatSettingsModal');}if(a==='mute'||a==='pin')await toggleChatMemberFlag(a);if(a==='report')await reportActiveConversation().catch(error=>reportAppError(error,'Could not submit report'));});
   document.querySelectorAll('[data-close-modal]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.closeModal))); document.querySelectorAll('[data-chat-setting]').forEach(i=>i.addEventListener('change',()=>{state.settings[i.dataset.chatSetting]=i.checked;saveSettings();}));
   $("peopleSearchToggle")?.addEventListener('click',()=>{$("peopleSearchPanel").hidden=!$("peopleSearchPanel").hidden;if(!$("peopleSearchPanel").hidden){$("peopleSearch").focus();renderPeopleResults();}}); $("newGroupBtn")?.addEventListener('click',()=>{renderGroupPicker();openModal('friendPickerModal');}); $("friendPickerClose")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCancel")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCreate")?.addEventListener('click',()=>createGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Create group'})));
   $("groupMemberSearch")?.addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#groupMemberPicker .chat-picker-row').forEach(r=>r.hidden=!r.innerText.toLowerCase().includes(q));}); $("editGroupBtn")?.addEventListener('click',()=>{const g=activeGroup();if(g){$("groupAvatarPreview").src=g.avatar_url||DEFAULT_GROUP_AVATAR;$("groupNameInput").value=g.name||'';$("groupDescriptionInput").value=g.description||'';$("groupEditor").hidden=false;}}); $("groupAvatarInput")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)$("groupAvatarPreview").src=URL.createObjectURL(f);}); $("cancelGroupBtn")?.addEventListener('click',()=>{$("groupEditor").hidden=true;}); $("saveGroupBtn")?.addEventListener('click',()=>editGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Group settings'}))); $("infoGroupMembers")?.addEventListener('click',e=>{const b=e.target.closest('[data-edit-member-tags]');if(b)editMemberTags(b.dataset.editMemberTags).catch(err=>window.siteToast?.(err.message,{type:'error',title:'Member tag'}));});

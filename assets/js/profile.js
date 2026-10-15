@@ -24,6 +24,7 @@ import {
 import { setupReveal } from "./reveal.js";
 import { safeNotificationPath } from "./notification-links.mjs";
 import "./nav.js";
+import { submitModerationReport } from "./moderation-reports.mjs";
 
 const state = {
   user: null,
@@ -833,6 +834,24 @@ function renderProfileActions() {
     return;
   }
 
+  const reportUserBtn=document.createElement("button");
+  reportUserBtn.type="button";
+  reportUserBtn.className="btn ghost";
+  reportUserBtn.textContent="Report user";
+  reportUserBtn.addEventListener("click",async()=>{
+    const reason=await window.appUI.prompt("Why are you reporting this account? Please describe the issue.","");
+    if(reason===null)return;
+    reportUserBtn.disabled=true;
+    try {
+      await submitModerationReport({
+        reporterId:state.user.id,contentType:"user",contentId:state.viewingId,reason
+      });
+      window.appUI.toast("Account report submitted for moderator review.",{tone:"success"});
+    } catch(error) {
+      window.appUI.toast(error.message||"Could not submit report.",{tone:"error"});
+    } finally{reportUserBtn.disabled=false;}
+  });
+  actions.append(reportUserBtn);
   const allowRequests = state.profile?.allow_requests !== false;
   const allowMessages = state.profile?.allow_messages !== false;
 

@@ -1,6 +1,7 @@
 import { supabase, getCurrentUser } from "./supabase.js";
 import { storeChatContext } from "./chat-ai-context.mjs";
 import { reportAppError } from "./utils.js";
+import { submitModerationReport } from "./moderation-reports.mjs";
 
 const MENU_ID = "chatMessageContextMenu";
 let currentMessage = null;
@@ -114,16 +115,10 @@ async function reportMessage(messageEl) {
   if (!reason) return;
   const id = messageEl.dataset.messageId;
   if (!id) throw new Error("Message identifier is missing.");
-  const result = await supabase.from("content_reports").insert({
-    id: crypto.randomUUID(),
-    reporter_id: user.id,
-    content_type: "direct_message",
-    content_id: id,
-    reason: String(reason).slice(0, 500),
-    status: "open",
-    metadata: { source: "chat-context-menu" }
+  await submitModerationReport({
+    reporterId:user.id,contentType:"direct_message",contentId:id,reason,
+    metadata:{threadId:messageEl.dataset.threadId||""}
   });
-  if (result.error) throw result.error;
   window.siteToast?.("Report submitted.", { type: "success", title: "Message reported" });
 }
 
