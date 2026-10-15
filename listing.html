@@ -397,7 +397,7 @@
           if(!state.listing){messageUser("Listing is still loading. Please try again.");return;}
           if (!state.user) {
             messageUser("Sign in to send an inquiry to this seller.");
-            const next=encodeURIComponent("listing.html?id="+state.itemId);
+            const next=encodeURIComponent("listing.html?id="+state.itemId+"&contact=1");
             window.location.href="login.html?next="+next;
             return;
           }
@@ -419,8 +419,13 @@
           }
 
           if (state.sellerProfile && state.sellerProfile.allow_messages === false) {
-            messageUser("This seller is not accepting direct messages. You can still send an inquiry below.");
-            document.getElementById("inquiryContainer")?.scrollIntoView({ behavior: "smooth", block: "center" });
+            const inquiry=document.getElementById("inquiryContainer");
+            if(inquiry){
+              inquiry.style.display="block";
+              inquiry.scrollIntoView({behavior:"smooth",block:"center"});
+              document.getElementById("inquiryMessage")?.focus();
+            }
+            messageUser("Direct chat is disabled, but you can still send a marketplace inquiry below.");
             return;
           }
 
