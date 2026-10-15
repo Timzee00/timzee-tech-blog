@@ -43,6 +43,7 @@ import {
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
+import { mountArticleAssistant } from "./article-ai.mjs";
 
 const state = {
   user: null,
@@ -281,17 +282,7 @@ function renderPost(data, post) {
         ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}">`
         : "";
   }
-  for (const [id,action] of [["summarizePostAi","summarize"],["chatPostAi","chat"]]) {
-    document.getElementById(id)?.addEventListener("click",()=>{
-      // Same-origin session storage: do not put article text in the URL,
-      // referrer or telemetry. The AI still requires signed-in consent.
-      const article=stripHTML(stripEditorialScaffolding(post.content||"")).slice(0,7500);
-      const context={title:String(post.title||"Article").slice(0,220),
-        url:location.href,excerpt:article,action,created:Date.now()};
-      sessionStorage.setItem("timzee:article-ai-context",JSON.stringify(context));
-      window.location.assign("ai-chat.html?articleContext=1");
-    });
-  }
+  mountArticleAssistant(post);
   const postBody = document.getElementById("postContent");
   if (postBody) {
     postBody.innerHTML = normalizeHtml(stripEditorialScaffolding(post.content || ""));

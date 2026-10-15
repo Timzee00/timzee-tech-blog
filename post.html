@@ -94,6 +94,20 @@
             <button type="button" class="btn ghost" id="summarizePostAi">Summarize with AI</button>
             <button type="button" class="btn ghost" id="chatPostAi">Chat about this article</button>
           </div>
+          <section id="inlineArticleAi" class="article-ai-panel" aria-label="Ask AI about this article" hidden>
+            <div class="article-ai-panel-heading">
+              <div><h2>Ask Timzee AI about this article</h2><p>Answers use this article as context. Check the original sources for important details.</p></div>
+              <button id="closeArticleAi" type="button" class="btn ghost" aria-label="Close article AI panel">Close</button>
+            </div>
+            <div id="articleAiTranscript" class="article-ai-transcript" role="log" aria-live="polite" aria-relevant="additions text"></div>
+            <form id="articleAiForm" class="article-ai-form">
+              <label class="sr-only" for="articleAiQuestion">Your question about the article</label>
+              <textarea id="articleAiQuestion" placeholder="Ask about the story, its background, or what it means…" rows="2" maxlength="700" required></textarea>
+              <button type="submit" id="articleAiSend" class="btn">Ask</button>
+            </form>
+            <p id="articleAiStatus" class="article-ai-status" role="status" aria-live="polite"></p>
+            <a class="article-ai-full-link" id="articleAiFullLink" href="ai-chat.html">Continue in full AI chat →</a>
+          </section>
           <div class="notice" id="commentNotice" style="display: none;"></div>
 
           <section class="author-profile-card" id="authorProfileCard"></section>
