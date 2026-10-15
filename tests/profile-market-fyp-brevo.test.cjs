@@ -37,8 +37,8 @@ test("email dashboard exposes meaningful diagnostic errors for stale deploys",()
   const page=source("super/email-operations.html");
   const handler=source("netlify/functions/email-operations.js");
   assert.match(page,/Email function is missing from this Netlify deploy/);
-  assert.match(handler,/diagnostic_code:safeCode/);
-  assert.match(handler,/console\.error\("Email operations aggregate failed"/);
+  assert.match(handler,/diagnostic_code:code/);
+  assert.match(handler,/console\.error\("Email operations RPC failed"/);
 });
 test("profile photos and cover have separate image viewer triggers",()=>{
   const html=source("profile.html"),js=source("assets/js/profile.js");
