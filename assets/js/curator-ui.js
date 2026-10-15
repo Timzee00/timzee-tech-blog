@@ -108,6 +108,12 @@ class CuratorManager {
                 <button class="btn btn-small" id="syncNowBtn" ${this.canRunScout ? "" : "disabled title=\"Only Super Admins can run the Scout manually\""}>🔄 Sync Now</button>
               </div>
             </div>
+            <div class="card">
+              <h4>Editorial AI readiness</h4>
+              <p style="font-size:13px;color:var(--color-text-muted);">Check whether this deployed Netlify Function can see a Groq or OpenRouter key. This does not make a paid API request.</p>
+              <p id="curatorAiDiagnostic" role="status" aria-live="polite">Not checked on this deployment.</p>
+              <button type="button" class="btn ghost" id="checkCuratorAiBtn">Check AI setup</button>
+            </div>
           </div>
         </div>
 
@@ -362,6 +368,8 @@ class CuratorManager {
     this.container.querySelector("#syncNowBtn").addEventListener("click", (e) => {
       this.handleSyncNow(e.currentTarget);
     });
+    this.container.querySelector("#checkCuratorAiBtn")?.addEventListener("click",()=>void this.checkEditorialAi());
+
 
     // Import recommended feeds
     const importBtn = this.container.querySelector("#importFeedsBtn");
@@ -406,6 +414,30 @@ class CuratorManager {
       btn.disabled = false;
       btn.textContent = originalText;
     }
+  }
+
+  async checkEditorialAi() {
+    const status=this.container.querySelector("#curatorAiDiagnostic");
+    const button=this.container.querySelector("#checkCuratorAiBtn");
+    if(!status || !button)return;
+    button.disabled=true;
+    status.textContent="Checking this deployment's Function configuration…";
+    try{
+      const {data,error}=await supabase.auth.getSession();
+      if(error || !data?.session?.access_token) throw Error("Sign in again to check AI configuration.");
+      const response=await fetch("/.netlify/functions/curator-expand-article",{
+        method:"GET",headers:{Authorization:"Bearer "+data.session.access_token},cache:"no-store"
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw Error(result.error||"The editorial AI diagnostic isn't available in this deploy.");
+      const provider=result.provider==="openrouter"?"OpenRouter":"Groq";
+      const context=result.deploymentContext||"unknown";
+      status.textContent=result.configured
+        ? provider+" credential detected in "+context+" Functions; actual AI response still needs a connection test."
+        : provider+" credential missing in "+context+" Functions. Check Netlify deploy context, Functions scope, and build a new deploy.";
+    }catch(error){
+      status.textContent=error?.message||"Could not check editorial AI.";
+    }finally {button.disabled=false;}
   }
 
   async loadScoutHealth() {
