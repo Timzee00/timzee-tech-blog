@@ -862,7 +862,7 @@
               title: document.getElementById("videoTitle").value,
               description: document.getElementById("videoDescription").value,
               category: document.getElementById("videoCategory").value,
-              tags: document.getElementById("videoTags").value.split(",").map(t => t.trim()).filter(Boolean),
+              tags: [...new Set(document.getElementById("videoTags").value.split(/[\\s,]+/).map(t => t.trim().replace(/^#/,"").toLowerCase()).filter(t=>/^[a-z0-9_]{1,32}$/.test(t)))],
               duration: state.selectedVideoDuration || 0
             }
           );
