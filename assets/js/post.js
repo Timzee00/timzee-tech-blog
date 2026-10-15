@@ -1087,6 +1087,7 @@ function renderAds(settings) {
 }
 
 async function boot() {
+  let articleRendered=false;
   try {
     // Start the article request independently of auth and personalization.
     // Visitors should see the public article while secondary page data loads.
@@ -1114,6 +1115,7 @@ async function boot() {
     // Display the title and body immediately instead of showing placeholders
     // while waiting for authentication, comments, and reaction counts.
     renderPost({categories:[]},post);
+    articleRendered=true;
     document.getElementById("post-app")?.setAttribute("aria-busy","false");
     const [user,siteSettings]=await Promise.all([authPromise,settingsPromise]);
     state.user=user;
@@ -1186,9 +1188,16 @@ async function boot() {
     setupReveal();
   } catch (err) {
     document.getElementById("post-app")?.setAttribute("aria-busy","false");
-    reportAppError(err, "Post load failed");
-    const message = extractErrorMessage(err, "Something went wrong while loading this post.");
-    document.getElementById("postTitle").textContent = "Error loading post";
+    if(articleRendered){
+      // A broken recommendation, auth extension or optional social widget
+      // must not erase a successfully loaded public article.
+      console.warn("Optional article enhancement failed",err);
+      document.getElementById("postContent")?.setAttribute("data-enhancement-error","true");
+      return;
+    }
+    reportAppError(err,"Post load failed");
+    const message=extractErrorMessage(err,"Something went wrong while loading this post.");
+    document.getElementById("postTitle").textContent="Error loading post";
     document.getElementById("postContent").innerHTML =
       `<p>${escapeHTML(message)}</p>`;
   }
