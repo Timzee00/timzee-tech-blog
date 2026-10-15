@@ -6,6 +6,7 @@
 import { supabase } from "./supabase.js";
 import { escapeHTML, isSafeUrl } from "./utils.js";
 import { collectMentionHandles, renderMentionLinks } from "./mention-text.mjs";
+import {placeMentionMenu} from "./mention-viewport.mjs";
 
 let mentionCache = {};
 let activeMentionDropdown = null;
@@ -13,6 +14,7 @@ let activeMentionField = null;
 let currentSearchTerm = "";
 let cursorAtMention = false;
 let mentionRequest = 0;
+let mentionPositionCleanup = null;
 
 /**
  * Search for users to mention
@@ -65,6 +67,8 @@ export async function searchUsersForMention(query) {
  * Close the mention dropdown
  */
 export function closeMentionDropdown() {
+  mentionPositionCleanup?.();
+  mentionPositionCleanup = null;
   if (activeMentionDropdown) {
     activeMentionDropdown.remove();
     activeMentionDropdown = null;
@@ -88,14 +92,6 @@ async function showMentionDropdown(field, searchTerm) {
   const suggestions = await searchUsersForMention(searchTerm);
   if (request !== mentionRequest || !field.isConnected || document.activeElement !== field) return;
 
-  const rect = field.getBoundingClientRect();
-  // Android's virtual keyboard reduces visualViewport, not always innerHeight.
-  const viewport=window.visualViewport;
-  const viewTop=viewport?.offsetTop || 0;
-  const viewBottom=viewTop+(viewport?.height || window.innerHeight);
-  const menuHeight=Math.min(260,Math.max(100,viewBottom-viewTop-20));
-  const roomBelow=viewBottom-rect.bottom;
-  const top=roomBelow>=160 ? rect.bottom+5 : Math.max(viewTop+8,rect.top-menuHeight-6);
   const dropdown = document.createElement("div");
   dropdown.className = "mention-dropdown";
   dropdown.id = "timzee-mention-suggestions";
@@ -103,18 +99,15 @@ async function showMentionDropdown(field, searchTerm) {
   dropdown.setAttribute("aria-label","Mention a community member");
   dropdown.style.cssText = `
     position: fixed;
-    top: ${Math.min(top,viewBottom-70)}px;
-    left: ${Math.max(8,Math.min(rect.left,innerWidth-Math.min(300,innerWidth-16)-8))}px;
-    width: min(300px, calc(100vw - 16px));
     background: var(--color-surface, #ffffff);
     color: var(--color-text, #111827);
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    max-width: 300px;
-    max-height: ${menuHeight}px;
+    border: 1px solid var(--color-border, #9ca3af);
+    border-radius: 10px;
+    overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior: contain;
     z-index: 10000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
   `;
 
   if(!suggestions.length){
@@ -186,6 +179,30 @@ async function showMentionDropdown(field, searchTerm) {
   });
 
   document.body.appendChild(dropdown);
+  const visualViewport=window.visualViewport;
+  const reposition=()=>{
+    if(!dropdown.isConnected)return;
+    const viewport=visualViewport
+      ? {offsetLeft:visualViewport.offsetLeft,offsetTop:visualViewport.offsetTop,
+         width:visualViewport.width,height:visualViewport.height}
+      : {offsetLeft:0,offsetTop:0,width:window.innerWidth,height:window.innerHeight};
+    const geometry=placeMentionMenu(field.getBoundingClientRect(),viewport);
+    dropdown.style.left=geometry.left+"px";
+    dropdown.style.top=geometry.top+"px";
+    dropdown.style.width=geometry.width+"px";
+    dropdown.style.maxHeight=geometry.maxHeight+"px";
+  };
+  reposition();
+  visualViewport?.addEventListener("resize",reposition);
+  visualViewport?.addEventListener("scroll",reposition);
+  window.addEventListener("resize",reposition);
+  window.addEventListener("scroll",reposition,true);
+  mentionPositionCleanup=()=>{
+    visualViewport?.removeEventListener("resize",reposition);
+    visualViewport?.removeEventListener("scroll",reposition);
+    window.removeEventListener("resize",reposition);
+    window.removeEventListener("scroll",reposition,true);
+  };
   activeMentionDropdown = dropdown;
   activeMentionField = field;
   field.setAttribute("aria-expanded","true");
