@@ -81,7 +81,7 @@ async function showMentionDropdown(field, searchTerm) {
   closeMentionDropdown();
   const request = ++mentionRequest;
   const suggestions = await searchUsersForMention(searchTerm);
-  if (request !== mentionRequest || !field.isConnected || document.activeElement !== field || !suggestions.length) return;
+  if (request !== mentionRequest || !field.isConnected || document.activeElement !== field) return;
 
   const rect = field.getBoundingClientRect();
   // Android's virtual keyboard reduces visualViewport, not always innerHeight.
@@ -111,6 +111,12 @@ async function showMentionDropdown(field, searchTerm) {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   `;
 
+  if (!suggestions.length) {
+    const empty=document.createElement("p");
+    empty.textContent=searchTerm ? "No matching community members." : "No members available to mention.";
+    empty.style.cssText="margin:0;padding:14px;color:var(--color-text-muted,#64748b);font-size:13px;";
+    dropdown.appendChild(empty);
+  }
   suggestions.forEach((user) => {
     const item = document.createElement("div");
     item.className = "mention-item";
@@ -148,7 +154,7 @@ async function showMentionDropdown(field, searchTerm) {
     item.append(img, copy);
 
     item.addEventListener("mouseover", () => {
-      item.style.background = "#f9fafb";
+      item.style.background = "var(--color-surface-muted,#e5e7eb)";
     });
     item.addEventListener("mouseout", () => {
       item.style.background = "transparent";
@@ -255,7 +261,14 @@ export async function handleMentionInput(event) {
 export function setupMentionInput(field) {
   if (!field) return;
 
+  if (field.dataset.timzeeMentionsWired === "true") return;
+  field.dataset.timzeeMentionsWired = "true";
+  field.setAttribute("aria-autocomplete","list");
   field.addEventListener("input", handleMentionInput);
+  field.addEventListener("click", () => {
+    if (field.value.slice(0,field.selectionStart).includes("@"))
+      void handleMentionInput({target:field});
+  });
   field.addEventListener("keydown", (event) => {
     // Close dropdown on Escape
     if (event.key === "Escape") {
