@@ -165,9 +165,32 @@ function renderRequests() {
 }
 function renderBlocked() { const target=$("blockedList"); if(!target)return; target.innerHTML=state.blocked.length?state.blocked.map(id=>`<div class="chat-request-row"><img src="${escapeHTML(profileFor(id)?.avatar_url||DEFAULT_AVATAR)}" alt=""><div><strong>${escapeHTML(profileFor(id)?.display_name||'Member')}</strong><small>Blocked</small></div><button class="btn ghost sm" data-unblock="${id}">Unblock</button></div>`).join(''):`<div class="callout">No blocked users.</div>`; }
 function renderPeopleResults() {
-  const target=$("peopleResults"); if(!target)return; const q=state.peopleTerm.trim().toLowerCase(); if(q.length<2){target.innerHTML='<div class="callout">Search by name or username (at least 2 characters).</div>';return;}
-  const profiles=state.peopleResults;
-  target.innerHTML=profiles.length?profiles.slice(0,20).map(p=>{const f=state.friendships.find(r=>(r.requester_id===state.user.id&&r.addressee_id===p.id)||(r.addressee_id===state.user.id&&r.requester_id===p.id));const friend=f?.status==='accepted';const pending=f?.status==='pending';const blocked=f?.status==='blocked';return `<div class="chat-request-row"><img src="${escapeHTML(p.avatar_url||DEFAULT_AVATAR)}" alt=""><div><strong>${escapeHTML(p.display_name||p.username||'Member')}</strong><small>${escapeHTML(p.username||p.email||'')}</small></div><button class="btn ghost sm" data-people-action="${friend?'message':'request'}" data-id="${p.id}" ${pending||blocked?'disabled':''}>${friend?'Message':blocked?'Blocked':pending?'Requested':'Add friend'}</button></div>`}).join(''):`<div class="callout">No users found.</div>`;
+  const target=$("peopleResults"); if(!target)return;
+  const q=state.peopleTerm.trim().toLowerCase();
+  if(q.length<2){
+    target.innerHTML='<div class="callout">Search by name or username (at least 2 characters).</div>';
+    return;
+  }
+  target.innerHTML=state.peopleResults.length
+   ? state.peopleResults.slice(0,20).map(p=>{
+       const rel=state.friendships.find(r=>
+         (r.requester_id===state.user.id&&r.addressee_id===p.id)||
+         (r.addressee_id===state.user.id&&r.requester_id===p.id));
+       const friend=rel?.status==="accepted",pending=rel?.status==="pending",blocked=rel?.status==="blocked";
+       const alreadyMessaging=state.directPartners.includes(p.id);
+       const canMessage=!blocked&&p.allow_messages!==false&&
+         (friend||state.staffDMAllowed||alreadyMessaging);
+       const message=canMessage?'<button class="btn sm" data-people-action="message" data-id="'+p.id+'">'+
+         (friend||alreadyMessaging?"Message":"Message as staff")+'</button>':"";
+       const request=blocked?'<span class="chip">Blocked</span>':
+         pending?'<span class="chip">Request pending</span>':
+         friend?'':'<button class="btn ghost sm" data-people-action="request" data-id="'+p.id+'">Add friend</button>';
+       return '<div class="chat-request-row"><img src="'+escapeHTML(p.avatar_url||DEFAULT_AVATAR)+'" alt="">'+
+         '<div><strong>'+escapeHTML(p.display_name||p.username||"Member")+'</strong>'+
+         '<small>'+escapeHTML(p.username||"")+'</small></div><div class="inline-actions">'+
+         message+request+'</div></div>';
+     }).join("")
+   :'<div class="callout">No users found.</div>';
 }
 
 async function searchPeople(query) {
@@ -180,7 +203,7 @@ async function searchPeople(query) {
     // Quote PostgREST filter values and escape LIKE wildcards; search public
     // names only. Email addresses are not a discovery directory.
     const pattern = JSON.stringify(`%${query.replace(/[\\%_]/g, character => `\\${character}`)}%`);
-    const result = await supabase.from('public_profiles').select('id,display_name,username,avatar_url')
+    const result = await supabase.from('public_profiles').select('id,display_name,username,avatar_url,allow_messages')
       .neq('id', state.user.id).or(`display_name.ilike.${pattern},username.ilike.${pattern}`).limit(20);
     if (version !== state.peopleRequest || query !== $("peopleSearch").value.trim()) return;
     if (result.error) throw result.error;
@@ -469,7 +492,7 @@ function setupEvents(){
         if (result.error) throw result.error;
         await loadAllChatData(); renderPeopleResults(); renderRequests();
       }
-    } catch (error) { reportAppError(error, 'Friend request failed'); }
+    } catch (error) { reportAppError(error, 'Unable to start conversation or friend request'); }
     finally { if (button.isConnected) button.disabled = false; }
   });
   $("chatBody")?.addEventListener('input',()=>{const t=$("chatBody");t.style.height='auto';t.style.height=`${Math.min(t.scrollHeight,140)}px`;});
