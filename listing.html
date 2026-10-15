@@ -430,14 +430,11 @@
           }
 
           messageUser("Checking available contact options…");
-          const friendship = await supabase
-            .from("friendships")
-            .select("id,status")
-            .or(`and(requester_id.eq.${state.user.id},addressee_id.eq.${sellerId}),and(requester_id.eq.${sellerId},addressee_id.eq.${state.user.id})`)
-            .maybeSingle();
-
-          if (!friendship.error && friendship.data?.status === "accepted") {
-            window.location.href = `chat.html?user=${encodeURIComponent(sellerId)}`;
+          // Use the same database-owned permission as Chat. This also allows
+          // official staff DMs without assuming a friendship must exist.
+          const permission=await supabase.rpc("can_send_direct_message",{p_recipient:sellerId});
+          if(!permission.error&&permission.data===true){
+            window.location.href=`chat.html?user=${encodeURIComponent(sellerId)}`;
             return;
           }
 
