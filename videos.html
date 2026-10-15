@@ -117,6 +117,17 @@
                 Trimming/filters/drawings/text re-encode to WebM and require a browser that supports it (Chrome/Edge/Firefox). If unsupported, skip editing and the original file uploads as-is.
               </p>
             </div>
+            <section style="margin:12px 0;padding:14px;border:1px solid var(--color-border,#d6e2e0);border-radius:12px">
+              <strong>First-frame and caption preview</strong>
+              <p style="font-size:12px">Choose a cover moment, and preview how your title and caption appear. The selected frame is saved as your thumbnail unless you upload a separate image.</p>
+              <label for="coverMoment">Cover position (seconds)</label>
+              <input type="range" id="coverMoment" min="0" max="1" step=".1" value=".1" style="display:block;width:100%">
+              <output id="coverMomentLabel" for="coverMoment">0.1 seconds</output>
+              <div style="margin-top:10px;background:#07151b;border-radius:10px;padding:12px;color:#fff">
+                <img id="autoCoverPreview" style="display:none;max-height:260px;max-width:100%;object-fit:contain;margin:auto" alt="Selected cover frame preview">
+                <p id="captionPreview" style="white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0">Your caption will appear here.</p>
+              </div>
+            </section>
             <input type="text" id="videoTitle" placeholder="Video title" required>
             <textarea id="videoDescription" placeholder="Video description" style="margin-top: 8px;" class="resize-none"></textarea>
             <select id="videoCategory" style="margin-top: 8px;">
@@ -174,6 +185,7 @@
       import { fetchVideoDiscoveryPage } from "./assets/js/video-discovery.mjs";
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+      import {setupMentionInput} from "./assets/js/mentions.js";
 
       let state = {
         user: null,
@@ -182,7 +194,8 @@
         category: "all",
         mode: new URLSearchParams(location.search).get("mode") === "following" ? "following" : "for-you",
         limit: 20,
-        selectedVideoDuration: 0
+        selectedVideoDuration: 0,
+        editorDirty:false,editRenderInProgress:false,selectedThumbnailTime:null
       };
 
       // Setup auth
@@ -348,6 +361,36 @@
       });
 
       const videoThumbnail = document.getElementById("videoThumbnail");
+      const coverMoment=document.getElementById("coverMoment");
+      const coverMomentLabel=document.getElementById("coverMomentLabel");
+      const autoCoverPreview=document.getElementById("autoCoverPreview");
+      let coverPreviewUrl=null;
+      function updateCaptionPreview(){
+        const title=document.getElementById("videoTitle").value.trim();
+        const description=document.getElementById("videoDescription").value.trim();
+        document.getElementById("captionPreview").textContent=
+          [title,description].filter(Boolean).join(" — ")||"Your caption will appear here.";
+      }
+      ["videoTitle","videoDescription"].forEach(id=>{
+        document.getElementById(id).addEventListener("input",updateCaptionPreview);
+      });
+      setupMentionInput(document.getElementById("videoDescription"));
+      async function previewCover(){
+        const file=state.trimmedFile||videoFile.files[0];
+        if(!file)return;
+        coverMomentLabel.textContent=Number(coverMoment.value).toFixed(1)+" seconds";
+        const frame=await captureVideoFrame(file,Number(coverMoment.value));
+        if(!frame)return;
+        if(coverPreviewUrl)URL.revokeObjectURL(coverPreviewUrl);
+        coverPreviewUrl=URL.createObjectURL(frame);
+        autoCoverPreview.src=coverPreviewUrl;
+        autoCoverPreview.style.display="block";
+      }
+      let coverPreviewTimer;
+      coverMoment.addEventListener("input",()=>{
+        clearTimeout(coverPreviewTimer);
+        coverPreviewTimer=setTimeout(()=>{void previewCover();},250);
+      });
       const thumbnailPreview = document.getElementById("thumbnailPreview");
       videoThumbnail.addEventListener("change", () => {
         const file = videoThumbnail.files[0];
@@ -366,6 +409,8 @@
           uploadForm.style.display = "block";
           state.selectedVideoDuration = 0;
           state.trimmedFile = null;
+          state.editorDirty=false;
+          state.selectedThumbnailTime=null;
           const status = document.getElementById("uploadStatus");
           if (status) {
             status.style.display = "block";
@@ -389,6 +434,9 @@
               status.style.color = "#f59e0b";
             }
           }
+          coverMoment.max=Math.max(0.1,(state.selectedVideoDuration||1)-0.1);
+          coverMoment.value=Math.min(.5,Number(coverMoment.max));
+          void previewCover();
           setupTrimEditor(file);
         }
       }
@@ -423,6 +471,15 @@
         trimStatus.style.display = "none";
         state.trimmedFile = null;
         state.selectedFilterCSS = "none";
+        const markChanged=()=>{
+          state.editorDirty=true;
+          state.trimmedFile=null;
+          resetBtn.style.display="inline-flex";
+          trimStatus.style.display="block";
+          trimStatus.style.color="#b45309";
+          trimStatus.textContent="Edits changed. Tap Apply Trim & Edits before uploading, or Use Original.";
+        };
+        [trimStart,trimEnd].forEach(input=>input.addEventListener("input",markChanged));
         state.textOverlays = []; // [{ text, xPct, yPct, color }]
         textLayer.innerHTML = "";
         const drawCtx = drawCanvas.getContext("2d");
@@ -453,6 +510,7 @@
           btn.addEventListener("click", () => {
             const value = btn.dataset.filter;
             state.selectedFilterCSS = value;
+            markChanged();
             trimPreview.style.filter = value === "none" ? "none" : value;
             document
               .querySelectorAll("#trimEditor [data-filter]")
@@ -487,6 +545,7 @@
           drawCtx.lineWidth = Math.max(3, drawCanvas.width * 0.006);
           drawCtx.lineCap = "round";
           drawCtx.lineJoin = "round";
+          markChanged();
           drawCtx.beginPath();
           drawCtx.moveTo(p.x, p.y);
           drawCanvas.setPointerCapture(e.pointerId);
@@ -505,6 +564,7 @@
 
         document.getElementById("clearDrawBtn").addEventListener("click", () => {
           drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+          markChanged();
         });
 
         // ---------------- Text tool ----------------
@@ -513,6 +573,7 @@
           if (!text || !text.trim()) return;
           const overlay = { text: text.trim(), xPct: 50, yPct: 50, color: drawColor.value };
           state.textOverlays.push(overlay);
+          markChanged();
           renderTextOverlayEl(overlay);
         });
 
@@ -539,6 +600,7 @@
             const stageRect = document.getElementById("editorStage").getBoundingClientRect();
             const xPct = Math.min(96, Math.max(4, ((e.clientX - stageRect.left) / stageRect.width) * 100));
             const yPct = Math.min(96, Math.max(4, ((e.clientY - stageRect.top) / stageRect.height) * 100));
+            markChanged();
             overlay.xPct = xPct;
             overlay.yPct = yPct;
             el.style.left = `${xPct}%`;
@@ -550,6 +612,7 @@
           });
           el.addEventListener("dblclick", () => {
             state.textOverlays = state.textOverlays.filter((o) => o !== overlay);
+            markChanged();
             el.remove();
           });
         }
@@ -586,24 +649,38 @@
             return;
           }
           trimStatus.style.display = "block";
-          trimStatus.textContent = "Rendering...";
+          if(state.editRenderInProgress)return;
+          state.editRenderInProgress=true;
+          trimStatus.textContent = "Rendering edited clip. Do not upload until this completes...";
           trimStatus.style.color = "#0f766e";
           try {
             const blob = await renderEditedVideo(trimPreview, drawCanvas, state.textOverlays, state.selectedFilterCSS, start, end);
-            state.trimmedFile = new File([blob], "edited-clip.webm", { type: blob.type || "video/webm" });
-            state.selectedVideoDuration = Math.round(end - start);
+            if(!blob?.size)throw Error("Edited recording is empty");
+            const editedFile=new File([blob],"edited-clip.webm",{type:blob.type||"video/webm"});
+            const verifiedDuration=await detectVideoDuration(editedFile);
+            if(!Number.isFinite(verifiedDuration)||verifiedDuration<.3)
+              throw Error("Edited video failed validation; original kept safely.");
+            state.trimmedFile=editedFile;
+            state.editorDirty=false;
+            state.selectedVideoDuration=Math.round(verifiedDuration);
+            coverMoment.max=Math.max(.1,verifiedDuration-.1);
+            coverMoment.value=.1;
+            void previewCover();
             trimStatus.textContent = `Ready — ${state.selectedVideoDuration}s clip with your edits will be uploaded.`;
             trimStatus.style.color = "#10b981";
             resetBtn.style.display = "inline-flex";
           } catch (trimError) {
             console.warn("Render failed:", trimError);
-            trimStatus.textContent = "Could not render edits in this browser. Original file will upload instead.";
-            trimStatus.style.color = "#f59e0b";
-          }
+            state.editorDirty=true;
+            state.trimmedFile=null;
+            trimStatus.textContent = "Edits could not be saved. Fix the issue or select Use Original before uploading.";
+            trimStatus.style.color = "#b91c1c";
+          } finally {state.editRenderInProgress=false;}
         };
 
         resetBtn.onclick = () => {
           state.trimmedFile = null;
+          state.editorDirty=false;
           resetBtn.style.display = "none";
           trimStatus.style.display = "block";
           trimStatus.textContent = "Edits discarded — original file will upload.";
@@ -766,11 +843,13 @@
         status.style.color = "#0f766e";
 
         try {
+          if(state.editRenderInProgress||state.editorDirty)
+            throw Error("Your video has unapplied edits. Apply and verify them or choose Use Original before posting.");
           const fileToUpload = state.trimmedFile || videoFile.files[0];
           let thumbnailFile = videoThumbnail.files[0] || null;
           if (!thumbnailFile && fileToUpload) {
             status.textContent = "Capturing thumbnail...";
-            thumbnailFile = await captureVideoFrame(fileToUpload);
+            thumbnailFile = await captureVideoFrame(fileToUpload,Number(coverMoment.value)||.1);
             status.textContent = "Uploading...";
           }
 
@@ -800,6 +879,7 @@
             uploadForm.style.display = "none";
             state.selectedVideoDuration = 0;
             state.trimmedFile = null;
+            state.editorDirty=false;
             document.getElementById("trimEditor").style.display = "none";
             setTimeout(() => {
               state.offset = 0;
