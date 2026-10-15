@@ -22,7 +22,7 @@ import {
 import { supabase, getCurrentUserWithRole, getUserRole } from "./supabase.js";
 import { escapeHTML, slugify, isSafeUrl, normalizeHtml } from "./utils.js";
 import { createPost, createPostMedia } from "./data.js";
-import { ROUNDUP_TOPICS, generateRoundupDraft, suggestRoundupIds, trustedExternalUrl, imageUrls, htmlEscape, socialCaption, placeEditorialFigures } from "./curator-publishing.mjs";
+import { ROUNDUP_TOPICS, generateRoundupDraft, suggestRoundupIds, trustedExternalUrl, imageUrls, htmlEscape, socialCaption, placeEditorialFigures, parseEditorialImageRows } from "./curator-publishing.mjs";
 import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
 
 class CuratorManager {
@@ -565,7 +565,7 @@ class CuratorManager {
           <summary>Images and embeds (up to six)</summary>
           <p>Source images are previews only. Add approved HTTPS image URLs, one per line. Publishing requires confirmed image rights.</p>
           ${post.image_url && trustedExternalUrl(post.image_url)?'<img class="curator-image-preview" loading="lazy" referrerpolicy="no-referrer" alt="Source image preview - rights not verified" src="'+escapeHTML(post.image_url)+'" style="max-width:180px;max-height:120px;object-fit:contain;">':""}
-          <label>Approved image URLs<textarea data-curator-images="${post.id}" rows="3" class="field" placeholder="https://example.com/licensed-image.jpg">${escapeHTML(candidates.join("\n"))}</textarea></label>
+          <label>Approved image URLs — one per line; optionally add <code> | section heading | caption</code> to place a picture with the relevant passage<textarea data-curator-images="${post.id}" rows="3" class="field" placeholder="https://example.com/licensed-image.jpg">${escapeHTML(candidates.join("\n"))}</textarea></label>
           <label>Image credit and permission reference<input data-curator-image-credit="${post.id}" class="field" placeholder="Photographer / license / permission link"></label>
           <label><input type="checkbox" data-curator-image-rights="${post.id}"> I verified permission to display these images on Timzee Tech Hub</label>
         </details>
@@ -722,9 +722,12 @@ class CuratorManager {
     const post=this.posts.find(item=>item.id===id);
     if(!post)return;
     // This is a local visual preview; no published post is created.
-    const selected=imageUrls(this.container.querySelector('[data-curator-images="'+id+'"]')?.value||"");
+    const selectedRows=parseEditorialImageRows(this.container.querySelector('[data-curator-images="'+id+'"]')?.value||"");
+    const selected=selectedRows.map(row=>row.url);
     const permitted=this.container.querySelector('[data-curator-image-rights="'+id+'"]')?.checked===true;
-    const media=selected.length?selected:post.image_url && trustedExternalUrl(post.image_url)?[post.image_url]:[];
+    const mediaRows=selectedRows.length?selectedRows:post.image_url && trustedExternalUrl(post.image_url)
+      ? [{url:post.image_url,heading:"",caption:""}] : [];
+    const media=mediaRows.map(row=>row.url);
     const credited=this.container.querySelector('[data-curator-image-credit="'+id+'"]')?.value.trim()||"";
     const doc=new DOMParser().parseFromString(String(post.content||""),"text/html");
     const takeawayTag=doc.querySelector("[data-timzee-takeaways]")?.getAttribute("data-timzee-takeaways");
@@ -748,7 +751,7 @@ class CuratorManager {
       (media.length?'<div class="curator-preview-cover"><figure><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+escapeHTML(media[0])+'" alt="Curated cover photo"></figure></div>':'')+
       (insights.length?'<section class="post-highlights"><h2>Key Takeaways</h2><ul>'+
          insights.map(i=>'<li>'+escapeHTML(i)+'</li>').join("")+'</ul></section>':'')+
-      '<div class="post-content">'+normalizeHtml(placeEditorialFigures(post.content||"",media,credited))+'</div>'+
+      '<div class="post-content">'+normalizeHtml(placeEditorialFigures(post.content||"",mediaRows,credited))+'</div>'+
       '<p class="curator-preview-note">'+
       (permitted?'Images marked as rights-verified by editor. ':'Image rights are not confirmed. ')+
       (credited?'Credit: '+escapeHTML(credited)+'. ':'')+
@@ -843,7 +846,8 @@ class CuratorManager {
     const curatorPost = this.posts.find(p => p.id === curatorPostId);
     if (!curatorPost) return;
     const imagesBox=this.container.querySelector('[data-curator-images="'+curatorPostId+'"]');
-    const selectedImages=imageUrls(imagesBox?.value||"");
+    const imageRows=parseEditorialImageRows(imagesBox?.value||"");
+    const selectedImages=imageRows.map(row=>row.url);
     const approved=this.container.querySelector('[data-curator-image-rights="'+curatorPostId+'"]')?.checked===true;
     const imageCredit=this.container.querySelector('[data-curator-image-credit="'+curatorPostId+'"]')?.value.trim()||"";
     if(selectedImages.length && (!approved || imageCredit.length<5)){
@@ -866,7 +870,7 @@ class CuratorManager {
       const title = curatorPost.title || "Untitled";
       const body=curatorPost.content || (curatorPost.excerpt ? '<p>'+escapeHTML(curatorPost.excerpt)+'</p>' : "");
       const credit=selectedImages.length ? '<p class="curator-image-credit">Images: '+htmlEscape(imageCredit)+'</p>' : "";
-      const content=placeEditorialFigures(stripEditorialScaffolding(body),selectedImages,imageCredit)+credit;
+      const content=placeEditorialFigures(stripEditorialScaffolding(body),imageRows,imageCredit)+credit;
       const now = new Date().toISOString();
 
       const result = await createPost({
