@@ -1,6 +1,16 @@
 const {createClient}=require("@supabase/supabase-js");
 const {requireRole}=require("./_lib/auth-role.js");
 const reply=(code,body)=>({statusCode:code,headers:{"content-type":"application/json","cache-control":"no-store"},body:JSON.stringify(body)});
+// Expose a non-sensitive database error code to help distinguish missing
+// PostgREST RPCs, access policies and stale Netlify deployments.
+function serviceError(operation,error){
+ const code=String(error?.code||"DB_ERROR").replace(/[^A-Z0-9_]/gi,"").slice(0,24);
+ console.error("Email operations RPC failed",operation,code);
+ const hint=code==="PGRST202"?"Supabase API schema cache may be stale or this RPC is absent.":
+   code==="42501"?"This function cannot execute the private operation with its configured service role.":
+   "Check the deployed function environment and Supabase logs.";
+ return reply(503,{error:operation+" unavailable. "+hint,diagnostic_code:code});
+}
 exports.handler=async event=>{
   if(!["GET","POST"].includes(event.httpMethod))return reply(405,{error:"Method not allowed"});
   const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -30,7 +40,7 @@ exports.handler=async event=>{
   }
   if(event.queryStringParameters?.review==="1") {
     const {data,error}=await db.rpc("list_email_review_cases",{p_limit:25});
-    if(error)return reply(503,{error:"Manual review queue unavailable"});
+    if(error)return serviceError("Manual review queue",error);
     const cases=Array.isArray(data)?data.map(item=>({
       id:item.id,template:item.template,attempts:item.attempts,
       created_at:item.created_at,updated_at:item.updated_at,
@@ -42,7 +52,7 @@ exports.handler=async event=>{
   }
   if(event.queryStringParameters?.legacyRecovery === "1") {
     const {data,error}=await db.rpc("legacy_user_recovery_overview");
-    if(error)return reply(503,{error:"Legacy recovery overview unavailable"});
+    if(error)return serviceError("Existing-user recovery overview",error);
     const allowed=["total_members","email_confirmed","no_recent_activity_30d",
       "no_recent_activity_60d","no_recent_activity_90d","has_visit_tracking",
       "documented_newsletter_consent","documented_newsletter_and_inactive_30d",
@@ -53,14 +63,14 @@ exports.handler=async event=>{
   }
   if(event.queryStringParameters?.inactivityPreview === "1"){
     const {data,error}=await db.rpc("prepare_inactivity_reminders",{p_dry_run:true,p_limit:10});
-    if(error)return reply(503,{error:"Inactivity preview unavailable"});
+    if(error)return serviceError("Inactivity preview",error);
     return reply(200,{dry_run:true,enabled:data?.enabled===true,
       eligible:Number(data?.eligible||0),remaining_budget:Number(data?.remaining_budget||0),
       enqueued:0});
   }
   if(event.queryStringParameters?.digestPreview === "1") {
     const {data,error}=await db.rpc("prepare_email_digests",{p_dry_run:true,p_limit:10});
-    if(error)return reply(503,{error:"Digest preview unavailable"});
+    if(error)return serviceError("Digest preview",error);
     return reply(200,{dry_run:true,enabled:data?.enabled===true,
       eligible:Number(data?.eligible||0),remaining_budget:Number(data?.remaining_budget||0),
       enqueued:0});
@@ -82,14 +92,6 @@ exports.handler=async event=>{
     }
   }
   const {data,error}=await db.rpc("email_delivery_statistics");
-  if(error){
-    const safeCode=String(error.code||"DB_ERROR").replace(/[^A-Z0-9_]/gi,"").slice(0,24);
-    console.error("Email operations aggregate failed",safeCode);
-    const likelyCache=["PGRST202","PGRST301","42501"].includes(safeCode);
-    return reply(503,{error:likelyCache?
-      "Email statistics are installed in Supabase, but this deployed function cannot access them. Check Function credentials, schema cache and deployment.":
-      "Email statistics are temporarily unavailable. Check the function logs or deployment configuration.",
-      diagnostic_code:safeCode});
-  }
+  if(error)return serviceError("Email statistics",error);
   return reply(200,{statistics:data,delivery_enabled:process.env.EMAIL_DELIVERY_ENABLED==="true"});
 };
