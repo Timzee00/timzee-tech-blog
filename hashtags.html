@@ -32,15 +32,31 @@ async function searchTag(raw){
  if(!/^[a-z0-9_]{1,32}$/.test(tag)){status.textContent="Use 1–32 letters, numbers or underscores.";return;}
  input.value="#"+tag;resultNode.replaceChildren();status.textContent="Looking for #"+tag+"…";
  history.replaceState({},"","hashtags.html?tag="+encodeURIComponent(tag));
- const [posts,videos,discussions]=await Promise.all([
-  supabase.from("posts").select("id,title,tags").eq("status","published").contains("tags",[tag]).limit(30),
-  supabase.from("videos").select("id,title,description,tags").eq("is_public",true).contains("tags",[tag]).limit(30),
-  supabase.from("discussion_topics").select("id,title,description").or("title.ilike.%23"+tag+"%,description.ilike.%23"+tag+"%").limit(30)
+ const [posts,postContent,videos,videoDescription,discussions,videoComments,discussionComments]=await Promise.all([
+  supabase.from("posts").select("id,title,tags").eq("status","published").contains("tags",[tag]).limit(20),
+  supabase.from("posts").select("id,title").eq("status","published").ilike("content","%#"+tag+"%").limit(20),
+  supabase.from("videos").select("id,title,description,tags").eq("is_public",true).contains("tags",[tag]).limit(20),
+  supabase.from("videos").select("id,title,description").eq("is_public",true).ilike("description","%#"+tag+"%").limit(20),
+  supabase.from("discussion_topics").select("id,title,description").or("title.ilike.%23"+tag+"%,description.ilike.%23"+tag+"%").limit(20),
+  supabase.from("video_comments").select("id,video_id,body").ilike("body","%#"+tag+"%").limit(20),
+  supabase.from("discussion_messages").select("id,topic_id,body").ilike("body","%#"+tag+"%").limit(20)
  ]);
- if(posts.error||videos.error||discussions.error){status.textContent="Some hashtag results are unavailable. Showing what loaded.";}
- for(const p of posts.data||[])showResult("Post",p,"post.html?id="+encodeURIComponent(p.id));
- for(const v of videos.data||[])showResult("Video",v,"video.html?id="+encodeURIComponent(v.id));
+ if([posts,postContent,videos,videoDescription,discussions,videoComments,discussionComments].some(r=>r.error))
+   status.textContent="Some results are temporarily unavailable. Showing what loaded.";
+ const shown=new Set();
+ for(const p of [...(posts.data||[]),...(postContent.data||[])]){
+   if(shown.has("p"+p.id))continue;shown.add("p"+p.id);
+   showResult("Post",p,"post.html?id="+encodeURIComponent(p.id));
+ }
+ for(const v of [...(videos.data||[]),...(videoDescription.data||[])]){
+   if(shown.has("v"+v.id))continue;shown.add("v"+v.id);
+   showResult("Video",v,"video.html?id="+encodeURIComponent(v.id));
+ }
  for(const d of discussions.data||[])showResult("Discussion",d,"discussion.html?topic="+encodeURIComponent(d.id));
+ for(const c of videoComments.data||[])
+   showResult("Video comment",{title:"Comment on a video",description:c.body},"video.html?id="+encodeURIComponent(c.video_id));
+ for(const c of discussionComments.data||[])
+   showResult("Discussion reply",{title:"Community reply",description:c.body},"discussion.html?topic="+encodeURIComponent(c.topic_id));
  if(!resultNode.childElementCount)status.textContent="No public results yet for #"+tag+".";
  else status.textContent=resultNode.childElementCount+" result(s) for #"+tag+".";
 }
