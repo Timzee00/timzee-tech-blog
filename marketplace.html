@@ -309,6 +309,10 @@
         }
       }
 
+      function safeSellerLabel(raw){
+        const value=String(raw||"Seller").replace(/<[^>]*>/g,"").replace(/[<>]/g,"").trim();
+        return value ? value.slice(0,80) : "Seller";
+      }
       function renderListings() {
         const container = document.getElementById("listingsContainer");
         if (!state.listings.length) {
@@ -331,8 +335,8 @@
                 <span>${escapeHTML(item.location || 'Online')}</span>
               </div>
               <div class="listing-seller">
-                <a class="seller-avatar" href="profile.html?id=${encodeURIComponent(item.user_id || '')}" aria-label="View seller profile">${escapeHTML((item.seller_name || '?').trim().slice(0, 1).toUpperCase())}</a>
-                <span class="market-seller-name">${escapeHTML(item.seller_name || '')}</span>
+                <a class="seller-avatar" href="profile.html?id=${encodeURIComponent(item.user_id || '')}" aria-label="View seller profile">${escapeHTML(safeSellerLabel(item.seller_name).slice(0,1).toUpperCase())}</a>
+                <span class="market-seller-name">${escapeHTML(safeSellerLabel(item.seller_name))}</span>
                 ${item.seller_verified ? '<span class="badge-chip verified market-verified-badge" title="Verified Seller">Verified Seller</span>' : ''}
               </div>
               <div class="listing-card-actions">
