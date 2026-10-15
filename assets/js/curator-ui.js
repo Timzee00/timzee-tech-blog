@@ -713,7 +713,7 @@ class CuratorManager {
       '<p class="post-kicker">'+escapeHTML((post.tags||[])[0]||"General")+' · '+escapeHTML(post.source_name||"Curator")+'</p>'+
       '<h1>'+escapeHTML(post.title||"Untitled")+'</h1>'+
       '<p class="post-dek">'+escapeHTML(post.excerpt||"")+'</p>'+
-      (media.length?'<div class="curator-preview-cover">'+(imageHtml.split("</figure>")[0]||"")+'</figure></div>':'')+
+      (media.length?'<div class="curator-preview-cover"><figure><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+escapeHTML(media[0])+'" alt="Curated cover photo"></figure></div>':'')+
       (insights.length?'<section class="post-highlights"><h2>Key Takeaways</h2><ul>'+
          insights.map(i=>'<li>'+escapeHTML(i)+'</li>').join("")+'</ul></section>':'')+
       '<div class="post-content">'+normalizeHtml(placeEditorialFigures(post.content||"",media,credited))+'</div>'+
@@ -721,12 +721,21 @@ class CuratorManager {
       (permitted?'Images marked as rights-verified by editor. ':'Image rights are not confirmed. ')+
       (credited?'Credit: '+escapeHTML(credited)+'. ':'')+
       'This is a private preview and has not been published.</p></article></div>';
-    dialog.style.cssText="position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(760px,calc(100vw - 20px));min-width:0;max-width:calc(100vw - 20px);height:min(92dvh,900px);max-height:calc(100dvh - 20px);overflow:hidden;padding:0;border-radius:16px;display:flex;flex-direction:column;";
+    dialog.style.cssText="position:fixed;top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);margin:0;box-sizing:border-box;width:min(760px,calc(100vw - 20px));min-width:0;max-width:calc(100vw - 20px);height:min(92dvh,900px);max-height:calc(100dvh - 20px);overflow:hidden;padding:0;border-radius:16px;display:flex;flex-direction:column;";
     const body=dialog.querySelector(".curator-preview-body");
     body.style.cssText="flex:1 1 auto;min-height:0;min-width:0;max-width:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:clamp(12px,3vw,24px);";
     dialog.querySelector(".curator-preview-toolbar").style.cssText="display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;padding:12px 16px;";
     dialog.querySelectorAll(".post-shell,.post-article,.post-content,.curator-preview-cover,figure").forEach(el=>{
       el.style.minWidth="0";el.style.maxWidth="100%";el.style.overflowWrap="anywhere";
+    });
+    // Avoid inherited post-shell padding pushing content beyond narrow phones.
+    dialog.querySelectorAll(".post-shell,.post-article,.post-content").forEach(el=>{
+      el.style.width="100%";el.style.boxSizing="border-box";el.style.margin="0";
+      el.style.paddingInline="0";el.style.overflowX="hidden";
+    });
+    dialog.querySelectorAll("figure").forEach(el=>{el.style.maxWidth="100%";el.style.margin="12px 0";});
+    dialog.querySelectorAll("iframe").forEach(el=>{
+      el.style.maxHeight="min(52dvh,420px)";el.setAttribute("loading","lazy");
     });
     dialog.querySelectorAll("img,iframe,video").forEach(media=>{
       media.style.maxWidth="100%";media.style.width="100%";media.style.height="auto";

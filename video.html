@@ -688,7 +688,7 @@
             <div class="reel-topbar">
               <a class="reel-back" href="videos.html" aria-label="Back to videos">←</a>
               <div class="reel-wordmark">Timzee <span>Reels</span></div>
-              <button type="button" class="reel-mute" id="mute-${index}" aria-label="Toggle sound">🔊</button>
+              <button type="button" class="reel-mute" id="mute-${index}" aria-label="${state.sessionMuted ? "Unmute videos" : "Mute videos"}">${state.sessionMuted ? "🔇" : "🔊"}</button>
             </div>
 
             <div class="reel-bottom">
@@ -756,9 +756,13 @@
           attempt.catch(() => {
             vid.muted = true;
             state.sessionMuted = true;
-            const btn = document.getElementById(`mute-${idx}`);
-            if (btn) btn.textContent = "🔇";
-            vid.play().catch(() => {});
+            try { sessionStorage.setItem("timzee:reels-muted","true"); } catch {}
+            document.querySelectorAll(".reel-video").forEach(item=>{item.muted=true;});
+            document.querySelectorAll(".reel-mute").forEach(button=>{
+              button.textContent="🔇";
+              button.setAttribute("aria-label","Unmute videos");
+            });
+            vid.play().catch(()=>{});
           });
         }
       }
