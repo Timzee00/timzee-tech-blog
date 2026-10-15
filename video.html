@@ -588,6 +588,7 @@
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
       import { fetchVideoDiscoveryPage } from "./assets/js/video-discovery.mjs";
+      import { createReelProgressStore } from "./assets/js/reel-progress.mjs";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
       import {renderSocialText} from "./assets/js/social-rich-text.mjs";
@@ -601,6 +602,7 @@
         user: null,
         preferences: mergePreferences(),
         sessionMuted: false,
+        progressStore: null,
         videos: [],
         offset: 0,
         limit: 6,
@@ -1110,6 +1112,23 @@
               void incrementVideoView(el.dataset.id).catch(()=>{});
             },{once:true});
           }
+          if(video && !video.dataset.resumeWired) {
+            video.dataset.resumeWired="true";
+            video.addEventListener("loadedmetadata",() => {
+              const second=state.progressStore?.get(el.dataset.id);
+              if(second && Number.isFinite(video.duration) && second<video.duration-3){
+                try{video.currentTime=second;}catch{}
+              }
+            });
+            let lastSaved=0;
+            video.addEventListener("timeupdate",() => {
+              const now=Date.now();
+              if(video.paused || now-lastSaved<4500)return;
+              lastSaved=now;
+              state.progressStore?.set(el.dataset.id,video.currentTime,video.duration);
+            });
+            video.addEventListener("ended",()=>state.progressStore?.remove(el.dataset.id));
+          }
         });
 
         // Mark liked state for signed-in user
@@ -1411,6 +1430,11 @@
       async function boot() {
         state.user=await getCurrentUser();
         state.preferences=mergePreferences(await loadUserPreferences(state.user));
+        try{
+          state.progressStore=createReelProgressStore(window.sessionStorage,{
+            key:"timzee:reel:position:"+(state.user?.id||"guest")
+          });
+        }catch{state.progressStore=null;}
         try {
           const savedMute=sessionStorage.getItem("timzee:reels-muted");
           state.sessionMuted = savedMute === null ? state.preferences.videos.mutedByDefault === true : savedMute === "true";
