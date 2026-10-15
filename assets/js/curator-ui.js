@@ -896,7 +896,7 @@ class CuratorManager {
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(payload.error||"English translation failed.");
       const note=this.container.querySelector('[data-editorial-state="'+id+'"]');
-      if(note){note.textContent="Translated into English. Review and expand with verified reporting.";note.setAttribute("role","status");}
+      if(note){note.textContent="Translated into English with "+(payload.providerUsed==="openrouter"?"OpenRouter":"Groq")+". Review and expand with verified reporting.";note.setAttribute("role","status");}
       window.appUI.toast("English translation saved as a source brief; review it before expansion.",{tone:"success"});
       await this.load();
     }catch(error){
@@ -935,7 +935,7 @@ class CuratorManager {
       if(!res.ok)throw new Error(payload.error||"Could not expand the article.");
       const warnings=payload.verificationNotes||[];
       const note=this.container.querySelector('[data-editorial-state="'+curatorPostId+'"]');
-      if(note){note.textContent="Expanded to "+payload.wordCount+" words. Fact-check before publication."+ (warnings.length ? " Check: "+warnings.slice(0,2).join("; ") : "");note.setAttribute("role","status");}
+      if(note){note.textContent="Expanded with "+(payload.providerUsed==="openrouter"?"OpenRouter":"Groq")+" to "+payload.wordCount+" words. Fact-check before publication."+ (warnings.length ? " Check: "+warnings.slice(0,2).join("; ") : "");note.setAttribute("role","status");}
       window.appUI.toast("AI-assisted article saved as a draft. Verify each factual claim and source before publishing.",{tone:"success"});
       await this.load();
     } catch(error) {
