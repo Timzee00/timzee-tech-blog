@@ -567,6 +567,7 @@
       </div>
       <div class="comment-drawer-list" id="commentDrawerList" aria-live="polite"></div>
       <button type="button" id="commentLoadMoreBtn" class="comment-load-more" hidden>Load more comments</button>
+      <p id="videoCommentStatus" role="status" aria-live="polite" style="margin:4px 14px;font-size:12px;"></p>
       <form novalidate class="comment-drawer-form" id="commentDrawerForm">
         <input type="text" id="commentDrawerInput" placeholder="Add a comment..." maxlength="500" autocomplete="off">
         <button type="submit">Post</button>
@@ -592,7 +593,7 @@
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
       import {renderSocialText} from "./assets/js/social-rich-text.mjs";
-      import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
+      import { notifyVideoLike } from "./assets/js/data.js";
 
       const root = document.getElementById("reelRoot");
       const params = new URLSearchParams(window.location.search);
@@ -1349,14 +1350,27 @@
           window.location.href = `login.html?next=${encodeURIComponent(window.location.href)}`;
           return;
         }
+        const status=document.getElementById("videoCommentStatus");
+        const submit=drawerForm.querySelector('[type="submit"]');
+        if(submit?.disabled)return;
+        if(submit)submit.disabled=true;
+        if(status)status.textContent="Posting comment…";
         const authorName = state.user.user_metadata?.display_name || state.user.email;
-        const result = await commentOnVideo(state.commentsOpenFor, state.user.id, authorName, body, replyingTo?.id || null);
-        if (!result.error) {
+        let result;
+        try {
+          result=await commentOnVideo(state.commentsOpenFor,state.user.id,authorName,body,replyingTo?.id||null);
+        } catch(error) {
+          result={error};
+        } finally {if(submit)submit.disabled=false;}
+        if(result?.error){
+          if(status)status.textContent="Could not post comment: "+String(result.error.message||"Try again.").slice(0,160);
+          return;
+        }
+        if (result?.error === undefined || !result.error) {
+          if(status)status.textContent="Comment posted.";
           drawerInput.value = "";
-          const video = state.videos.find((v) => v.id === state.commentsOpenFor);
-          if (video && video.user_id && video.user_id !== state.user.id) {
-            notifyVideoComment(video.user_id, authorName, state.commentsOpenFor).catch((error) => console.warn("Video-comment notification failed:", error));
-          }
+          // The database trigger delivers owner and reply notifications
+          // once the comment is persisted. No duplicate browser insert.
           const currentVideoId=state.commentsOpenFor;
           const counters=await supabase.rpc("video_social_counts",{p_video_ids:[currentVideoId]});
           const total=Number(counters.data?.[0]?.comment_count||0);
