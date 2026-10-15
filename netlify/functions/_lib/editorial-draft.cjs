@@ -5,7 +5,7 @@ function toText(value,max=1600) { return String(value||"").replace(/<[^>]*>/g," 
 function parseModelJson(response) {
   const raw=String(response||"").trim();
   if (!raw || raw.length>30000) throw Error("The AI response was empty or exceeded the allowed size.");
-  const unfenced=raw.replace(/^\`\`\`(?:json)?\\s*/i,"").replace(/\\s*\`\`\`$/,"");
+  const unfenced=raw.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"");
   let result;
   try { result=JSON.parse(unfenced); }
   catch {
