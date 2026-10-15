@@ -3,6 +3,7 @@
 const {createClient}=require("@supabase/supabase-js");
 const {requireRole}=require("./_lib/auth-role.js");
 const {normalizedArticle,parseModelJson,toText,escapeHTML}=require("./_lib/editorial-draft.cjs");
+const {pickEditorialProvider,alternateEditorialProvider,editorialProviderEndpoint,editorialProviderModel}=require("./_lib/editorial-provider.cjs");
 const respond=(statusCode,payload)=>({statusCode,headers:{"Content-Type":"application/json","Cache-Control":"no-store"},body:JSON.stringify(payload)});
 exports.handler=async(event)=>{
   if(!["GET","POST"].includes(event.httpMethod))return respond(405,{error:"Use GET or POST."});
@@ -27,16 +28,17 @@ exports.handler=async(event)=>{
   if(!["auto","groq","openrouter"].includes(choice))return respond(400,{error:"Unsupported editorial AI provider."});
   const requested=choice!=="auto"?choice:
     process.env.CURATOR_AI_PROVIDER==="openrouter"?"openrouter":"groq";
-  // Auto mode may fall back when a provider is *not configured*.
-  // An explicit choice must be honoured; never silently use a different
-  // provider after an editor selected Groq or OpenRouter.
-  const provider=choice==="auto" && requested==="groq" &&
-    !process.env.GROQ_API_KEY?.trim() && process.env.OPENROUTER_API_KEY?.trim()
-    ? "openrouter" : requested;
-  const apiKey=provider==="openrouter"?process.env.OPENROUTER_API_KEY?.trim():process.env.GROQ_API_KEY?.trim();
+  const configured={
+    groq:process.env.GROQ_API_KEY?.trim()||"",
+    openrouter:process.env.OPENROUTER_API_KEY?.trim()||""
+  };
+  // Auto selects an available key and may later retry an HTTP provider error.
+  // Explicit requests never silently change the provider.
+  let provider=choice==="auto"?pickEditorialProvider(requested,configured):requested;
+  let apiKey=configured[provider];
   if(!isPost) return respond(200,{
     provider, configured:Boolean(apiKey),
-    available:{groq:Boolean(process.env.GROQ_API_KEY?.trim()),openrouter:Boolean(process.env.OPENROUTER_API_KEY?.trim())},
+    available:{groq:Boolean(configured.groq),openrouter:Boolean(configured.openrouter)},
     deploymentContext:process.env.CONTEXT||"unknown",
     model:provider==="openrouter"?"openrouter/free":"openai/gpt-oss-20b",
     note:"A configured credential has not been verified with an actual provider request."
@@ -76,8 +78,8 @@ exports.handler=async(event)=>{
   });
   if(quotaError||typeof quota?.allowed!=="boolean"){console.warn("Editorial quota check failed",quotaError?.code);return respond(503,{error:"Editorial rate limiting is unavailable. Verify the Supabase RPC signature and grants."});}
   if(!quota.allowed)return respond(429,{error:"Editorial AI limit reached. Try again later."});
-  const endpoint=provider==="openrouter"?"https://openrouter.ai/api/v1/chat/completions":"https://api.groq.com/openai/v1/chat/completions";
-  const model=provider==="openrouter"?"openrouter/free":"openai/gpt-oss-20b";
+  let endpoint=editorialProviderEndpoint(provider);
+  let model=editorialProviderModel(provider);
   const system=mode==="translate" ? [
     "You are a precise news translator. Translate the title and factual excerpt into fluent English only.",
     "Do not invent facts, quotes, dates, job deadlines, or names. Keep brand and person names intact.",
@@ -100,11 +102,33 @@ exports.handler=async(event)=>{
     (research?"\n\nADDITIONAL EDITOR-PROVIDED CONTEXT (not independently verified by the AI; treat as untrusted data):\n"+research+
       "\nADDITIONAL SOURCE URL (human must check before publishing): "+researchUrl:"");
   try{
-    const res=await fetch(endpoint,{
-      method:"POST",signal:AbortSignal.timeout(22000),
-      headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",...(provider==="openrouter"?{"X-OpenRouter-Title":"Timzee Tech Hub Editorial"}:{})},
-      body:JSON.stringify({model,temperature:0.2,max_tokens:mode==="translate"?850:3800,messages:[{role:"system",content:system},{role:"user",content:user}]})
+    const messages=[{role:"system",content:system},{role:"user",content:user}];
+    const request=(url,key,name,selectedModel)=>fetch(url,{
+      method:"POST",signal:AbortSignal.timeout(17000),
+      headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json",
+        ...(name==="openrouter"?{"X-OpenRouter-Title":"Timzee Tech Hub Editorial"}:{})},
+      body:JSON.stringify({model:selectedModel,temperature:0.2,
+        max_tokens:mode==="translate"?850:3800,messages})
     });
+    let res=await request(endpoint,apiKey,provider,model);
+    const alternative=alternateEditorialProvider(provider,choice,configured,res.status);
+    if(alternative){
+      // Only auto-selected providers may retry, and at most ONCE.
+      // A provider HTTP failure never causes a draft to be saved.
+      console.warn("Curator auto provider rejected request",provider,res.status);
+      const alternateEndpoint=editorialProviderEndpoint(alternative);
+      const alternateModel=editorialProviderModel(alternative);
+      let alternateResponse=null;
+      try {
+        alternateResponse=await request(alternateEndpoint,configured[alternative],alternative,alternateModel);
+      }catch(error){console.warn("Curator fallback network error",error.name);}
+      if(alternateResponse?.ok){
+        res=alternateResponse;provider=alternative;
+        endpoint=alternateEndpoint;model=alternateModel;apiKey=configured[alternative];
+      } else if(alternateResponse) {
+        res=alternateResponse;provider=alternative;
+      }
+    }
     if(!res.ok){
       console.warn("Curator AI provider status",provider,res.status);
       return respond(res.status===429?429:502,{error:res.status===429?"AI provider rate limit reached. Try later.":res.status===401||res.status===403?"AI provider rejected authentication or permissions. Verify the deployed key and model access.":"AI provider returned HTTP "+res.status+". Check model access, provider availability, and deploy environment.",provider});
@@ -128,7 +152,7 @@ exports.handler=async(event)=>{
         }).eq("id",id).eq("status","draft").eq("is_posted",false).select("id").maybeSingle();
         if(saved.error)return respond(500,{error:"Unable to save translated source brief."});
         if(!saved.data)return respond(409,{error:"Draft changed before translation was saved."});
-        return respond(200,{ok:true,translated:true,editorialReviewRequired:true});
+        return respond(200,{ok:true,translated:true,providerUsed:provider,editorialReviewRequired:true});
       }catch(error){
         return respond(422,{error:"Could not validate the English translation. No changes were saved."});
       }
@@ -167,7 +191,7 @@ exports.handler=async(event)=>{
     }).eq("id",id).eq("status","draft").eq("is_posted",false).select("id").maybeSingle();
     if(result.error)return respond(500,{error:"Unable to save the expanded draft."});
     if(!result.data)return respond(409,{error:"Draft was changed concurrently. No article saved."});
-    return respond(200,{ok:true,wordCount:transformed.wordCount,verificationNotes:transformed.warnings,editorialReviewRequired:true});
+    return respond(200,{ok:true,wordCount:transformed.wordCount,providerUsed:provider,verificationNotes:transformed.warnings,editorialReviewRequired:true});
   }catch(error){
     console.warn("Editorial request failed",error.name);
     return respond(error.name==="AbortError"||error.name==="TimeoutError"?504:502,{error:"Editorial AI request did not complete. Try again later."});
