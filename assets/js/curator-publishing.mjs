@@ -124,7 +124,7 @@ export function placeEditorialFigures(html,images,credit=""){
     const begin=headings[chosen].index+headings[chosen][0].length;
     const until=headings[chosen+1]?.index??body.length;
     const within=body.slice(begin,until);
-    const firstParagraph=/<p\\b[^>]*>[\\s\\S]*?<\\/p\\s*>/i.exec(within);
+    const firstParagraph=/<p\b[^>]*>[\s\S]*?<\/p\s*>/i.exec(within);
     const afterContext=firstParagraph ? begin+firstParagraph.index+firstParagraph[0].length : begin;
     return {
       position:afterContext,index:i,
