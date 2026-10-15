@@ -36,6 +36,7 @@ import {
 import { uploadMedia } from "./media.js";
 import { bindRichEditorToolbar } from "./editor-tools.js";
 import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
+import {submitStaffReply,checkStaffReply} from "./staff-mail-client.mjs";
 import {
   formatDate,
   toTagArray,
@@ -1589,30 +1590,52 @@ function inspectRequest(kind,id){
       const status=document.createElement("p");status.setAttribute("role","status");
       const send=document.createElement("button");send.className="btn";send.type="submit";send.textContent="Send through Brevo";
       form.append(heading,address,subjectLabel,bodyLabel,status,send);
-      let clientRequestId=crypto.randomUUID();
+      const key="timzee-staff-reply-id:"+kind+":"+item.id;
+      let clientRequestId;
+      try{clientRequestId=sessionStorage.getItem(key)||crypto.randomUUID();sessionStorage.setItem(key,clientRequestId);}
+      catch{clientRequestId=crypto.randomUUID();}
+      const check=document.createElement("button");
+      check.type="button";check.className="btn ghost";check.textContent="Check reply status";
+      const renderResult=(result)=>{
+        const record=result?.reply||{},current=record.status||"not_found";
+        if(current==="accepted"){
+          status.textContent="Brevo accepted this reply. Delivery confirmation is separate.";
+          send.disabled=true;send.textContent="Reply submitted";
+        }else if(current==="needs_review"||current==="reserved"){
+          status.textContent="This reply needs review against Brevo transaction logs before retrying. No new email will be queued.";
+          send.disabled=true;send.textContent="Awaiting review";
+        }else if(current==="rejected"){
+          status.textContent="Brevo rejected the prior attempt. Check provider settings before starting a new reply.";
+          send.disabled=true;send.textContent="Reply rejected";
+        }else if(current==="not_found"){
+          status.textContent="No matching reply attempt was found. You may submit this reply.";
+          send.disabled=false;send.textContent="Send through Brevo";
+        }else{
+          status.textContent="Reply status: "+current+". Do not retry until the outcome is understood.";
+          send.disabled=true;
+        }
+      };
+      check.addEventListener("click",async()=>{
+        check.disabled=true;status.textContent="Checking the audit record…";
+        try{renderResult(await checkStaffReply(clientRequestId));}
+        catch(error){status.textContent=error.message||"Unable to check status.";}
+        finally{check.disabled=false;}
+      });
+      form.append(check);
       form.addEventListener("submit",async event=>{
         event.preventDefault();if(!form.reportValidity())return;
         if(!window.confirm("Send this email through Timzee Tech Hub to the original requester's address?"))return;
         send.disabled=true;send.textContent="Submitting…";status.textContent="Submitting your reply securely…";
         try{
-          const session=await getSession();
-          if(!session?.access_token)throw Error("Admin session expired. Sign in again.");
-          const response=await fetch("/.netlify/functions/admin-reply-email",{
-            method:"POST",headers:{"content-type":"application/json",Authorization:"Bearer "+session.access_token},
-            body:JSON.stringify({kind,request_id:item.id,client_request_id:clientRequestId,
-              subject:subject.value.trim(),message:message.value.trim()}),cache:"no-store"
+          const result=await submitStaffReply({
+            kind,requestId:item.id,clientRequestId,subject:subject.value.trim(),message:message.value.trim()
           });
-          let result={};try{result=await response.json()}catch{
-            throw Error(response.status===404?"Email reply function has not been deployed yet.":"Email response unavailable.");
-          }
-          if(!response.ok)throw Error(result.error||"Could not submit this email.");
           status.textContent=result.message||"Brevo accepted the reply. Delivery confirmation is pending.";
           send.textContent="Reply submitted";
         }catch(error){
-          status.textContent=error.message||"Could not send email.";
-          // Don't automatically generate another request id; network uncertainty
-          // must be reconciled before resending.
-          send.disabled=false;send.textContent="Check status before retry";
+          status.textContent=(error.message||"Reply submission failed.")+
+            " Use Check reply status before retrying.";
+          send.disabled=true;send.textContent="Check status first";
         }
       });
       actions.after(form);
