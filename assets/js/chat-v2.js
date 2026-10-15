@@ -19,7 +19,7 @@ const AUDIO_EXTENSIONS = new Set(["mp3","wav","ogg","m4a","aac","flac","opus","w
 const state = {
   selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false,
   drafts: new Map(), previews: new Map(), peopleResults: [], peopleRequest: 0, messageVersions: new Map(), messageRevision: 0,
-  user: null, settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [],
+  user: null, settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [], directPartners: [], staffDMAllowed: false, canCompose: true,
   blockedProfiles: new Map(), groups: [], groupMembers: new Map(), messages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
   searchTerm: "", peopleTerm: "", messageSearchTerm: "", mediaFile: null, mediaType: "", previewUrl: "",
   recorder: null, recorderStream: null, recorderChunks: [], recorderTimer: null, recorderStartedAt: 0, analyserFrame: 0, audioContext: null, analyser: null, recordingStarting: false, recordingRequestId: 0
@@ -124,8 +124,20 @@ async function loadAllChatData() {
   state.blocked=state.friendships.filter(r=>r.status==='blocked'&&r.blocked_by===state.user.id).map(r=>r.requester_id===state.user.id?r.addressee_id:r.requester_id);
   const gr=await supabase.from("chat_members").select("thread_id,tags,is_muted,is_pinned,chat_threads(id,name,is_group,created_by,created_at,avatar_url,description,settings,updated_at)").eq("user_id",state.user.id); if(gr.error)throw gr.error;
   state.groups=(gr.data||[]).map(r=>({...(r.chat_threads||{}),member_tags:r.tags||[],is_muted:r.is_muted,is_pinned:r.is_pinned})).filter(g=>g.id&&g.is_group);
-  await loadProfiles([...state.friends,...state.requests.map(r=>r.requester_id),...state.sentRequests.map(r=>r.addressee_id),...state.blocked]);
-  state.previews = await loadThreadPreviews(state.friends.map(threadForFriend));
+  // Preserve two-way access to staff-initiated direct conversations without friendship.
+  const history=await supabase.from("direct_messages")
+    .select("sender_id,recipient_id,created_at")
+    .or(`sender_id.eq.${state.user.id},recipient_id.eq.${state.user.id}`)
+    .not("recipient_id","is",null)
+    .order("created_at",{ascending:false}).limit(250);
+  if(history.error)throw history.error;
+  const blockedPairs=new Set(state.friendships.filter(f=>f.status==="blocked")
+    .map(f=>f.requester_id===state.user.id?f.addressee_id:f.requester_id));
+  state.directPartners=[...new Set((history.data||[]).map(m=>
+    m.sender_id===state.user.id?m.recipient_id:m.sender_id))]
+    .filter(id=>id&&id!==state.user.id&&!blockedPairs.has(id));
+  await loadProfiles([...state.friends,...state.directPartners,...state.requests.map(r=>r.requester_id),...state.sentRequests.map(r=>r.addressee_id),...state.blocked]);
+  state.previews = await loadThreadPreviews([...new Set([...state.friends,...state.directPartners])].map(threadForFriend));
 }
 async function loadThreadPreviews(threadIds = []) {
   // One preview per thread, never an unbounded download of complete histories.
@@ -135,10 +147,10 @@ async function loadThreadPreviews(threadIds = []) {
 function renderFriends() {
   const target=$("friendList"); if(!target)return;
   const previewMap=state.previews;
-  const rows=state.friends.map(friendId=>({friendId,profile:profileFor(friendId)||{},preview:previewMap.get(threadForFriend(friendId))||null}));
+  const rows=[...new Set([...state.friends,...state.directPartners])].map(friendId=>({friendId,profile:profileFor(friendId)||{},preview:previewMap.get(threadForFriend(friendId))||null}));
   const q=state.searchTerm.trim().toLowerCase();
   const filtered=rows.filter(({profile})=>!q||[profile.display_name,profile.username,profile.email].some(v=>String(v||"").toLowerCase().includes(q))).sort((a,b)=>new Date(b.preview?.created_at||0)-new Date(a.preview?.created_at||0));
-  target.innerHTML=filtered.length?filtered.map(({friendId,profile,preview})=>`<button class="chat-list-row ${friendId===state.activeFriendId?'active':''}" type="button" data-friend-id="${friendId}"><img class="chat-list-avatar" src="${escapeHTML(profile.avatar_url||DEFAULT_AVATAR)}" alt=""><span class="chat-list-copy"><strong>${escapeHTML(profile.display_name||"Member")}</strong><small>${escapeHTML(preview?.body||(preview?.media_type?`Sent ${preview.media_type}`:'Start a conversation'))}</small></span><span class="chat-list-time">${preview?timeAgo(preview.created_at):''}</span></button>`).join(''):`<div class="callout">${q?'No matching chats.':'No friends yet. Use Find people to connect.'}</div>`;
+  target.innerHTML=filtered.length?filtered.map(({friendId,profile,preview})=>`<button class="chat-list-row ${friendId===state.activeFriendId?'active':''}" type="button" data-friend-id="${friendId}"><img class="chat-list-avatar" src="${escapeHTML(profile.avatar_url||DEFAULT_AVATAR)}" alt=""><span class="chat-list-copy"><strong>${escapeHTML(profile.display_name||"Member")}${["super","admin","moderator"].includes(profile.role)?' <span class="chat-staff-label">Staff</span>':''}</strong><small>${escapeHTML(preview?.body||(preview?.media_type?`Sent ${preview.media_type}`:'Start a conversation'))}</small></span><span class="chat-list-time">${preview?timeAgo(preview.created_at):''}</span></button>`).join(''):`<div class="callout">${q?'No matching chats.':'No friends yet. Use Find people to connect.'}</div>`;
 }
 function renderGroups() {
   const target=$("groupList"); if(!target)return; const q=state.searchTerm.trim().toLowerCase();
@@ -245,7 +257,7 @@ function rememberDraft() {
   if (state.activeThreadId) state.drafts.set(state.activeThreadId, { body: $("chatBody").value, file: state.mediaFile });
 }
 function updateComposer() {
-  const disabled = state.loadingThread || !state.activeThreadId;
+  const disabled = state.loadingThread || !state.activeThreadId || !state.canCompose;
   $("chatBody").disabled = disabled;
   $("chatMedia").disabled = disabled;
   $("recordVoiceBtn").disabled = disabled;
@@ -253,13 +265,22 @@ function updateComposer() {
   $("chatForm").setAttribute('aria-busy', String(state.sending));
 }
 async function selectConversation({ friendId = '', groupId = '' }) {
-  if (friendId && !state.friends.includes(friendId)) return;
+  if(friendId){
+    const candidate=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(friendId);
+    if(!candidate || friendId===state.user?.id)return;
+    const permission=await supabase.rpc("can_send_direct_message",{p_recipient:friendId});
+    if(permission.error||permission.data!==true){
+      window.siteToast?.("This member's privacy or blocking settings do not permit direct messaging.","error");
+      return;
+    }
+    if(!profileFor(friendId))await loadProfiles([friendId]);
+  }
   const group = groupId ? state.groups.find(item => item.id === groupId) : null;
   if (groupId && !group) return;
   rememberDraft(); stopRecording(false); clearMediaPreview();
   const selection = ++state.selection;
   void realtime.stop();
-  state.activeFriendId = friendId; state.activeGroupId = groupId;
+  state.activeFriendId = friendId; state.activeGroupId = groupId; state.canCompose=true;
   const threadId = state.activeThreadId = groupId || threadForFriend(friendId);
   state.messageSearchTerm = ''; state.loadingHistory = false; state.messageVersions.clear();
   $("loadOlderMessages").disabled = false;
@@ -416,7 +437,8 @@ async function sendMessage() {
     }
     const draft = state.drafts.get(threadId);
     if (state.activeThreadId !== threadId && draft?.body.trim() === body && draft?.file === file) state.drafts.delete(threadId);
-    state.previews.set(threadId, saved);
+    state.previews.set(threadId,saved);
+    if(recipientId&&!state.directPartners.includes(recipientId))state.directPartners.unshift(recipientId);
     await renderFriends(); renderGroups();
   } finally {
     state.sending = false; updateComposer();
@@ -480,5 +502,5 @@ function setupEvents(){
 }
 async function handleRequests(e){const b=e.target.closest('button[data-request]');if(!b)return;const row=state.friendships.find(r=>r.id===b.dataset.id);if(!row)return;if(b.dataset.request==='accept'){const r=await supabase.from('friendships').update({status:'accepted',updated_at:new Date().toISOString()}).eq('id',row.id);if(r.error)throw r.error;}else{const r=await supabase.from('friendships').delete().eq('id',row.id);if(r.error)throw r.error;}await loadAllChatData();renderRequests();renderBlocked();await renderFriends();renderPeopleResults();}
 
-async function boot(){setupTabs();setupEvents();state.settings=readSettings();applySettings();state.user=await getCurrentUserWithRole();if(!state.user){$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}const preferences=await loadUserPreferences(state.user);state.settings={...DEFAULT_SETTINGS,...preferences.chat};applySettings();document.documentElement.dataset.groupTags=preferences.groups?.showMemberTags===false?"hidden":"visible";await loadAllChatData();renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('user')&&state.friends.includes(params.get('user')))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
+async function boot(){setupTabs();setupEvents();state.settings=readSettings();applySettings();state.user=await getCurrentUserWithRole();if(!state.user){$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}const preferences=await loadUserPreferences(state.user);state.settings={...DEFAULT_SETTINGS,...preferences.chat};applySettings();document.documentElement.dataset.groupTags=preferences.groups?.showMemberTags===false?"hidden":"visible";await loadAllChatData();const staffPermission=await supabase.rpc('can_start_staff_dm');state.staffDMAllowed=staffPermission.data===true&&!staffPermission.error;renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('user'))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
 boot().catch(err=>{reportAppError(err,'Chat initialization failed');if($("chatMessages"))$("chatMessages").innerHTML=`<div class="chat-no-messages">Unable to load chats right now. ${escapeHTML(err.message||'Please try again.')}</div>`;});
