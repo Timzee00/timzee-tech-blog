@@ -768,6 +768,18 @@
         const scroller = document.getElementById("scroller");
         if (!scroller) return;
 
+        scroller.querySelectorAll(".reel-back").forEach(link=>{
+          link.addEventListener("click",event=>{
+            // Return to FYP, a profile or a shared feed if that is where the
+            // viewer arrived from; otherwise keep Videos as the safe fallback.
+            try{
+              const previous=document.referrer?new URL(document.referrer):null;
+              if(previous&&previous.origin===location.origin&&history.length>1){
+                event.preventDefault();history.back();
+              }
+            }catch{}
+          });
+        });
         // Whole visual reel receives gestures, including the video above/below
         // its center. Ignore caption/controls/progress so those still work.
         const tapState=new Map();
