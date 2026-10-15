@@ -25,6 +25,7 @@ import {
   reportAppError
 } from "./utils.js";
 import { bindEditorToolbar } from "./editor-tools.js";
+import {setupMentionInput} from "./mentions.js";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 
@@ -1144,6 +1145,8 @@ async function boot() {
   setupTopicSearch();
   setupBackButton();
   bindEditorToolbar("topicToolbar", "topicDescription");
+  setupMentionInput(document.getElementById("messageBody"));
+  setupMentionInput(document.getElementById("topicDescription"));
   const params = new URLSearchParams(window.location.search);
   const topicId = params.get("topic");
   if (topicId) {
