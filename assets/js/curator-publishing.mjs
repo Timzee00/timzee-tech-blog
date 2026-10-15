@@ -107,15 +107,27 @@ export function placeEditorialFigures(html,images,credit=""){
   const body=String(html||"");
   if(!rows.length)return body;
   const headings=[...body.matchAll(/<h2\b[^>]*>[\s\S]*?<\/h2\s*>/gi)];
-  if(!headings.length)return body;
-  const positions=rows.map((row,i)=>{
+  const tailFigures=[];
+  if(!headings.length){
+    // Cover image is rendered separately. The other approved images still
+    // need to be visible when the article has only paragraphs.
+    const figures=rows.map((row,i)=>editorialFigure(row,credit,i+2)).join("");
+    return body+'<section class="curator-unplaced-images" aria-label="Additional approved images"><h2>Additional images</h2>'+figures+'</section>';
+  }
+  const positions=rows.flatMap((row,i)=>{
     let match=-1;
     if(row.heading){
       const sought=row.heading.toLowerCase().replace(/\s+/g," ");
       match=headings.findIndex(heading=>plainText(heading[0]).toLowerCase().includes(sought));
     }
-    // If no section matches, distribute photos without claiming they document
-    // facts from an unrelated passage. Editors approve every placement.
+    // If the editor assigned a specific heading that no longer exists (e.g.
+    // following a translation), do not insert an unrelated image into a
+    // passage it might falsely appear to illustrate.
+    if(row.heading && match<0) {
+      tailFigures.push(editorialFigure(row,credit,i+2));
+      return [];
+    }
+    // An image without an assigned heading is an editorial illustration.
     const chosen=match>=0?match:Math.min(headings.length-1,
       Math.floor((i+1)*headings.length/(rows.length+1)));
     // Preserve readable context: introduce the section before showing its
@@ -126,11 +138,17 @@ export function placeEditorialFigures(html,images,credit=""){
     const within=body.slice(begin,until);
     const firstParagraph=/<p\b[^>]*>[\s\S]*?<\/p\s*>/i.exec(within);
     const afterContext=firstParagraph ? begin+firstParagraph.index+firstParagraph[0].length : begin;
-    return {
+    return [{
       position:afterContext,index:i,
-      figure:'<figure class="curator-inline-image"><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+htmlEscape(row.url)+'" alt="'+htmlEscape(row.caption||"Article illustration "+(i+2))+'"><figcaption>'+htmlEscape(row.caption||credit||"Image used with permission")+'</figcaption></figure>'
-    };
+      figure:editorialFigure(row,credit,i+2)
+    }];
   });
-  return positions.sort((a,b)=>b.position-a.position || b.index-a.index).reduce(
+  const placed=positions.sort((a,b)=>b.position-a.position || b.index-a.index).reduce(
     (current,item)=>current.slice(0,item.position)+item.figure+current.slice(item.position),body);
+  return tailFigures.length
+    ? placed+'<section class="curator-unplaced-images" aria-label="Additional approved images"><h2>Additional images</h2>'+tailFigures.join("")+'</section>'
+    : placed;
+}
+function editorialFigure(row,credit,index){
+  return '<figure class="curator-inline-image"><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+htmlEscape(row.url)+'" alt="'+htmlEscape(row.caption||"Article illustration "+index)+'"><figcaption>'+htmlEscape(row.caption||credit||"Image used with permission")+'</figcaption></figure>';
 }

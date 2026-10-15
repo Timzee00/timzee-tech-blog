@@ -308,9 +308,11 @@ export function setupMentionInput(field) {
     
     // Handle arrow keys in dropdown
     if (activeMentionDropdown && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
-      event.preventDefault();
       const items = activeMentionDropdown.querySelectorAll(".mention-item");
+      // An empty result is just information, not an active listbox.
+      // Preserve the editor's native arrow/caret behavior.
       if (items.length === 0) return;
+      event.preventDefault();
       
       // Simple cycling through items
       let selected = activeMentionDropdown.querySelector("[data-selected]");
@@ -325,14 +327,14 @@ export function setupMentionInput(field) {
 
     // Handle Enter to select mention
     if (activeMentionDropdown && event.key === "Enter") {
-      event.preventDefault();
       const selected = activeMentionDropdown.querySelector("[data-selected]");
-      if (selected) {
-        selected.click();
-      } else {
-        const first = activeMentionDropdown.querySelector(".mention-item");
-        if (first) first.click();
-      }
+      const first = activeMentionDropdown.querySelector(".mention-item");
+      const target = selected || first;
+      // No selectable result: do not swallow Enter from a chat composer
+      // or comment form (or prevent a newline in a textarea).
+      if (!target) return;
+      event.preventDefault();
+      target.click();
     }
   });
 

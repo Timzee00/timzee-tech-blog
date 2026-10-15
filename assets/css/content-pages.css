@@ -260,3 +260,20 @@
   min-height:44px;padding:8px 10px;font:inherit;font-size:14px;}
 .article-ai-provider-row .btn{min-height:44px;white-space:normal;}
 @media(max-width:480px){.article-ai-provider-row select{flex-basis:100%;}.article-ai-provider-row .btn{width:100%;}}
+
+/* Captions and section-matched illustrations retain a readable width.
+   Unmatched, rights-approved photos are kept in an explicit supplemental
+   gallery, not inserted beside unrelated claims. */
+.curator-unplaced-images{max-width:100%;min-width:0;margin:28px 0;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));}
+.curator-unplaced-images>h2{grid-column:1/-1;margin-bottom:0;}
+.curator-unplaced-images .curator-inline-image{margin:0;min-width:0;overflow:hidden;}
+.post-article .post-content :where(pre,table,.table-wrapper),
+.curator-post-preview-dialog .post-content :where(pre,table,.table-wrapper){
+  max-width:100%;overflow-x:auto;display:block;
+}
+.curator-post-preview-dialog :where(img,video,iframe,svg,canvas){max-width:100%;height:auto;}
+@media(max-width:600px){
+  .curator-post-preview-dialog .curator-preview-body{overscroll-behavior:contain;padding:10px;}
+  .curator-post-preview-dialog .post-article{min-width:0;max-width:100%;box-sizing:border-box;}
+  .curator-preview-toolbar{flex-wrap:wrap;}
+}
