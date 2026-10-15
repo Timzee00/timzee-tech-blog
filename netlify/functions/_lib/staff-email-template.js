@@ -5,7 +5,7 @@ const escapeHtml=(value)=>String(value??"").replace(/[&<>"']/g,ch=>({
  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
 }[ch]));
 function buildStaffReplyEmail({message,name="there",requestKind="contact"}){
- const recipientName=String(name||"there").replace(/[<>]/g,"").slice(0,90);
+ const recipientName=(String(name||"").replace(/<[^>]*>/g,"").replace(/[<>]/g,"").trim().slice(0,90))||"there";
  const safeName=escapeHtml(recipientName);
  const kind=String(requestKind||"contact").replace(/[^a-z]/gi,"").slice(0,30);
  const safeMessage=escapeHtml(message);
