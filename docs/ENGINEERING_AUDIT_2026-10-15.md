@@ -13,6 +13,14 @@
 ## Read-only public-browser check
 A 390×844 mobile browser check at `https://timzee-tech-blog.netlify.app/` found no horizontal overflow, a working menu and a readable footer. The cookie panel occupies much of the initial viewport. The public article at `/post.html?id=b21aaa8a-e08a-47ea-93a4-81918943a5a9` loaded its body after a visible generic loading state; this branch reduces that delay and uses meaningful loading text. The device-specific grey broken-image strip was **not reproduced** in the controlled browser. The check did **not** exercise authenticated or production-write workflows.
 
+## Staging database performance candidates
+
+`docs/sql/review-only-article-reader-indexes.sql` proposes **three partial
+concurrent indexes** on published category/recency, author posts and approved
+comment order. Live DB currently has the post search/pkey indexes plus a
+comment post-id index. Apply only after staging EXPLAIN with representative
+data, because partial indexes can increase write cost.
+
 ## Changes included in this PR
 - Port unmerged mobile preview containment, sensible empty-state and idempotent @mentions, and persistent reel mute state on autoplay fallback from the closed PR.
 - Recognize compact GDELT timestamps when scoring fresher news.
