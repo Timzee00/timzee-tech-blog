@@ -74,7 +74,7 @@ export function mountArticleAssistant(post) {
   };
   async function ask(text) {
     const prompt=String(text||"").trim().slice(0,700);
-    if(!prompt||busy)return;
+    if(!prompt||busy)return false;
     open();
     busy=true; send.disabled=true;summarize.disabled=true;
     try{
@@ -84,7 +84,7 @@ export function mountArticleAssistant(post) {
         const link=document.createElement("a");
         link.href="login.html?next="+encodeURIComponent(location.pathname+location.search);
         link.textContent=" Sign in";
-        status.append(link);return;
+        status.append(link);return false;
       }
       status.textContent="Checking provider availability…";
       const diagnostic=await getDiagnostic(data.session.access_token);
@@ -103,10 +103,12 @@ export function mountArticleAssistant(post) {
       history.push({role:"user",content:prompt},{role:"assistant",content:response.content.slice(0,1800)});
       if(history.length>10)history.splice(0,history.length-10);
       status.textContent="Answer provided by "+(providerNames[provider]||provider)+". AI can be mistaken; verify important claims against original reporting.";
+      return true;
     }catch(error) {
       const message=String(error?.message||"AI request failed").slice(0,260);
       const context=lastDiagnostic?.deploymentContext||"current";
       status.textContent="Unable to answer: "+message+". If this is a missing key, check its Functions scope and "+context+" deploy context in Netlify, then redeploy. The article remains readable.";
+      return false;
     }finally{busy=false;send.disabled=false;summarize.disabled=false;}
   }
   const full=document.getElementById("articleAiFullLink");
@@ -121,8 +123,13 @@ export function mountArticleAssistant(post) {
   chat.onclick=()=>{open();question.focus();};
   const closeButton=document.getElementById("closeArticleAi");
   if(closeButton)closeButton.onclick=()=>{panel.hidden=true;};
-  form.onsubmit=event=>{
-    event.preventDefault();const text=question.value.trim();if(!text)return;
-    question.value="";void ask(text);
+  form.onsubmit=async event=>{
+    event.preventDefault();
+    const text=question.value.trim();
+    if(!text)return;
+    const success=await ask(text);
+    // Failed provider/auth checks must not destroy a reader's typed question.
+    // If they started a new question during the request, preserve that too.
+    if(success && question.value.trim()===text)question.value="";
   };
 }
