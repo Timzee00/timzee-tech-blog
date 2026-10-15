@@ -1,8 +1,9 @@
 import {
   fetchCategories,
-  fetchPosts,
-  fetchComments,
-  fetchPostLikes,
+  fetchRelatedPosts,
+  fetchPublishedAuthorCount,
+  fetchPostLikeSummary,
+  fetchRecentPostComments,
   fetchPostByIdOrSlug,
   fetchPostMedia,
   fetchAds,
@@ -973,6 +974,31 @@ function handleIncomingComment(payload, postId) {
   renderComments(state.comments);
 }
 
+function setupOlderComments(postId,rows,pageSize=40){
+  const button=document.getElementById("loadOlderCommentsBtn");
+  if(!button)return;
+  let offset=rows.length, loading=false;
+  button.hidden=rows.length<pageSize;
+  button.addEventListener("click",async()=>{
+    if(loading)return;
+    loading=true;button.disabled=true;button.textContent="Loading comments…";
+    try{
+      const page=await fetchRecentPostComments(postId,{offset,limit:pageSize});
+      offset+=page.length;
+      const current=new Set(rows.map(row=>row.id));
+      const additional=page.filter(row=>!current.has(row.id));
+      rows.unshift(...additional);
+      rows.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+      await loadCommentAuthors(additional);
+      renderComments(rows);
+      button.hidden=page.length<pageSize;
+    }catch(error){
+      console.warn("Could not load older comments",error);
+      window.appUI?.toast?.("Older comments could not load. Retry.",{tone:"error"});
+    }finally{loading=false;button.disabled=false;button.textContent="Load older comments";}
+  });
+}
+
 function subscribeToComments(postId) {
   if (!postId || typeof supabase?.channel !== "function") return;
   if (commentChannel) {
@@ -1079,22 +1105,23 @@ async function boot() {
 
     updateMeta(post);
 
-    const [categories, relatedPosts, comments, likes, ads, postMedia] = await Promise.all([
+    const [categories, relatedPosts, comments, likeSummary, ads, postMedia, authorCount] = await Promise.all([
       fetchCategories(),
-      fetchPosts({ status: "published" }),
-      fetchComments({ status: "approved", postId: post.id }),
-      fetchPostLikes({ postId: post.id }),
+      fetchRelatedPosts(post,{limit:4}),
+      fetchRecentPostComments(post.id,{limit:40}),
+      fetchPostLikeSummary(post.id,state.user?.id),
       fetchAds({ status: "active" }),
-      fetchPostMedia(post.id)
+      fetchPostMedia(post.id),
+      fetchPublishedAuthorCount(post.author_id)
     ]);
 
     state.categories = categories;
-    state.likes = likes;
+    state.likes = [];
     state.ads = ads;
     state.postMedia = postMedia;
-    state.likeCount = likes.length;
-    state.hasLiked = !!state.user && likes.some((like) => like.user_id === state.user.id);
-    state.authorPostCount = relatedPosts.filter((item) => item.author_id === post.author_id).length;
+    state.likeCount = likeSummary.count;
+    state.hasLiked = likeSummary.hasLiked;
+    state.authorPostCount = authorCount;
     if (post.author_id) {
       const profile = await supabase
         .from("public_profiles")
@@ -1119,6 +1146,7 @@ async function boot() {
     state.comments = comments || [];
     await loadCommentAuthors(state.comments);
     renderComments(state.comments);
+    setupOlderComments(post.id,state.comments,40);
     renderRelated({ posts: relatedPosts }, post);
     renderTakeaways(post);
     renderAuthorMini(post);
