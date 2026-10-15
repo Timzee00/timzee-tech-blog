@@ -5,6 +5,7 @@
 
 import { supabase } from "./supabase.js";
 import { escapeHTML, isSafeUrl } from "./utils.js";
+import { collectMentionHandles, renderMentionLinks } from "./mention-text.mjs";
 
 let mentionCache = {};
 let activeMentionDropdown = null;
@@ -312,26 +313,12 @@ export function setupMentionInput(field) {
  * Extract all mentions from text
  */
 export function extractMentions(text) {
-  if (!text) return [];
-  const regex = /@([a-zA-Z0-9_]+)/g;
-  const mentions = [];
-  let match;
-
-  while ((match = regex.exec(text)) !== null) {
-    mentions.push(match[1]);
-  }
-
-  return [...new Set(mentions)]; // Remove duplicates
+  return collectMentionHandles(text,{limit:20});
 }
 
-/**
- * Convert mention text to links
- */
+/** Render escaped text and valid @username links only. */
 export function linkifyMentions(text) {
-  if (!text) return text;
-  return text.replace(/@([a-zA-Z0-9_]+)/g, (match, username) => {
-    return `<a href="profile.html?username=${encodeURIComponent(username)}" class="mention-link">@${username}</a>`;
-  });
+  return renderMentionLinks(text);
 }
 
 /**
