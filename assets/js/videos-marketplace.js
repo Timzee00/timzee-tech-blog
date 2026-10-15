@@ -208,28 +208,22 @@ export async function searchVideos({ query, category = null, limit = 20, offset 
 }
 
 export async function likeVideo(videoId, userId) {
-  const existing = await supabase
-    .from("video_likes")
-    .select("id")
-    .eq("video_id", videoId)
-    .eq("user_id", userId)
-    .single();
-
-  if (!existing.error && existing.data) {
-    // Already liked, unlike
-    await supabase.from("video_likes").delete().eq("id", existing.data.id);
-    return { liked: false };
+  if(!videoId||!userId)return {liked:false,error:{message:"Sign in to like videos."}};
+  const existing=await supabase.from("video_likes").select("id")
+    .eq("video_id",videoId).eq("user_id",userId).maybeSingle();
+  if(existing.error)return {liked:false,error:existing.error};
+  if(existing.data){
+    const removed=await supabase.from("video_likes").delete()
+      .eq("id",existing.data.id).eq("user_id",userId);
+    if(removed.error)return {liked:true,error:removed.error};
+    return {liked:false};
   }
-
-  // Like video
-  await supabase.from("video_likes").insert({
-    id: crypto.randomUUID(),
-    video_id: videoId,
-    user_id: userId,
-    created_at: new Date().toISOString()
+  const inserted=await supabase.from("video_likes").insert({
+    id:crypto.randomUUID(),video_id:videoId,user_id:userId,
+    created_at:new Date().toISOString()
   });
-
-  return { liked: true };
+  if(inserted.error)return {liked:false,error:inserted.error};
+  return {liked:true};
 }
 
 export async function getVideoLikeCount(videoId) {
