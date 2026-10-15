@@ -118,11 +118,19 @@ export function placeEditorialFigures(html,images,credit=""){
     // facts from an unrelated passage. Editors approve every placement.
     const chosen=match>=0?match:Math.min(headings.length-1,
       Math.floor((i+1)*headings.length/(rows.length+1)));
+    // Preserve readable context: introduce the section before showing its
+    // illustrative figure, rather than placing every photo immediately after
+    // the heading. Do not cross into the next section.
+    const begin=headings[chosen].index+headings[chosen][0].length;
+    const until=headings[chosen+1]?.index??body.length;
+    const within=body.slice(begin,until);
+    const firstParagraph=/<p\\b[^>]*>[\\s\\S]*?<\\/p\\s*>/i.exec(within);
+    const afterContext=firstParagraph ? begin+firstParagraph.index+firstParagraph[0].length : begin;
     return {
-      position:headings[chosen].index+headings[chosen][0].length,
+      position:afterContext,index:i,
       figure:'<figure class="curator-inline-image"><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+htmlEscape(row.url)+'" alt="'+htmlEscape(row.caption||"Article illustration "+(i+2))+'"><figcaption>'+htmlEscape(row.caption||credit||"Image used with permission")+'</figcaption></figure>'
     };
   });
-  return positions.sort((a,b)=>b.position-a.position).reduce(
+  return positions.sort((a,b)=>b.position-a.position || b.index-a.index).reduce(
     (current,item)=>current.slice(0,item.position)+item.figure+current.slice(item.position),body);
 }

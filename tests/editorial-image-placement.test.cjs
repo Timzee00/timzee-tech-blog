@@ -31,3 +31,24 @@ test("legacy one-link-per-line entry remains compatible",async()=>{
   const out=placeEditorialFigures("<h2>Context</h2><p>Body</p>",rows,"Verified permission");
   assert.ok(out.includes("inline.jpg"));
 });
+
+test("figures appear after their relevant paragraph, not before the explanation",async()=>{
+  const {placeEditorialFigures,parseEditorialImageRows}=await helpers;
+  const rows=parseEditorialImageRows(
+    "https://example.com/cover.png\\nhttps://example.com/checklist.png | Eligibility | Official requirements image"
+  );
+  const body="<h2>Eligibility</h2><p>Applicants must review official conditions.</p><h2>Next steps</h2><p>Check deadlines.</p>";
+  const html=placeEditorialFigures(body,rows,"Rights verified");
+  assert.ok(html.indexOf("checklist.png")>html.indexOf("</p>"));
+  assert.ok(html.indexOf("checklist.png")<html.indexOf("<h2>Next steps</h2>"));
+});
+test("multiple figures assigned to one section retain editor-supplied order",async()=>{
+ const {placeEditorialFigures,parseEditorialImageRows}=await helpers;
+ const rows=parseEditorialImageRows([
+  "https://example.com/cover.png",
+  "https://example.com/one.png | Findings | First illustration",
+  "https://example.com/two.png | Findings | Second illustration"
+ ].join("\\n"));
+ const result=placeEditorialFigures("<h2>Findings</h2><p>Details.</p>",rows,"Approved");
+ assert.ok(result.indexOf("one.png")<result.indexOf("two.png"));
+});
