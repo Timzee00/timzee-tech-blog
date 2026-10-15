@@ -69,6 +69,10 @@ export function closeMentionDropdown() {
     activeMentionDropdown.remove();
     activeMentionDropdown = null;
   }
+  if(activeMentionField){
+    activeMentionField.setAttribute("aria-expanded","false");
+    activeMentionField.removeAttribute("aria-controls");
+  }
   currentSearchTerm = "";
   activeMentionField = null;
   mentionRequest++;
@@ -94,6 +98,7 @@ async function showMentionDropdown(field, searchTerm) {
   const top=roomBelow>=160 ? rect.bottom+5 : Math.max(viewTop+8,rect.top-menuHeight-6);
   const dropdown = document.createElement("div");
   dropdown.className = "mention-dropdown";
+  dropdown.id = "timzee-mention-suggestions";
   dropdown.setAttribute("role","listbox");
   dropdown.setAttribute("aria-label","Mention a community member");
   dropdown.style.cssText = `
@@ -163,12 +168,19 @@ async function showMentionDropdown(field, searchTerm) {
 
     item.setAttribute("role","option");
     item.setAttribute("aria-label",`Mention @${user.username}`);
-    // Keep the textarea focused so its caret position is preserved.
-    item.addEventListener("pointerdown",event=>event.preventDefault());
-    item.addEventListener("click", () => {
-      insertMention(field, user.username, searchTerm);
-      closeMentionDropdown();
+    // Android often blurs the editor between pointerdown and click. Choose
+    // immediately on pointerdown; keep click for keyboard/accessibility use.
+    let chosen=false;
+    const choose=()=>{
+      if(chosen||!field.isConnected)return;
+      chosen=true;
+      insertMention(field,user.username,searchTerm);
+    };
+    item.addEventListener("pointerdown",event=>{
+      event.preventDefault();
+      choose();
     });
+    item.addEventListener("click",choose);
 
     dropdown.appendChild(item);
   });
@@ -176,6 +188,8 @@ async function showMentionDropdown(field, searchTerm) {
   document.body.appendChild(dropdown);
   activeMentionDropdown = dropdown;
   activeMentionField = field;
+  field.setAttribute("aria-expanded","true");
+  field.setAttribute("aria-controls",dropdown.id);
 }
 
 /**
@@ -263,6 +277,8 @@ export function setupMentionInput(field) {
   if (!field || field.dataset.timzeeMentionsWired === "true") return;
   field.dataset.timzeeMentionsWired = "true";
   field.setAttribute("aria-autocomplete","list");
+  field.setAttribute("aria-haspopup","listbox");
+  field.setAttribute("aria-expanded","false");
   field.addEventListener("input", handleMentionInput);
   field.addEventListener("click",()=>{
     if(field.value.slice(0,field.selectionStart).includes("@")) void handleMentionInput({target:field});
