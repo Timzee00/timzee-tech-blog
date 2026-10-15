@@ -829,6 +829,11 @@
             return;
           }
           const result = await likeVideo(videoId, state.user.id);
+          if (result?.error) {
+            window.appUI?.toast?.("Couldn\'t save your like. Please retry.",{tone:"error"});
+            console.warn("Video like failed:",result.error?.message||"Unknown error");
+            return;
+          }
           if (countEl) {
             const current = parseInt(countEl.textContent, 10) || 0;
             countEl.textContent = result.liked ? current + 1 : Math.max(0, current - 1);
