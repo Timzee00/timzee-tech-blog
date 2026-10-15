@@ -30,7 +30,7 @@ test("RLS-protected comment likes work in Reel drawer and FYP",()=>{
  assert.match(reels,/video_comment_likes/);
  assert.match(reels,/data-comment-like=/);
  assert.match(reels,/aria-pressed/);
- assert.match(fyp,/data\.fypCommentLike/);
+ assert.match(fyp,/dataset\.fypCommentLike/);
  assert.match(fyp,/video_comment_likes/);
 });
 test("FYP discussion topics have like and inline reply actions",()=>{
