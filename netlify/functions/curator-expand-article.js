@@ -2,16 +2,19 @@
 // separate from the hourly Scout fetcher; it cannot trigger automatic posting.
 const {createClient}=require("@supabase/supabase-js");
 const {requireRole}=require("./_lib/auth-role.js");
-const {normalizedArticle,toText,escapeHTML}=require("./_lib/editorial-draft.cjs");
+const {normalizedArticle,parseModelJson,toText,escapeHTML}=require("./_lib/editorial-draft.cjs");
 const respond=(statusCode,payload)=>({statusCode,headers:{"Content-Type":"application/json","Cache-Control":"no-store"},body:JSON.stringify(payload)});
 exports.handler=async(event)=>{
-  if(event.httpMethod!=="POST")return respond(405,{error:"Use POST."});
-  if(!event.body || Buffer.byteLength(event.body,"utf8")>8500)return respond(413,{error:"Invalid request size."});
-  let args;
-  try{args=JSON.parse(event.body);}catch{return respond(400,{error:"Invalid JSON."});}
+  if(!["GET","POST"].includes(event.httpMethod))return respond(405,{error:"Use GET or POST."});
+  const isPost=event.httpMethod==="POST";
+  if(isPost && (!event.body || Buffer.byteLength(event.body,"utf8")>8500))
+    return respond(413,{error:"Invalid request size."});
+  let args={};
+  if(isPost) {try{args=JSON.parse(event.body);}catch{return respond(400,{error:"Invalid JSON."});}}
   const id=String(args?.id||"");
   const mode=args?.mode==="translate"?"translate":"expand";
-  if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id))return respond(400,{error:"Invalid article ID."});
+  if(isPost && !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id))
+    return respond(400,{error:"Invalid article ID."});
   const token=(event.headers?.authorization||event.headers?.Authorization||"").replace(/^Bearer\s+/i,"");
   const url=process.env.SUPABASE_URL,secret=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SERVICE_ROLE_KEY;
   if(!url||!secret)return respond(503,{error:"Server authentication is not configured."});
@@ -22,6 +25,13 @@ exports.handler=async(event)=>{
   const provider=requested==="groq" && !process.env.GROQ_API_KEY?.trim() && process.env.OPENROUTER_API_KEY?.trim()
     ? "openrouter" : requested;
   const apiKey=provider==="openrouter"?process.env.OPENROUTER_API_KEY?.trim():process.env.GROQ_API_KEY?.trim();
+  if(!isPost) return respond(200,{
+    provider, configured:Boolean(apiKey),
+    available:{groq:Boolean(process.env.GROQ_API_KEY?.trim()),openrouter:Boolean(process.env.OPENROUTER_API_KEY?.trim())},
+    deploymentContext:process.env.CONTEXT||"unknown",
+    model:provider==="openrouter"?"openrouter/free":"openai/gpt-oss-20b",
+    note:"A configured credential has not been verified with an actual provider request."
+  });
   if(!apiKey)return respond(503,{error:provider==="openrouter"?"OPENROUTER_API_KEY is unavailable to this deployed Function. Check its context/scope and redeploy.":"GROQ_API_KEY is unavailable to this deployed Function. Check its context/scope and redeploy.",provider});
   const {data:post,error}=await db.from("curator_posts").select("id,title,content,excerpt,description,source_name,source_url,status,is_posted").eq("id",id).maybeSingle();
   if(error)return respond(500,{error:"Could not load the draft."});
@@ -46,7 +56,7 @@ exports.handler=async(event)=>{
       return respond(400,{error:"Additional reporting must include specific facts (100-4,500 characters) and a public HTTPS source URL."});
     }
   }
-  if(evidence.length<55){
+  if(evidence.length<(mode==="translate"?12:55)){
     return respond(422,{error:"The original source has too little reporting to summarize reliably. Check the source link and add a fuller source brief before trying AI."});
   }
   if(mode==="expand"&&evidence.length+research.length<380){
@@ -96,10 +106,10 @@ exports.handler=async(event)=>{
     if(mode==="translate"){
       let translated;
       try {
-        translated=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/gi,"").trim());
+        translated=parseModelJson(raw);
         const headline=toText(translated.headline,160);
         const excerpt=toText(translated.excerpt,4200);
-        if(headline.length<10||excerpt.length<45)throw Error("Incomplete translation");
+        if(headline.length<8||excerpt.length<12)throw Error("Incomplete translation");
         const link=new URL(post.source_url);
         if(!["http:","https:"].includes(link.protocol))throw Error("Invalid source URL");
         const brief='<p>'+escapeHTML(excerpt)+'</p><p><strong>Editorial status:</strong> Translated source brief; requires reporting, expansion and review before publication.</p><p>Original source: <a rel="noopener noreferrer" target="_blank" href="'+escapeHTML(link.toString())+'">Read original</a>.</p>';

@@ -2,8 +2,26 @@
 // never trusted HTML. The staff member must still fact-check before publishing.
 const escapeHTML = value => String(value??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 function toText(value,max=1600) { return String(value||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim().slice(0,max); }
+function parseModelJson(response) {
+  const raw=String(response||"").trim();
+  if (!raw || raw.length>30000) throw Error("The AI response was empty or exceeded the allowed size.");
+  const unfenced=raw.replace(/^\`\`\`(?:json)?\\s*/i,"").replace(/\\s*\`\`\`$/,"");
+  let result;
+  try { result=JSON.parse(unfenced); }
+  catch {
+    // Some compatible models wrap JSON in introductory prose. Accept one
+    // complete JSON object only; content remains untrusted and escaped later.
+    const first=unfenced.indexOf("{"),last=unfenced.lastIndexOf("}");
+    if(first<0||last<=first)throw Error("The AI did not return valid JSON.");
+    try { result=JSON.parse(unfenced.slice(first,last+1)); }
+    catch { throw Error("The AI did not return valid JSON."); }
+  }
+  if(!result || Array.isArray(result) || typeof result!=="object")
+    throw Error("The AI response must be a JSON object.");
+  return result;
+}
 function normalizedArticle(response, sourceUrl,sourceName) {
-  const data=typeof response==="string"?JSON.parse(response.replace(/^```(?:json)?\s*|\s*```$/gi,"").trim()):response;
+  const data=typeof response==="string"?parseModelJson(response):response;
   if(!data || !Array.isArray(data.sections) || data.sections.length<4 || data.sections.length>7)
     throw Error("The model did not produce a structured article.");
   const intro=toText(data.introduction,2600), conclusion=toText(data.conclusion,2400);
@@ -45,4 +63,4 @@ function normalizedArticle(response, sourceUrl,sourceName) {
   const englishTitle=toText(data.headline,160);
   return {content:html.join("\n"),excerpt,title:englishTitle||null,wordCount:words,warnings};
 }
-module.exports={normalizedArticle,toText,escapeHTML};
+module.exports={normalizedArticle,parseModelJson,toText,escapeHTML};

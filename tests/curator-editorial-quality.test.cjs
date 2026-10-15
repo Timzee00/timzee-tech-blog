@@ -21,3 +21,15 @@ test("rejects a short, unsupported article instead of padding it",()=>{
  const p="A report about a project that still requires factual verification and a great deal of supporting evidence.";
  assert.throws(()=>normalizedArticle({introduction:p.repeat(2),sections:Array.from({length:4},(_,i)=>({heading:"Part "+i,paragraphs:[p]})),conclusion:p.repeat(2)},src,"News"),/450/);
 });
+
+test("editorial parser supports fenced model JSON and carefully wrapped objects",()=>{
+ const {parseModelJson}=require("../netlify/functions/_lib/editorial-draft.cjs");
+ assert.deepEqual(parseModelJson("\\`\\`\\`json\\n{\\\"headline\\\":\\\"Hello\\\"}\\n\\`\\`\\`"),{headline:"Hello"});
+ assert.deepEqual(parseModelJson("Here is JSON: {\\\"headline\\\":\\\"Hello\\\"}"),{headline:"Hello"});
+ assert.throws(()=>parseModelJson("Not JSON"));
+});
+test("authenticated GET editorial readiness avoids a costly model call",()=>{
+ const source=require("node:fs").readFileSync(require("node:path").join(__dirname,"../netlify/functions/curator-expand-article.js"),"utf8");
+ assert.match(source,/if\\(!isPost\\) return respond\\(200/);
+ assert.match(source,/deploymentContext:/);
+});
