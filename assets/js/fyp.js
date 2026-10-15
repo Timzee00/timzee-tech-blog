@@ -104,7 +104,7 @@ async function toggleLike(card,button){
   button.disabled=true;
   try{
     const query=active?supabase.from(table).delete().eq(col,id).eq("user_id",state.user.id):
-      supabase.from(table).insert({[col]:id,user_id:state.user.id});
+      supabase.from(table).insert({id:crypto.randomUUID(),[col]:id,user_id:state.user.id});
     const {error}=await query;
     if(error)throw error;
     button.setAttribute("aria-pressed",String(!active));
@@ -144,7 +144,7 @@ async function submitInlineComment(card,form){
   if(!body||body.length>1500){status.textContent="Enter a comment under 1,500 characters.";return;}
   if(!state.user?.id){status.textContent="Please sign in first.";return;}
   const isVideo=type==="video";
-  const payload=isVideo?{video_id:id,user_id:state.user.id,author_name:state.user.user_metadata?.display_name||"Member",body}:
+  const payload=isVideo?{id:crypto.randomUUID(),video_id:id,user_id:state.user.id,author_name:state.user.user_metadata?.display_name||"Member",body}:
     {post_id:id,author_id:state.user.id,author_name:state.user.user_metadata?.display_name||"Member",body,status:"pending"};
   const submit=form.querySelector('button[type="submit"]');submit.disabled=true;
   try{
