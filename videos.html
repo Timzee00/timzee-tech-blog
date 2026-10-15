@@ -449,6 +449,12 @@
       // back gracefully (whole editor hidden) if the browser can't do it.
       // ------------------------------------------------------------------
       function setupTrimEditor(file) {
+        state.editorController?.abort();
+        const controller=new AbortController();
+        state.editorController=controller;
+        const withSignal=(element,type,listener,options={})=>
+          element.addEventListener(type,listener,{...options,signal:controller.signal});
+        if(state.editorObjectUrl)URL.revokeObjectURL(state.editorObjectUrl);
         const trimEditor = document.getElementById("trimEditor");
         const trimPreview = document.getElementById("trimPreview");
         const trimStart = document.getElementById("trimStart");
@@ -479,7 +485,7 @@
           trimStatus.style.color="#b45309";
           trimStatus.textContent="Edits changed. Tap Apply Trim & Edits before uploading, or Use Original.";
         };
-        [trimStart,trimEnd].forEach(input=>input.addEventListener("input",markChanged));
+        [trimStart,trimEnd].forEach(input=>withSignal(input,"input",markChanged));
         state.textOverlays = []; // [{ text, xPct, yPct, color }]
         textLayer.innerHTML = "";
         const drawCtx = drawCanvas.getContext("2d");
@@ -487,9 +493,10 @@
         let drawingEnabled = false;
 
         const objectUrl = URL.createObjectURL(file);
+        state.editorObjectUrl=objectUrl;
         trimPreview.src = objectUrl;
         trimPreview.style.filter = "none";
-        trimPreview.addEventListener(
+        withSignal(trimPreview,
           "loadedmetadata",
           () => {
             trimStart.value = 0;
@@ -507,7 +514,7 @@
 
         // ---------------- Filters ----------------
         document.querySelectorAll("#trimEditor [data-filter]").forEach((btn) => {
-          btn.addEventListener("click", () => {
+          withSignal(btn,"click", () => {
             const value = btn.dataset.filter;
             state.selectedFilterCSS = value;
             markChanged();
@@ -520,7 +527,7 @@
 
         // ---------------- Pen / draw ----------------
         const drawToolBtn = document.getElementById("drawToolBtn");
-        drawToolBtn.addEventListener("click", () => {
+        withSignal(drawToolBtn,"click", () => {
           drawingEnabled = !drawingEnabled;
           drawToolBtn.classList.toggle("active", drawingEnabled);
           drawCanvas.style.pointerEvents = drawingEnabled ? "auto" : "none";
@@ -537,7 +544,7 @@
             y: (event.clientY - rect.top) * scaleY
           };
         }
-        drawCanvas.addEventListener("pointerdown", (e) => {
+        withSignal(drawCanvas,"pointerdown", (e) => {
           if (!drawingEnabled) return;
           isDrawing = true;
           const p = canvasPointFromEvent(e);
@@ -550,25 +557,25 @@
           drawCtx.moveTo(p.x, p.y);
           drawCanvas.setPointerCapture(e.pointerId);
         });
-        drawCanvas.addEventListener("pointermove", (e) => {
+        withSignal(drawCanvas,"pointermove", (e) => {
           if (!drawingEnabled || !isDrawing) return;
           const p = canvasPointFromEvent(e);
           drawCtx.lineTo(p.x, p.y);
           drawCtx.stroke();
         });
         ["pointerup", "pointercancel", "pointerleave"].forEach((evt) =>
-          drawCanvas.addEventListener(evt, () => {
+          withSignal(drawCanvas,evt, () => {
             isDrawing = false;
           })
         );
 
-        document.getElementById("clearDrawBtn").addEventListener("click", () => {
+        withSignal(document.getElementById("clearDrawBtn"),"click", () => {
           drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
           markChanged();
         });
 
         // ---------------- Text tool ----------------
-        document.getElementById("addTextBtn").addEventListener("click", async () => {
+        withSignal(document.getElementById("addTextBtn"),"click", async () => {
           const text = await window.appUI.prompt("Text to add:");
           if (!text || !text.trim()) return;
           const overlay = { text: text.trim(), xPct: 50, yPct: 50, color: drawColor.value };
@@ -590,12 +597,12 @@
           textLayer.appendChild(el);
 
           let dragging = false;
-          el.addEventListener("pointerdown", (e) => {
+          withSignal(el,"pointerdown", (e) => {
             dragging = true;
             el.style.cursor = "grabbing";
             el.setPointerCapture(e.pointerId);
           });
-          el.addEventListener("pointermove", (e) => {
+          withSignal(el,"pointermove", (e) => {
             if (!dragging) return;
             const stageRect = document.getElementById("editorStage").getBoundingClientRect();
             const xPct = Math.min(96, Math.max(4, ((e.clientX - stageRect.left) / stageRect.width) * 100));
@@ -606,11 +613,11 @@
             el.style.left = `${xPct}%`;
             el.style.top = `${yPct}%`;
           });
-          el.addEventListener("pointerup", () => {
+          withSignal(el,"pointerup", () => {
             dragging = false;
             el.style.cursor = "grab";
           });
-          el.addEventListener("dblclick", () => {
+          withSignal(el,"dblclick", () => {
             state.textOverlays = state.textOverlays.filter((o) => o !== overlay);
             markChanged();
             el.remove();
@@ -635,7 +642,7 @@
               trimPreview.removeEventListener("timeupdate", stopAt);
             }
           };
-          trimPreview.addEventListener("timeupdate", stopAt);
+          withSignal(trimPreview,"timeupdate", stopAt);
         };
 
         // ---------------- Apply (render final clip) ----------------
