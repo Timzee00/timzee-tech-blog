@@ -313,7 +313,11 @@
       }
       .reel-caption.expanded {
         -webkit-line-clamp: unset;
+        overflow:visible;
+        max-height:42dvh;
+        overflow-y:auto;
       }
+      .reel-caption a,.reel-tag{color:#b5f4e9;text-decoration:underline;text-underline-offset:2px;position:relative;z-index:1}
       .reel-tags {
         display: flex;
         flex-wrap: wrap;
@@ -584,6 +588,8 @@
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
       import { fetchVideoDiscoveryPage } from "./assets/js/video-discovery.mjs";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+      import {setupMentionInput} from "./assets/js/mentions.js";
+      import {renderSocialText} from "./assets/js/social-rich-text.mjs";
       import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
 
       const root = document.getElementById("reelRoot");
@@ -661,9 +667,9 @@
           ? '<span class="reel-staff">★ Staff Pick</span>'
           : '';
         const tags = (video.tags || [])
-          .filter(Boolean)
+          .filter(t=>/^[a-z0-9_]{1,32}$/i.test(String(t)))
           .slice(0, 6)
-          .map((t) => `<span class="reel-tag">#${escapeHTML(t)}</span>`)
+          .map((t) => `<a class="reel-tag" href="hashtags.html?tag=${encodeURIComponent(t)}">#${escapeHTML(t)}</a>`)
           .join(" ");
         const poster = video.thumbnail_url && isSafeUrl(video.thumbnail_url) ? video.thumbnail_url : "";
         const src = isSafeUrl(video.video_url) ? video.video_url : "";
@@ -691,7 +697,7 @@
                   <span class="reel-username">@${escapeHTML(uploaderName)}</span>
                   ${verified}${staff}
                 </div>
-                <p class="reel-caption" id="caption-${index}">${escapeHTML(video.title || "")}${video.description ? " — " + escapeHTML(video.description) : ""}</p>
+                <p class="reel-caption" id="caption-${index}">${renderSocialText(video.title || "")}${video.description ? " — " + renderSocialText(video.description) : ""}</p>
                 <div class="reel-tags">${tags}</div>
               </div>
               <div class="reel-rail">
@@ -809,6 +815,7 @@
           cap.dataset.reelCaptionWired="true";
           cap.addEventListener("click", (e) => {
             e.stopPropagation();
+            if(e.target.closest("a"))return;
             cap.classList.toggle("expanded");
           });
         });
@@ -1108,6 +1115,7 @@
       const drawerList = document.getElementById("commentDrawerList");
       const drawerForm = document.getElementById("commentDrawerForm");
       const drawerInput = document.getElementById("commentDrawerInput");
+      setupMentionInput(drawerInput);
       let replyingTo = null;
 
       function renderCommentTree(comments, parentId = null, depth = 0) {
@@ -1123,7 +1131,7 @@
             return `
               <div class="comment-row" style="margin-left:${Math.min(depth, 4) * 16}px;" data-comment-id="${c.id}">
                 <strong>${escapeHTML(c.author_name || "Anonymous")}</strong>
-                <p>${escapeHTML(c.body || "")}</p>
+                <p>${renderSocialText(c.body || "")}</p>
                 <div class="reel-comment-actions">
                   <button class="comment-reply-btn" data-reply-id="${c.id}" data-reply-name="${escapeHTML(c.author_name || "Anonymous")}">Reply</button>
                   <button class="comment-like-btn" data-comment-like="${c.id}" aria-pressed="${c.viewer_liked===true}" aria-label="Like comment" type="button">${c.viewer_liked?"♥ Liked":"♡ Like"} <span>${Number(c.like_count||0)}</span></button>
