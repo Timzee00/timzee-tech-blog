@@ -42,3 +42,26 @@ test("mentions preserve cursor, reject email tokens, and allow empty typed @",()
   assert.equal("hello @member".match(token)?.[2],"member");
   assert.equal("hello@domain.com".match(token),null);
 });
+
+test("public video uploads cache immutable objects and reel playback resumes",()=>{
+ const upload=file("assets/js/videos-marketplace.js");
+ const reels=file("video.html");
+ assert.match(upload,/cacheControl:\s*"604800"/);
+ assert.match(upload,/upsert:\s*false/);
+ assert.match(upload,/\${timestamp}-\${safeVideoName}/);
+ assert.match(reels,/createReelProgressStore/);
+ assert.match(reels,/loadedmetadata/);
+ assert.match(reels,/progressStore\?\.set/);
+});
+test("only autoplay policy failures may change global mute state",()=>{
+ const reels=file("video.html");
+ assert.ok(reels.includes('error?.name !== "NotAllowedError" || explicit'));
+});
+test("curator previews and reader recover from external image failures",()=>{
+ const ui=file("assets/js/curator-ui.js");
+ const reader=file("assets/js/post.js");
+ assert.match(ui,/parseEditorialImageRows/);
+ assert.match(ui,/checkCuratorAiBtn/);
+ assert.match(ui,/image\.replaceWith\(placeholder\)/);
+ assert.match(reader,/image\.replaceWith\(link\)/);
+});
