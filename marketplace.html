@@ -335,6 +335,10 @@
                 <span class="market-seller-name">${escapeHTML(item.seller_name || '')}</span>
                 ${item.seller_verified ? '<span class="badge-chip verified market-verified-badge" title="Verified Seller">Verified Seller</span>' : ''}
               </div>
+              <div class="listing-card-actions">
+                <a class="btn ghost sm" href="listing.html?id=${encodeURIComponent(item.id)}">View details</a>
+                <a class="btn sm" href="listing.html?id=${encodeURIComponent(item.id)}&contact=1">Contact seller</a>
+              </div>
             </div>
           </article>
         `).join("")}</div>`;
