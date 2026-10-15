@@ -18,39 +18,46 @@ let mentionRequest = 0;
  */
 export async function searchUsersForMention(query) {
   if (query.length > 32 || !/^[a-z0-9_]*$/i.test(query)) return [];
-  
-  // Check cache first
-  const cacheKey = `mention_${query.toLowerCase()}`;
-  if (mentionCache[cacheKey] && Date.now()-mentionCache[cacheKey].time < 45000) {
+  const {data:sessionInfo}=await supabase.auth.getUser();
+  const id=sessionInfo?.user?.id||"guest";
+  const cacheKey=id+":"+query.toLowerCase();
+  if(mentionCache[cacheKey] && Date.now()-mentionCache[cacheKey].time<30000)
     return mentionCache[cacheKey].results;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from("public_profiles")
-      .select("id, username, display_name, avatar_url")
-      .ilike("username", `${query}%`)
-      .order("username", {ascending:true})
-      .limit(10);
-
-    if (error) {
-      console.error("User search error:", error);
-      return [];
+  try{
+    let friends=[];
+    if(id!=="guest"){
+      const pairs=await supabase.from("friendships").select("requester_id,addressee_id")
+        .eq("status","accepted")
+        .or("requester_id.eq."+id+",addressee_id.eq."+id).limit(250);
+      friends=(pairs.data||[]).map(pair=>pair.requester_id===id?pair.addressee_id:pair.requester_id);
     }
-
-    const results = (data || []).map(user => ({
-      id: user.id,
-      username: user.username,
-      display_name: user.display_name,
-      avatar_url: user.avatar_url
+    let preferred=[];
+    if(friends.length){
+      let request=supabase.from("public_profiles")
+        .select("id,username,display_name,avatar_url").in("id",friends.slice(0,250)).limit(12);
+      if(query)request=request.or("username.ilike."+query+"%,display_name.ilike."+query+"%");
+      const result=await request;
+      preferred=result.data||[];
+    }
+    // If a member does not have matching friends, still find other people.
+    let publicRequest=supabase.from("public_profiles")
+      .select("id,username,display_name,avatar_url")
+      .limit(12);
+    if(query)publicRequest=publicRequest.or("username.ilike."+query+"%,display_name.ilike."+query+"%");
+    else publicRequest=publicRequest.order("username",{ascending:true});
+    const {data,error}=await publicRequest;
+    if(error)throw error;
+    const seen=new Set();
+    const results=[...preferred,...(data||[])].filter(user=>{
+      if(!user.id||!user.username||seen.has(user.id))return false;
+      seen.add(user.id);return true;
+    }).slice(0,10).map(user=>({
+      id:user.id,username:user.username,display_name:user.display_name,
+      avatar_url:user.avatar_url,is_friend:friends.includes(user.id)
     }));
-
-    mentionCache[cacheKey] = {time:Date.now(),results};
+    mentionCache[cacheKey]={time:Date.now(),results};
     return results;
-  } catch (error) {
-    console.error("Mention search failed:", error);
-    return [];
-  }
+  }catch(error){console.warn("Mention search unavailable",error);return [];}
 }
 
 /**
@@ -133,6 +140,11 @@ async function showMentionDropdown(field, searchTerm) {
     handle.style.cssText = "font-size: 12px; color: #999;";
     handle.textContent = `@${user.username || ""}`;
     copy.append(name, handle);
+    if(user.is_friend){
+      const badge=document.createElement("small");badge.textContent="Friend";
+      badge.style.cssText="color:var(--color-primary,#0f766e);font-weight:700";
+      copy.append(badge);
+    }
     item.append(img, copy);
 
     item.addEventListener("mouseover", () => {
