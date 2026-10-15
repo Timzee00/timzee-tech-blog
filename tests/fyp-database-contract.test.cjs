@@ -47,7 +47,7 @@ test("video comments supply mandatory ID and display moderation feedback",async(
    querySelector:()=>button,reset(){this.cleared=true}};
  const ctx={supabase:{from(table){assert.equal(table,"video_comments");return{
    insert(data){inserted=data;return Promise.resolve({error:null});}
- }}},crypto:{randomUUID:makeUuid},
+ }},rpc:async()=>({data:[{comment_count:1}],error:null})},crypto:{randomUUID:makeUuid},
  state:{user:{id:me,user_metadata:{display_name:"Member"}}},
  loadInlineComments:async()=>{},reportAppError(){}};
  const text=source.slice(source.indexOf("async function submitInlineComment("),
