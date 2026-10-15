@@ -12,7 +12,7 @@ test("Timzee Corp-inspired email template escapes untrusted sender names and bod
  assert.match(payload.htmlContent,/Timzee Tech Hub/);
  assert.doesNotMatch(payload.htmlContent,/<script>|<img src=x/i);
  assert.match(payload.htmlContent,/&lt;script&gt;/);
- assert.match(payload.htmlContent,/&lt;img src=x/);
+ assert.doesNotMatch(payload.htmlContent,/onerror=alert\(1\)/);
  assert.match(payload.textContent,/We can help/);
  assert.match(payload.htmlContent,/white-space:pre-wrap/);
 });
