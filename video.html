@@ -755,7 +755,11 @@
         vid.muted = state.sessionMuted;
         const attempt = vid.play();
         if (attempt && typeof attempt.catch === "function") {
-          attempt.catch(() => {
+          attempt.catch((error) => {
+            // A stalled network or unsupported file must not change the
+            // viewer's mute preference. Only an autoplay-policy rejection
+            // should trigger the muted fallback.
+            if (error?.name !== "NotAllowedError" || explicit) return;
             vid.muted = true;
             state.sessionMuted = true;
             try { sessionStorage.setItem("timzee:reels-muted","true"); } catch {}
