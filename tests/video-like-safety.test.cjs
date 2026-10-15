@@ -31,7 +31,7 @@ test("a failed unlike does not falsely show the video as unliked",async()=>{
  const supabase={from(){return{
    select(){return this},eq(){return this},
    async maybeSingle(){return {data:{id:"like-1"},error:null}},
-   async delete(){return {error:{message:"blocked"}}}
+   delete(){return {eq(){return {async eq(){return {error:{message:"blocked"}}}}}}}
  }}};
  const outcome=await makeLike(supabase)(vid,uid);
  assert.equal(outcome.liked,true);
