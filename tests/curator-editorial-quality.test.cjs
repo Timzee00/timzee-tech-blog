@@ -21,3 +21,16 @@ test("rejects a short, unsupported article instead of padding it",()=>{
  const p="A report about a project that still requires factual verification and a great deal of supporting evidence.";
  assert.throws(()=>normalizedArticle({introduction:p.repeat(2),sections:Array.from({length:4},(_,i)=>({heading:"Part "+i,paragraphs:[p]})),conclusion:p.repeat(2)},src,"News"),/450/);
 });
+
+test("editorial parser accepts wrapped JSON without inventing fields",()=>{
+ const {parseModelJson}=require("../netlify/functions/_lib/editorial-draft.cjs");
+ const fence=String.fromCharCode(96).repeat(3);
+ assert.deepEqual(parseModelJson(fence+"json\n"+JSON.stringify({headline:"Hello"})+"\n"+fence),{headline:"Hello"});
+ assert.deepEqual(parseModelJson("Here is JSON: "+JSON.stringify({headline:"Hello"})),{headline:"Hello"});
+ assert.throws(()=>parseModelJson("Not JSON"),/valid JSON/);
+});
+test("editorial readiness uses an authenticated GET and returns no secret values",()=>{
+ const source=require("node:fs").readFileSync(require("node:path").join(__dirname,"../netlify/functions/curator-expand-article.js"),"utf8");
+ assert.ok(source.includes("if(!isPost) return respond(200"));
+ assert.ok(source.includes("deploymentContext:"));
+});

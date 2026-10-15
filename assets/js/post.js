@@ -1,8 +1,9 @@
 import {
   fetchCategories,
-  fetchPosts,
-  fetchComments,
-  fetchPostLikes,
+  fetchRelatedPosts,
+  fetchPublishedAuthorCount,
+  fetchPostLikeSummary,
+  fetchRecentPostComments,
   fetchPostByIdOrSlug,
   fetchPostMedia,
   fetchAds,
@@ -42,6 +43,7 @@ import {
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
+import { mountArticleAssistant } from "./article-ai.mjs";
 
 const state = {
   user: null,
@@ -280,20 +282,25 @@ function renderPost(data, post) {
         ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}">`
         : "";
   }
-  for (const [id,action] of [["summarizePostAi","summarize"],["chatPostAi","chat"]]) {
-    document.getElementById(id)?.addEventListener("click",()=>{
-      // Same-origin session storage: do not put article text in the URL,
-      // referrer or telemetry. The AI still requires signed-in consent.
-      const article=stripHTML(stripEditorialScaffolding(post.content||"")).slice(0,7500);
-      const context={title:String(post.title||"Article").slice(0,220),
-        url:location.href,excerpt:article,action,created:Date.now()};
-      sessionStorage.setItem("timzee:article-ai-context",JSON.stringify(context));
-      window.location.assign("ai-chat.html?articleContext=1");
-    });
-  }
+  mountArticleAssistant(post);
   const postBody = document.getElementById("postContent");
   if (postBody) {
     postBody.innerHTML = normalizeHtml(stripEditorialScaffolding(post.content || ""));
+    postBody.querySelectorAll("img").forEach(image=>{
+      image.loading="lazy";
+      image.decoding="async";
+      image.referrerPolicy="no-referrer";
+      image.addEventListener("error",()=>{
+        const link=document.createElement("a");
+        const url=image.currentSrc||image.src;
+        if(isSafeUrl(url)){
+          link.href=url;link.target="_blank";link.rel="noopener noreferrer";
+          link.textContent="Image unavailable here — open it at the original source";
+        }else{link.textContent="This image is unavailable.";}
+        link.className="curator-image-unavailable";
+        image.replaceWith(link);
+      },{once:true});
+    });
   }
 
   const gallery = document.getElementById("postGallery");
@@ -607,12 +614,12 @@ async function loadCommentAuthors(comments) {
   const ids = Array.from(
     new Set(comments.map((comment) => comment.author_id).filter(Boolean))
   );
-  if (!ids.length) {
-    state.commentAuthors = {};
-    return;
-  }
-  const profiles = await fetchProfilesByIds(ids);
-  const map = {};
+  if (!ids.length) return;
+  // Older comment pagination must retain authors from already loaded pages.
+  const missing=ids.filter(id=>!state.commentAuthors[id]);
+  if(!missing.length)return;
+  const profiles = await fetchProfilesByIds(missing);
+  const map = {...state.commentAuthors};
   profiles.forEach((profile) => {
     if (profile?.id) {
       map[profile.id] = profile;
@@ -628,21 +635,30 @@ function setupLike(post) {
     likeBtn.textContent = state.hasLiked ? "Liked" : "Like";
   };
   updateLabel();
+  let busy=false;
+  likeBtn.setAttribute("aria-pressed",String(state.hasLiked));
   likeBtn.addEventListener("click", async () => {
+    if(busy)return;
     if (!state.user) {
       window.appUI.toast("Please log in to like posts.");
       window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       return;
     }
-    const result = await togglePostLike(post.id, state.user.id);
-    state.hasLiked = result.liked;
-    if (result.liked) {
-      state.likeCount += 1;
-    } else {
-      state.likeCount = Math.max(0, state.likeCount - 1);
-    }
-    updateLabel();
-    updateCounts(post);
+    busy=true;likeBtn.disabled=true;
+    try{
+      const result=await togglePostLike(post.id,state.user.id);
+      if(result.error)throw result.error;
+      if(state.hasLiked !== result.liked){
+        state.likeCount=Math.max(0,state.likeCount+(result.liked?1:-1));
+      }
+      state.hasLiked=result.liked;
+      likeBtn.setAttribute("aria-pressed",String(state.hasLiked));
+      updateLabel();
+      updateCounts(post);
+    }catch(error){
+      console.warn("Post like failed",error);
+      window.appUI?.toast?.("Could not save your like. Try again.",{tone:"error"});
+    }finally{busy=false;likeBtn.disabled=false;}
   });
 }
 
@@ -973,6 +989,31 @@ function handleIncomingComment(payload, postId) {
   renderComments(state.comments);
 }
 
+function setupOlderComments(postId,rows,pageSize=40){
+  const button=document.getElementById("loadOlderCommentsBtn");
+  if(!button)return;
+  let offset=rows.length, loading=false;
+  button.hidden=rows.length<pageSize;
+  button.addEventListener("click",async()=>{
+    if(loading)return;
+    loading=true;button.disabled=true;button.textContent="Loading comments…";
+    try{
+      const page=await fetchRecentPostComments(postId,{offset,limit:pageSize});
+      offset+=page.length;
+      const current=new Set(rows.map(row=>row.id));
+      const additional=page.filter(row=>!current.has(row.id));
+      rows.unshift(...additional);
+      rows.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+      await loadCommentAuthors(additional);
+      renderComments(rows);
+      button.hidden=page.length<pageSize;
+    }catch(error){
+      console.warn("Could not load older comments",error);
+      window.appUI?.toast?.("Older comments could not load. Retry.",{tone:"error"});
+    }finally{loading=false;button.disabled=false;button.textContent="Load older comments";}
+  });
+}
+
 function subscribeToComments(postId) {
   if (!postId || typeof supabase?.channel !== "function") return;
   if (commentChannel) {
@@ -1052,24 +1093,23 @@ function renderAds(settings) {
 }
 
 async function boot() {
+  let articleRendered=false;
   try {
-    state.user = await getCurrentUserWithRole();
-    state.settings = await fetchSettings();
-    applyTheme(state.settings);
-    if (state.settings.themeId) {
-      const theme = await fetchThemeById(state.settings.themeId);
-      if (theme) applyThemeVariables(theme);
-    }
-    renderAuthActions();
-    showAdminLinks();
-
+    // Start the article request independently of auth and personalization.
+    // Visitors should see the public article while secondary page data loads.
     const postId = getQueryParam("id");
     const slug = getQueryParam("slug");
-
+    const authPromise=getCurrentUserWithRole().catch(error=>{
+      console.warn("Optional article auth unavailable",error);return null;
+    });
+    const settingsPromise=fetchSettings().catch(error=>{
+      console.warn("Optional site settings unavailable",error);return {};
+    });
     const post = await fetchPostByIdOrSlug({ id: postId, slug });
 
     if (!post) {
-      console.warn("⚠️ Post not found for id:", postId, "slug:", slug);
+      document.getElementById("post-app")?.setAttribute("aria-busy","false");
+      console.warn("Post unavailable for requested identifier");
       document.getElementById("postTitle").textContent = "Post not found";
       document.getElementById("postContent").innerHTML =
         '<p>This post is unavailable or may have been removed.</p><a class="btn" href="/index.html">Explore the latest posts</a>';
@@ -1078,23 +1118,42 @@ async function boot() {
     }
 
     updateMeta(post);
+    // Display the title and body immediately instead of showing placeholders
+    // while waiting for authentication, comments, and reaction counts.
+    renderPost({categories:[]},post);
+    articleRendered=true;
+    document.getElementById("post-app")?.setAttribute("aria-busy","false");
+    const [user,siteSettings]=await Promise.all([authPromise,settingsPromise]);
+    state.user=user;
+    state.settings=siteSettings||{};
+    applyTheme(state.settings);
+    if(state.settings.themeId)void fetchThemeById(state.settings.themeId)
+      .then(theme=>{if(theme)applyThemeVariables(theme);})
+      .catch(error=>console.warn("Theme styling could not load",error));
+    renderAuthActions();
+    showAdminLinks();
 
-    const [categories, relatedPosts, comments, likes, ads, postMedia] = await Promise.all([
+    const [categories, relatedPosts, comments, likeSummary, ads, postMedia, authorCount] = await Promise.all([
       fetchCategories(),
-      fetchPosts({ status: "published" }),
-      fetchComments({ status: "approved", postId: post.id }),
-      fetchPostLikes({ postId: post.id }),
+      fetchRelatedPosts(post,{limit:4}),
+      fetchRecentPostComments(post.id,{limit:40}).catch(error=>{
+        console.warn("Article comments unavailable",error);return [];
+      }),
+      fetchPostLikeSummary(post.id,state.user?.id).catch(error=>{
+        console.warn("Article like count unavailable",error);return {count:0,hasLiked:false};
+      }),
       fetchAds({ status: "active" }),
-      fetchPostMedia(post.id)
+      fetchPostMedia(post.id),
+      fetchPublishedAuthorCount(post.author_id)
     ]);
 
     state.categories = categories;
-    state.likes = likes;
+    state.likes = [];
     state.ads = ads;
     state.postMedia = postMedia;
-    state.likeCount = likes.length;
-    state.hasLiked = !!state.user && likes.some((like) => like.user_id === state.user.id);
-    state.authorPostCount = relatedPosts.filter((item) => item.author_id === post.author_id).length;
+    state.likeCount = likeSummary.count;
+    state.hasLiked = likeSummary.hasLiked;
+    state.authorPostCount = authorCount;
     if (post.author_id) {
       const profile = await supabase
         .from("public_profiles")
@@ -1119,6 +1178,7 @@ async function boot() {
     state.comments = comments || [];
     await loadCommentAuthors(state.comments);
     renderComments(state.comments);
+    setupOlderComments(post.id,state.comments,40);
     renderRelated({ posts: relatedPosts }, post);
     renderTakeaways(post);
     renderAuthorMini(post);
@@ -1133,9 +1193,17 @@ async function boot() {
     subscribeToComments(post.id);
     setupReveal();
   } catch (err) {
-    reportAppError(err, "Post load failed");
-    const message = extractErrorMessage(err, "Something went wrong while loading this post.");
-    document.getElementById("postTitle").textContent = "Error loading post";
+    document.getElementById("post-app")?.setAttribute("aria-busy","false");
+    if(articleRendered){
+      // A broken recommendation, auth extension or optional social widget
+      // must not erase a successfully loaded public article.
+      console.warn("Optional article enhancement failed",err);
+      document.getElementById("postContent")?.setAttribute("data-enhancement-error","true");
+      return;
+    }
+    reportAppError(err,"Post load failed");
+    const message=extractErrorMessage(err,"Something went wrong while loading this post.");
+    document.getElementById("postTitle").textContent="Error loading post";
     document.getElementById("postContent").innerHTML =
       `<p>${escapeHTML(message)}</p>`;
   }

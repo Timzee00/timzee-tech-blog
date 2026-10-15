@@ -567,6 +567,7 @@
       </div>
       <div class="comment-drawer-list" id="commentDrawerList" aria-live="polite"></div>
       <button type="button" id="commentLoadMoreBtn" class="comment-load-more" hidden>Load more comments</button>
+      <p id="videoCommentStatus" role="status" aria-live="polite" style="margin:4px 14px;font-size:12px;"></p>
       <form novalidate class="comment-drawer-form" id="commentDrawerForm">
         <input type="text" id="commentDrawerInput" placeholder="Add a comment..." maxlength="500" autocomplete="off">
         <button type="submit">Post</button>
@@ -588,10 +589,11 @@
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
       import { fetchVideoDiscoveryPage } from "./assets/js/video-discovery.mjs";
+      import { createReelProgressStore } from "./assets/js/reel-progress.mjs";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
       import {renderSocialText} from "./assets/js/social-rich-text.mjs";
-      import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
+      import { notifyVideoLike } from "./assets/js/data.js";
 
       const root = document.getElementById("reelRoot");
       const params = new URLSearchParams(window.location.search);
@@ -601,6 +603,7 @@
         user: null,
         preferences: mergePreferences(),
         sessionMuted: false,
+        progressStore: null,
         videos: [],
         offset: 0,
         limit: 6,
@@ -688,7 +691,7 @@
             <div class="reel-topbar">
               <a class="reel-back" href="videos.html" aria-label="Back to videos">←</a>
               <div class="reel-wordmark">Timzee <span>Reels</span></div>
-              <button type="button" class="reel-mute" id="mute-${index}" aria-label="Toggle sound">🔊</button>
+              <button type="button" class="reel-mute" id="mute-${index}" aria-label="${state.sessionMuted ? "Unmute videos" : "Mute videos"}">${state.sessionMuted ? "🔇" : "🔊"}</button>
             </div>
 
             <div class="reel-bottom">
@@ -753,12 +756,20 @@
         vid.muted = state.sessionMuted;
         const attempt = vid.play();
         if (attempt && typeof attempt.catch === "function") {
-          attempt.catch(() => {
+          attempt.catch((error) => {
+            // A stalled network or unsupported file must not change the
+            // viewer's mute preference. Only an autoplay-policy rejection
+            // should trigger the muted fallback.
+            if (error?.name !== "NotAllowedError" || explicit) return;
             vid.muted = true;
             state.sessionMuted = true;
-            const btn = document.getElementById(`mute-${idx}`);
-            if (btn) btn.textContent = "🔇";
-            vid.play().catch(() => {});
+            try { sessionStorage.setItem("timzee:reels-muted","true"); } catch {}
+            document.querySelectorAll(".reel-video").forEach(item=>{item.muted=true;});
+            document.querySelectorAll(".reel-mute").forEach(button=>{
+              button.textContent="🔇";
+              button.setAttribute("aria-label","Unmute videos");
+            });
+            vid.play().catch(()=>{});
           });
         }
       }
@@ -1106,6 +1117,23 @@
               void incrementVideoView(el.dataset.id).catch(()=>{});
             },{once:true});
           }
+          if(video && !video.dataset.resumeWired) {
+            video.dataset.resumeWired="true";
+            video.addEventListener("loadedmetadata",() => {
+              const second=state.progressStore?.get(el.dataset.id);
+              if(second && Number.isFinite(video.duration) && second<video.duration-3){
+                try{video.currentTime=second;}catch{}
+              }
+            });
+            let lastSaved=0;
+            video.addEventListener("timeupdate",() => {
+              const now=Date.now();
+              if(video.paused || now-lastSaved<4500)return;
+              lastSaved=now;
+              state.progressStore?.set(el.dataset.id,video.currentTime,video.duration);
+            });
+            video.addEventListener("ended",()=>state.progressStore?.remove(el.dataset.id));
+          }
         });
 
         // Mark liked state for signed-in user
@@ -1322,23 +1350,42 @@
           window.location.href = `login.html?next=${encodeURIComponent(window.location.href)}`;
           return;
         }
+        const status=document.getElementById("videoCommentStatus");
+        const submit=drawerForm.querySelector('[type="submit"]');
+        if(submit?.disabled)return;
+        if(submit)submit.disabled=true;
+        if(status)status.textContent="Posting comment…";
         const authorName = state.user.user_metadata?.display_name || state.user.email;
-        const result = await commentOnVideo(state.commentsOpenFor, state.user.id, authorName, body, replyingTo?.id || null);
-        if (!result.error) {
+        let result;
+        try {
+          result=await commentOnVideo(state.commentsOpenFor,state.user.id,authorName,body,replyingTo?.id||null);
+        } catch(error) {
+          result={error};
+        } finally {if(submit)submit.disabled=false;}
+        if(!result || result.error){
+          if(status)status.textContent="Could not post comment: "+String(result?.error?.message||"Try again.").slice(0,160);
+          return;
+        }
+        if (result) {
+          if(status)status.textContent="Comment posted.";
           drawerInput.value = "";
-          const video = state.videos.find((v) => v.id === state.commentsOpenFor);
-          if (video && video.user_id && video.user_id !== state.user.id) {
-            notifyVideoComment(video.user_id, authorName, state.commentsOpenFor).catch((error) => console.warn("Video-comment notification failed:", error));
-          }
+          // The database trigger delivers owner and reply notifications
+          // once the comment is persisted. No duplicate browser insert.
           const currentVideoId=state.commentsOpenFor;
-          const counters=await supabase.rpc("video_social_counts",{p_video_ids:[currentVideoId]});
-          const total=Number(counters.data?.[0]?.comment_count||0);
-          const badge=state.videos.findIndex(v=>v.id===currentVideoId);
-          if(badge>=0){
-            state.videos[badge].comment_count=total;
-            const count=document.getElementById("commentcount-"+badge);
-            if(count)count.textContent=String(total);
-          }
+          // A failed optional count refresh must never convert a successful
+          // comment into a misleading send failure.
+          try {
+            const counters=await supabase.rpc("video_social_counts",{p_video_ids:[currentVideoId]});
+            if(!counters.error){
+              const total=Number(counters.data?.[0]?.comment_count||0);
+              const badge=state.videos.findIndex(v=>v.id===currentVideoId);
+              if(badge>=0){
+                state.videos[badge].comment_count=total;
+                const count=document.getElementById("commentcount-"+badge);
+                if(count)count.textContent=String(total);
+              }
+            }
+          } catch(error){console.warn("Optional video comment count refresh failed",error);}
           replyingTo=null;
           void openComments(currentVideoId);
         }
@@ -1407,6 +1454,11 @@
       async function boot() {
         state.user=await getCurrentUser();
         state.preferences=mergePreferences(await loadUserPreferences(state.user));
+        try{
+          state.progressStore=createReelProgressStore(window.sessionStorage,{
+            key:"timzee:reel:position:"+(state.user?.id||"guest")
+          });
+        }catch{state.progressStore=null;}
         try {
           const savedMute=sessionStorage.getItem("timzee:reels-muted");
           state.sessionMuted = savedMute === null ? state.preferences.videos.mutedByDefault === true : savedMute === "true";

@@ -22,7 +22,8 @@ import {
 import { supabase, getCurrentUserWithRole, getUserRole } from "./supabase.js";
 import { escapeHTML, slugify, isSafeUrl, normalizeHtml } from "./utils.js";
 import { createPost, createPostMedia } from "./data.js";
-import { ROUNDUP_TOPICS, generateRoundupDraft, suggestRoundupIds, trustedExternalUrl, imageUrls, htmlEscape, socialCaption, placeEditorialFigures } from "./curator-publishing.mjs";
+import {isDemoFeedUrl} from "./scout-source-health.mjs";
+import { ROUNDUP_TOPICS, generateRoundupDraft, suggestRoundupIds, trustedExternalUrl, imageUrls, htmlEscape, socialCaption, placeEditorialFigures, parseEditorialImageRows } from "./curator-publishing.mjs";
 import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
 
 class CuratorManager {
@@ -33,6 +34,7 @@ class CuratorManager {
     this.stats = null;
     this.currentUser = null;
     this.roundupIds = new Set();
+    this.cardDrafts = new Map();
   }
 
   async init(containerId) {
@@ -107,6 +109,12 @@ class CuratorManager {
                 <p id="scoutBackendStatus" role="status" style="margin:8px 0 12px;font-size:13px;color:var(--color-text-muted);"></p>
                 <button class="btn btn-small" id="syncNowBtn" ${this.canRunScout ? "" : "disabled title=\"Only Super Admins can run the Scout manually\""}>🔄 Sync Now</button>
               </div>
+            </div>
+            <div class="card">
+              <h4>Editorial AI readiness</h4>
+              <p style="font-size:13px;color:var(--color-text-muted);">Check whether this deployed Netlify Function can see a Groq or OpenRouter key. This does not make a paid API request.</p>
+              <p id="curatorAiDiagnostic" role="status" aria-live="polite">Not checked on this deployment.</p>
+              <button type="button" class="btn ghost" id="checkCuratorAiBtn">Check AI setup</button>
             </div>
           </div>
         </div>
@@ -362,6 +370,8 @@ class CuratorManager {
     this.container.querySelector("#syncNowBtn").addEventListener("click", (e) => {
       this.handleSyncNow(e.currentTarget);
     });
+    this.container.querySelector("#checkCuratorAiBtn")?.addEventListener("click",()=>void this.checkEditorialAi());
+
 
     // Import recommended feeds
     const importBtn = this.container.querySelector("#importFeedsBtn");
@@ -394,8 +404,9 @@ class CuratorManager {
       const count = result.posted ? result.posted.length : 0;
       const status=result.status || "unknown";
       const errorCount = result.feedErrors ? result.feedErrors.length : 0;
+      const demoCount=(result.ignoredDemoSources?.length||0)+(result.ignoredEnvDemoCount||0);
       if (lastSync) {
-        lastSync.textContent = `Sync ${status} at ${new Date().toLocaleTimeString()} — ${count} new draft${count === 1 ? "" : "s"}${errorCount ? `, ${errorCount} source error${errorCount === 1 ? "" : "s"}` : ""}`;
+        lastSync.textContent = `Sync ${status} at ${new Date().toLocaleTimeString()} — ${count} new draft${count === 1 ? "" : "s"}${errorCount ? `, ${errorCount} source error${errorCount === 1 ? "" : "s"}` : ""}${demoCount ? ` · ${demoCount} example feed(s) ignored` : ""}`;
       }
       await this.load();
       void this.loadScoutHealth();
@@ -406,6 +417,36 @@ class CuratorManager {
       btn.disabled = false;
       btn.textContent = originalText;
     }
+  }
+
+  async checkEditorialAi() {
+    const status=this.container.querySelector("#curatorAiDiagnostic");
+    const button=this.container.querySelector("#checkCuratorAiBtn");
+    if(!status || !button)return;
+    button.disabled=true;
+    status.textContent="Checking this deployment's Function configuration…";
+    try{
+      const {data,error}=await supabase.auth.getSession();
+      if(error || !data?.session?.access_token) throw Error("Sign in again to check AI configuration.");
+      const response=await fetch("/.netlify/functions/curator-expand-article",{
+        method:"GET",headers:{Authorization:"Bearer "+data.session.access_token},cache:"no-store"
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw Error(result.error||"The editorial AI diagnostic isn't available in this deploy.");
+      const provider=result.provider==="openrouter"?"OpenRouter":"Groq";
+      const context=result.deploymentContext||"unknown";
+      const available=result.available||{};
+      const detail="Groq: "+(available.groq===true?"configured":"missing")+
+        " · OpenRouter: "+(available.openrouter===true?"configured":"missing");
+      status.textContent=(result.configured
+        ? "Default "+provider+" credential detected."
+        : "Default "+provider+" credential missing.")+
+        " "+detail+" · Netlify context: "+context+
+        ". This verifies configuration visibility, not a working model request. "+
+        "If the key exists in Netlify but is missing here, check the Functions scope and the selected deploy context, then deploy again.";
+    }catch(error){
+      status.textContent=error?.message||"Could not check editorial AI.";
+    }finally {button.disabled=false;}
   }
 
   async loadScoutHealth() {
@@ -475,6 +516,7 @@ class CuratorManager {
       const checkedAt = source.last_fetched_at
         ? new Date(source.last_fetched_at).toLocaleString() : "Never checked";
       // Source failure details are escaped, and only displayed to staff.
+      const isDemo=isDemoFeedUrl(source.feed_url||source.url);
       const lastError = source.last_error
         ? `<p class="curator-source-error" role="status">Last error: ${escapeHTML(String(source.last_error).slice(0, 250))}</p>`
         : "";
@@ -485,7 +527,7 @@ class CuratorManager {
           <p>${escapeHTML(source.feed_url || source.query || 'No feed URL')}</p>
           <p style="font-size: 11px; color: var(--color-primary);">📡 ${escapeHTML(String(source.source_type || '').toUpperCase())} • 📄 Up to ${escapeHTML(String(source.max_items ?? 30))} articles per sync</p>
           <p style="font-size:12px;color:var(--color-text-muted);">Last checked: ${escapeHTML(checkedAt)} · ${failures} failure${failures === 1 ? "" : "s"}</p>
-          ${lastError}
+          ${isDemo ? '<p class="curator-source-error" role="status"><strong>Example feed ignored.</strong> Replace it with a real RSS feed or delete this source.</p>' : lastError}
         </div>
         <div class="source-actions">
           <button class="btn ${active ? "btn-ghost" : "btn-danger"}" data-source-id="${source.id}" data-type="toggle-source">
@@ -503,8 +545,58 @@ class CuratorManager {
     });
   }
 
+  captureCardDrafts(){
+    const list=this.container.querySelector("#postsList");
+    if(!list)return;
+    list.querySelectorAll("[data-curator-images]").forEach(field=>{
+      const id=field.dataset.curatorImages;
+      if(!id)return;
+      const input=attr=>list.querySelector('['+attr+'="'+id+'"]');
+      const images=field.closest("details");
+      const reporting=input("data-curator-reporting")?.closest("details");
+      const note=input("data-editorial-state");
+      this.cardDrafts.set(id,{
+        images:field.value,
+        credit:input("data-curator-image-credit")?.value||"",
+        rights:input("data-curator-image-rights")?.checked||false,
+        reporting:input("data-curator-reporting")?.value||"",
+        reportingUrl:input("data-curator-reporting-source")?.value||"",
+        reportingChecked:input("data-curator-reporting-checked")?.checked||false,
+        provider:input("data-curator-provider")?.value||"auto",
+        imagesOpen:images?.open||false,
+        reportingOpen:reporting?.open||false,
+        lastError:note?.getAttribute("role")==="alert"?note.textContent:""
+      });
+    });
+  }
+
+  restoreCardDrafts(){
+    const list=this.container.querySelector("#postsList");
+    if(!list)return;
+    for(const [id,data] of this.cardDrafts){
+      const input=attr=>list.querySelector('['+attr+'="'+id+'"]');
+      const images=input("data-curator-images");
+      if(!images)continue;
+      images.value=data.images;
+      const setValue=(attr,val)=>{const field=input(attr);if(field)field.value=val;};
+      const setChecked=(attr,val)=>{const field=input(attr);if(field)field.checked=val;};
+      setValue("data-curator-image-credit",data.credit);
+      setChecked("data-curator-image-rights",data.rights);
+      setValue("data-curator-reporting",data.reporting);
+      setValue("data-curator-reporting-source",data.reportingUrl);
+      setChecked("data-curator-reporting-checked",data.reportingChecked);
+      setValue("data-curator-provider",data.provider);
+      if(images.closest("details"))images.closest("details").open=data.imagesOpen;
+      const notes=input("data-curator-reporting");
+      if(notes?.closest("details"))notes.closest("details").open=data.reportingOpen;
+      const status=input("data-editorial-state");
+      if(data.lastError && status){status.textContent=data.lastError;status.setAttribute("role","alert");}
+    }
+  }
+
   renderPosts() {
     const list = this.container.querySelector("#postsList");
+    this.captureCardDrafts();
     if (!this.posts.length) {
       list.innerHTML = "<div style='grid-column: 1/-1; text-align: center; padding: 40px; color: var(--color-text-muted);'>No pending articles</div>";
       return;
@@ -533,7 +625,7 @@ class CuratorManager {
           <summary>Images and embeds (up to six)</summary>
           <p>Source images are previews only. Add approved HTTPS image URLs, one per line. Publishing requires confirmed image rights.</p>
           ${post.image_url && trustedExternalUrl(post.image_url)?'<img class="curator-image-preview" loading="lazy" referrerpolicy="no-referrer" alt="Source image preview - rights not verified" src="'+escapeHTML(post.image_url)+'" style="max-width:180px;max-height:120px;object-fit:contain;">':""}
-          <label>Approved image URLs<textarea data-curator-images="${post.id}" rows="3" class="field" placeholder="https://example.com/licensed-image.jpg">${escapeHTML(candidates.join("\n"))}</textarea></label>
+          <label>Approved image URLs — one per line; optionally add <code> | section heading | caption</code> to place a picture with the relevant passage<textarea data-curator-images="${post.id}" rows="3" class="field" placeholder="https://example.com/licensed-image.jpg">${escapeHTML(candidates.join("\n"))}</textarea></label>
           <label>Image credit and permission reference<input data-curator-image-credit="${post.id}" class="field" placeholder="Photographer / license / permission link"></label>
           <label><input type="checkbox" data-curator-image-rights="${post.id}"> I verified permission to display these images on Timzee Tech Hub</label>
         </details>
@@ -548,6 +640,13 @@ class CuratorManager {
           </label>
           <label class="curator-reporting-confirm"><input type="checkbox" data-curator-reporting-checked="${post.id}"> I reviewed this source and will fact-check the generated draft before publication.</label>
         </details>
+        <label class="curator-provider-choice">AI writing provider
+          <select class="field" data-curator-provider="${post.id}">
+            <option value="auto">Automatic (server preference)</option>
+            <option value="groq">Groq</option>
+            <option value="openrouter">OpenRouter</option>
+          </select>
+        </label>
         <div class="post-actions">
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-preview">Preview post</button>
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-translate">Translate to English</button>
@@ -558,6 +657,7 @@ class CuratorManager {
       </div>
     `}).join("");
 
+    this.restoreCardDrafts();
     list.querySelectorAll(".btn").forEach(btn => {
       btn.addEventListener("click", (e) => this.handlePostAction(e, btn));
     });
@@ -690,9 +790,12 @@ class CuratorManager {
     const post=this.posts.find(item=>item.id===id);
     if(!post)return;
     // This is a local visual preview; no published post is created.
-    const selected=imageUrls(this.container.querySelector('[data-curator-images="'+id+'"]')?.value||"");
+    const selectedRows=parseEditorialImageRows(this.container.querySelector('[data-curator-images="'+id+'"]')?.value||"");
+    const selected=selectedRows.map(row=>row.url);
     const permitted=this.container.querySelector('[data-curator-image-rights="'+id+'"]')?.checked===true;
-    const media=selected.length?selected:post.image_url && trustedExternalUrl(post.image_url)?[post.image_url]:[];
+    const mediaRows=selectedRows.length?selectedRows:post.image_url && trustedExternalUrl(post.image_url)
+      ? [{url:post.image_url,heading:"",caption:""}] : [];
+    const media=mediaRows.map(row=>row.url);
     const credited=this.container.querySelector('[data-curator-image-credit="'+id+'"]')?.value.trim()||"";
     const doc=new DOMParser().parseFromString(String(post.content||""),"text/html");
     const takeawayTag=doc.querySelector("[data-timzee-takeaways]")?.getAttribute("data-timzee-takeaways");
@@ -713,32 +816,72 @@ class CuratorManager {
       '<p class="post-kicker">'+escapeHTML((post.tags||[])[0]||"General")+' · '+escapeHTML(post.source_name||"Curator")+'</p>'+
       '<h1>'+escapeHTML(post.title||"Untitled")+'</h1>'+
       '<p class="post-dek">'+escapeHTML(post.excerpt||"")+'</p>'+
-      (media.length?'<div class="curator-preview-cover">'+(imageHtml.split("</figure>")[0]||"")+'</figure></div>':'')+
+      (media.length?'<div class="curator-preview-cover"><figure><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+escapeHTML(media[0])+'" alt="Curated cover photo"></figure></div>':'')+
       (insights.length?'<section class="post-highlights"><h2>Key Takeaways</h2><ul>'+
          insights.map(i=>'<li>'+escapeHTML(i)+'</li>').join("")+'</ul></section>':'')+
-      '<div class="post-content">'+normalizeHtml(placeEditorialFigures(post.content||"",media,credited))+'</div>'+
+      '<div class="post-content">'+normalizeHtml(placeEditorialFigures(post.content||"",mediaRows,credited))+'</div>'+
       '<p class="curator-preview-note">'+
       (permitted?'Images marked as rights-verified by editor. ':'Image rights are not confirmed. ')+
       (credited?'Credit: '+escapeHTML(credited)+'. ':'')+
       'This is a private preview and has not been published.</p></article></div>';
-    dialog.style.cssText="position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(760px,calc(100vw - 20px));min-width:0;max-width:calc(100vw - 20px);height:min(92dvh,900px);max-height:calc(100dvh - 20px);overflow:hidden;padding:0;border-radius:16px;display:flex;flex-direction:column;";
+    dialog.style.cssText="position:fixed;top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);margin:0;box-sizing:border-box;width:min(760px,calc(100vw - 20px));min-width:0;max-width:calc(100vw - 20px);height:min(92dvh,900px);max-height:calc(100dvh - 20px);overflow:hidden;padding:0;border-radius:16px;display:flex;flex-direction:column;";
     const body=dialog.querySelector(".curator-preview-body");
     body.style.cssText="flex:1 1 auto;min-height:0;min-width:0;max-width:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:clamp(12px,3vw,24px);";
     dialog.querySelector(".curator-preview-toolbar").style.cssText="display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;padding:12px 16px;";
     dialog.querySelectorAll(".post-shell,.post-article,.post-content,.curator-preview-cover,figure").forEach(el=>{
       el.style.minWidth="0";el.style.maxWidth="100%";el.style.overflowWrap="anywhere";
     });
+    // Avoid inherited post-shell padding pushing content beyond narrow phones.
+    dialog.querySelectorAll(".post-shell,.post-article,.post-content").forEach(el=>{
+      el.style.width="100%";el.style.boxSizing="border-box";el.style.margin="0";
+      el.style.paddingInline="0";el.style.overflowX="hidden";
+    });
+    dialog.querySelectorAll("figure").forEach(el=>{el.style.maxWidth="100%";el.style.margin="12px 0";});
+    dialog.querySelectorAll("iframe").forEach(el=>{
+      el.style.maxHeight="min(52dvh,420px)";el.setAttribute("loading","lazy");
+    });
     dialog.querySelectorAll("img,iframe,video").forEach(media=>{
       media.style.maxWidth="100%";media.style.width="100%";media.style.height="auto";
       media.style.objectFit="contain";
     });
+    dialog.querySelectorAll("img").forEach(image=>image.addEventListener("error",()=>{
+      const placeholder=document.createElement("p");
+      placeholder.className="curator-preview-note";
+      placeholder.textContent="This image host blocked embedding or the image is unavailable. Check the URL, license and hosting before publishing.";
+      image.replaceWith(placeholder);
+    },{once:true}));
     document.body.append(dialog);
-    const close=()=>dialog.close();
+    // Android keyboards and browser bars change the *visual* viewport.
+    // Keep the dialog centered in the visible area, not the obscured layout viewport.
+    const viewport=window.visualViewport;
+    const fitPreview=()=>{
+      const width=viewport?.width||window.innerWidth;
+      const height=viewport?.height||window.innerHeight;
+      dialog.style.left=((viewport?.offsetLeft||0)+width/2)+"px";
+      dialog.style.top=((viewport?.offsetTop||0)+height/2)+"px";
+      dialog.style.width=Math.max(0,Math.min(760,width-20))+"px";
+      dialog.style.maxWidth=Math.max(0,width-20)+"px";
+      dialog.style.height=Math.max(0,Math.min(900,height-16))+"px";
+      dialog.style.maxHeight=Math.max(0,height-16)+"px";
+    };
+    fitPreview();
+    viewport?.addEventListener("resize",fitPreview);
+    viewport?.addEventListener("scroll",fitPreview);
+    const close=()=>{if(typeof dialog.close==="function"&&dialog.open)dialog.close();else dialog.remove();};
     dialog.querySelector(".curator-preview-close")?.addEventListener("click",close);
     dialog.addEventListener("close",()=>dialog.remove(),{once:true});
+    const cleanup=()=>{
+      viewport?.removeEventListener("resize",fitPreview);
+      viewport?.removeEventListener("scroll",fitPreview);
+    };
+    dialog.addEventListener("close",cleanup,{once:true});
     dialog.addEventListener("click",e=>{if(e.target===dialog)close();});
     if(typeof dialog.showModal==="function")dialog.showModal();
     else dialog.setAttribute("open","");
+    const removed=new MutationObserver(()=>{
+      if(!dialog.isConnected){cleanup();removed.disconnect();}
+    });
+    removed.observe(document.body,{childList:true});
   }
 
   async translateCuratorPost(id,button) {
@@ -751,13 +894,20 @@ class CuratorManager {
       const response=await fetch("/.netlify/functions/curator-expand-article",{
         method:"POST",
         headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
-        body:JSON.stringify({id,mode:"translate"})
+        body:JSON.stringify({id,mode:"translate",provider:this.container.querySelector('[data-curator-provider="'+id+'"]')?.value||"auto"})
       });
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(payload.error||"English translation failed.");
+      const note=this.container.querySelector('[data-editorial-state="'+id+'"]');
+      if(note){note.textContent="Translated into English with "+(payload.providerUsed==="openrouter"?"OpenRouter":"Groq")+". Review and expand with verified reporting.";note.setAttribute("role","status");}
       window.appUI.toast("English translation saved as a source brief; review it before expansion.",{tone:"success"});
       await this.load();
-    }catch(error){window.appUI.toast(error.message||"Translation failed.",{tone:"error"});}
+    }catch(error){
+      const message=String(error?.message||"Translation failed.").slice(0,340);
+      const note=this.container.querySelector('[data-editorial-state="'+id+'"]');
+      if(note){note.textContent="Translation failed: "+message;note.setAttribute("role","alert");}
+      window.appUI.toast(message,{tone:"error"});
+    }
     finally{button.disabled=false;button.textContent=label;}
   }
 
@@ -782,17 +932,20 @@ class CuratorManager {
       if(!token) throw new Error("Sign in again to use the editorial assistant.");
       const res=await fetch("/.netlify/functions/curator-expand-article",{
         method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
-        body:JSON.stringify({id:curatorPostId,reporting,reportingUrl})
+        body:JSON.stringify({id:curatorPostId,reporting,reportingUrl,provider:this.container.querySelector('[data-curator-provider="'+curatorPostId+'"]')?.value||"auto"})
       });
       const payload=await res.json().catch(()=>({}));
       if(!res.ok)throw new Error(payload.error||"Could not expand the article.");
       const warnings=payload.verificationNotes||[];
       const note=this.container.querySelector('[data-editorial-state="'+curatorPostId+'"]');
-      if(note)note.textContent="Expanded to "+payload.wordCount+" words. Fact-check before publication."+ (warnings.length ? " Check: "+warnings.slice(0,2).join("; ") : "");
+      if(note){note.textContent="Expanded with "+(payload.providerUsed==="openrouter"?"OpenRouter":"Groq")+" to "+payload.wordCount+" words. Fact-check before publication."+ (warnings.length ? " Check: "+warnings.slice(0,2).join("; ") : "");note.setAttribute("role","status");}
       window.appUI.toast("AI-assisted article saved as a draft. Verify each factual claim and source before publishing.",{tone:"success"});
       await this.load();
     } catch(error) {
-      window.appUI.toast(error?.message||"Editorial expansion failed. Add verified context and retry, or keep it as a source brief.",{tone:"error"});
+      const message=String(error?.message||"Editorial expansion failed. Add verified reporting and retry.").slice(0,380);
+      const note=this.container.querySelector('[data-editorial-state="'+curatorPostId+'"]');
+      if(note){note.textContent="Expansion failed: "+message;note.setAttribute("role","alert");}
+      window.appUI.toast(message,{tone:"error"});
     } finally {
       btn.disabled=false;btn.textContent=label;
     }
@@ -802,7 +955,8 @@ class CuratorManager {
     const curatorPost = this.posts.find(p => p.id === curatorPostId);
     if (!curatorPost) return;
     const imagesBox=this.container.querySelector('[data-curator-images="'+curatorPostId+'"]');
-    const selectedImages=imageUrls(imagesBox?.value||"");
+    const imageRows=parseEditorialImageRows(imagesBox?.value||"");
+    const selectedImages=imageRows.map(row=>row.url);
     const approved=this.container.querySelector('[data-curator-image-rights="'+curatorPostId+'"]')?.checked===true;
     const imageCredit=this.container.querySelector('[data-curator-image-credit="'+curatorPostId+'"]')?.value.trim()||"";
     if(selectedImages.length && (!approved || imageCredit.length<5)){
@@ -825,7 +979,7 @@ class CuratorManager {
       const title = curatorPost.title || "Untitled";
       const body=curatorPost.content || (curatorPost.excerpt ? '<p>'+escapeHTML(curatorPost.excerpt)+'</p>' : "");
       const credit=selectedImages.length ? '<p class="curator-image-credit">Images: '+htmlEscape(imageCredit)+'</p>' : "";
-      const content=placeEditorialFigures(stripEditorialScaffolding(body),selectedImages,imageCredit)+credit;
+      const content=placeEditorialFigures(stripEditorialScaffolding(body),imageRows,imageCredit)+credit;
       const now = new Date().toISOString();
 
       const result = await createPost({

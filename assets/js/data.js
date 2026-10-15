@@ -56,6 +56,54 @@ export async function fetchPosts({ status, contentType, limit = null, offset = 0
   return rows;
 }
 
+// The article reader must not fetch the entire posts table to render three
+// related cards or retrieve every like record just to display a number.
+export async function fetchRelatedPosts(post,{limit=4}={}) {
+  if(!post?.id)return [];
+  let query=supabase.from("posts")
+    .select("id,title,category_id,created_at,views")
+    .eq("status","published").neq("id",post.id)
+    .order("created_at",{ascending:false})
+    .limit(Math.max(1,Math.min(8,Math.trunc(Number(limit)||4))));
+  query=post.category_id ? query.eq("category_id",post.category_id)
+    :query.is("category_id",null);
+  return normalizeResponse(await query);
+}
+export async function fetchPublishedAuthorCount(authorId) {
+  if(!authorId)return 0;
+  const {count,error}=await supabase.from("posts")
+    .select("id",{count:"exact",head:true})
+    .eq("author_id",authorId).eq("status","published");
+  if(error) { console.warn("Author count unavailable",error);return 0; }
+  return Number(count||0);
+}
+export async function fetchPostLikeSummary(postId,viewerId=null) {
+  if(!postId)return {count:0,hasLiked:false};
+  const [countResult,viewerResult]=await Promise.all([
+    supabase.from("post_likes").select("id",{head:true,count:"exact"}).eq("post_id",postId),
+    viewerId
+      ?supabase.from("post_likes").select("id").eq("post_id",postId).eq("user_id",viewerId).maybeSingle()
+      :Promise.resolve({data:null,error:null})
+  ]);
+  if(countResult.error||viewerResult.error){
+    throw countResult.error||viewerResult.error;
+  }
+  return {count:Number(countResult.count||0),hasLiked:Boolean(viewerResult.data)};
+}
+export async function fetchRecentPostComments(postId,{status="approved",offset=0,limit=40}={}) {
+  if(!postId)return [];
+  const start=Math.max(0,Math.trunc(Number(offset)||0));
+  const size=Math.max(1,Math.min(60,Math.trunc(Number(limit)||40)));
+  let query=supabase.from("comments").select("*")
+    .eq("post_id",postId).order("created_at",{ascending:false})
+    .range(start,start+size-1);
+  if(status) query=query.eq("status",status);
+  const {data,error}=await query;
+  if(error)throw error;
+  // Display loaded pages chronologically, keeping new comments at the bottom.
+  return (data||[]).reverse();
+}
+
 export async function fetchPostMedia(postId) {
   if (!postId) return [];
   const result = await supabase
@@ -242,14 +290,14 @@ export async function togglePostLike(postId, userId) {
 
   if (existing.error) {
     console.warn("Like lookup failed", existing.error);
-    return { liked: false };
+    return { liked: false, error: existing.error };
   }
 
   if (existing.data) {
     const removed = await supabase.from("post_likes").delete().eq("id", existing.data.id);
     if (removed.error) {
       console.warn("Like removal failed", removed.error);
-      return { liked: true };
+      return { liked: true, error: removed.error };
     }
     return { liked: false };
   }
@@ -261,7 +309,7 @@ export async function togglePostLike(postId, userId) {
   });
   if (inserted.error) {
     console.warn("Like insert failed", inserted.error);
-    return { liked: false };
+    return { liked: false, error: inserted.error };
   }
   return { liked: true };
 }

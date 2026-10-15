@@ -12,6 +12,27 @@ export function imageUrls(input,max=6){
   const values=Array.isArray(input)?input:String(input||"").split(/[\n\r,]+/);
   return [...new Set(values.map(trustedExternalUrl).filter(Boolean))].slice(0,Math.max(0,Math.min(max,6)));
 }
+/** An editor can write "image URL | matching section heading | caption".
+ * Plain one-URL-per-line entries continue to work. Keep editorial placement
+ * metadata out of URLs and verify reuse rights separately before publication.
+ */
+export function parseEditorialImageRows(input,max=6){
+  const values=Array.isArray(input)?input:String(input||"").split(/[\n\r]+/);
+  const result=[],seen=new Set();
+  for(const value of values){
+    const parts=typeof value==="string"?value.split(/\s+\|\s+/):[value?.url,value?.heading,value?.caption];
+    const url=trustedExternalUrl(parts[0]);
+    if(!url || seen.has(url))continue;
+    seen.add(url);
+    result.push({
+      url,
+      heading:String(parts[1]||"").replace(/<[^>]*>/g,"").trim().slice(0,110),
+      caption:String(parts[2]||"").replace(/<[^>]*>/g,"").trim().slice(0,220)
+    });
+    if(result.length>=Math.max(1,Math.min(6,max)))break;
+  }
+  return result;
+}
 export function htmlEscape(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
 export function plainText(v){return String(v||"").replace(/<[^>]*>/g," ").replace(/&nbsp;/gi," ").replace(/\s+/g," ").trim();}
 export function generateRoundupDraft(rows,topic){
@@ -79,18 +100,37 @@ export function socialCaption(title,url,topic="news"){
  * Placement is evenly spaced by section, never an inference that a particular
  * photo documents a claim. Editors verify relevance and reuse permission. */
 export function placeEditorialFigures(html,images,credit=""){
-  const urls=imageUrls(images).slice(1);
+  const rows=(Array.isArray(images)&&images.every(v=>typeof v==="object")
+    ?parseEditorialImageRows(images):Array.isArray(images)
+      ?parseEditorialImageRows(images.map(x=>String(x)).join("\n"))
+      :parseEditorialImageRows(images)).slice(1);
   const body=String(html||"");
-  if(!urls.length)return body;
-  const headings=[...body.matchAll(/<\/h2\s*>/gi)];
+  if(!rows.length)return body;
+  const headings=[...body.matchAll(/<h2\b[^>]*>[\s\S]*?<\/h2\s*>/gi)];
   if(!headings.length)return body;
-  const positions=urls.map((url,i)=>{
-    const chosen=Math.min(headings.length-1,Math.floor((i+1)*headings.length/(urls.length+1)));
+  const positions=rows.map((row,i)=>{
+    let match=-1;
+    if(row.heading){
+      const sought=row.heading.toLowerCase().replace(/\s+/g," ");
+      match=headings.findIndex(heading=>plainText(heading[0]).toLowerCase().includes(sought));
+    }
+    // If no section matches, distribute photos without claiming they document
+    // facts from an unrelated passage. Editors approve every placement.
+    const chosen=match>=0?match:Math.min(headings.length-1,
+      Math.floor((i+1)*headings.length/(rows.length+1)));
+    // Preserve readable context: introduce the section before showing its
+    // illustrative figure, rather than placing every photo immediately after
+    // the heading. Do not cross into the next section.
+    const begin=headings[chosen].index+headings[chosen][0].length;
+    const until=headings[chosen+1]?.index??body.length;
+    const within=body.slice(begin,until);
+    const firstParagraph=/<p\b[^>]*>[\s\S]*?<\/p\s*>/i.exec(within);
+    const afterContext=firstParagraph ? begin+firstParagraph.index+firstParagraph[0].length : begin;
     return {
-      position:headings[chosen].index+headings[chosen][0].length,
-      figure:'<figure class="curator-inline-image"><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+htmlEscape(url)+'" alt="Editorial illustration '+(i+2)+'"><figcaption>'+htmlEscape(credit||"Image published with permission")+'</figcaption></figure>'
+      position:afterContext,index:i,
+      figure:'<figure class="curator-inline-image"><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+htmlEscape(row.url)+'" alt="'+htmlEscape(row.caption||"Article illustration "+(i+2))+'"><figcaption>'+htmlEscape(row.caption||credit||"Image used with permission")+'</figcaption></figure>'
     };
   });
-  return positions.sort((a,b)=>b.position-a.position)
-    .reduce((current,item)=>current.slice(0,item.position)+item.figure+current.slice(item.position),body);
+  return positions.sort((a,b)=>b.position-a.position || b.index-a.index).reduce(
+    (current,item)=>current.slice(0,item.position)+item.figure+current.slice(item.position),body);
 }

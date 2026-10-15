@@ -31,7 +31,15 @@ function topicFor(item){
   return interestAreas.find(([, , re])=>re.test(haystack))?.[0]||"other";
 }
 function publishedMillis(value){
-  const ms=Date.parse(String(value||""));
+  const raw=String(value||"").trim();
+  if(!raw) return 0;
+  // GDELT sends compact UTC dates. Parsing these with Date.parse alone
+  // silently removes every GDELT candidate from the fresh-news feed.
+  const match=raw.match(/^(\d{4})(\d{2})(\d{2})T?(\d{2})(\d{2})(\d{2})Z?$/);
+  const normalized=match
+    ? `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}Z`
+    : raw;
+  const ms=Date.parse(normalized);
   return Number.isFinite(ms)?ms:0;
 }
 function newsScore(item,now=Date.now()){

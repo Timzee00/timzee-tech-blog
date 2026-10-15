@@ -56,14 +56,14 @@
     </header>
 
     <main id="main-content" class="post-hero">
-      <div class="container post-layout" id="post-app">
+      <div class="container post-layout" id="post-app" aria-busy="true">
         <article class="post-shell post-article" data-reveal>
           <div class="post-header">
             <div class="post-kicker">
-              <div class="chip" id="postCategory">Category</div>
+              <div class="chip" id="postCategory">Article</div>
               <span class="post-date" id="postDate"></span>
             </div>
-            <h1 id="postTitle">Post title</h1>
+            <h1 id="postTitle" aria-live="polite">Loading article…</h1>
             <p class="post-dek" id="postDek"></p>
             <div class="post-meta post-meta-row" id="postMeta"></div>
           </div>
@@ -75,7 +75,7 @@
           </section>
 
           <div class="post-cover" id="postCover"></div>
-          <div class="post-content" id="postContent"></div>
+          <div class="post-content" id="postContent"><p class="post-reader-loading">Loading the story and its sources…</p></div>
           <div class="post-gallery" id="postGallery"></div>
 
           <div class="post-tags-row">
@@ -94,6 +94,31 @@
             <button type="button" class="btn ghost" id="summarizePostAi">Summarize with AI</button>
             <button type="button" class="btn ghost" id="chatPostAi">Chat about this article</button>
           </div>
+          <section id="inlineArticleAi" class="article-ai-panel" aria-label="Ask AI about this article" hidden>
+            <div class="article-ai-panel-heading">
+              <div><h2>Ask Timzee AI about this article</h2><p>Answers use this article as context. Check the original sources for important details.</p></div>
+              <button id="closeArticleAi" type="button" class="btn ghost" aria-label="Close article AI panel">Close</button>
+            </div>
+            <div class="article-ai-provider-row">
+              <label for="articleAiProvider">AI provider</label>
+              <select id="articleAiProvider" aria-describedby="articleAiStatus">
+                <option value="auto">Auto (available provider)</option>
+                <option value="groq">Groq</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+              </select>
+              <button id="articleAiCheckProvider" type="button" class="btn ghost">Check connection</button>
+            </div>
+            <div id="articleAiTranscript" class="article-ai-transcript" role="log" aria-live="polite" aria-relevant="additions text"></div>
+            <form id="articleAiForm" class="article-ai-form">
+              <label class="sr-only" for="articleAiQuestion">Your question about the article</label>
+              <textarea id="articleAiQuestion" placeholder="Ask about the story, its background, or what it means…" rows="2" maxlength="700" required></textarea>
+              <button type="submit" id="articleAiSend" class="btn">Ask</button>
+            </form>
+            <p id="articleAiStatus" class="article-ai-status" role="status" aria-live="polite"></p>
+            <a class="article-ai-full-link" id="articleAiFullLink" href="ai-chat.html">Continue in full AI chat →</a>
+          </section>
           <div class="notice" id="commentNotice" style="display: none;"></div>
 
           <section class="author-profile-card" id="authorProfileCard"></section>
@@ -101,6 +126,7 @@
           <section id="comments" style="margin-top: 24px;">
             <h2 class="section-title">Comments</h2>
             <div id="commentList" class="post-list"></div>
+            <button type="button" id="loadOlderCommentsBtn" class="btn ghost" hidden>Load older comments</button>
             <form novalidate id="commentForm" class="comment-form" data-reveal>
               <div class="callout" id="commentAs" style="display:none;"></div>
               <div class="reply-preview hidden" id="commentReplyPreview"></div>

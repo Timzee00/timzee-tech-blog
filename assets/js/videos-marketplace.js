@@ -5,8 +5,11 @@ import { supabase } from "./supabase.js";
 // ============================================================================
 
 function getUploadOptions(file, fallbackContentType) {
+  // Video and thumbnail object paths include timestamp + original name and
+  // are never overwritten. Long-lived public caching avoids repeat traffic
+  // when a viewer revisits a reel. It applies only to NEW uploads.
   return {
-    cacheControl: "3600",
+    cacheControl: "604800",
     upsert: false,
     contentType: file?.type || fallbackContentType
   };

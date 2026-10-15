@@ -5,6 +5,8 @@
 
 import { supabase } from "./supabase.js";
 import { escapeHTML, isSafeUrl } from "./utils.js";
+import { collectMentionHandles, renderMentionLinks } from "./mention-text.mjs";
+import {placeMentionMenu} from "./mention-viewport.mjs";
 
 let mentionCache = {};
 let activeMentionDropdown = null;
@@ -12,6 +14,7 @@ let activeMentionField = null;
 let currentSearchTerm = "";
 let cursorAtMention = false;
 let mentionRequest = 0;
+let mentionPositionCleanup = null;
 
 /**
  * Search for users to mention
@@ -64,9 +67,15 @@ export async function searchUsersForMention(query) {
  * Close the mention dropdown
  */
 export function closeMentionDropdown() {
+  mentionPositionCleanup?.();
+  mentionPositionCleanup = null;
   if (activeMentionDropdown) {
     activeMentionDropdown.remove();
     activeMentionDropdown = null;
+  }
+  if(activeMentionField){
+    activeMentionField.setAttribute("aria-expanded","false");
+    activeMentionField.removeAttribute("aria-controls");
   }
   currentSearchTerm = "";
   activeMentionField = null;
@@ -81,36 +90,32 @@ async function showMentionDropdown(field, searchTerm) {
   closeMentionDropdown();
   const request = ++mentionRequest;
   const suggestions = await searchUsersForMention(searchTerm);
-  if (request !== mentionRequest || !field.isConnected || document.activeElement !== field || !suggestions.length) return;
+  if (request !== mentionRequest || !field.isConnected || document.activeElement !== field) return;
 
-  const rect = field.getBoundingClientRect();
-  // Android's virtual keyboard reduces visualViewport, not always innerHeight.
-  const viewport=window.visualViewport;
-  const viewTop=viewport?.offsetTop || 0;
-  const viewBottom=viewTop+(viewport?.height || window.innerHeight);
-  const menuHeight=Math.min(260,Math.max(100,viewBottom-viewTop-20));
-  const roomBelow=viewBottom-rect.bottom;
-  const top=roomBelow>=160 ? rect.bottom+5 : Math.max(viewTop+8,rect.top-menuHeight-6);
   const dropdown = document.createElement("div");
   dropdown.className = "mention-dropdown";
+  dropdown.id = "timzee-mention-suggestions";
   dropdown.setAttribute("role","listbox");
   dropdown.setAttribute("aria-label","Mention a community member");
   dropdown.style.cssText = `
     position: fixed;
-    top: ${Math.min(top,viewBottom-70)}px;
-    left: ${Math.max(8,Math.min(rect.left,innerWidth-Math.min(300,innerWidth-16)-8))}px;
-    width: min(300px, calc(100vw - 16px));
     background: var(--color-surface, #ffffff);
     color: var(--color-text, #111827);
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    max-width: 300px;
-    max-height: ${menuHeight}px;
+    border: 1px solid var(--color-border, #9ca3af);
+    border-radius: 10px;
+    overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior: contain;
     z-index: 10000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
   `;
 
+  if(!suggestions.length){
+    const empty=document.createElement("p");
+    empty.textContent=searchTerm?"No matching community members.":"No members available to mention.";
+    empty.style.cssText="margin:0;padding:14px;color:var(--color-text-muted,#64748b);font-size:13px;";
+    dropdown.appendChild(empty);
+  }
   suggestions.forEach((user) => {
     const item = document.createElement("div");
     item.className = "mention-item";
@@ -148,7 +153,7 @@ async function showMentionDropdown(field, searchTerm) {
     item.append(img, copy);
 
     item.addEventListener("mouseover", () => {
-      item.style.background = "#f9fafb";
+      item.style.background = "var(--color-surface-muted,#e5e7eb)";
     });
     item.addEventListener("mouseout", () => {
       item.style.background = "transparent";
@@ -156,19 +161,52 @@ async function showMentionDropdown(field, searchTerm) {
 
     item.setAttribute("role","option");
     item.setAttribute("aria-label",`Mention @${user.username}`);
-    // Keep the textarea focused so its caret position is preserved.
-    item.addEventListener("pointerdown",event=>event.preventDefault());
-    item.addEventListener("click", () => {
-      insertMention(field, user.username, searchTerm);
-      closeMentionDropdown();
+    // Android often blurs the editor between pointerdown and click. Choose
+    // immediately on pointerdown; keep click for keyboard/accessibility use.
+    let chosen=false;
+    const choose=()=>{
+      if(chosen||!field.isConnected)return;
+      chosen=true;
+      insertMention(field,user.username,searchTerm);
+    };
+    item.addEventListener("pointerdown",event=>{
+      event.preventDefault();
+      choose();
     });
+    item.addEventListener("click",choose);
 
     dropdown.appendChild(item);
   });
 
   document.body.appendChild(dropdown);
+  const visualViewport=window.visualViewport;
+  const reposition=()=>{
+    if(!dropdown.isConnected)return;
+    const viewport=visualViewport
+      ? {offsetLeft:visualViewport.offsetLeft,offsetTop:visualViewport.offsetTop,
+         width:visualViewport.width,height:visualViewport.height}
+      : {offsetLeft:0,offsetTop:0,width:window.innerWidth,height:window.innerHeight};
+    const geometry=placeMentionMenu(field.getBoundingClientRect(),viewport);
+    dropdown.style.left=geometry.left+"px";
+    dropdown.style.top=geometry.top+"px";
+    dropdown.style.width=geometry.width+"px";
+    dropdown.style.maxHeight=geometry.maxHeight+"px";
+  };
+  reposition();
+  visualViewport?.addEventListener("resize",reposition);
+  visualViewport?.addEventListener("scroll",reposition);
+  window.addEventListener("resize",reposition);
+  window.addEventListener("scroll",reposition,true);
+  mentionPositionCleanup=()=>{
+    visualViewport?.removeEventListener("resize",reposition);
+    visualViewport?.removeEventListener("scroll",reposition);
+    window.removeEventListener("resize",reposition);
+    window.removeEventListener("scroll",reposition,true);
+  };
   activeMentionDropdown = dropdown;
   activeMentionField = field;
+  field.setAttribute("aria-expanded","true");
+  field.setAttribute("aria-controls",dropdown.id);
 }
 
 /**
@@ -253,9 +291,15 @@ export async function handleMentionInput(event) {
  * Setup mention system on a textarea or input
  */
 export function setupMentionInput(field) {
-  if (!field) return;
-
+  if (!field || field.dataset.timzeeMentionsWired === "true") return;
+  field.dataset.timzeeMentionsWired = "true";
+  field.setAttribute("aria-autocomplete","list");
+  field.setAttribute("aria-haspopup","listbox");
+  field.setAttribute("aria-expanded","false");
   field.addEventListener("input", handleMentionInput);
+  field.addEventListener("click",()=>{
+    if(field.value.slice(0,field.selectionStart).includes("@")) void handleMentionInput({target:field});
+  });
   field.addEventListener("keydown", (event) => {
     // Close dropdown on Escape
     if (event.key === "Escape") {
@@ -302,26 +346,12 @@ export function setupMentionInput(field) {
  * Extract all mentions from text
  */
 export function extractMentions(text) {
-  if (!text) return [];
-  const regex = /@([a-zA-Z0-9_]+)/g;
-  const mentions = [];
-  let match;
-
-  while ((match = regex.exec(text)) !== null) {
-    mentions.push(match[1]);
-  }
-
-  return [...new Set(mentions)]; // Remove duplicates
+  return collectMentionHandles(text,{limit:20});
 }
 
-/**
- * Convert mention text to links
- */
+/** Render escaped text and valid @username links only. */
 export function linkifyMentions(text) {
-  if (!text) return text;
-  return text.replace(/@([a-zA-Z0-9_]+)/g, (match, username) => {
-    return `<a href="profile.html?username=${encodeURIComponent(username)}" class="mention-link">@${username}</a>`;
-  });
+  return renderMentionLinks(text);
 }
 
 /**

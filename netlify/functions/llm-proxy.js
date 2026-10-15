@@ -141,7 +141,8 @@ exports.handler = async (event) => {
         anthropic: Boolean(process.env.ANTHROPIC_API_KEY?.trim()),
         openrouter: Boolean(process.env.OPENROUTER_API_KEY?.trim())
       },
-      modelDefaults: { groq: "openai/gpt-oss-120b", openai: "gpt-4o-mini", anthropic: "claude-haiku-4-5-20251001", openrouter: "openrouter/free" }
+      modelDefaults: { groq: "openai/gpt-oss-120b", openai: "gpt-4o-mini", anthropic: "claude-haiku-4-5-20251001", openrouter: "openrouter/free" },
+      deploymentContext: process.env.CONTEXT || "unknown"
     });
   }
 
