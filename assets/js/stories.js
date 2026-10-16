@@ -7,7 +7,7 @@ import { uploadMedia } from "./media.js";
 export async function fetchStoriesFeed() {
   const result = await supabase
     .from("stories")
-    .select("id, user_id, media_url, media_type, caption, visibility, created_at, expires_at, allow_reshare, allow_public_comments, original_story_id")
+    .select("id, user_id, media_url, media_type, caption, visibility, created_at, expires_at, allow_reshare, allow_public_comments, original_story_id, music_url, music_title")
     .order("created_at", { ascending: true });
 
   if (result.error) {
@@ -51,7 +51,7 @@ export async function fetchStoriesFeed() {
 export async function fetchUserStories(userId) {
   const result = await supabase
     .from("stories")
-    .select("id, user_id, media_url, media_type, caption, visibility, created_at, expires_at, allow_reshare, allow_public_comments, original_story_id")
+    .select("id, user_id, media_url, media_type, caption, visibility, created_at, expires_at, allow_reshare, allow_public_comments, original_story_id, music_url, music_title")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
   if (result.error) {
