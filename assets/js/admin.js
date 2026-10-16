@@ -12,6 +12,7 @@ import {
   fetchNewsletterSignups,
   fetchAdApplications,
   fetchAdminRequests,
+  updateAdminRequestStatus,
   fetchContentRequests,
   fetchPostMedia,
   createCategory,
@@ -1567,7 +1568,9 @@ function inspectRequest(kind,id){
     contact:state.contactRequests,
     support:state.supportRequests,
     newsletter:state.newsletterSignups,
-    ads:state.adApplications
+    ads:state.adApplications,
+    admin:state.adminRequests,
+    content:state.contentRequests
   };
   const item=(entries[kind]||[]).find(entry=>String(entry.id)===String(id));
   if(!item)return;
@@ -1578,7 +1581,7 @@ function inspectRequest(kind,id){
   const heading=document.createElement("h3");
   heading.textContent=(kind[0].toUpperCase()+kind.slice(1))+" request";
   dialog.append(heading);
-  const fields=["name","email","company","subject","issue","interest","budget","message","created_at","status"];
+  const fields=["name","user_name","email","user_email","company","subject","issue","interest","budget","query","message","created_at","status"];
   for(const key of fields){
     if(item[key]===null||item[key]===undefined||item[key]==="")continue;
     const section=document.createElement("div");section.className="admin-request-field";
@@ -1796,20 +1799,41 @@ function renderRequests() {
   const adminTable = document.getElementById("adminRequestTable");
   if (adminTable) {
     adminTable.innerHTML = state.adminRequests.length
-      ? state.adminRequests
-          .map(
-            (item) => `
-          <tr>
-            <td>${escapeHTML(item.user_name || "")}</td>
-            <td>${escapeHTML(item.user_email || "")}</td>
-            <td>${clampText(escapeHTML(item.message || ""), 60)}</td>
-            <td>${formatDate(item.created_at)}</td>
-            <td>${requestStatusCell(item.status)}</td>
-          </tr>
-        `
-          )
-          .join("")
-      : "<tr><td colspan=\"5\">No admin requests yet.</td></tr>";
+      ? state.adminRequests.map(item => `
+        <tr>
+          <td data-label="User">${escapeHTML(item.user_name || "Member")}</td>
+          <td data-label="Email">${escapeHTML(item.user_email || "")}</td>
+          <td data-label="Request">${clampText(escapeHTML(item.message || ""), 90)}</td>
+          <td data-label="Date">${formatDate(item.created_at)}</td>
+          <td data-label="Status">${requestStatusCell(item.status)}</td>
+          <td data-label="Actions"><div class="inline-actions">
+            <button class="muted" type="button" data-admin-request="view" data-id="${item.id}">View</button>
+            ${["approved","rejected"].includes(item.status) ? `<button class="muted" type="button" data-admin-request="pending" data-id="${item.id}">Reopen</button>` : `
+              <button class="muted" type="button" data-admin-request="approved" data-id="${item.id}">Approve request</button>
+              <button class="danger" type="button" data-admin-request="rejected" data-id="${item.id}">Reject</button>
+            `}
+          </div></td>
+        </tr>
+      `).join("")
+      : '<tr><td colspan="6">No admin requests yet.</td></tr>';
+    adminTable.querySelectorAll("[data-admin-request]").forEach(button=>{
+      button.addEventListener("click",async()=>{
+        const action=button.dataset.adminRequest;
+        const item=state.adminRequests.find(record=>String(record.id)===button.dataset.id);
+        if(!item)return;
+        if(action==="view"){inspectRequest("admin",item.id);return;}
+        if(!await window.appUI.confirm(action==="approved"
+          ? "Approve this application for administrative review? This does NOT grant administrator permissions; grant roles separately in Users after verifying the account."
+          : action==="rejected" ? "Reject this administrator application?" : "Reopen this application?"))return;
+        button.disabled=true;
+        try{
+          const result=await updateAdminRequestStatus(item.id,action,state.user?.id);
+          if(result.error)throw result.error;
+          await refreshData();renderRequests();
+          window.appUI.toast(action==="approved" ? "Application approved. Grant access separately in Users." : "Request status updated.");
+        }catch(error){button.disabled=false;window.appUI.toast(extractErrorMessage(error,"Could not update request."));}
+      });
+    });
   }
 
   const contentTable = document.getElementById("contentRequestTable");
