@@ -113,7 +113,6 @@ export async function showStoryInteractions(story,user,container,{onReshare=()=>
   const {error}=await supabase.from('direct_messages').insert({
    id:crypto.randomUUID(),thread_id,sender_id:user.id,recipient_id:story.user_id,
    body:`Reply to status: ${location.origin}/stories.html?user=${encodeURIComponent(story.user_id)}\n\n${body}`,
-   created_at:new Date().toISOString()
   });
   if(error){note(error.message);return;}
   note('Private reply sent.');form.hidden=true;form.reset();
