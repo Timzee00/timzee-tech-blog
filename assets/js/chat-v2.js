@@ -1,4 +1,5 @@
 import { createChatRealtime } from "./chat-realtime.mjs";
+import { setupChatEnhancements } from "./chat-enhancements.mjs";
 import { bindSearch } from "./search-input.js";
 import { fetchMessagePage } from "./chat-history.mjs";
 import { loadLatestThreadPreviews } from "./chat-previews.mjs";
@@ -27,6 +28,15 @@ const state = {
 };
 
 const $ = (id) => document.getElementById(id);
+const chatEnhancements=setupChatEnhancements({
+  supabase,
+  onPresence:(label,active)=>{
+    state.peerPresenceLabel=label;
+    if(!state.activeThreadId)return;
+    if(['connecting','reconnecting','offline'].includes(state.connectionStatus))return;
+    setHeaderStatus(label,active);
+  }
+});
 
 function getFileExtension(value = "") {
   const cleaned = String(value || "").split("?")[0].split("#")[0];
@@ -325,7 +335,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
   }
   const group = groupId ? state.groups.find(item => item.id === groupId) : null;
   if (groupId && !group) return;
-  rememberDraft(); stopRecording(false); clearMediaPreview(); closeAttachMenu();
+  rememberDraft(); stopRecording(false); clearMediaPreview(); closeAttachMenu(); chatEnhancements.deactivate();
   const selection = ++state.selection;
   void realtime.stop();
   state.activeFriendId = friendId; state.activeGroupId = groupId; state.canCompose=true;
@@ -347,6 +357,12 @@ async function selectConversation({ friendId = '', groupId = '' }) {
     if (group) await loadGroupMembers(threadId);
     if (selection !== state.selection) return;
     state.loadingThread = false; updateComposer();
+    void chatEnhancements.activate(state.user.id,threadId,friendId).then(()=>{
+      if(threadId===state.activeThreadId&&selection===state.selection) {
+        const lastIncoming=state.messages.filter(m=>m.sender_id!==state.user.id).at(-1);
+        if(lastIncoming)void chatEnhancements.markRead(lastIncoming.id);
+      }
+    });
     renderInfoMedia(); void renderFriends(); renderGroups();
     void realtime.start(threadId).catch(error => reportAppError(error, 'Chat connection failed'));
   } catch (error) {
@@ -359,7 +375,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
 const selectFriend = id => selectConversation({ friendId: id });
 const selectGroup = id => selectConversation({ groupId: id });
 function leaveConversation() {
-  rememberDraft(); ++state.selection; void realtime.stop();
+  rememberDraft(); ++state.selection; void realtime.stop(); chatEnhancements.deactivate();
   state.activeThreadId = state.activeFriendId = state.activeGroupId = '';
   state.messages = []; state.loadingThread = false; updateComposer(); setView('list');
 }
@@ -380,10 +396,17 @@ async function refreshRecent(threadId) {
     if ((state.messageVersions.get(message.id) || 0) <= revision) mergeMessage(message);
   }
   renderMessages({ preserveScroll: true }); renderInfoMedia(); void renderFriends();
+  const latestIncoming=state.messages.filter(m=>m.sender_id!==state.user.id).at(-1);
+  if(latestIncoming)void chatEnhancements.markRead(latestIncoming.id);
 }
 const realtime = createChatRealtime(supabase, {
   canConnect: () => navigator.onLine,
-  onStatus: status => setHeaderStatus({ connected: 'Connected', connecting: 'Connecting…', reconnecting: 'Reconnecting…', offline: 'Offline' }[status], status === 'connected'),
+  onStatus: status => {
+    state.connectionStatus=status;
+    const fallback=state.activeGroupId?'Group conversation':state.peerPresenceLabel||'Chat available';
+    const label=status==='offline'?'Offline':status==='reconnecting'?'Reconnecting…':status==='connecting'?'Syncing messages…':fallback;
+    setHeaderStatus(label,status==='connected'&&state.peerPresenceLabel==='Active in chat');
+  },
   onError: error => console.warn('Chat updates unavailable:', error),
   onConnected: refreshRecent,
   async onMessage(event, message, threadId) {
@@ -393,6 +416,7 @@ const realtime = createChatRealtime(supabase, {
     if (event === 'UPDATE' && !exists) return;
     state.messageVersions.set(message.id, ++state.messageRevision);
     mergeMessage(message); renderMessages({ preserveScroll: true }); renderInfoMedia(); void renderFriends();
+    if(message.sender_id!==state.user.id)void chatEnhancements.markRead(message.id);
     await loadProfiles([message.sender_id]);
     if (threadId !== state.activeThreadId || selection !== state.selection) return;
     renderMessages({ preserveScroll: true });
@@ -588,10 +612,17 @@ function setupEvents(){
   $("peopleSearchToggle")?.addEventListener('click',()=>{$("peopleSearchPanel").hidden=!$("peopleSearchPanel").hidden;if(!$("peopleSearchPanel").hidden){$("peopleSearch").focus();renderPeopleResults();}}); $("newGroupBtn")?.addEventListener('click',()=>{renderGroupPicker();openModal('friendPickerModal');}); $("friendPickerClose")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCancel")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCreate")?.addEventListener('click',()=>createGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Create group'})));
   $("groupMemberSearch")?.addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#groupMemberPicker .chat-picker-row').forEach(r=>r.hidden=!r.innerText.toLowerCase().includes(q));}); $("editGroupBtn")?.addEventListener('click',()=>{const g=activeGroup();if(g){$("groupAvatarPreview").src=g.avatar_url||DEFAULT_GROUP_AVATAR;$("groupNameInput").value=g.name||'';$("groupDescriptionInput").value=g.description||'';$("groupEditor").hidden=false;}}); $("groupAvatarInput")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)$("groupAvatarPreview").src=URL.createObjectURL(f);}); $("cancelGroupBtn")?.addEventListener('click',()=>{$("groupEditor").hidden=true;}); $("saveGroupBtn")?.addEventListener('click',()=>editGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Group settings'}))); $("infoGroupMembers")?.addEventListener('click',e=>{const b=e.target.closest('[data-edit-member-tags]');if(b)editMemberTags(b.dataset.editMemberTags).catch(err=>window.siteToast?.(err.message,{type:'error',title:'Member tag'}));});
   window.addEventListener('online',()=>{if(state.activeThreadId&&!state.loadingThread)void realtime.start(state.activeThreadId);}); window.addEventListener('offline',()=>{void realtime.stop();if(state.activeThreadId)setHeaderStatus('Offline');});
-  window.addEventListener('pagehide',()=>{void realtime.stop();stopRecording(false);});
+  window.addEventListener('timzee:chat-refresh',()=>{
+    if(state.activeThreadId)void refreshRecent(state.activeThreadId).catch(err=>reportAppError(err,'Unable to refresh chat'));
+  });
+  window.addEventListener('timzee:chat-message-info',e=>{
+    if(e.detail?.messageId)void chatEnhancements.messageInfo(e.detail.messageId)
+      .catch(err=>reportAppError(err,'Message info unavailable'));
+  });
+  window.addEventListener('pagehide',()=>{void realtime.stop();stopRecording(false);chatEnhancements.deactivate();});
   window.addEventListener('pageshow',event=>{if(event.persisted&&state.activeThreadId)void realtime.start(state.activeThreadId);});
 }
 async function handleRequests(e){const b=e.target.closest('button[data-request]');if(!b)return;const row=state.friendships.find(r=>r.id===b.dataset.id);if(!row)return;if(b.dataset.request==='accept'){const r=await supabase.from('friendships').update({status:'accepted',updated_at:new Date().toISOString()}).eq('id',row.id);if(r.error)throw r.error;}else{const r=await supabase.from('friendships').delete().eq('id',row.id);if(r.error)throw r.error;}await loadAllChatData();renderRequests();renderBlocked();await renderFriends();renderPeopleResults();}
 
-async function boot(){setupTabs();setupEvents();state.settings=readSettings();applySettings();state.user=await getCurrentUserWithRole();if(!state.user){$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}const preferences=await loadUserPreferences(state.user);state.settings={...DEFAULT_SETTINGS,...preferences.chat};applySettings();document.documentElement.dataset.groupTags=preferences.groups?.showMemberTags===false?"hidden":"visible";await loadAllChatData();const staffPermission=await supabase.rpc('can_start_staff_dm');state.staffDMAllowed=staffPermission.data===true&&!staffPermission.error;renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('user'))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
+async function boot(){setupTabs();setupEvents();chatEnhancements.setup();state.settings=readSettings();applySettings();state.user=await getCurrentUserWithRole();if(!state.user){$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}const preferences=await loadUserPreferences(state.user);state.settings={...DEFAULT_SETTINGS,...preferences.chat};applySettings();document.documentElement.dataset.groupTags=preferences.groups?.showMemberTags===false?"hidden":"visible";await loadAllChatData();const staffPermission=await supabase.rpc('can_start_staff_dm');state.staffDMAllowed=staffPermission.data===true&&!staffPermission.error;renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('user'))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
 boot().catch(err=>{reportAppError(err,'Chat initialization failed');if($("chatMessages"))$("chatMessages").innerHTML=`<div class="chat-no-messages">Unable to load chats right now. ${escapeHTML(err.message||'Please try again.')}</div>`;});
