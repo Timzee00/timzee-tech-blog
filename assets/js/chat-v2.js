@@ -18,7 +18,7 @@ import { submitModerationReport } from "./moderation-reports.mjs";
 const DEFAULT_AVATAR = "/assets/img/avatar-placeholder.svg";
 const DEFAULT_GROUP_AVATAR = "/assets/img/group-placeholder.svg";
 const SETTINGS_KEY = "timzee_chat_settings_v2";
-const DEFAULT_SETTINGS = { notifications: true, enterToSend: true, compact: false, autoTranslate:false,translateLanguage:"en" };
+const DEFAULT_SETTINGS = { notifications: true, enterToSend: true, compact: false, autoTranslate:false,translateLanguage:"en",fontSize:"1",wallpaper:"default" };
 const IMAGE_EXTENSIONS = new Set(["jpg","jpeg","png","gif","webp","bmp","svg","avif","heic","heif"]);
 const VIDEO_EXTENSIONS = new Set(["mp4","webm","mov","m4v","mkv","avi","wmv","flv","3gp"]);
 const AUDIO_EXTENSIONS = new Set(["mp3","wav","ogg","m4a","aac","flac","opus","webm"]);
@@ -98,6 +98,19 @@ let settingsDirty = false;
 function applySettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch (_) {}
   document.documentElement.dataset.chatCompact = String(state.settings.compact === true);
+  const validWallpapers=["default","linen","dark","forest","oxblood","aurora","platinum"];
+  let wallpaper=validWallpapers.includes(state.settings.wallpaper)?state.settings.wallpaper:"default";
+  if(!state.verified&&["aurora","platinum"].includes(wallpaper))wallpaper="default";
+  const size=Number(state.settings.fontSize);
+  const safeSize=[.875,1,1.125,1.25].includes(size)?size:1;
+  document.documentElement.dataset.chatWallpaper=wallpaper;
+  document.documentElement.style.setProperty("--timzee-chat-message-scale",String(safeSize));
+  if($("chatWallpaper"))$("chatWallpaper").value=wallpaper;
+  if($("chatTextSize"))$("chatTextSize").value=String(safeSize);
+  document.querySelectorAll("[data-chat-premium]").forEach(option=>{
+    option.disabled=!state.verified;
+    option.hidden=!state.verified;
+  });
   defaultSettingsUI();
 }
 async function saveSettings() {
@@ -1002,6 +1015,14 @@ function setupEvents(){
   $("chatMessages")?.addEventListener('click',e=>{
     const id=e.target.closest('[data-replied-id]')?.dataset.repliedId;
     if(id)void jumpToPinned(id).catch(err=>reportAppError(err,"Unable to load replied message"));
+  });
+  $("chatWallpaper")?.addEventListener("change",e=>{
+    state.settings.wallpaper=e.target.value;
+    void saveSettings();
+  });
+  $("chatTextSize")?.addEventListener("change",e=>{
+    state.settings.fontSize=e.target.value;
+    void saveSettings();
   });
   $("chatTranslateLanguage")?.addEventListener('change',e=>{
     state.settings.translateLanguage=e.target.value;
