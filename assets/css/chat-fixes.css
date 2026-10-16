@@ -208,3 +208,10 @@ html[data-chat-compact="true"] .chat-messages { gap: 5px; }
 .chat-page .chat-verified-translation select{padding:9px;background:var(--color-surface);color:var(--color-text);border-radius:8px;border:1px solid var(--color-border)}
 .chat-page .chat-message-translation{margin-top:8px;padding:9px 10px;border-inline-start:3px solid currentColor;background:color-mix(in srgb,currentColor 9%,transparent);white-space:pre-wrap;line-height:1.4;font-size:.8rem;overflow-wrap:anywhere}
 .chat-page .chat-message-translation::before{content:"Translated · Groq";display:block;font-size:.65rem;font-weight:700;margin-bottom:3px;opacity:.7}
+
+.chat-page .chat-star-indicator,.chat-page .chat-forwarded-indicator{font-size:.7rem;opacity:.8;display:inline-block;margin-right:9px}
+.chat-page .chat-forward-choice,.chat-page .chat-starred-jump{width:100%;min-height:48px;text-align:left;display:grid;gap:3px;margin:4px 0;padding:11px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface-muted);color:var(--color-text);cursor:pointer;font:inherit}
+.chat-page .chat-starred-jump strong{font-size:.8rem}
+.chat-page .chat-starred-jump small{font-size:.75rem;overflow-wrap:anywhere;color:var(--color-text-muted)}
+.chat-page #chatForwardModal .chat-modal,.chat-page #chatStarredModal .chat-modal{max-height:80dvh;overflow-y:auto}
+.chat-page #chatForwardList,.chat-page #chatStarredList{max-height:min(54dvh,480px);overflow-y:auto;padding:8px}
