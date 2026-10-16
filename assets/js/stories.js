@@ -73,11 +73,36 @@ function ownedStoryStoragePath(publicUrl,userId){
     return "stories/"+userId+"/"+decodeURIComponent(url.pathname.slice(expected.length));
   }catch{return "";}
 }
+const PRIVATE_STORY_BUCKET="story-private-media";
+function privateStoryPath(source,userId){
+ const prefix=PRIVATE_STORY_BUCKET+"/"+userId+"/";
+ const value=String(source||"");
+ if(!value.startsWith(prefix)||value.includes("..")||value.includes("\\"))return "";
+ return value.slice(PRIVATE_STORY_BUCKET.length+1);
+}
+async function uploadPrivateStoryMedia(file,userId,{music=false}={}){
+ if(!userId||!file)throw Error("Private status upload requires an account and a file.");
+ if(file.size<1||file.size>50*1024*1024)throw Error("Private status files must be under 50 MB.");
+ const ext=String(file.name||"").split(".").at(-1)?.toLowerCase()||"";
+ if(!/^[a-z0-9]{2,6}$/.test(ext))throw Error("Unsupported file extension.");
+ const path=userId+"/"+(music?"music/":"")+crypto.randomUUID()+"."+ext;
+ const {error}=await supabase.storage.from(PRIVATE_STORY_BUCKET).upload(path,file,{
+   upsert:false,cacheControl:"300",contentType:file.type||undefined
+ });
+ if(error)throw Error(error.message||"Unable to store private status.");
+ return PRIVATE_STORY_BUCKET+"/"+path;
+}
 async function cleanupFailedStoryUploads(urls,userId){
-  const paths=urls.map(url=>ownedStoryStoragePath(url,userId)).filter(Boolean);
-  if(!paths.length)return;
-  const {error}=await supabase.storage.from("media").remove(paths);
-  if(error)console.warn("Could not remove a failed status upload",error.message);
+ const publicPaths=urls.map(url=>ownedStoryStoragePath(url,userId)).filter(Boolean);
+ const privatePaths=urls.map(url=>privateStoryPath(url,userId)).filter(Boolean);
+ if(publicPaths.length){
+   const {error}=await supabase.storage.from("media").remove(publicPaths);
+   if(error)console.warn("Could not clean up public status upload",error.message);
+ }
+ if(privatePaths.length){
+   const {error}=await supabase.storage.from(PRIVATE_STORY_BUCKET).remove(privatePaths);
+   if(error)console.warn("Could not clean up private status upload",error.message);
+ }
 }
 
 export async function createStory({
@@ -98,12 +123,17 @@ export async function createStory({
   }
   const uploaded=[];
   try{
-    const mediaUrl=await uploadMedia(file,`stories/${userId}`);
+    const privateStory=visibility==="private";
+    const mediaUrl=privateStory
+      ?await uploadPrivateStoryMedia(file,userId)
+      :await uploadMedia(file,`stories/${userId}`);
     if(!mediaUrl)throw Error("Status media upload failed.");
     uploaded.push(mediaUrl);
     let musicUrl=null;
     if(musicFile){
-      musicUrl=await uploadMedia(musicFile,`stories/${userId}/music`);
+      musicUrl=privateStory
+        ?await uploadPrivateStoryMedia(musicFile,userId,{music:true})
+        :await uploadMedia(musicFile,`stories/${userId}/music`);
       if(!musicUrl)throw Error("Soundtrack upload failed.");
       uploaded.push(musicUrl);
     }
@@ -127,5 +157,9 @@ export async function createStory({
 }
 
 export async function deleteStory(storyId) {
-  return supabase.from("stories").delete().eq("id", storyId);
+  const {data,error}=await supabase.from("stories")
+    .delete().eq("id",storyId).select("user_id,media_url,music_url").maybeSingle();
+  if(error)return {data:null,error};
+  if(data)await cleanupFailedStoryUploads([data.media_url,data.music_url].filter(Boolean),data.user_id);
+  return {data,error:null};
 }
