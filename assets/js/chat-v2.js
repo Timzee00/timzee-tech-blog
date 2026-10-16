@@ -358,7 +358,7 @@ function openConversationDetails() {
   refreshInfoProfile();
   $("chatInfoPanel").showModal();
 }
-function closeEditPanel(){
+function closeEditPanel(restoreFocus=false){
   state.editing=null;
   state.editSaving=false;
   const panel=$("chatEditPanel");
@@ -367,6 +367,7 @@ function closeEditPanel(){
   if($("chatEditSave"))$("chatEditSave").disabled=false;
   if($("chatEditCancel"))$("chatEditCancel").disabled=false;
   if($("chatEditBody"))$("chatEditBody").disabled=false;
+  if(restoreFocus)$("chatBody")?.focus();
 }
 function beginEditMessage(messageId){
   if(state.sending||state.loadingThread||!state.activeThreadId||!state.canCompose)return;
@@ -413,11 +414,11 @@ async function saveEditedMessage(){
     if(error)throw error;
     if(state.activeThreadId===editing.threadId){
       if(data)mergeMessage(data);
-      closeEditPanel();
+      if(state.editing===editing)closeEditPanel(true);
       renderMessages({preserveScroll:true});
       void renderFriends();
       window.siteToast?.('Message edited.',{type:'success',title:'Chat'});
-    }else{
+    }else if(state.editing===editing){
       closeEditPanel();
     }
   }catch(error){
@@ -425,8 +426,8 @@ async function saveEditedMessage(){
       $("chatEditStatus").textContent=error.message||'Unable to save edit. Your text is still here.';
     }
   }finally{
-    state.editSaving=false;
     if(state.editing===editing){
+      state.editSaving=false;
       save.disabled=false;cancel.disabled=false;area.disabled=false;
     }
   }
@@ -706,9 +707,9 @@ function setupEvents(){
     finally { if (button.isConnected) button.disabled = false; }
   });
   $("chatEditSave")?.addEventListener('click',()=>void saveEditedMessage());
-  $("chatEditCancel")?.addEventListener('click',closeEditPanel);
+  $("chatEditCancel")?.addEventListener('click',()=>closeEditPanel(true));
   $("chatEditBody")?.addEventListener('keydown',e=>{
-    if(e.key==='Escape'){e.preventDefault();closeEditPanel();}
+    if(e.key==='Escape'){e.preventDefault();closeEditPanel(true);}
     if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){
       e.preventDefault();void saveEditedMessage();
     }
