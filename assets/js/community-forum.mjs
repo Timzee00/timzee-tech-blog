@@ -1,0 +1,666 @@
+import {supabase,getCurrentUser,getDisplayName,signOut} from "./supabase.js";
+import {escapeHTML,timeAgo,reportAppError} from "./utils.js";
+import {setupMentionInput} from "./mentions.js";
+import "./nav.js";
+
+const $=id=>document.getElementById(id);
+const escape=value=>escapeHTML(String(value??""));
+const validId=value=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(String(value||""));
+const categories=["All","AI & ML","Programming","Gadgets","Cybersecurity","Tech Jobs","Gaming","Startups","Learning","Technology"];
+const PAGE_SIZE=20;
+const state={
+ user:null,communities:[],communityPage:0,hasMoreCommunities:false,
+ selectedCategory:"All",communitySearch:"",activeCommunity:null,activeThread:null,
+ view:"home",mode:"home",sort:"active",feed:[],feedCursor:null,feedHasMore:false,feedBusy:false,feedVersion:0,search:"",
+ joined:new Set(),memberRoles:new Map(),saved:new Set(),votes:new Map(),
+ pinned:[],replies:[],replyCursor:null,repliesHasMore:false,replyTo:null,loadingReplies:false
+};
+function notify(message,warning=false){
+ const node=$("forumNotice");node.textContent=message;node.hidden=false;
+ node.classList.toggle("error",warning);
+}
+function clearNotice(){$("forumNotice").hidden=true;}
+function memberName(){return String(getDisplayName(state.user)||state.user?.user_metadata?.full_name||"Member").slice(0,100);}
+function mustLogin(){
+ if(state.user)return true;
+ notify("Sign in to participate. Everyone can browse public communities.",true);
+ return false;
+}
+function setButtonBusy(button,busy){
+ if(button)button.disabled=Boolean(busy);
+}
+function preferredDate(value){try{return timeAgo(value);}catch{return "Recently";}}
+function findCommunity(id){return state.communities.find(c=>c.id===id);}
+function showDialog(id){
+ if(!mustLogin())return;
+ const dialog=$(id);
+ if(typeof dialog.showModal!=="function"){notify("This browser cannot open the editor.",true);return;}
+ if(id==="forumThreadDialog"){
+  const options=state.communities.filter(c=>c.community_state==="active");
+  $("forumThreadCommunity").innerHTML=options.map(c=>"<option value='"+escape(c.id)+"'>"+escape(c.title)+"</option>").join("");
+  if(state.activeCommunity)$("forumThreadCommunity").value=state.activeCommunity.id;
+  if(!options.length){notify("Create a community before posting a topic.",true);return;}
+ }
+ dialog.showModal();
+}
+function cleanQuery(value){
+ return String(value||"").trim().slice(0,70).replace(/[%_\\]/g,"");
+}
+function authPanel(){
+ const el=$("authActions");
+ el.replaceChildren();
+ if(!state.user){
+  const link=document.createElement("a");link.className="forum-button secondary";
+  link.href="login.html?redirect=discussion.html";link.textContent="Log in";
+  el.append(link);return;
+ }
+ const profile=document.createElement("a");
+ profile.href="profile.html?id="+encodeURIComponent(state.user.id);
+ profile.textContent=memberName();
+ profile.className="forum-account-link";
+ el.append(profile);
+ const logout=document.createElement("button");logout.type="button";logout.textContent="Log out";
+ logout.className="forum-signout";logout.addEventListener("click",async()=>{await signOut();location.href="discussion.html";});
+ el.append(logout);
+}
+async function loadMemberships(){
+ state.joined.clear();state.memberRoles.clear();
+ if(!state.user)return;
+ const {data,error}=await supabase.from("community_members")
+   .select("community_id,role").eq("user_id",state.user.id)
+   .order("joined_at",{ascending:false}).limit(200);
+ if(error){console.warn("Community memberships unavailable",error.message);return;}
+ for(const item of data||[]){state.joined.add(item.community_id);state.memberRoles.set(item.community_id,item.role);}
+}
+function renderCategories(){
+ $("forumCategories").innerHTML=categories.map(name=>
+  "<button type='button' data-category='"+escape(name)+"' aria-pressed='"+(state.selectedCategory===name?"true":"false")+"'>"+
+   escape(name)+"</button>").join("");
+ const select=$("forumCommunityCategory");
+ select.innerHTML=categories.filter(x=>x!=="All").map(x=>
+  "<option value='"+escape(x)+"'>"+escape(x)+"</option>").join("");
+}
+async function loadCommunities(reset=true){
+ if(reset){state.communityPage=0;state.communities=[];}
+ let query=supabase.from("discussion_topics").select(
+  "id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,rules,icon_emoji,created_at")
+  .eq("community_state","active")
+  .order("member_count",{ascending:false}).order("created_at",{ascending:false});
+ if(state.selectedCategory!=="All")query=query.eq("category",state.selectedCategory);
+ if(state.communitySearch)query=query.ilike("title","%"+cleanQuery(state.communitySearch)+"%");
+ const start=state.communityPage*30;
+ const {data,error}=await query.range(start,start+30);
+ if(error)throw error;
+ state.hasMoreCommunities=(data||[]).length>30;
+ const entries=(data||[]).slice(0,30);
+ const seen=new Set(state.communities.map(x=>x.id));
+ state.communities.push(...entries.filter(x=>!seen.has(x.id)));
+ $("communityListCount").textContent=String(state.communities.length)+(state.hasMoreCommunities?"+":"");
+ $("moreCommunities").hidden=!state.hasMoreCommunities;
+ renderCommunityList();
+ renderSuggestions();
+}
+function renderCommunityList(){
+ const list=$("forumCommunityList");
+ list.innerHTML=state.communities.length?state.communities.map(c=>
+  "<button type='button' class='forum-community-item "+(state.activeCommunity?.id===c.id?"active":"")+
+  "' data-open-community='"+escape(c.id)+"'>"+
+  "<span class='forum-community-icon' aria-hidden='true'>"+escape(c.icon_emoji||"💬")+"</span>"+
+  "<span><strong>"+escape(c.title)+"</strong><small>"+escape(c.category||"Technology")+
+  " · "+Number(c.member_count||0).toLocaleString()+" members</small></span></button>").join(""):
+  "<p class='forum-muted'>No communities found in this category.</p>";
+}
+function renderSuggestions(){
+ $("forumSuggestions").innerHTML=state.communities.slice(0,4).map(c=>
+  "<button type='button' data-open-community='"+escape(c.id)+"'><span aria-hidden='true'>"+
+  escape(c.icon_emoji||"💬")+"</span><span><strong>"+escape(c.title)+"</strong><small>"+
+  escape(c.category)+"</small></span></button>").join("")||
+  "<p class='forum-muted'>No suggestions yet.</p>";
+}
+function setUrl(){
+ const url=new URL(location.href);
+ url.searchParams.delete("community");url.searchParams.delete("thread");
+ if(state.activeThread)url.searchParams.set("thread",state.activeThread.id);
+ else if(state.activeCommunity)url.searchParams.set("community",state.activeCommunity.slug||state.activeCommunity.id);
+ history.pushState({forum:true},"",url.pathname+url.search);
+}
+function renderNav(){
+ document.querySelectorAll("[data-forum-nav]").forEach(btn=>{
+  btn.classList.toggle("active",btn.dataset.forumNav===state.mode&&state.view!=="community");
+ });
+ renderCommunityList();
+}
+function enterFeed({mode="home",community=null,push=true,sort=null}={}){
+ state.activeThread=null;state.activeCommunity=community;state.mode=mode;state.view=community?"community":"home";
+ state.feed=[];state.feedCursor=null;state.feedHasMore=false;state.search="";
+ $("forumThreadSearch").value="";
+ if(sort)state.sort=sort;
+ $("forumFeedView").hidden=false;$("forumThreadView").hidden=true;
+ $("forumFeedTitle").textContent=community?community.title:
+  mode==="joined"?"Your communities":mode==="saved"?"Saved topics":"The community feed";
+ $("forumFeedKicker").textContent=community?"COMMUNITY / "+String(community.category||"TECH").toUpperCase():
+  mode==="joined"?"YOUR SUBSCRIPTIONS":mode==="saved"?"READ LATER":"DISCOVER";
+ $("forumFeedSubtitle").textContent=community?community.description||"Explore community threads.":
+  mode==="joined"?"New conversations in communities you've joined.":
+  mode==="saved"?"The useful topics you saved for later.":"Ask questions, exchange ideas and share practical tech knowledge.";
+ $("forumJoinButton").hidden=!community||!state.user;
+ if(community){
+  $("forumJoinButton").textContent=state.joined.has(community.id)?"Joined ✓":"Join community";
+  $("forumJoinButton").setAttribute("aria-pressed",String(state.joined.has(community.id)));
+ }
+ const details=$("forumCommunityDetails");
+ details.hidden=!community;
+ if(community){
+  const role=state.memberRoles.get(community.id);
+  details.innerHTML="<div class='forum-community-presentation'><span class='forum-community-big-icon' aria-hidden='true'>"+
+  escape(community.icon_emoji||"💬")+"</span><div><span>"+escape(community.category)+
+  " · "+Number(community.member_count||0)+" members</span><p>"+
+  escape(community.description||"Join this community to discuss technology.")+"</p></div></div>"+
+  (community.rules?"<details><summary>Community rules</summary><p>"+escape(community.rules)+"</p></details>":"")+
+  (role==="owner"?"<div class='forum-owner-controls'><label>Who may post? <select id='forumPostingPolicy'>"+
+    ["everyone","members","staff"].map(policy=>"<option value='"+policy+"' "+(community.posting_policy===policy?"selected":"")+">"+
+     (policy==="everyone"?"Everyone":policy==="members"?"Members":"Moderators")+"</option>").join("")+
+  "</select></label><button id='forumSaveCommunityRules' type='button'>Save rule</button></div>":"");
+ }
+ document.querySelectorAll("[data-forum-sort]").forEach(btn=>btn.setAttribute("aria-pressed",String(btn.dataset.forumSort===state.sort)));
+ renderNav();
+ if(push)setUrl();
+ void loadFeed(true);
+}
+function fieldForSort(){return state.sort==="top"?"score":state.sort==="new"||state.sort==="unanswered"?"created_at":"last_activity_at";}
+async function loadFeed(reset=false){
+ if(state.feedBusy&&!reset)return;
+ const version=++state.feedVersion;
+ state.feedBusy=true;
+ if(reset){state.feed=[];state.feedCursor=null;state.feedHasMore=false;
+  $("forumThreadFeed").innerHTML="<p class='forum-muted'>Loading topics…</p>";$("forumPinnedThreads").replaceChildren();}
+ $("forumLoadMore").hidden=true;
+ try{
+  if(state.mode==="joined"&&!state.activeCommunity&&!state.joined.size){
+   state.feed=[];renderFeed();return;
+  }
+  if(state.mode==="saved"&&!state.activeCommunity&&!state.user){
+   state.feed=[];renderFeed();return;
+  }
+  const selected=state.activeCommunity;
+  if(reset&&selected){
+   const {data:pinned}=await supabase.from("community_threads")
+    .select("id,community_id,author_id,author_name,title,body,kind,status,is_pinned,is_locked,is_legacy_room,reply_count,score,created_at,last_activity_at")
+    .eq("community_id",selected.id).eq("status","published").eq("is_pinned",true)
+    .order("created_at",{ascending:false}).limit(4);
+   if(version!==state.feedVersion)return;
+   state.pinned=pinned||[];renderPinned();
+  }
+  let savedIds=[];
+  if(state.mode==="saved"&&!selected){
+   const {data,error}=await supabase.from("community_saved_threads")
+     .select("thread_id").eq("user_id",state.user.id).order("created_at",{ascending:false}).limit(200);
+   if(error)throw error;
+   savedIds=(data||[]).map(v=>v.thread_id);
+   if(!savedIds.length){state.feed=[];renderFeed();return;}
+  }
+  let query=supabase.from("community_threads")
+    .select("id,community_id,author_id,author_name,title,body,kind,status,is_pinned,is_locked,is_legacy_room,reply_count,score,created_at,last_activity_at")
+    .eq("status","published");
+  if(selected)query=query.eq("community_id",selected.id).eq("is_pinned",false);
+  else if(state.mode==="joined")query=query.in("community_id",[...state.joined].slice(0,200));
+  else if(state.mode==="saved")query=query.in("id",savedIds);
+  if(state.sort==="unanswered")query=query.eq("reply_count",0);
+  const search=cleanQuery(state.search);
+  if(search)query=query.textSearch("search_vector",search,{type:"websearch",config:"english"});
+  const col=fieldForSort();
+  query=query.order(col,{ascending:false}).order("id",{ascending:false});
+  if(state.feedCursor){
+   const cursor=state.feedCursor,v=cursor[col];
+   // Indexed keyset pagination avoids ever-growing OFFSET scans.
+   const literal=col==="score"?Number(v):String(v);
+   query=query.or(col+".lt."+literal+",and("+col+".eq."+literal+",id.lt."+cursor.id+")");
+  }
+  const {data,error}=await query.limit(PAGE_SIZE+1);
+  if(error)throw error;
+  if(version!==state.feedVersion)return;
+  const page=(data||[]).slice(0,PAGE_SIZE);
+  state.feedHasMore=(data||[]).length>PAGE_SIZE;
+  if(page.length)state.feedCursor=page.at(-1);
+  const seen=new Set(state.feed.map(x=>x.id));
+  state.feed.push(...page.filter(x=>!seen.has(x.id)));
+  await loadPersonalThreadState(page.map(x=>x.id));
+  if(version!==state.feedVersion)return;
+  renderFeed();
+ }catch(error){
+  if(version===state.feedVersion){
+   if(!state.feed.length)$("forumThreadFeed").innerHTML="<p class='forum-muted'>Could not load topics. Please retry.</p>";
+   notify(error.message||"Could not load community topics.",true);
+  }
+ }finally{
+  state.feedBusy=false;
+  if(version===state.feedVersion)$("forumLoadMore").hidden=!state.feedHasMore;
+ }
+}
+async function loadPersonalThreadState(ids){
+ if(!state.user||!ids.length)return;
+ const [votes,saved]=await Promise.all([
+  supabase.from("community_thread_votes").select("thread_id,value").eq("user_id",state.user.id).in("thread_id",ids),
+  supabase.from("community_saved_threads").select("thread_id").eq("user_id",state.user.id).in("thread_id",ids)
+ ]);
+ for(const item of votes.data||[])state.votes.set(item.thread_id,item.value);
+ for(const item of saved.data||[])state.saved.add(item.thread_id);
+}
+function threadCard(thread,{pinned=false}={}){
+ const community=findCommunity(thread.community_id);
+ const label=thread.kind==="question"?"Question":thread.kind==="guide"?"Guide":thread.kind==="news"?"News":
+  thread.kind==="showcase"?"Project":thread.kind==="announcement"?"Official":"Discussion";
+ const intro=String(thread.body||"").replace(/\s+/g," ").slice(0,220);
+ return "<article class='forum-thread-card' data-thread-card='"+escape(thread.id)+"'>"+
+  "<div class='forum-vote-rail'>"+
+  "<button type='button' data-vote='1' data-id='"+escape(thread.id)+"' class='"+(state.votes.get(thread.id)===1?"selected":"")+"' aria-label='Upvote topic' aria-pressed='"+(state.votes.get(thread.id)===1)+"'>▲</button>"+
+  "<strong data-score='"+escape(thread.id)+"'>"+Number(thread.score||0)+"</strong>"+
+  "<button type='button' data-vote='-1' data-id='"+escape(thread.id)+"' class='"+(state.votes.get(thread.id)===-1?"selected":"")+"' aria-label='Downvote topic' aria-pressed='"+(state.votes.get(thread.id)===-1)+"'>▼</button></div>"+
+  "<div class='forum-thread-main'>"+
+  "<div class='forum-thread-meta'><span class='forum-topic-kind'>"+escape(label)+"</span>"+
+  (pinned||thread.is_pinned?"<span class='forum-topic-pinned'>📌 Pinned</span>":"")+
+  (thread.is_locked?"<span>🔒 Locked</span>":"")+
+  (community?"<button type='button' data-open-community='"+escape(community.id)+"'>"+
+   escape(community.title)+"</button>":"")+
+  "<span>· "+escape(preferredDate(thread.created_at))+"</span></div>"+
+  "<button class='forum-thread-title' data-open-thread='"+escape(thread.id)+"' type='button'>"+escape(thread.title)+"</button>"+
+  (intro?"<p>"+escape(intro)+"</p>":"")+
+  "<div class='forum-thread-footer'><span>By "+escape(thread.author_name||"Member")+"</span>"+
+  "<button type='button' data-open-thread='"+escape(thread.id)+"'>"+
+   Number(thread.reply_count||0)+" replies</button>"+
+  "<button type='button' data-save-thread='"+escape(thread.id)+"' aria-pressed='"+state.saved.has(thread.id)+"'>"+
+   (state.saved.has(thread.id)?"★ Saved":"☆ Save")+"</button>"+
+  "<button type='button' data-copy-thread='"+escape(thread.id)+"'>↗ Share</button></div></div></article>";
+}
+function renderPinned(){
+ $("forumPinnedThreads").innerHTML=state.pinned.length?
+  "<div class='forum-pinned-heading'>Pinned by moderators</div>"+
+  state.pinned.map(thread=>threadCard(thread,{pinned:true})).join(""):"";
+}
+function renderFeed(){
+ const host=$("forumThreadFeed");
+ if(!state.feed.length){
+  const text=state.mode==="joined"?"You haven't joined any communities yet.":
+   state.mode==="saved"?"No saved topics yet.":
+   state.activeCommunity?"No threads here yet. Start a useful conversation.":
+   "No topics found yet. Be the first to post.";
+  host.innerHTML="<div class='forum-empty'><strong>Nothing here yet</strong><p>"+escape(text)+
+  "</p><button type='button' data-create-topic>Create a topic</button></div>";
+ }else host.innerHTML=state.feed.map(thread=>threadCard(thread)).join("");
+ $("forumLoadMore").hidden=!state.feedHasMore;
+}
+async function openCommunity(id,{push=true}={}){
+ let board=findCommunity(id);
+ if(!board){
+  const {data,error}=await supabase.from("discussion_topics")
+    .select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,rules,icon_emoji,created_at")
+    .eq("id",id).maybeSingle();
+  if(error||!data){notify("Community not available.",true);return;}
+  board=data;state.communities.push(board);
+ }
+ enterFeed({community:board,mode:"community",push});
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+async function openCommunitySlug(slug,{push=false}={}){
+ const existing=state.communities.find(c=>c.slug===slug||c.id===slug);
+ if(existing){await openCommunity(existing.id,{push});return;}
+ const field=validId(slug)?"id":"slug";
+ const {data,error}=await supabase.from("discussion_topics")
+  .select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,rules,icon_emoji,created_at")
+  .eq(field,slug).maybeSingle();
+ if(error||!data){notify("Community not found.",true);return;}
+ state.communities.push(data);
+ await openCommunity(data.id,{push});
+}
+async function toggleJoin(){
+ if(!mustLogin()||!state.activeCommunity)return;
+ const c=state.activeCommunity,joined=state.joined.has(c.id);
+ const button=$("forumJoinButton");setButtonBusy(button,true);
+ try{
+  if(joined){
+   const role=state.memberRoles.get(c.id);
+   if(role==="owner"){notify("The community owner can't leave their own community.",true);return;}
+   const {error}=await supabase.from("community_members").delete().eq("community_id",c.id).eq("user_id",state.user.id);
+   if(error)throw error;state.joined.delete(c.id);state.memberRoles.delete(c.id);c.member_count=Math.max(0,Number(c.member_count)-1);
+  }else{
+   const {error}=await supabase.from("community_members").insert({community_id:c.id,user_id:state.user.id,role:"member"});
+   if(error)throw error;state.joined.add(c.id);state.memberRoles.set(c.id,"member");c.member_count=Number(c.member_count||0)+1;
+  }
+  $("forumJoinButton").textContent=joined?"Join community":"Joined ✓";
+  $("forumJoinButton").setAttribute("aria-pressed",String(!joined));renderCommunityList();
+  notify(joined?"You left this community.":"You've joined this community.");
+ }catch(e){notify(e.message||"Unable to update membership.",true);}
+ finally{setButtonBusy(button,false);}
+}
+async function voteThread(id,value){
+ if(!mustLogin()||!validId(id))return;
+ const old=state.votes.get(id)||0;
+ try{
+  if(old===value){
+   const {error}=await supabase.from("community_thread_votes").delete().eq("thread_id",id).eq("user_id",state.user.id);
+   if(error)throw error;state.votes.delete(id);
+  }else if(old){
+   const {error}=await supabase.from("community_thread_votes").update({value})
+    .eq("thread_id",id).eq("user_id",state.user.id);
+   if(error)throw error;state.votes.set(id,value);
+  }else{
+   const {error}=await supabase.from("community_thread_votes").insert({
+    thread_id:id,user_id:state.user.id,value
+   });
+   if(error)throw error;state.votes.set(id,value);
+  }
+  const scoreDiff=(state.votes.get(id)||0)-old;
+  const thread=[...state.feed,...state.pinned,state.activeThread].find(t=>t?.id===id);
+  if(thread)thread.score=Number(thread.score||0)+scoreDiff;
+  document.querySelectorAll("[data-score='"+id+"']").forEach(node=>{node.textContent=String(Number(node.textContent||0)+scoreDiff);});
+  document.querySelectorAll("[data-vote][data-id='"+id+"']").forEach(button=>{
+   button.classList.toggle("selected",Number(button.dataset.vote)===state.votes.get(id));
+   button.setAttribute("aria-pressed",String(Number(button.dataset.vote)===state.votes.get(id)));
+  });
+ }catch(e){notify(e.message||"Couldn't register vote.",true);}
+}
+async function toggleSave(id){
+ if(!mustLogin())return;
+ const saved=state.saved.has(id);
+ try{
+  const operation=saved?supabase.from("community_saved_threads").delete()
+     .eq("thread_id",id).eq("user_id",state.user.id):
+     supabase.from("community_saved_threads").insert({thread_id:id,user_id:state.user.id});
+  const {error}=await operation;if(error)throw error;
+  if(saved)state.saved.delete(id);else state.saved.add(id);
+  document.querySelectorAll("[data-save-thread='"+id+"']").forEach(button=>{
+    button.textContent=saved?"☆ Save":"★ Saved";
+    button.setAttribute("aria-pressed",String(!saved));
+  });
+  notify(saved?"Removed from saved topics.":"Saved for later.");
+ }catch(e){notify(e.message||"Couldn't update your saves.",true);}
+}
+async function shareThread(id){
+ const url=new URL("discussion.html",location.href);
+ url.searchParams.set("thread",id);
+ try{
+  if(navigator.share)await navigator.share({title:"Timzee Tech Hub discussion",url:url.href});
+  else{await navigator.clipboard.writeText(url.href);notify("Topic link copied.");}
+ }catch(e){if(e.name!=="AbortError")notify("Unable to share this topic.",true);}
+}
+async function openThread(id,{push=true}={}){
+ if(!validId(id))return;
+ const {data,error}=await supabase.from("community_threads")
+  .select("id,community_id,author_id,author_name,title,body,kind,status,is_locked,is_pinned,is_legacy_room,created_at,reply_count,score")
+  .eq("id",id).maybeSingle();
+ if(error||!data||data.status!=="published"){notify("This topic is unavailable.",true);return;}
+ const board=findCommunity(data.community_id);
+ state.activeThread=data;state.view="thread";
+ if(!state.activeCommunity||state.activeCommunity.id!==data.community_id){
+  if(board)state.activeCommunity=board;
+  else{
+   const q=await supabase.from("discussion_topics").select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,rules,icon_emoji").eq("id",data.community_id).maybeSingle();
+   if(q.data){state.activeCommunity=q.data;state.communities.push(q.data);}
+  }
+ }
+ $("forumFeedView").hidden=true;$("forumThreadView").hidden=false;
+ const boardName=state.activeCommunity?.title||"Community";
+ const staff=["owner","moderator"].includes(state.memberRoles.get(data.community_id));
+ $("forumThreadHeader").innerHTML="<p class='forum-eyebrow'>"+
+  "<button type='button' data-open-community='"+escape(data.community_id)+"'>"+
+  escape(boardName)+"</button> / "+escape(data.kind)+"</p><h1>"+escape(data.title)+
+  "</h1><p class='forum-thread-detail-meta'>By "+escape(data.author_name||"Member")+
+  " · "+escape(preferredDate(data.created_at))+(data.is_locked?" · Locked":"")+"</p>";
+ $("forumThreadBody").textContent=data.body||"";
+ $("forumThreadActions").innerHTML=
+  "<button type='button' data-vote='1' data-id='"+id+"'>▲</button>"+
+  "<strong data-score='"+id+"'>"+Number(data.score||0)+"</strong>"+
+  "<button type='button' data-vote='-1' data-id='"+id+"'>▼</button>"+
+  "<button type='button' data-save-thread='"+id+"'>☆ Save</button>"+
+  "<button type='button' data-copy-thread='"+id+"'>↗ Share</button>"+
+  (staff?"<select id='forumModerateAction' aria-label='Moderate this topic'><option value=''>Moderate…</option>"+
+    ["pin","unpin","lock","unlock","remove"].map(v=>"<option value='"+v+"'>"+v+"</option>").join("")+
+   "</select>":"");
+ $("forumReplyForm").hidden=Boolean(data.is_locked);
+ state.replies=[];state.replyCursor=null;state.repliesHasMore=false;state.replyTo=null;
+ $("forumReplyTarget").hidden=true;
+ await loadPersonalThreadState([data.id]);
+ const vote=state.votes.get(data.id)||0;
+ document.querySelectorAll("#forumThreadActions [data-vote]").forEach(b=>{
+  b.classList.toggle("selected",Number(b.dataset.vote)===vote);
+  b.setAttribute("aria-pressed",String(Number(b.dataset.vote)===vote));
+ });
+ const save=$("forumThreadActions").querySelector("[data-save-thread]");
+ if(save){save.textContent=state.saved.has(data.id)?"★ Saved":"☆ Save";save.setAttribute("aria-pressed",String(state.saved.has(data.id)));}
+ if(push)setUrl();
+ await loadReplies(true);
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+async function loadReplies(reset=false){
+ if(!state.activeThread||state.loadingReplies)return;
+ state.loadingReplies=true;
+ const threadId=state.activeThread.id;
+ if(reset){state.replies=[];state.replyCursor=null;$("forumReplies").innerHTML="<p class='forum-muted'>Loading replies…</p>";}
+ $("forumMoreReplies").hidden=true;
+ try{
+  let query=supabase.from("discussion_messages")
+    .select("id,author_id,author_name,body,reply_to,created_at,media_url,media_type,pinned")
+    .eq("thread_id",threadId)
+    .order("created_at",{ascending:true}).order("id",{ascending:true});
+  if(state.replyCursor){
+   const t=state.replyCursor;
+   query=query.or("created_at.gt."+t.created_at+",and(created_at.eq."+t.created_at+",id.gt."+t.id+")");
+  }
+  const {data,error}=await query.limit(31);
+  if(error)throw error;
+  if(state.activeThread?.id!==threadId)return;
+  const page=(data||[]).slice(0,30);
+  state.repliesHasMore=(data||[]).length>30;
+  if(page.length)state.replyCursor=page.at(-1);
+  const seen=new Set(state.replies.map(r=>r.id));
+  state.replies.push(...page.filter(r=>!seen.has(r.id)));
+  renderReplies();
+ }catch(e){notify(e.message||"Couldn't load replies.",true);}
+ finally{
+  state.loadingReplies=false;
+  $("forumMoreReplies").hidden=!state.repliesHasMore;
+ }
+}
+function renderReplies(){
+ const replies=state.replies,byId=new Map(replies.map(x=>[x.id,x]));
+ $("forumThreadTitle").textContent="Replies ("+Number(state.activeThread?.reply_count||replies.length)+")";
+ $("forumReplies").innerHTML=replies.map((r,i)=>{
+  const parent=byId.get(r.reply_to);
+  const header="<div class='forum-reply-meta'><strong>"+escape(r.author_name||"Member")+
+    "</strong><span>· "+escape(preferredDate(r.created_at))+"</span>"+
+    (r.pinned?"<span class='forum-topic-pinned'>Pinned</span>":"")+"</div>";
+  const quote=r.reply_to?"<button type='button' data-jump-reply='"+escape(r.reply_to)+
+    "' class='forum-reply-reference'>↳ Reply to "+escape(parent?.author_name||"an earlier message")+"</button>":"";
+  return "<article class='forum-reply' id='reply-"+escape(r.id)+"'>"+
+   "<span class='forum-reply-number'>#"+(i+1)+"</span><div class='forum-reply-main'>"+
+   header+quote+"<p class='forum-reply-body'>"+escape(r.body||"")+"</p>"+
+   "<div class='forum-reply-actions'><button type='button' data-reply-to='"+escape(r.id)+"'>Reply</button>"+
+   "<button type='button' data-copy-reply='"+escape(r.id)+"'>Copy link</button></div></div></article>";
+ }).join("")||"<div class='forum-empty'><strong>No replies yet</strong><p>Start a helpful discussion.</p></div>";
+ $("forumMoreReplies").hidden=!state.repliesHasMore;
+}
+function startReply(id){
+ if(!mustLogin())return;
+ const target=state.replies.find(r=>r.id===id);
+ if(!target)return;
+ state.replyTo=id;
+ $("forumReplyTarget").hidden=false;
+ $("forumReplyTarget").innerHTML="<span>Replying to "+escape(target.author_name||"Member")+"</span>"+
+  "<button type='button' data-cancel-reply aria-label='Cancel reply'>×</button>";
+ $("forumReplyText").focus();
+ $("forumReplyForm").scrollIntoView({behavior:"smooth",block:"center"});
+}
+async function createCommunity(event){
+ event.preventDefault();
+ if(!mustLogin())return;
+ const form=event.currentTarget,button=form.querySelector("[type=submit]");
+ const values=new FormData(form);
+ const title=String(values.get("title")||"").trim();
+ const description=String(values.get("description")||"").trim();
+ if(title.length<3||description.length<20){$("forumCommunityFormError").textContent="Add a meaningful name and description.";return;}
+ setButtonBusy(button,true);$("forumCommunityFormError").textContent="";
+ try{
+  const id=crypto.randomUUID();
+  const {data,error}=await supabase.from("discussion_topics").insert({
+    id,title,description,category:String(values.get("category")||"Technology"),
+    posting_policy:String(values.get("posting_policy")||"everyone"),
+    author_id:state.user.id,author_name:memberName(),
+    created_at:new Date().toISOString(),updated_at:new Date().toISOString()
+  }).select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,rules,icon_emoji,created_at").single();
+  if(error)throw error;
+  state.communities.unshift(data);state.joined.add(id);state.memberRoles.set(id,"owner");
+  $("forumCommunityDialog").close();form.reset();
+  renderCommunityList();await openCommunity(id);
+  notify("Your community is ready! Start its first topic.");
+ }catch(e){$("forumCommunityFormError").textContent=e.message||"Unable to create community.";}
+ finally{setButtonBusy(button,false);}
+}
+async function createThread(event){
+ event.preventDefault();
+ if(!mustLogin())return;
+ const form=event.currentTarget,button=form.querySelector("[type=submit]");
+ const values=new FormData(form);
+ const communityId=String(values.get("community_id")||"");
+ if(!validId(communityId)){$("forumThreadFormError").textContent="Choose a community.";return;}
+ setButtonBusy(button,true);$("forumThreadFormError").textContent="";
+ try{
+  const {data,error}=await supabase.from("community_threads").insert({
+    community_id:communityId,author_id:state.user.id,author_name:memberName(),
+    title:String(values.get("title")||"").trim(),
+    body:String(values.get("body")||"").trim(),
+    kind:String(values.get("kind")||"discussion")
+  }).select("id").single();
+  if(error)throw error;
+  $("forumThreadDialog").close();form.reset();
+  await openThread(data.id);
+  notify("Topic published.");
+ }catch(e){$("forumThreadFormError").textContent=e.message||"Unable to publish.";}
+ finally{setButtonBusy(button,false);}
+}
+async function submitReply(event){
+ event.preventDefault();
+ if(!mustLogin()||!state.activeThread)return;
+ const body=$("forumReplyText").value.trim();if(!body)return;
+ const button=event.currentTarget.querySelector("[type=submit]");setButtonBusy(button,true);
+ try{
+  const {error}=await supabase.from("discussion_messages").insert({
+    id:crypto.randomUUID(),thread_id:state.activeThread.id,topic_id:state.activeThread.community_id,
+    author_id:state.user.id,author_name:memberName(),body,reply_to:state.replyTo
+  });
+  if(error)throw error;
+  $("forumReplyText").value="";state.replyTo=null;$("forumReplyTarget").hidden=true;
+  state.activeThread.reply_count=Number(state.activeThread.reply_count||0)+1;
+  state.replies=[];state.replyCursor=null;await loadReplies(true);
+  notify("Reply posted.");
+ }catch(e){notify(e.message||"Unable to post a reply.",true);}
+ finally{setButtonBusy(button,false);}
+}
+async function moderateThread(action){
+ const t=state.activeThread;if(!t||!action)return;
+ try{
+  const {data,error}=await supabase.rpc("community_manage_thread",{p_thread:t.id,p_action:action});
+  if(error)throw error;
+  if(data?.status==="removed"){notify("Topic removed from the public feed.");enterFeed({community:state.activeCommunity});return;}
+  t.is_locked=data.is_locked;t.is_pinned=data.is_pinned;
+  $("forumReplyForm").hidden=t.is_locked;
+  notify("Moderation action applied: "+action+".");
+ }catch(e){notify(e.message||"Moderation action unavailable.",true);}
+}
+async function savePostingPolicy(){
+ const community=state.activeCommunity;
+ if(!community||state.memberRoles.get(community.id)!=="owner")return;
+ const policy=$("forumPostingPolicy")?.value;
+ if(!["everyone","members","staff"].includes(policy))return;
+ const {error}=await supabase.from("discussion_topics").update({posting_policy:policy})
+ .eq("id",community.id).eq("author_id",state.user.id);
+ if(error){notify(error.message,true);return;}
+ community.posting_policy=policy;notify("Community posting settings updated.");
+}
+async function initializeFromUrl(){
+ const params=new URLSearchParams(location.search);
+ const thread=params.get("thread"),community=params.get("community");
+ if(thread&&validId(thread))await openThread(thread,{push:false});
+ else if(community)await openCommunitySlug(community,{push:false});
+ else enterFeed({mode:"home",push:false});
+}
+function bindEvents(){
+ document.body.addEventListener("click",async event=>{
+  const element=event.target.closest("button,a");if(!element)return;
+  const data=element.dataset;
+  if(data.openCommunity){event.preventDefault();await openCommunity(data.openCommunity);return;}
+  if(data.openThread){await openThread(data.openThread);return;}
+  if(data.forumNav){state.activeCommunity=null;enterFeed({mode:data.forumNav});return;}
+  if(data.category){state.selectedCategory=data.category;renderCategories();try{await loadCommunities(true);}catch(e){notify(e.message,true);}return;}
+  if(data.forumSort){
+   state.sort=data.forumSort;
+   document.querySelectorAll("[data-forum-sort]").forEach(b=>b.setAttribute("aria-pressed",String(b===element)));
+   await loadFeed(true);return;
+  }
+  if(data.vote){await voteThread(data.id,Number(data.vote));return;}
+  if(data.saveThread){await toggleSave(data.saveThread);return;}
+  if(data.copyThread){await shareThread(data.copyThread);return;}
+  if(data.replyTo){startReply(data.replyTo);return;}
+  if(data.cancelReply!==undefined){state.replyTo=null;$("forumReplyTarget").hidden=true;return;}
+  if(data.jumpReply){
+   document.getElementById("reply-"+data.jumpReply)?.scrollIntoView({behavior:"smooth",block:"center"});return;
+  }
+  if(data.copyReply){const url=new URL(location.href);url.hash="reply-"+data.copyReply;
+    await navigator.clipboard.writeText(url.href);notify("Reply link copied.");return;}
+  if(data.createTopic!==undefined){showDialog("forumThreadDialog");return;}
+  if(data.closeForumDialog!==undefined){element.closest("dialog")?.close();}
+ });
+ $("forumCommunitySearch").addEventListener("input",()=>{
+  clearTimeout(window.__communitySearchTimer);
+  window.__communitySearchTimer=setTimeout(async()=>{
+   state.communitySearch=$("forumCommunitySearch").value;
+   try{await loadCommunities(true);}catch(e){notify(e.message,true);}
+  },300);
+ });
+ $("forumThreadSearch").addEventListener("input",()=>{
+  clearTimeout(window.__forumThreadSearchTimer);
+  window.__forumThreadSearchTimer=setTimeout(()=>{
+   state.search=$("forumThreadSearch").value.trim();void loadFeed(true);
+  },300);
+ });
+ $("moreCommunities").addEventListener("click",async()=>{
+  state.communityPage++;try{await loadCommunities(false);}catch(e){notify(e.message,true);}
+ });
+ $("forumLoadMore").addEventListener("click",()=>void loadFeed(false));
+ $("forumMoreReplies").addEventListener("click",()=>void loadReplies(false));
+ $("forumJoinButton").addEventListener("click",toggleJoin);
+ $("forumBackButton").addEventListener("click",()=>{
+  enterFeed({community:state.activeCommunity,mode:state.activeCommunity?"community":"home"});
+ });
+ $("forumRefreshReplies").addEventListener("click",()=>void loadReplies(true));
+ $("createThreadButton").addEventListener("click",()=>showDialog("forumThreadDialog"));
+ $("createCommunityButton").addEventListener("click",()=>showDialog("forumCommunityDialog"));
+ $("forumCommunityForm").addEventListener("submit",createCommunity);
+ $("forumThreadForm").addEventListener("submit",createThread);
+ $("forumReplyForm").addEventListener("submit",submitReply);
+ $("forumThreadActions").addEventListener("change",event=>{
+  if(event.target.id==="forumModerateAction"){
+   const action=event.target.value;event.target.value="";
+   void moderateThread(action);
+  }
+ });
+ $("forumCommunityDetails").addEventListener("click",e=>{
+  if(e.target.id==="forumSaveCommunityRules")void savePostingPolicy();
+ });
+ for(const dialog of [$("forumThreadDialog"),$("forumCommunityDialog")]){
+  dialog.addEventListener("click",event=>{
+   if(event.target===dialog)dialog.close();
+  });
+ }
+ addEventListener("popstate",()=>void initializeFromUrl());
+ setupMentionInput($("forumReplyText"));
+ setupMentionInput($("forumThreadForm").querySelector("[name=body]"));
+}
+async function boot(){
+ renderCategories();bindEvents();
+ try{state.user=await getCurrentUser();}catch(error){console.warn("Forum account unavailable",error);}
+ authPanel();
+ await loadMemberships();
+ try{await loadCommunities(true);}catch(error){notify("Cannot load community directory right now.",true);}
+ await initializeFromUrl();
+}
+boot().catch(error=>{reportAppError(error,"Community forum failed to start");notify("Could not load communities. Refresh to try again.",true);});
