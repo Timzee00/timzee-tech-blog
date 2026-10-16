@@ -105,7 +105,14 @@ function setView(view) {
 }
 function setHeaderStatus(text, live = false) { if ($("chatStatusText")) $("chatStatusText").textContent = text; if ($("chatLiveDot")) $("chatLiveDot").classList.toggle("is-live", live); }
 function closeHeaderMenu() { const menu=$("chatHeaderMenu"); if(menu)menu.hidden=true; $("chatMenuToggle")?.setAttribute("aria-expanded","false"); }
-function openHeaderMenu() { const menu=$("chatHeaderMenu"); if(menu)menu.hidden=false; $("chatMenuToggle")?.setAttribute("aria-expanded","true"); }
+function openHeaderMenu() {
+  const menu=$("chatHeaderMenu");
+  if(!menu)return;
+  menu.querySelectorAll('[data-chat-menu="mute"],[data-chat-menu="pin"]')
+    .forEach(item=>{item.hidden=!Boolean(state.activeGroupId);});
+  menu.hidden=false;
+  $("chatMenuToggle")?.setAttribute("aria-expanded","true");
+}
 function profileFor(id) { return state.friendProfiles.get(id) || state.blockedProfiles.get(id) || null; }
 function threadForFriend(id) { return [state.user.id,id].sort().join("_"); }
 function activeGroup() { return state.groups.find((g)=>g.id===state.activeGroupId) || null; }
@@ -300,6 +307,7 @@ function updateComposer() {
   const disabled = state.loadingThread || !state.activeThreadId || !state.canCompose;
   $("chatBody").disabled = disabled;
   $("chatMedia").disabled = disabled;
+  if ($("chatAttachToggle")) $("chatAttachToggle").disabled = disabled;
   $("recordVoiceBtn").disabled = disabled;
   $("chatForm").querySelector('button[type="submit"]').disabled = disabled || state.sending;
   $("chatForm").setAttribute('aria-busy', String(state.sending));
@@ -317,7 +325,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
   }
   const group = groupId ? state.groups.find(item => item.id === groupId) : null;
   if (groupId && !group) return;
-  rememberDraft(); stopRecording(false); clearMediaPreview();
+  rememberDraft(); stopRecording(false); clearMediaPreview(); closeAttachMenu();
   const selection = ++state.selection;
   void realtime.stop();
   state.activeFriendId = friendId; state.activeGroupId = groupId; state.canCompose=true;
@@ -393,6 +401,22 @@ const realtime = createChatRealtime(supabase, {
     }
   }
 });
+function closeAttachMenu(){
+  const menu=$("chatAttachMenu");
+  if(menu)menu.hidden=true;
+  $("chatAttachToggle")?.setAttribute("aria-expanded","false");
+}
+function chooseAttachment(kind){
+  if(!state.activeThreadId||!state.canCompose||state.sending)return;
+  const input=$("chatMedia");if(!input)return;
+  const formats={photo:"image/*,video/*",camera:"image/*",audio:"audio/*",document:"*/*"};
+  if(!Object.hasOwn(formats,kind))return;
+  input.accept=formats[kind];
+  input.removeAttribute("capture");
+  if(kind==="camera")input.setAttribute("capture","environment");
+  closeAttachMenu();
+  input.click();
+}
 function clearMediaPreview(){if(state.previewUrl)URL.revokeObjectURL(state.previewUrl);state.previewUrl='';state.mediaFile=null;state.mediaType='';if($("chatMediaPreview"))$("chatMediaPreview").innerHTML='';}
 function showMediaPreview(file){clearMediaPreview();state.mediaFile=file;state.mediaType=resolveAttachmentType({mimeType:file.type,fileName:file.name});state.previewUrl=URL.createObjectURL(file);let c=state.mediaType==='image'?`<img src="${escapeHTML(state.previewUrl)}" alt="Attachment preview">`:state.mediaType==='video'?`<video controls src="${escapeHTML(state.previewUrl)}"></video>`:state.mediaType==='audio'?`<div class="voice-preview"><div class="voice-preview-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><audio controls src="${escapeHTML(state.previewUrl)}"></audio></div>`:`<div class="media-preview-file"><strong>${escapeHTML(file.name)}</strong><small>${escapeHTML(file.type||'File')} · ${escapeHTML(formatFileSize(file.size))}</small></div>`;$("chatMediaPreview").innerHTML=`${c}<button class="btn ghost sm" id="removeChatMedia" type="button">Remove</button>`;$("removeChatMedia")?.addEventListener('click',clearMediaPreview);}
 function stopRecorderTracks(){state.recorderStream?.getTracks().forEach(t=>t.stop());state.recorderStream=null;try{state.audioContext?.close();}catch(_){}state.audioContext=null;state.analyser=null;if(state.analyserFrame)cancelAnimationFrame(state.analyserFrame);state.analyserFrame=0;}
@@ -411,18 +435,23 @@ async function startRecording(){
     }
     state.recorderStream=stream;
     state.recorderChunks=[];
-    state.recorder=new MediaRecorder(stream);
+    const recorder=new MediaRecorder(stream);
+    state.recorder=recorder;
     state.recorderStartedAt=Date.now();
     $("voiceWaveform").innerHTML=Array.from({length:40},(_,i)=>`<span data-wave="${i}"></span>`).join('');
     $("voiceRecordingSheet").hidden=false;
     animateWaveform();
-    state.recorder.ondataavailable=e=>{if(e.data.size)state.recorderChunks.push(e.data);};
-    state.recorder.onstop=()=>{
-      const blob=new Blob(state.recorderChunks,{type:state.recorder?.mimeType||'audio/webm'});
-      if(blob.size)showMediaPreview(new File([blob],`voice-${Date.now()}.webm`,{type:blob.type}));
+    recorder.ondataavailable=e=>{if(e.data.size)state.recorderChunks.push(e.data);};
+    recorder.onstop=()=>{
+      // stopRecording clears state.recorder before this asynchronous callback.
+      // Keep the original recorder MIME so Safari/Android previews stay playable.
+      const mime=recorder.mimeType||state.recorderChunks[0]?.type||'audio/webm';
+      const extension=mime.includes('mp4')?'m4a':mime.includes('ogg')?'ogg':'webm';
+      const blob=new Blob(state.recorderChunks,{type:mime});
+      if(blob.size)showMediaPreview(new File([blob],`voice-${Date.now()}.${extension}`,{type:mime}));
       stopRecorderTracks();
     };
-    state.recorder.start(120);
+    recorder.start(120);
     $("recordVoiceBtn").classList.add('is-recording');
     state.recorderTimer=setInterval(()=>$("voiceRecordingTimer").textContent=formatDuration(Date.now()-state.recorderStartedAt),200);
   } finally {
@@ -521,6 +550,22 @@ function setupEvents(){
   $("chatBody")?.addEventListener('input',()=>{const t=$("chatBody");t.style.height='auto';t.style.height=`${Math.min(t.scrollHeight,140)}px`;});
   $("chatBody")?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&state.settings.enterToSend){e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));}}); $("chatForm")?.addEventListener('submit',e=>{e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));});
   $("chatMedia")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)showMediaPreview(f);e.target.value='';});
+  $("chatAttachToggle")?.addEventListener("click",event=>{
+    event.stopPropagation();
+    const menu=$("chatAttachMenu");if(!menu)return;
+    const shouldOpen=menu.hidden;closeAttachMenu();
+    if(shouldOpen){menu.hidden=false;$("chatAttachToggle").setAttribute("aria-expanded","true");}
+  });
+  $("chatAttachMenu")?.addEventListener("click",event=>{
+    const button=event.target.closest("[data-attach-kind]");
+    if(button)chooseAttachment(button.dataset.attachKind);
+  });
+  document.addEventListener("click",event=>{
+    if(!event.target.closest("#chatAttachMenu,#chatAttachToggle"))closeAttachMenu();
+  });
+  document.addEventListener("keydown",event=>{
+    if(event.key==="Escape")closeAttachMenu();
+  });
   $("recordVoiceBtn")?.addEventListener('click',()=>{
     if(state.recorder||state.recordingStarting){stopRecording(false);return;}
     startRecording().catch(err=>{
@@ -538,7 +583,7 @@ function setupEvents(){
     if (event.target === panel && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) panel.close();
   });
   $("chatMenuToggle")?.addEventListener('click',e=>{e.stopPropagation();$("chatHeaderMenu").hidden?openHeaderMenu():closeHeaderMenu();}); document.addEventListener('click',e=>{if(!e.target.closest('.chat-header-actions'))closeHeaderMenu();});
-  $("chatHeaderMenu")?.addEventListener('click',async e=>{const a=e.target.closest('[data-chat-menu]')?.dataset.chatMenu;if(!a)return;closeHeaderMenu();if(a==='search'){state.messageSearchTerm=await window.appUI.prompt('Search in this chat:',state.messageSearchTerm)||'';renderMessages();}if(a==='settings'){defaultSettingsUI();openModal('chatSettingsModal');}if(a==='mute'||a==='pin')await toggleChatMemberFlag(a);if(a==='report')await reportActiveConversation().catch(error=>reportAppError(error,'Could not submit report'));});
+  $("chatHeaderMenu")?.addEventListener('click',async e=>{const a=e.target.closest('[data-chat-menu]')?.dataset.chatMenu;if(!a)return;closeHeaderMenu();if(a==='search'){state.messageSearchTerm=await window.appUI.prompt('Search in this chat:',state.messageSearchTerm)||'';renderMessages();}if(a==='details'||a==='media'){openConversationDetails();if(a==='media')setTimeout(()=>$("infoMediaGrid")?.scrollIntoView({block:"nearest"}),50);}if(a==='settings'){defaultSettingsUI();openModal('chatSettingsModal');}if(a==='mute'||a==='pin')await toggleChatMemberFlag(a);if(a==='report')await reportActiveConversation().catch(error=>reportAppError(error,'Could not submit report'));});
   document.querySelectorAll('[data-close-modal]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.closeModal))); document.querySelectorAll('[data-chat-setting]').forEach(i=>i.addEventListener('change',()=>{state.settings[i.dataset.chatSetting]=i.checked;saveSettings();}));
   $("peopleSearchToggle")?.addEventListener('click',()=>{$("peopleSearchPanel").hidden=!$("peopleSearchPanel").hidden;if(!$("peopleSearchPanel").hidden){$("peopleSearch").focus();renderPeopleResults();}}); $("newGroupBtn")?.addEventListener('click',()=>{renderGroupPicker();openModal('friendPickerModal');}); $("friendPickerClose")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCancel")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCreate")?.addEventListener('click',()=>createGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Create group'})));
   $("groupMemberSearch")?.addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#groupMemberPicker .chat-picker-row').forEach(r=>r.hidden=!r.innerText.toLowerCase().includes(q));}); $("editGroupBtn")?.addEventListener('click',()=>{const g=activeGroup();if(g){$("groupAvatarPreview").src=g.avatar_url||DEFAULT_GROUP_AVATAR;$("groupNameInput").value=g.name||'';$("groupDescriptionInput").value=g.description||'';$("groupEditor").hidden=false;}}); $("groupAvatarInput")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)$("groupAvatarPreview").src=URL.createObjectURL(f);}); $("cancelGroupBtn")?.addEventListener('click',()=>{$("groupEditor").hidden=true;}); $("saveGroupBtn")?.addEventListener('click',()=>editGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Group settings'}))); $("infoGroupMembers")?.addEventListener('click',e=>{const b=e.target.closest('[data-edit-member-tags]');if(b)editMemberTags(b.dataset.editMemberTags).catch(err=>window.siteToast?.(err.message,{type:'error',title:'Member tag'}));});
