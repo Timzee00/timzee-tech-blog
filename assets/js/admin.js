@@ -1347,6 +1347,7 @@ function renderUsersTable(users) {
               <button class="danger" data-action="${status === "suspended" ? "activate" : "suspend"}" data-id="${
                 user.id
               }">${status === "suspended" ? "Activate" : "Suspend"}</button>
+              <a class="muted" href="restrictions.html?user=${encodeURIComponent(user.id)}" title="Review timed feature restrictions for this member">Restrict features</a>
             </div>
           </td>
         </tr>
