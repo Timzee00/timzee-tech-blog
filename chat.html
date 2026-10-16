@@ -108,6 +108,7 @@
                   <button type="button" data-chat-menu="mute">Mute notifications</button>
                   <button type="button" data-chat-menu="pin">Pin chat</button>
                   <button type="button" data-chat-menu="settings">Chat settings</button>
+                  <button type="button" data-chat-menu="poll" hidden>New group poll</button>
                   <button type="button" data-chat-menu="report">Report</button>
                 </div>
               </div>
@@ -146,7 +147,7 @@
               <div class="chat-composer-row">
                 <button class="chat-composer-btn" id="chatAttachToggle" type="button" title="Choose attachment" aria-label="Choose attachment" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 6.7-6.7a3.2 3.2 0 0 1 4.5 4.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 <input type="file" id="chatMedia" accept="*/*" hidden>
-                <textarea id="chatBody" rows="1" placeholder="Write a message…" autocomplete="off" class="resize-none"></textarea>
+                <textarea id="chatBody" rows="1" placeholder="Write a message… @mention someone" autocomplete="off" class="resize-none"></textarea>
                 <button class="chat-composer-btn" id="recordVoiceBtn" type="button" title="Record voice" aria-label="Record voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="3" width="7" height="12" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 11.5a7 7 0 0 0 14 0M12 18.5v3M8.5 21.5h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
                 <button class="chat-send-btn" type="submit" title="Send message" aria-label="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5 20 12 4 19.5l3-7.5-3-7.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
               </div>
@@ -176,6 +177,20 @@
                 <input id="groupNameInput" class="input" type="text" maxlength="80" placeholder="Group name">
                 <textarea id="groupDescriptionInput" class="resize-none input" rows="3" maxlength="300" placeholder="Group description"></textarea>
                 <div class="inline-actions"><button class="btn" id="saveGroupBtn" type="button">Save group</button><button class="btn ghost" id="cancelGroupBtn" type="button">Cancel</button></div>
+              </div>
+              <div class="chat-group-permissions" id="groupPermissionsPanel" hidden>
+                <h4>Group permissions</h4>
+                <label><input type="checkbox" id="groupAdminsOnly"> Admins only can send messages</label>
+                <label><input type="checkbox" id="groupAllowMedia" checked> Allow media messages</label>
+                <label><input type="checkbox" id="groupAllowPolls" checked> Allow group polls</label>
+                <label>Slow mode<select id="groupSlowMode">
+                  <option value="0">Off</option><option value="15">15 seconds</option>
+                  <option value="30">30 seconds</option><option value="60">1 minute</option>
+                  <option value="300">5 minutes</option><option value="600">10 minutes</option>
+                  <option value="3600">1 hour</option>
+                </select></label>
+                <p class="chat-group-permissions-hint">Admins and moderators bypass slow mode. Restrictions are checked by the database.</p>
+                <button type="button" class="btn" id="saveGroupPermissions">Save group permissions</button>
               </div>
             </section>
             <section class="chat-info-section" id="groupMembersSection" hidden>
