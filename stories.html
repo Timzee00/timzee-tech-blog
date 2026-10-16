@@ -61,6 +61,13 @@
           </span>
         </button>
         <button type="button" id="savedStoryToggle" class="btn ghost sm" hidden aria-pressed="false">☆ Saved statuses</button>
+        <section id="verifiedStoryInsights" class="verified-story-insights" hidden>
+          <div class="verified-insights-heading"><div><strong>Verified Creator Insights</strong>
+            <small>Private performance overview · last 30 days</small></div>
+            <button type="button" id="refreshStoryInsights">Refresh</button></div>
+          <div id="verifiedStoryInsightsStats" class="verified-story-metrics" aria-live="polite">Loading insights…</div>
+          <p>View totals include only viewers who allow read receipts.</p>
+        </section>
         <div class="stories-rail" id="storiesRail">
           <button type="button" class="story-avatar story-avatar-add" id="addStoryBtn" aria-label="Add your story">
             <div class="story-ring story-ring-add">
@@ -185,6 +192,11 @@
         if(state.user){
           const {data}=await supabase.from('profiles').select('is_verified').eq('id',state.user.id).maybeSingle();
           state.verified=data?.is_verified===true;
+          if(state.verified){
+            document.getElementById("verifiedStoryInsights").hidden=false;
+            document.getElementById("refreshStoryInsights").addEventListener("click",()=>void loadCreatorInsights());
+            void loadCreatorInsights();
+          }
           document.querySelectorAll('#storyDuration [data-verified-only]')
            .forEach(option=>{option.hidden=!state.verified;option.disabled=!state.verified;});
           document.getElementById("storyCreatorEntitlements").textContent=state.verified
@@ -231,6 +243,23 @@
         setupViewerControls();
       }
 
+      async function loadCreatorInsights(){
+        if(!state.verified)return;
+        const host=document.getElementById("verifiedStoryInsightsStats");
+        host.textContent="Refreshing…";
+        const {data,error}=await supabase.rpc('verified_story_insights',{p_days:30});
+        if(error){host.textContent="Insights unavailable: "+error.message;return;}
+        host.replaceChildren();
+        for(const [label,value] of [
+          ["Statuses",data.total_stories||0],["Likes",data.likes||0],
+          ["Visible views",data.visible_views||0],["Comments",data.public_comments||0],
+          ["Reshares",data.reshares||0]
+        ]){
+          const box=document.createElement("div"),strong=document.createElement("strong"),small=document.createElement("span");
+          strong.textContent=Number(value).toLocaleString();
+          small.textContent=label;box.append(strong,small);host.append(box);
+        }
+      }
       async function applySavedFilter(){
         if(!state.savedOnly||!state.user){
           state.groups=state.allGroups;
