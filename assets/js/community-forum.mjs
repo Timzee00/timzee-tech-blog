@@ -1,5 +1,5 @@
 import {supabase,getCurrentUser,getDisplayName,signOut} from "./supabase.js";
-import {escapeHTML,timeAgo,reportAppError} from "./utils.js";
+import {escapeHTML,timeAgo,reportAppError,isSafeUrl} from "./utils.js";
 import {setupMentionInput} from "./mentions.js";
 import "./nav.js";
 
@@ -185,7 +185,7 @@ async function loadFeed(reset=false){
   const selected=state.activeCommunity;
   if(reset&&selected){
    const {data:pinned}=await supabase.from("community_threads")
-    .select("id,community_id,author_id,author_name,title,body,kind,status,is_pinned,is_locked,is_legacy_room,reply_count,score,created_at,last_activity_at")
+    .select("id,community_id,author_id,author_name,title,body,kind,status,is_pinned,is_locked,is_legacy_room,reply_count,score,media_url,media_type,created_at,last_activity_at")
     .eq("community_id",selected.id).eq("status","published").eq("is_pinned",true)
     .order("created_at",{ascending:false}).limit(4);
    if(version!==state.feedVersion)return;
@@ -200,7 +200,7 @@ async function loadFeed(reset=false){
    if(!savedIds.length){state.feed=[];renderFeed();return;}
   }
   let query=supabase.from("community_threads")
-    .select("id,community_id,author_id,author_name,title,body,kind,status,is_pinned,is_locked,is_legacy_room,reply_count,score,created_at,last_activity_at")
+    .select("id,community_id,author_id,author_name,title,body,kind,status,is_pinned,is_locked,is_legacy_room,reply_count,score,media_url,media_type,created_at,last_activity_at")
     .eq("status","published");
   if(selected)query=query.eq("community_id",selected.id).eq("is_pinned",false);
   else if(state.mode==="joined")query=query.in("community_id",[...state.joined].slice(0,200));
@@ -246,6 +246,26 @@ async function loadPersonalThreadState(ids){
  for(const item of votes.data||[])state.votes.set(item.thread_id,item.value);
  for(const item of saved.data||[])state.saved.add(item.thread_id);
 }
+function mediaHtml(url,type){
+ if(!url||!isSafeUrl(url))return "";
+ const safeUrl=escape(url);
+ if(type==="video"||/\.(mp4|webm)(\?|$)/i.test(url))
+  return "<div class='forum-attachment'><video src='"+safeUrl+"' preload='none' controls playsinline aria-label='Community video attachment'></video></div>";
+ return "<div class='forum-attachment'><img src='"+safeUrl+"' loading='lazy' decoding='async' alt='Attached image'></div>";
+}
+function mediaFile(input){
+ const file=input?.files?.[0];return file?.size?file:null;
+}
+async function uploadForumFile(file,folder){
+ if(!file)return {url:null,type:null};
+ if(file.size>12*1024*1024||file.size<1)throw Error("Attachment must be under 12 MB.");
+ if(!["image/jpeg","image/png","image/webp","image/gif","video/mp4","video/webm"].includes(file.type))
+  throw Error("Use JPEG, PNG, WebP, GIF, MP4 or WebM.");
+ const {uploadMedia}=await import("./media.js");
+ const url=await uploadMedia(file,folder+"/"+state.user.id);
+ if(!url)throw Error("Unable to upload attachment.");
+ return {url,type:file.type.startsWith("video")?"video":"image"};
+}
 function threadCard(thread,{pinned=false}={}){
  const community=findCommunity(thread.community_id);
  const label=thread.kind==="question"?"Question":thread.kind==="guide"?"Guide":thread.kind==="news"?"News":
@@ -265,6 +285,7 @@ function threadCard(thread,{pinned=false}={}){
   "<span>· "+escape(preferredDate(thread.created_at))+"</span></div>"+
   "<button class='forum-thread-title' data-open-thread='"+escape(thread.id)+"' type='button'>"+escape(thread.title)+"</button>"+
   (intro?"<p>"+escape(intro)+"</p>":"")+
+  (thread.media_url?"<span class='forum-topic-media-indicator'>◈ Media attached</span>":"")+
   "<div class='forum-thread-footer'><span>By "+escape(thread.author_name||"Member")+"</span>"+
   "<button type='button' data-open-thread='"+escape(thread.id)+"'>"+
    Number(thread.reply_count||0)+" replies</button>"+
@@ -386,7 +407,7 @@ async function shareThread(id){
 async function openThread(id,{push=true}={}){
  if(!validId(id))return;
  const {data,error}=await supabase.from("community_threads")
-  .select("id,community_id,author_id,author_name,title,body,kind,status,is_locked,is_pinned,is_legacy_room,created_at,reply_count,score")
+  .select("id,community_id,author_id,author_name,title,body,kind,status,is_locked,is_pinned,is_legacy_room,created_at,reply_count,score,media_url,media_type")
   .eq("id",id).maybeSingle();
  if(error||!data||data.status!=="published"){notify("This topic is unavailable.",true);return;}
  const board=findCommunity(data.community_id);
@@ -407,6 +428,7 @@ async function openThread(id,{push=true}={}){
   "</h1><p class='forum-thread-detail-meta'>By "+escape(data.author_name||"Member")+
   " · "+escape(preferredDate(data.created_at))+(data.is_locked?" · Locked":"")+"</p>";
  $("forumThreadBody").textContent=data.body||"";
+ if(data.media_url)$("forumThreadBody").insertAdjacentHTML("beforeend",mediaHtml(data.media_url,data.media_type));
  $("forumThreadActions").innerHTML=
   "<button type='button' data-vote='1' data-id='"+id+"'>▲</button>"+
   "<strong data-score='"+id+"'>"+Number(data.score||0)+"</strong>"+
@@ -474,6 +496,7 @@ function renderReplies(){
   return "<article class='forum-reply' id='reply-"+escape(r.id)+"'>"+
    "<span class='forum-reply-number'>#"+(i+1)+"</span><div class='forum-reply-main'>"+
    header+quote+"<p class='forum-reply-body'>"+escape(r.body||"")+"</p>"+
+   mediaHtml(r.media_url,r.media_type)+
    "<div class='forum-reply-actions'><button type='button' data-reply-to='"+escape(r.id)+"'>Reply</button>"+
    "<button type='button' data-copy-reply='"+escape(r.id)+"'>Copy link</button></div></div></article>";
  }).join("")||"<div class='forum-empty'><strong>No replies yet</strong><p>Start a helpful discussion.</p></div>";
@@ -524,8 +547,10 @@ async function createThread(event){
  if(!validId(communityId)){$("forumThreadFormError").textContent="Choose a community.";return;}
  setButtonBusy(button,true);$("forumThreadFormError").textContent="";
  try{
+  const attachment=await uploadForumFile(mediaFile(form.querySelector("[name=media]")),"community-threads");
   const {data,error}=await supabase.from("community_threads").insert({
     community_id:communityId,author_id:state.user.id,author_name:memberName(),
+    media_url:attachment.url,media_type:attachment.type,
     title:String(values.get("title")||"").trim(),
     body:String(values.get("body")||"").trim(),
     kind:String(values.get("kind")||"discussion")
@@ -540,15 +565,19 @@ async function createThread(event){
 async function submitReply(event){
  event.preventDefault();
  if(!mustLogin()||!state.activeThread)return;
- const body=$("forumReplyText").value.trim();if(!body)return;
+ const body=$("forumReplyText").value.trim();
+ const selectedMedia=mediaFile($("forumReplyMedia"));
+ if(!body&&!selectedMedia){notify("Write a reply or attach media.",true);return;}
  const button=event.currentTarget.querySelector("[type=submit]");setButtonBusy(button,true);
  try{
+  const attachment=await uploadForumFile(selectedMedia,"community-replies");
   const {error}=await supabase.from("discussion_messages").insert({
     id:crypto.randomUUID(),thread_id:state.activeThread.id,topic_id:state.activeThread.community_id,
-    author_id:state.user.id,author_name:memberName(),body,reply_to:state.replyTo
+    author_id:state.user.id,author_name:memberName(),body,reply_to:state.replyTo,
+    media_url:attachment.url,media_type:attachment.type
   });
   if(error)throw error;
-  $("forumReplyText").value="";state.replyTo=null;$("forumReplyTarget").hidden=true;
+  $("forumReplyText").value="";$("forumReplyMedia").value="";state.replyTo=null;$("forumReplyTarget").hidden=true;
   state.activeThread.reply_count=Number(state.activeThread.reply_count||0)+1;
   state.replies=[];state.replyCursor=null;await loadReplies(true);
   notify("Reply posted.");
