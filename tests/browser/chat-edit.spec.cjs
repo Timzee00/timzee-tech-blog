@@ -72,8 +72,10 @@ test('editing can be cancelled without overwriting a draft',async({page})=>{
   expect(edits).toHaveLength(0);
 });
 
-test('old messages never expose Edit in the message menu',async({page})=>{
+test('older sent messages show an expired Edit explanation rather than a missing button',async({page})=>{
   await ownChat(page,true);
   await page.getByRole('button',{name:'Message actions',exact:true}).click();
-  await expect(page.getByRole('menuitem',{name:'Edit message'})).toBeHidden();
+  await expect(page.getByRole('menuitem',{name:/Edit message.*15-minute limit/})).toBeVisible();
+  await page.getByRole('menuitem',{name:/Edit message.*15-minute limit/}).click();
+  await expect(page.locator('#chatEditPanel')).toBeHidden();
 });
