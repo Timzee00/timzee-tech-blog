@@ -110,6 +110,7 @@
           <div class="story-file-preview" id="storyFilePreview"></div>
         </label>
         <input type="file" id="storyFile" accept="image/*,video/*" hidden required>
+        <button type="button" id="storyEditPhoto" class="btn ghost" hidden>Edit photo: crop, rotate, text, draw</button>
         <textarea id="storyCaption" placeholder="Add a caption · @mention a member" rows="2" maxlength="200" class="resize-none"></textarea>
         <div class="story-composer-extras">
           <label for="storyDuration">Status duration<select id="storyDuration">
@@ -154,6 +155,7 @@
       import { escapeHTML, isSafeUrl, timeAgo } from "./assets/js/utils.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
       import {showStoryInteractions} from "./assets/js/story-interactions.mjs";
+      import {editStatusPhoto} from "./assets/js/story-media-editor.mjs";
       import {supabase} from "./assets/js/supabase.js";
       import "./assets/js/nav.js";
 
@@ -283,6 +285,7 @@
       let composerOpener = null;
       let composerBodyOverflow = "";
       let storyPreviewObjectUrl = null;
+      let editedStoryFile = null;
       function revokeStoryPreview() {
         if (storyPreviewObjectUrl) {
           URL.revokeObjectURL(storyPreviewObjectUrl);
@@ -652,6 +655,8 @@
         document.getElementById("storyForm").reset();
         document.getElementById("storyFilePreview").innerHTML = "";
         revokeStoryPreview();
+        editedStoryFile=null;
+        document.getElementById("storyEditPhoto").hidden=true;
         document.getElementById("storyFilePreviewLabel").textContent = "Choose a photo or video";
         document.body.style.overflow = composerBodyOverflow;
         restoreStoryFocus(composerOpener);
@@ -667,6 +672,8 @@
           const file = fileInput.files?.[0];
           const preview = document.getElementById("storyFilePreview");
           const label = document.getElementById("storyFilePreviewLabel");
+          editedStoryFile=null;
+          document.getElementById("storyEditPhoto").hidden=!file?.type?.startsWith("image/");
           preview.innerHTML = "";
           revokeStoryPreview();
           if (!file) {
@@ -690,13 +697,33 @@
           }
         });
 
+        document.getElementById("storyEditPhoto").addEventListener("click",async()=>{
+          const original=editedStoryFile||fileInput.files?.[0];
+          if(!original?.type.startsWith("image/"))return;
+          const button=document.getElementById("storyEditPhoto");
+          button.disabled=true;
+          try{
+            const edited=await editStatusPhoto(original,{verified:state.verified});
+            if(!edited)return;
+            editedStoryFile=edited;
+            revokeStoryPreview();
+            const url=URL.createObjectURL(edited);
+            storyPreviewObjectUrl=url;
+            const preview=document.getElementById("storyFilePreview");
+            preview.replaceChildren();
+            const img=document.createElement("img");img.src=url;img.alt="Edited status preview";preview.appendChild(img);
+            document.getElementById("storyFilePreviewLabel").textContent="Edited photo ready";
+          }catch(error){
+            window.appUI?.toast?.(error.message||"Photo editing unavailable on this device.");
+          }finally{button.disabled=false;}
+        });
         setupMentionInput(document.getElementById("storyCaption"));
         document.getElementById("storyForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           if (!state.user) return;
           const submitBtn = document.getElementById("storySubmitBtn");
           const status = document.getElementById("storyComposerStatus");
-          const file = fileInput.files?.[0];
+          const file = editedStoryFile || fileInput.files?.[0];
           const caption = document.getElementById("storyCaption").value.trim();
           const visibility = document.querySelector('input[name="storyVisibility"]:checked')?.value || "public";
 
