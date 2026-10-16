@@ -124,3 +124,41 @@ html[data-chat-compact="true"] .chat-messages { gap: 5px; }
  .chat-page .chat-pinned-bar{padding:5px 7px;gap:4px}
  .chat-page .chat-pinned-link{flex-basis:90px;padding:5px;gap:5px}
 }
+
+/* Editing lives above the existing composer and never overwrites an unsent draft. */
+.chat-page .chat-edit-panel{
+ box-sizing:border-box;display:flex;flex-direction:column;gap:8px;
+ width:100%;max-width:100%;min-width:0;padding:10px;
+ border:1px solid var(--color-border-strong);border-radius:13px;
+ background:var(--color-surface-muted);color:var(--color-text);
+}
+.chat-page .chat-edit-panel[hidden]{display:none!important}
+.chat-page .chat-edit-panel-top,.chat-page .chat-edit-panel-bottom{
+ display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;
+}
+.chat-page .chat-edit-panel-top strong{font-size:.86rem}
+.chat-page .chat-edit-remaining{font-size:.72rem;color:var(--color-text-muted)}
+.chat-page #chatEditBody{
+ display:block;box-sizing:border-box;width:100%;max-width:100%;min-width:0;max-height:min(25dvh,160px);
+ resize:vertical;overflow-y:auto;line-height:1.45;
+ padding:10px;border-radius:10px;border:1px solid var(--color-border-strong);
+ background:var(--color-surface);color:var(--color-text);font:inherit;
+}
+.chat-page #chatEditBody:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+.chat-page .chat-edit-panel-bottom{align-items:flex-end}
+.chat-page #chatEditStatus{flex:1 1 160px;min-width:0;max-width:100%;font-size:.73rem;line-height:1.35;color:var(--color-text-muted);overflow-wrap:anywhere}
+.chat-page .chat-edit-actions{display:flex;gap:6px;justify-content:flex-end;align-items:center;flex:0 0 auto}
+.chat-page .chat-edit-actions button{
+ min-height:38px;min-width:62px;padding:8px 11px;border:1px solid var(--color-border-strong);
+ border-radius:9px;color:var(--color-text);background:var(--color-surface);
+ font:600 .78rem var(--font-body,system-ui);cursor:pointer;
+}
+.chat-page .chat-edit-actions .chat-edit-save{background:var(--color-primary);color:white;border-color:var(--color-primary)}
+.chat-page .chat-edit-actions button:disabled{opacity:.6;cursor:wait}
+.chat-page .chat-edited-indicator{font-size:.68rem;color:inherit;opacity:.78;font-style:italic}
+@media(max-width:500px){
+ .chat-page .chat-edit-panel{padding:8px;gap:7px}
+ .chat-page .chat-edit-panel-bottom{flex-direction:column;align-items:stretch}
+ .chat-page .chat-edit-actions{width:100%;justify-content:flex-end}
+ .chat-page #chatEditStatus{flex:auto}
+}
