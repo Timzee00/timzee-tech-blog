@@ -4,7 +4,7 @@ import { escapeHTML } from "./utils.js";
 const panels=new Map();
 const polls=new Map();
 const lock=new Set();
-const KINDS=new Set(["video","story","chat"]);
+const KINDS=new Set(["video","story","chat","group"]);
 const uid=id=>String(id||"").match(/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i)?.[0]||"";
 const safe=escapeHTML;
 const key=(kind,id)=>kind+":"+id;
@@ -60,12 +60,22 @@ export async function openPollComposer(kind,id,onCreated=()=>{}){
    if(duration==="custom"&&!end){err.textContent="Choose an end date or select No end time.";return;}
    const button=dialog.querySelector(".timzee-poll-submit");button.disabled=true;err.textContent="Publishing…";
    try{
-     const {error}=await supabase.rpc("create_content_poll",{
-       p_kind:kind,p_target:id,p_question:question,p_options:options,p_ends_at:ends_at
-     });
-     if(error)throw error;
-     close();await refreshPoll(kind,id);
-     await onCreated();
+     let targetId=id;
+     if(kind==="group"){
+       const {data,error}=await supabase.rpc("create_group_poll",{
+         p_thread:id,p_question:question,p_options:options,p_ends_at:ends_at
+       });
+       if(error)throw error;
+       targetId=data;
+     }else{
+       const {error}=await supabase.rpc("create_content_poll",{
+         p_kind:kind,p_target:id,p_question:question,p_options:options,p_ends_at:ends_at
+       });
+       if(error)throw error;
+     }
+     close();
+     if(kind!=="group")await refreshPoll(kind,targetId);
+     await onCreated(targetId);
    }catch(e){err.textContent=e.message||"Unable to publish poll";button.disabled=false;}
  });
  dialog.showModal();dialog.querySelector('[name=question]').focus();
