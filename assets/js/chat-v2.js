@@ -20,7 +20,7 @@ const VIDEO_EXTENSIONS = new Set(["mp4","webm","mov","m4v","mkv","avi","wmv","fl
 const AUDIO_EXTENSIONS = new Set(["mp3","wav","ogg","m4a","aac","flac","opus","webm"]);
 
 const state = {
-  selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false, editing: null, editSaving: false,
+  selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false, editing: null, editSaving: false, replyTo: null,
   drafts: new Map(), previews: new Map(), peopleResults: [], peopleRequest: 0, messageVersions: new Map(), messageRevision: 0,
   user: null, settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [], directPartners: [], staffDMAllowed: false, canCompose: true,
   blockedProfiles: new Map(), groups: [], groupMembers: new Map(), messages: [], pinnedMessages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
@@ -331,7 +331,7 @@ async function loadOlderMessages() {
   }
 }
 function messageMediaHtml(m) { const url=m.media_url&&isSafeUrl(m.media_url)?m.media_url:''; if(!url)return ''; const type=resolveAttachmentType({mediaType:m.media_type,mediaUrl:url}); if(type==='image')return `<img class="message-attachment-image" src="${escapeHTML(url)}" alt="Message attachment" loading="lazy">`; if(type==='video')return `<video class="message-attachment-video" controls preload="metadata" src="${escapeHTML(url)}"></video>`; if(type==='audio')return voicePlayerHtml(escapeHTML(url)); return `<a class="message-file" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" download><strong>${escapeHTML(getDisplayFileName(url))}</strong><small>${escapeHTML(m.media_type||'File')} · Open or download</small></a>`; }
-function renderMessages({ preserveScroll = false } = {}) { const target=$("chatMessages"); if(!target)return; const previousTop=target.scrollTop; const followBottom=!preserveScroll||target.scrollHeight-target.scrollTop-target.clientHeight<80; const q=state.messageSearchTerm.trim().toLowerCase(); const msgs=q?state.messages.filter(m=>String(m.body||'').toLowerCase().includes(q)):state.messages; if(!msgs.length){target.innerHTML=`<div class="chat-no-messages">${q?'No messages match your search.':'No messages yet. Start the conversation.'}</div>`;return;} target.innerHTML=msgs.map(m=>{const self=m.sender_id===state.user.id;const p=profileFor(m.sender_id)||{};const deleted=Boolean(m.deleted_at);
+function renderMessages({ preserveScroll = false } = {}) { const target=$("chatMessages"); if(!target)return; const previousTop=target.scrollTop; const followBottom=!preserveScroll||target.scrollHeight-target.scrollTop-target.clientHeight<80; const q=state.messageSearchTerm.trim().toLowerCase(); const msgs=q?state.messages.filter(m=>String(m.body||'').toLowerCase().includes(q)):state.messages;const replyMap=new Map(state.messages.map(m=>[m.id,m])); if(!msgs.length){target.innerHTML=`<div class="chat-no-messages">${q?'No messages match your search.':'No messages yet. Start the conversation.'}</div>`;return;} target.innerHTML=msgs.map(m=>{const self=m.sender_id===state.user.id;const p=profileFor(m.sender_id)||{};const deleted=Boolean(m.deleted_at);
  const body=deleted?'This message was unsent':m.body?escapeHTML(m.body).replace(/\n/g,'<br>'):'';
  const canPin=!state.activeGroupId||isOwnerOfActiveGroup();
  return `<article class="chat-message ${self?'self':'received'} ${deleted?'is-unsent':''} ${m.pinned_at?'is-pinned':''}"
@@ -339,7 +339,7 @@ function renderMessages({ preserveScroll = false } = {}) { const target=$("chatM
  data-message-deleted="${deleted?'true':'false'}" data-can-pin="${canPin?'true':'false'}"
  data-message-created="${escapeHTML(m.created_at||'')}"
  data-message-pinned="${m.pinned_at?'true':'false'}"
- data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop; }
+ data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop; }
 function renderInfoMedia(){const grid=$("infoMediaGrid");if(!grid)return;const items=state.messages.filter(m=>{const t=resolveAttachmentType({mediaType:m.media_type,mediaUrl:m.media_url});return isSafeUrl(m.media_url||'')&&['image','video'].includes(t)}).slice(-18).reverse();grid.innerHTML=items.length?items.map(m=>{const t=resolveAttachmentType({mediaType:m.media_type,mediaUrl:m.media_url});return t==='video'?`<a href="${escapeHTML(m.media_url)}" target="_blank" rel="noopener noreferrer"><video src="${escapeHTML(m.media_url)}" muted preload="metadata"></video></a>`:`<a href="${escapeHTML(m.media_url)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHTML(m.media_url)}" alt="Shared media" loading="lazy"></a>`}).join(''):`<div class="callout">No media shared yet.</div>`;}
 async function loadGroupMembers(threadId){const result=await supabase.from('chat_members').select('id,user_id,role,tags,is_muted,is_pinned,last_read_at').eq('thread_id',threadId);if(result.error)throw result.error;const members=result.data||[];await loadProfiles(members.map(m=>m.user_id));state.groupMembers.set(threadId,members);renderGroupMembers();}
 function renderGroupMembers(){const target=$("infoGroupMembers"),section=$("groupMembersSection");if(!target||!section||!state.activeGroupId)return;const members=state.groupMembers.get(state.activeGroupId)||[];section.hidden=false;$("groupMemberCount").textContent=String(members.length);const owner=isOwnerOfActiveGroup();target.innerHTML=members.map(m=>{const p=profileFor(m.user_id)||{};const tags=Array.isArray(m.tags)?m.tags:[];return `<div class="group-member-row"><img class="chat-member-avatar" src="${escapeHTML(p.avatar_url||DEFAULT_AVATAR)}" alt=""><div class="group-member-copy"><strong>${escapeHTML(p.display_name||'Member')}${m.role==='owner'?' · Owner':''}</strong><div class="member-tag-list">${tags.map(tag=>`<span class="member-tag">${escapeHTML(tag)}</span>`).join('')||'<span class="member-tag muted">No tag</span>'}</div></div>${owner?`<button class="btn ghost sm" data-edit-member-tags="${m.id}" type="button">Edit tag</button>`:''}</div>`}).join('');}
@@ -432,6 +432,38 @@ async function saveEditedMessage(){
     }
   }
 }
+function renderReplyPreview(){
+  const preview=$("chatReplyPreview"),reply=state.replyTo;
+  if(!preview)return;
+  preview.hidden=!reply;
+  if(!reply)return;
+  $("chatReplyAuthor").textContent=reply.author||"Member";
+  $("chatReplyExcerpt").textContent=reply.excerpt||"Attachment";
+}
+function cancelReply(){
+  state.replyTo=null;
+  renderReplyPreview();
+}
+function startLinkedReply(messageId){
+  if(!messageId||!state.activeThreadId||!state.canCompose)return;
+  const m=state.messages.find(row=>row.id===messageId);
+  if(!m||m.deleted_at){window.siteToast?.("This message can no longer be replied to.",{type:"info"});return;}
+  state.replyTo={
+    id:m.id,threadId:state.activeThreadId,
+    author:m.sender_id===state.user.id?"You":profileFor(m.sender_id)?.display_name||"Member",
+    excerpt:String(m.body||m.media_type||"Attachment").slice(0,150)
+  };
+  renderReplyPreview();
+  $("chatBody")?.focus();
+}
+function replyQuoteHtml(m,map){
+  if(!m.reply_to)return "";
+  const parent=map.get(m.reply_to);
+  const author=parent?(parent.sender_id===state.user.id?"You":profileFor(parent.sender_id)?.display_name||"Member"):"Message";
+  const excerpt=parent?(parent.deleted_at?"Message unsent":String(parent.body||parent.media_type||"Attachment")):"Tap to view original message";
+  return `<button type="button" class="chat-message-reply-ref" data-replied-id="${escapeHTML(m.reply_to)}" aria-label="Jump to replied message">
+    <strong>${escapeHTML(author)}</strong><span>${escapeHTML(excerpt.slice(0,140))}</span></button>`;
+}
 function rememberDraft() {
   if (state.activeThreadId) state.drafts.set(state.activeThreadId, { body: $("chatBody").value, file: state.mediaFile });
 }
@@ -457,7 +489,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
   }
   const group = groupId ? state.groups.find(item => item.id === groupId) : null;
   if (groupId && !group) return;
-  closeEditPanel(); rememberDraft(); stopRecording(false); clearMediaPreview(); closeAttachMenu(); chatEnhancements.deactivate();
+  closeEditPanel(); cancelReply(); rememberDraft(); stopRecording(false); clearMediaPreview(); closeAttachMenu(); chatEnhancements.deactivate();
   state.pinnedMessages=[];renderPinnedMessages();
   const selection = ++state.selection;
   void realtime.stop();
@@ -500,7 +532,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
 const selectFriend = id => selectConversation({ friendId: id });
 const selectGroup = id => selectConversation({ groupId: id });
 function leaveConversation() {
-  closeEditPanel(); rememberDraft(); ++state.selection; void realtime.stop(); chatEnhancements.deactivate();
+  closeEditPanel(); cancelReply(); rememberDraft(); ++state.selection; void realtime.stop(); chatEnhancements.deactivate();
   state.activeThreadId = state.activeFriendId = state.activeGroupId = '';
   state.messages = [];state.pinnedMessages=[];renderPinnedMessages(); state.loadingThread = false; updateComposer(); setView('list');
 }
@@ -636,6 +668,7 @@ async function sendMessage() {
   const recipientId = state.activeFriendId || null;
   const file = state.mediaFile;
   const mediaType = state.mediaType;
+  const reply=state.replyTo?.threadId===threadId?{...state.replyTo}:null;
   if(file && file.size>45*1024*1024)throw new Error("This attachment is too large for the current storage limit (45 MB). Trim or compress the video first.");
   const hint=$("chatStatus");
   state.sending = true; updateComposer();
@@ -654,7 +687,7 @@ async function sendMessage() {
     // function can renew access for the recipient after expiry.
     const mediaPath = file ? getChatMediaPath(mediaUrl) : null;
     if (file && !mediaPath) throw new Error('Uploaded chat attachment has no valid private path.');
-    const payload = { id: crypto.randomUUID(), thread_id: threadId, sender_id: state.user.id, recipient_id: recipientId, body, media_url: mediaUrl, media_path: mediaPath, media_type: mediaType || '', created_at: new Date().toISOString() };
+    const payload = { id: crypto.randomUUID(), thread_id: threadId, sender_id: state.user.id, recipient_id: recipientId, body, reply_to:reply?.id||null, media_url: mediaUrl, media_path: mediaPath, media_type: mediaType || '', created_at: new Date().toISOString() };
     const result = await supabase.from('direct_messages').insert(payload).select().single();
     if (result.error) throw result.error;
     const saved = result.data || payload;
@@ -665,6 +698,7 @@ async function sendMessage() {
       if ($("chatBody").value.trim() === body) $("chatBody").value = '';
       $("chatBody").style.height = 'auto';
       if (state.mediaFile === file) clearMediaPreview();
+      if(state.replyTo?.id===reply?.id)cancelReply();
       rememberDraft();
     }
     const draft = state.drafts.get(threadId);
@@ -705,6 +739,11 @@ function setupEvents(){
       }
     } catch (error) { reportAppError(error, 'Unable to start conversation or friend request'); }
     finally { if (button.isConnected) button.disabled = false; }
+  });
+  $("chatReplyCancel")?.addEventListener('click',()=>{cancelReply();$("chatBody")?.focus();});
+  $("chatMessages")?.addEventListener('click',e=>{
+    const id=e.target.closest('[data-replied-id]')?.dataset.repliedId;
+    if(id)void jumpToPinned(id).catch(err=>reportAppError(err,"Unable to load replied message"));
   });
   $("chatEditSave")?.addEventListener('click',()=>void saveEditedMessage());
   $("chatEditCancel")?.addEventListener('click',()=>closeEditPanel(true));
@@ -775,6 +814,9 @@ function setupEvents(){
       }
       await refreshRecent(threadId);
     })().catch(err=>reportAppError(err,'Unable to refresh chat'));
+  });
+  window.addEventListener('timzee:chat-reply-message',e=>{
+    if(e.detail?.messageId)startLinkedReply(e.detail.messageId);
   });
   window.addEventListener('timzee:chat-edit-message',e=>{
     if(e.detail?.messageId)beginEditMessage(e.detail.messageId);
