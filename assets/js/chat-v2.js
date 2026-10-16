@@ -561,7 +561,7 @@ async function sendMessage() {
   const recipientId = state.activeFriendId || null;
   const file = state.mediaFile;
   const mediaType = state.mediaType;
-  if(file && file.size>48*1024*1024)throw new Error("This attachment is too large for the current storage limit (48 MB). Trim or compress the video first.");
+  if(file && file.size>45*1024*1024)throw new Error("This attachment is too large for the current storage limit (45 MB). Trim or compress the video first.");
   const hint=$("chatStatus");
   state.sending = true; updateComposer();
   if(hint){hint.hidden=false;hint.textContent=file?
@@ -635,8 +635,8 @@ function setupEvents(){
   $("chatBody")?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&state.settings.enterToSend){e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));}}); $("chatForm")?.addEventListener('submit',e=>{e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));});
   $("chatMedia")?.addEventListener('change',e=>{
     const f=e.target.files?.[0];
-    if(f?.size>48*1024*1024){
-      window.siteToast?.("File too large for chat storage. Try a video or document below 48 MB.",{type:"error",title:"Attachment"});
+    if(f?.size>45*1024*1024){
+      window.siteToast?.("File too large for chat storage. Try a video or document below 45 MB.",{type:"error",title:"Attachment"});
     }else if(f)showMediaPreview(f);
     e.target.value='';
   });
