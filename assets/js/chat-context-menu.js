@@ -31,6 +31,7 @@ function createMenu() {
   menu.setAttribute("aria-label", "Message actions");
   menu.innerHTML = `
     <button type="button" data-message-action="reply" role="menuitem">Reply</button>
+    <button type="button" data-message-action="edit" role="menuitem" hidden>Edit message</button>
     <button type="button" data-message-action="copy" role="menuitem">Copy message</button>
     <button type="button" data-message-action="info" role="menuitem" hidden>Message info</button>
     <button type="button" data-message-action="pin" role="menuitem" hidden>Pin message</button>
@@ -74,6 +75,9 @@ function openMenu(messageEl, x, y) {
     && Date.now()-messageTime<48*3600*1000;
   menu.querySelector('[data-message-action="info"]').hidden = !own;
   menu.querySelector('[data-message-action="unsend"]').hidden = !canUnsend;
+  const canEdit=own&&!deleted&&Number.isFinite(messageTime)
+    && messageTime-Date.now()<=60000 && Date.now()-messageTime<15*60*1000;
+  menu.querySelector('[data-message-action="edit"]').hidden = !canEdit;
   const pin=menu.querySelector('[data-message-action="pin"]');
   pin.hidden=deleted||messageEl.dataset.canPin!=="true";
   pin.textContent=messageEl.dataset.messagePinned==="true"?"Unpin message":"Pin message";
@@ -143,7 +147,11 @@ async function handleMenuAction(event) {
   const messageEl = currentMessage;
   closeMenu();
   try {
-    if(action==="info"){
+    if(action==="edit"){
+      window.dispatchEvent(new CustomEvent("timzee:chat-edit-message",{
+        detail:{messageId:messageEl.dataset.messageId}
+      }));
+    }else if(action==="info"){
       window.dispatchEvent(new CustomEvent("timzee:chat-message-info",{detail:{messageId:messageEl.dataset.messageId}}));
     }else if(action==="unsend"){
       if(!await window.appUI.confirm("Unsend this message for everyone? Recipients may already have downloaded or viewed it."))return;
