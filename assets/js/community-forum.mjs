@@ -9,7 +9,7 @@ const validId=value=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(Strin
 const categories=["All","AI & ML","Programming","Gadgets","Cybersecurity","Tech Jobs","Gaming","Startups","Learning","Technology","Project Showcase","Sports","Entertainment","World Affairs","General"];
 const PAGE_SIZE=20;
 const state={
- user:null,communities:[],communityPage:0,hasMoreCommunities:false,
+ user:null,platformStaff:false,reportTarget:null,communities:[],communityPage:0,hasMoreCommunities:false,
  selectedCategory:"All",communitySearch:"",activeCommunity:null,activeThread:null,
  view:"home",mode:"home",sort:"active",feed:[],feedCursor:null,feedHasMore:false,feedBusy:false,feedVersion:0,search:"",
  joined:new Set(),memberRoles:new Map(),saved:new Set(),votes:new Map(),
@@ -21,6 +21,7 @@ function notify(message,warning=false){
 }
 function clearNotice(){$("forumNotice").hidden=true;}
 function memberName(){return String(getDisplayName(state.user)||state.user?.user_metadata?.full_name||"Member").slice(0,100);}
+function isCommunityStaff(id){return state.platformStaff||["owner","moderator"].includes(state.memberRoles.get(id));}
 function mustLogin(){
  if(state.user)return true;
  notify("Sign in to participate. Everyone can browse public communities.",true);
@@ -144,6 +145,7 @@ function enterFeed({mode="home",community=null,push=true,sort=null}={}){
   mode==="joined"?"New conversations in communities you've joined.":
   mode==="saved"?"The useful topics you saved for later.":"Ask questions, exchange ideas and share practical tech knowledge.";
  $("forumJoinButton").hidden=!community||!state.user;
+ $("forumModerationButton").hidden=!community||!isCommunityStaff(community.id);
  if(community){
   $("forumJoinButton").textContent=state.joined.has(community.id)?"Joined ✓":"Join community";
   $("forumJoinButton").setAttribute("aria-pressed",String(state.joined.has(community.id)));
@@ -291,7 +293,8 @@ function threadCard(thread,{pinned=false}={}){
    Number(thread.reply_count||0)+" replies</button>"+
   "<button type='button' data-save-thread='"+escape(thread.id)+"' aria-pressed='"+state.saved.has(thread.id)+"'>"+
    (state.saved.has(thread.id)?"★ Saved":"☆ Save")+"</button>"+
-  "<button type='button' data-copy-thread='"+escape(thread.id)+"'>↗ Share</button></div></div></article>";
+  "<button type='button' data-copy-thread='"+escape(thread.id)+"'>↗ Share</button>"+
+  "<button type='button' data-report-thread='"+escape(thread.id)+"'>Report</button></div></div></article>";
 }
 function renderPinned(){
  $("forumPinnedThreads").innerHTML=state.pinned.length?
@@ -421,7 +424,7 @@ async function openThread(id,{push=true}={}){
  }
  $("forumFeedView").hidden=true;$("forumThreadView").hidden=false;
  const boardName=state.activeCommunity?.title||"Community";
- const staff=["owner","moderator"].includes(state.memberRoles.get(data.community_id));
+ const staff=isCommunityStaff(data.community_id);
  $("forumThreadHeader").innerHTML="<p class='forum-eyebrow'>"+
   "<button type='button' data-open-community='"+escape(data.community_id)+"'>"+
   escape(boardName)+"</button> / "+escape(data.kind)+"</p><h1>"+escape(data.title)+
@@ -435,6 +438,7 @@ async function openThread(id,{push=true}={}){
   "<button type='button' data-vote='-1' data-id='"+id+"'>▼</button>"+
   "<button type='button' data-save-thread='"+id+"'>☆ Save</button>"+
   "<button type='button' data-copy-thread='"+id+"'>↗ Share</button>"+
+  "<button type='button' data-report-thread='"+id+"'>Report</button>"+
   (staff?"<select id='forumModerateAction' aria-label='Moderate this topic'><option value=''>Moderate…</option>"+
     ["pin","unpin","lock","unlock","remove"].map(v=>"<option value='"+v+"'>"+v+"</option>").join("")+
    "</select>":"");
@@ -498,7 +502,11 @@ function renderReplies(){
    header+quote+"<p class='forum-reply-body'>"+escape(r.body||"")+"</p>"+
    mediaHtml(r.media_url,r.media_type)+
    "<div class='forum-reply-actions'><button type='button' data-reply-to='"+escape(r.id)+"'>Reply</button>"+
-   "<button type='button' data-copy-reply='"+escape(r.id)+"'>Copy link</button></div></div></article>";
+   "<button type='button' data-copy-reply='"+escape(r.id)+"'>Copy link</button>"+
+   "<button type='button' data-report-reply='"+escape(r.id)+"'>Report</button>"+
+   (isCommunityStaff(state.activeThread?.community_id)&&r.author_id&&r.author_id!==state.user?.id
+    ?"<button type='button' data-ban-author='"+escape(r.author_id)+"'>Ban member</button>":"")+
+   "</div></div></article>";
  }).join("")||"<div class='forum-empty'><strong>No replies yet</strong><p>Start a helpful discussion.</p></div>";
  $("forumMoreReplies").hidden=!state.repliesHasMore;
 }
@@ -595,6 +603,110 @@ async function moderateThread(action){
   notify("Moderation action applied: "+action+".");
  }catch(e){notify(e.message||"Moderation action unavailable.",true);}
 }
+function openForumReport(type,id){
+ if(!mustLogin())return;
+ const thread=type==="thread"?[state.activeThread,...state.feed,...state.pinned]
+   .find(x=>x?.id===id):state.activeThread;
+ if(!thread?.community_id){notify("Unable to identify this community.",true);return;}
+ state.reportTarget={type,id,communityId:thread.community_id};
+ $("forumReportError").textContent="";
+ $("forumReportDialog").showModal();
+}
+async function submitForumReport(event){
+ event.preventDefault();
+ const payload=state.reportTarget;
+ if(!payload||!state.user)return;
+ const form=event.currentTarget,button=form.querySelector('[type="submit"]');
+ setButtonBusy(button,true);
+ try{
+  const reason=String(new FormData(form).get("reason")||"").trim();
+  const {error}=await supabase.from("community_reports").insert({
+   community_id:payload.communityId,reporter_id:state.user.id,
+   target_type:payload.type,target_id:payload.id,reason
+  });
+  if(error)throw error;
+  $("forumReportDialog").close();form.reset();state.reportTarget=null;
+  notify("Thanks. Your report was sent privately to the community moderators.");
+ }catch(error){$("forumReportError").textContent=error.message||"Unable to send report.";}
+ finally{setButtonBusy(button,false);}
+}
+async function openModerationWorkspace(){
+ const board=state.activeCommunity;
+ if(!board||!isCommunityStaff(board.id))return;
+ $("forumModerationDialog").showModal();
+ $("forumReportsQueue").textContent="Loading reports…";
+ $("forumModeratorMembers").textContent="Loading community members…";
+ await Promise.all([loadModerationReports(board.id),loadModeratorMembers(board.id)]);
+}
+async function loadModerationReports(boardId){
+ const {data,error}=await supabase.from("community_reports")
+  .select("id,target_type,target_id,reason,status,created_at")
+  .eq("community_id",boardId).eq("status","pending")
+  .order("created_at",{ascending:false}).limit(50);
+ const host=$("forumReportsQueue");
+ if(error){host.textContent=error.message;return;}
+ host.innerHTML=(data||[]).map(r=>
+  "<article class='forum-mod-item'><strong>"+escape(r.target_type)+" report</strong>"+
+  "<p>"+escape(r.reason)+"</p><small>"+escape(preferredDate(r.created_at))+"</small>"+
+  "<div><button type='button' data-review-report='"+escape(r.id)+"' data-resolution='reviewed'>Mark reviewed</button>"+
+  "<button type='button' data-review-report='"+escape(r.id)+"' data-resolution='dismissed'>Dismiss</button></div></article>"
+ ).join("")||"<p class='forum-muted'>No pending reports. Your community is all caught up.</p>";
+}
+async function loadModeratorMembers(boardId){
+ const {data,error}=await supabase.from("community_members")
+  .select("user_id,role,joined_at").eq("community_id",boardId)
+  .order("joined_at",{ascending:false}).limit(50);
+ const host=$("forumModeratorMembers");
+ if(error){host.textContent=error.message;return;}
+ let profiles=new Map();
+ if((data||[]).length){
+  const ids=(data||[]).map(row=>row.user_id);
+  const lookup=await supabase.from("public_profiles")
+    .select("id,display_name,username").in("id",ids);
+  profiles=new Map((lookup.data||[]).map(p=>[p.id,p]));
+ }
+ const owner=state.platformStaff||state.memberRoles.get(boardId)==="owner";
+ host.innerHTML=(data||[]).map(m=>{
+  const p=profiles.get(m.user_id);
+  const name=p?.display_name||p?.username||"Member";
+  const editable=owner&&m.role!=="owner"&&m.user_id!==state.user?.id;
+  return "<div class='forum-mod-member'><span><strong>"+escape(name)+"</strong><small>"+escape(m.role)+"</small></span>"+
+  (editable?"<select data-set-role='"+escape(m.user_id)+"' aria-label='Role for "+escape(name)+"'>"+
+    ["member","moderator"].map(role=>"<option value='"+role+"' "+(role===m.role?"selected":"")+">"+role+"</option>").join("")+
+    "</select>":"")+
+  (m.role!=="owner"&&m.user_id!==state.user?.id?
+    "<button type='button' data-ban-author='"+escape(m.user_id)+"'>Ban</button>":"")+
+  "</div>";
+ }).join("")||"<p class='forum-muted'>No members found.</p>";
+}
+async function reviewForumReport(id,resolution){
+ if(!state.activeCommunity||!isCommunityStaff(state.activeCommunity.id))return;
+ const {error}=await supabase.rpc("community_review_report",{p_report:id,p_resolution:resolution});
+ if(error){notify(error.message,true);return;}
+ await loadModerationReports(state.activeCommunity.id);
+ notify("Report marked as "+resolution+".");
+}
+async function changeForumRole(id,role){
+ if(!state.activeCommunity||!isCommunityStaff(state.activeCommunity.id))return;
+ const {error}=await supabase.rpc("community_set_member_role",{
+  p_community:state.activeCommunity.id,p_member:id,p_role:role
+ });
+ if(error){notify(error.message,true);return;}
+ await loadModeratorMembers(state.activeCommunity.id);
+ notify("Community role updated.");
+}
+async function banForumMember(userId){
+ const board=state.activeCommunity;
+ if(!board||!isCommunityStaff(board.id)||userId===state.user?.id)return;
+ if(!window.confirm("Ban this member from "+board.title+"? They will no longer be able to post here."))return;
+ const reason=window.prompt("Reason for ban (visible to moderators):","Violation of community rules");
+ if(reason===null)return;
+ const {error}=await supabase.rpc("community_moderate_member",{
+  p_community:board.id,p_member:userId,p_action:"ban",p_reason:reason
+ });
+ if(error){notify(error.message,true);return;}
+ notify("Member banned from this community.");
+}
 async function savePostingPolicy(){
  const community=state.activeCommunity;
  if(!community||state.memberRoles.get(community.id)!=="owner")return;
@@ -634,6 +746,10 @@ function bindEvents(){
   if(data.vote){await voteThread(data.id,Number(data.vote));return;}
   if(data.saveThread){await toggleSave(data.saveThread);return;}
   if(data.copyThread){await shareThread(data.copyThread);return;}
+  if(data.reportThread){openForumReport("thread",data.reportThread);return;}
+  if(data.reportReply){openForumReport("reply",data.reportReply);return;}
+  if(data.reviewReport){await reviewForumReport(data.reviewReport,data.resolution);return;}
+  if(data.banAuthor){await banForumMember(data.banAuthor);return;}
   if(data.replyTo){startReply(data.replyTo);return;}
   if(data.cancelReply!==undefined){state.replyTo=null;$("forumReplyTarget").hidden=true;return;}
   if(data.jumpReply){
@@ -663,6 +779,11 @@ function bindEvents(){
  $("forumLoadMore").addEventListener("click",()=>void loadFeed(false));
  $("forumMoreReplies").addEventListener("click",()=>void loadReplies(false));
  $("forumJoinButton").addEventListener("click",toggleJoin);
+ $("forumModerationButton").addEventListener("click",()=>void openModerationWorkspace());
+ $("forumModerationDialog").addEventListener("change",e=>{
+   const select=e.target.closest("[data-set-role]");
+   if(select)void changeForumRole(select.dataset.setRole,select.value);
+ });
  $("forumBackButton").addEventListener("click",()=>{
   enterFeed({community:state.activeCommunity,mode:state.activeCommunity?"community":"home"});
  });
@@ -670,6 +791,7 @@ function bindEvents(){
  $("createThreadButton").addEventListener("click",()=>showDialog("forumThreadDialog"));
  $("createCommunityButton").addEventListener("click",()=>showDialog("forumCommunityDialog"));
  $("forumCommunityForm").addEventListener("submit",createCommunity);
+ $("forumReportForm").addEventListener("submit",submitForumReport);
  $("forumThreadForm").addEventListener("submit",createThread);
  $("forumReplyForm").addEventListener("submit",submitReply);
  $("forumThreadActions").addEventListener("change",event=>{
@@ -681,7 +803,7 @@ function bindEvents(){
  $("forumCommunityDetails").addEventListener("click",e=>{
   if(e.target.id==="forumSaveCommunityRules")void savePostingPolicy();
  });
- for(const dialog of [$("forumThreadDialog"),$("forumCommunityDialog")]){
+ for(const dialog of [$("forumThreadDialog"),$("forumCommunityDialog"),$("forumReportDialog"),$("forumModerationDialog")]){
   dialog.addEventListener("click",event=>{
    if(event.target===dialog)dialog.close();
   });
@@ -692,7 +814,14 @@ function bindEvents(){
 }
 async function boot(){
  renderCategories();bindEvents();
- try{state.user=await getCurrentUser();}catch(error){console.warn("Forum account unavailable",error);}
+ try{
+   state.user=await getCurrentUser();
+   if(state.user){
+     const role=String(state.user.app_metadata?.role||"").toLowerCase();
+     const {data}=await supabase.from("profiles").select("role").eq("id",state.user.id).maybeSingle();
+     state.platformStaff=["admin","super"].includes(role)||["admin","super"].includes(String(data?.role||"").toLowerCase());
+   }
+ }catch(error){console.warn("Forum account unavailable",error);}
  authPanel();
  await loadMemberships();
  try{await loadCommunities(true);}catch(error){notify("Cannot load community directory right now.",true);}
