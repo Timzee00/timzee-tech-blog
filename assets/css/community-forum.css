@@ -155,3 +155,22 @@
 .forum-file-label{display:grid;gap:6px;font-size:.75rem;font-weight:650;color:var(--color-text-muted,#71808c)}
 .forum-file-label input{min-width:0;max-width:100%;color:var(--color-text,#17232b)}
 .forum-form input[type=file]{font-size:.77rem;border:1px dashed var(--color-border-strong,#b2c0c5)}
+
+.forum-community-header-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.forum-moderation-dialog{width:min(680px,calc(100vw - 24px))}
+.forum-moderation-dialog h3{font-size:.9rem;margin:8px 0 0}
+.forum-mod-queue,.forum-mod-members{display:grid;gap:9px;max-height:min(32dvh,250px);overflow:auto;overscroll-behavior:contain}
+.forum-mod-item{background:var(--color-surface-muted,#f5f7f9);border:1px solid var(--color-border,#dce4e8);border-radius:10px;padding:11px;display:grid;gap:7px}
+.forum-mod-item strong{font-size:.8rem}
+.forum-mod-item p{font-size:.8rem;overflow-wrap:anywhere;line-height:1.5;margin:0}
+.forum-mod-item small{font-size:.69rem;color:var(--color-text-muted,#6d7a85)}
+.forum-mod-item>div{display:flex;flex-wrap:wrap;gap:6px}
+.forum-mod-item button,.forum-mod-member button{border:1px solid var(--color-border-strong,#aab9c0);border-radius:8px;padding:7px 10px;background:var(--color-surface,#fff);color:var(--color-text,#152432);font-size:.72rem;font-weight:750}
+.forum-mod-member{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--color-border,#dee6e8)}
+.forum-mod-member>span{flex:1;min-width:0}
+.forum-mod-member strong,.forum-mod-member small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.forum-mod-member strong{font-size:.8rem}
+.forum-mod-member small{font-size:.7rem;color:var(--color-text-muted,#72808a)}
+.forum-mod-member select{min-height:35px;max-width:125px;border-radius:8px;padding:5px;border:1px solid var(--color-border-strong,#adb8c0);background:var(--color-surface,#fff);color:inherit;font-size:.76rem}
+.forum-reply-actions{flex-wrap:wrap}
+@media(max-width:550px){.forum-community-header-actions{justify-content:flex-start}.forum-community-header-actions button{font-size:.73rem;padding:8px 10px}.forum-mod-member{flex-wrap:wrap}}
