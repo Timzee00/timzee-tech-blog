@@ -102,6 +102,8 @@
                 <button class="chat-icon-btn" id="chatInfoToggle" type="button" aria-label="Chat details" title="Chat details"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 10.5v5M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
                 <button class="chat-icon-btn" id="chatMenuToggle" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Conversation menu" title="Conversation menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg></button>
                 <div class="chat-header-menu" id="chatHeaderMenu" hidden>
+                  <button type="button" data-chat-menu="details">Conversation details</button>
+                  <button type="button" data-chat-menu="media">Shared media</button>
                   <button type="button" data-chat-menu="search">Search in chat</button>
                   <button type="button" data-chat-menu="mute">Mute notifications</button>
                   <button type="button" data-chat-menu="pin">Pin chat</button>
@@ -116,9 +118,15 @@
 
 
             <form novalidate id="chatForm" class="chat-composer">
-              <div class="chat-attachment-preview" id="chatMediaPreview"></div>
+              <div class="chat-attachment-preview" id="chatMediaPreview" aria-live="polite"></div>
+              <div class="chat-attach-menu" id="chatAttachMenu" role="menu" aria-label="Choose attachment type" hidden>
+                <button type="button" role="menuitem" data-attach-kind="photo"><span aria-hidden="true">🖼️</span><span>Photo or video</span></button>
+                <button type="button" role="menuitem" data-attach-kind="camera"><span aria-hidden="true">📷</span><span>Camera</span></button>
+                <button type="button" role="menuitem" data-attach-kind="audio"><span aria-hidden="true">🎵</span><span>Audio</span></button>
+                <button type="button" role="menuitem" data-attach-kind="document"><span aria-hidden="true">📄</span><span>Document or file</span></button>
+              </div>
               <div class="chat-composer-row">
-                <label class="chat-composer-btn" for="chatMedia" title="Attach file" aria-label="Attach file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 6.7-6.7a3.2 3.2 0 0 1 4.5 4.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></label>
+                <button class="chat-composer-btn" id="chatAttachToggle" type="button" title="Choose attachment" aria-label="Choose attachment" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 6.7-6.7a3.2 3.2 0 0 1 4.5 4.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 <input type="file" id="chatMedia" accept="*/*" hidden>
                 <textarea id="chatBody" rows="1" placeholder="Write a message…" autocomplete="off" class="resize-none"></textarea>
                 <button class="chat-composer-btn" id="recordVoiceBtn" type="button" title="Record voice" aria-label="Record voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="3" width="7" height="12" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 11.5a7 7 0 0 0 14 0M12 18.5v3M8.5 21.5h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
