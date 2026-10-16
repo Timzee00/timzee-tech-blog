@@ -58,7 +58,7 @@
           <div class="forum-content-header">
             <div><p id="forumFeedKicker" class="forum-eyebrow">FOR YOU</p><h2 id="forumFeedTitle">The community feed</h2>
               <p id="forumFeedSubtitle">Topic threads from across tech communities.</p></div>
-            <button id="forumJoinButton" class="forum-button secondary" type="button" hidden>Join community</button>
+            <div class="forum-community-header-actions"><button id="forumModerationButton" class="forum-button secondary" type="button" hidden>Moderator tools</button><button id="forumJoinButton" class="forum-button secondary" type="button" hidden>Join community</button></div>
           </div>
           <div id="forumCommunityDetails" class="forum-community-details" hidden></div>
           <div class="forum-feed-controls">
@@ -128,6 +128,23 @@
       <p id="forumThreadFormError" class="forum-form-error" role="alert"></p>
       <button type="submit" class="forum-button primary">Publish topic</button>
     </form>
+  </dialog>
+  <dialog id="forumReportDialog" class="forum-dialog" aria-labelledby="forumReportTitle">
+    <form id="forumReportForm" class="forum-form">
+      <div class="forum-modal-head"><h2 id="forumReportTitle">Report content</h2><button type="button" data-close-forum-dialog aria-label="Close">×</button></div>
+      <p>Help moderators keep discussions safe. Reports are private and must describe a genuine issue.</p>
+      <label>What needs attention?<textarea name="reason" rows="4" minlength="10" maxlength="500" placeholder="Explain what happened and which community rule was affected." required></textarea></label>
+      <p id="forumReportError" role="alert" class="forum-form-error"></p>
+      <button type="submit" class="forum-button primary">Send report</button>
+    </form>
+  </dialog>
+  <dialog id="forumModerationDialog" class="forum-dialog forum-moderation-dialog" aria-labelledby="forumModerationTitle">
+    <div class="forum-form">
+      <div class="forum-modal-head"><h2 id="forumModerationTitle">Community moderation</h2><button type="button" data-close-forum-dialog aria-label="Close">×</button></div>
+      <p>Review member reports, remove harmful topics, lock conversations or assign trusted moderators.</p>
+      <h3>Pending reports</h3><div id="forumReportsQueue" class="forum-mod-queue" aria-live="polite"></div>
+      <h3>Community members</h3><div id="forumModeratorMembers" class="forum-mod-members"></div>
+    </div>
   </dialog>
   <footer class="footer"><div class="container"><div class="footer-links"><a href="support.html">Support</a><a href="contact.html">Contact</a><a href="newsletter.html">Newsletter</a><a href="index.html">Home</a></div></div></footer>
   <script type="module" src="assets/js/community-forum.mjs"></script>
