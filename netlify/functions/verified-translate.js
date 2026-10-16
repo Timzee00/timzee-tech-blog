@@ -27,7 +27,7 @@ exports.handler=async event=>{
   const rows=await profile.json();
   if(rows[0]?.is_verified!==true)return result(403,{error:'Translation is currently for verified creators'});
   // Count translation use in Postgres; serverless instances cannot share a Map.
-  const quotaResponse=await fetch(url.replace(/\\/$/,'')+'/rest/v1/rpc/consume_verified_translation_quota',{
+  const quotaResponse=await fetch(url.replace(/\/$/,'')+'/rest/v1/rpc/consume_verified_translation_quota',{
     method:'POST',signal:AbortSignal.timeout(9000),
     headers:{apikey:key,Authorization:'Bearer '+token,'content-type':'application/json'},
     body:JSON.stringify({p_chars:text.length})
