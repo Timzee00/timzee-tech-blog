@@ -77,7 +77,9 @@ function openMenu(messageEl, x, y) {
   menu.querySelector('[data-message-action="unsend"]').hidden = !canUnsend;
   const canEdit=own&&!deleted&&Number.isFinite(messageTime)
     && messageTime-Date.now()<=60000 && Date.now()-messageTime<15*60*1000;
-  menu.querySelector('[data-message-action="edit"]').hidden = !canEdit;
+  const editItem=menu.querySelector('[data-message-action="edit"]');
+  editItem.hidden=!own||deleted;
+  editItem.textContent=canEdit?'Edit message':'Edit message · 15-minute limit';
   const pin=menu.querySelector('[data-message-action="pin"]');
   pin.hidden=deleted||messageEl.dataset.canPin!=="true";
   pin.textContent=messageEl.dataset.messagePinned==="true"?"Unpin message":"Pin message";
@@ -148,9 +150,14 @@ async function handleMenuAction(event) {
   closeMenu();
   try {
     if(action==="edit"){
-      window.dispatchEvent(new CustomEvent("timzee:chat-edit-message",{
-        detail:{messageId:messageEl.dataset.messageId}
-      }));
+      const sentAt=Date.parse(messageEl.dataset.messageCreated||"");
+      if(!Number.isFinite(sentAt)||Date.now()-sentAt>=15*60000){
+        window.siteToast?.("You can only edit a sent message within 15 minutes. Older messages can be copied or unsent when eligible.",{type:"info",title:"Edit unavailable"});
+      }else{
+        window.dispatchEvent(new CustomEvent("timzee:chat-edit-message",{
+          detail:{messageId:messageEl.dataset.messageId}
+        }));
+      }
     }else if(action==="info"){
       window.dispatchEvent(new CustomEvent("timzee:chat-message-info",{detail:{messageId:messageEl.dataset.messageId}}));
     }else if(action==="unsend"){
