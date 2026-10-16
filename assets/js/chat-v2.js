@@ -517,7 +517,11 @@ async function sendMessage() {
   const recipientId = state.activeFriendId || null;
   const file = state.mediaFile;
   const mediaType = state.mediaType;
+  if(file && file.size>48*1024*1024)throw new Error("This attachment is too large for the current storage limit (48 MB). Trim or compress the video first.");
+  const hint=$("chatStatus");
   state.sending = true; updateComposer();
+  if(hint){hint.hidden=false;hint.textContent=file?
+    `Uploading ${mediaType||'attachment'} (${formatFileSize(file.size)})… Keep this chat open.`:'Sending message…';}
   try {
     if(recipientId){
       // Recheck in case privacy, blocking or staff role changed while composing.
@@ -526,6 +530,7 @@ async function sendMessage() {
         throw new Error("Messaging is no longer permitted by this member's privacy or blocking settings.");
     }
     const mediaUrl = file ? await uploadMedia(file, 'direct-messages') : '';
+    if(hint)hint.textContent='Saving message…';
     // Signed links expire. Persist the private path so the authorization
     // function can renew access for the recipient after expiry.
     const mediaPath = file ? getChatMediaPath(mediaUrl) : null;
@@ -550,6 +555,7 @@ async function sendMessage() {
     await renderFriends(); renderGroups();
   } finally {
     state.sending = false; updateComposer();
+    if(hint){hint.hidden=true;hint.textContent='';}
   }
 }
 function openModal(id){const dialog=$(id);if(!dialog)return;dialog.showModal();document.body.classList.add('modal-open');dialog.addEventListener('close',()=>document.body.classList.remove('modal-open'),{once:true});}
@@ -582,7 +588,13 @@ function setupEvents(){
   });
   $("chatBody")?.addEventListener('input',()=>{const t=$("chatBody");t.style.height='auto';t.style.height=`${Math.min(t.scrollHeight,140)}px`;});
   $("chatBody")?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&state.settings.enterToSend){e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));}}); $("chatForm")?.addEventListener('submit',e=>{e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));});
-  $("chatMedia")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)showMediaPreview(f);e.target.value='';});
+  $("chatMedia")?.addEventListener('change',e=>{
+    const f=e.target.files?.[0];
+    if(f?.size>48*1024*1024){
+      window.siteToast?.("File too large for chat storage. Try a video or document below 48 MB.",{type:"error",title:"Attachment"});
+    }else if(f)showMediaPreview(f);
+    e.target.value='';
+  });
   $("chatAttachToggle")?.addEventListener("click",event=>{
     event.stopPropagation();
     const menu=$("chatAttachMenu");if(!menu)return;
