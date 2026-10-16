@@ -77,7 +77,7 @@ test('accepted friends get five-minute URLs but not raw storage credentials',asy
  const response=await request();
  assert.equal(response.status,200);
  assert.equal(response.body.expiresIn,300);
- assert.match(response.body.signedUrl,/story-private-media/);
+ assert.match(response.body.signedUrl,new RegExp(OWNER));
  assert.equal(activity.signs,1);
 });
 test('story owner can securely access own private soundtrack',async()=>{
