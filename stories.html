@@ -569,11 +569,49 @@
 
       function setupViewerControls() {
         const socialControls=document.getElementById("storyViewerSocial");
-        socialControls?.addEventListener("pointerdown",clearTimer,{passive:true,capture:true});
-        socialControls?.addEventListener("focusin",clearTimer);
-        socialControls?.addEventListener("touchstart",clearTimer,{passive:true});
-        document.getElementById("storyPrevZone").addEventListener("click", () => advance(-1));
-        document.getElementById("storyNextZone").addEventListener("click", () => advance(1));
+        // Press-and-hold pauses anywhere on the content, including navigation sides.
+        // Brief taps on either side still navigate. A held side never skips.
+        for(const [id,direction] of [["storyPrevZone",-1],["storyNextZone",1]]){
+          const zone=document.getElementById(id);
+          let pressedAt=0,wasHeld=false;
+          zone.addEventListener("pointerdown",e=>{
+            if(e.button!==0)return;
+            pressedAt=performance.now();wasHeld=false;
+            zone.setPointerCapture?.(e.pointerId);
+            pauseStory();
+          });
+          zone.addEventListener("pointerup",e=>{
+            if(!pressedAt)return;
+            const elapsed=performance.now()-pressedAt;
+            pressedAt=0;wasHeld=elapsed>=260;
+            resumeStory();
+            if(!wasHeld)advance(direction);
+          });
+          zone.addEventListener("pointercancel",()=>{pressedAt=0;wasHeld=true;resumeStory();});
+          zone.addEventListener("click",e=>{
+            // Pointer taps were already handled above; keyboard clicks are not.
+            if(e.detail===0)advance(direction);
+            e.preventDefault();
+          });
+        }
+        const mediaSurface=document.getElementById("storyViewerMedia");
+        mediaSurface?.addEventListener("pointerdown",e=>{
+          if(e.target.closest("button,video[controls]"))return;
+          pauseStory();
+        });
+        mediaSurface?.addEventListener("pointerup",resumeStory);
+        mediaSurface?.addEventListener("pointercancel",resumeStory);
+        socialControls?.addEventListener("pointerdown",pauseStory,{passive:true});
+        socialControls?.addEventListener("focusin",pauseStory);
+        socialControls?.addEventListener("focusout",()=>{
+          setTimeout(()=>{
+            if(!socialControls.contains(document.activeElement))resumeStory();
+          },100);
+        });
+        socialControls?.addEventListener("pointerup",()=>{
+          if(!socialControls.contains(document.activeElement))resumeStory();
+        });
+        socialControls?.addEventListener("pointercancel",resumeStory);
         document.getElementById("viewerCloseBtn").addEventListener("click", closeViewer);
         document.addEventListener("keydown", (event) => {
           const composer = document.getElementById("storyComposer");
