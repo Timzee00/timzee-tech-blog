@@ -141,11 +141,12 @@ test('realtime edits win over an older reconnect snapshot and connection status 
     };
     window.supabase.removeChannel = channel => window.chatChannels.includes(channel) ? Promise.resolve('ok') : remove(channel);
   });
-  await open(page, A); await expect(page.locator('#chatStatusText')).toHaveText('Connecting…');
+  await open(page, A); await expect(page.locator('#chatStatusText')).toHaveText('Syncing messages…');
   await expect(page.locator('#chatLiveDot')).not.toHaveClass(/is-live/);
   await page.evaluate(() => window.chatChannels[0].status('SUBSCRIBED'));
   await expect.poll(() => history).toBe(2);
-  await expect(page.locator('#chatStatusText')).toHaveText('Connected');
+  await expect(page.locator('#chatStatusText')).toHaveText('Chat available');
+  // A subscribed WebSocket must never claim the other person is online.
   await page.evaluate(row => window.chatChannels[0].handlers.find(h => h.filter.event === 'UPDATE').fn({ new: row }), message(A, 'Edited during reconnect'));
   await expect(page.locator('.chat-message')).toContainText('Edited during reconnect');
   const response = page.waitForResponse(r => r.url().includes('direct_messages') && r.url().includes(encodeURIComponent(thread(A))));
