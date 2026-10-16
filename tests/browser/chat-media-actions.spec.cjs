@@ -155,3 +155,39 @@ test('closed details take no grid space and the populated dialog returns focus',
   await page.keyboard.press('Escape'); await expect(panel).toBeHidden(); await expect(trigger).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test('linked replies preserve a typed draft, then send a real reply_to reference', async ({ page }) => {
+  await chat(page);
+  const saved=[];
+  await page.route('https://*/rest/v1/direct_messages*',route=>{
+    if(route.request().method()!=='POST')return route.fallback();
+    const payload=route.request().postDataJSON();saved.push(payload);
+    return route.fulfill({status:201,contentType:'application/json',
+      headers:{'access-control-allow-origin':'*'},
+      body:JSON.stringify(payload)});
+  });
+  await page.locator('#chatBody').fill('Yes, I received it.');
+  await page.getByRole('button',{name:'Message actions',exact:true}).click();
+  await page.getByRole('menuitem',{name:'Reply',exact:true}).click();
+  await expect(page.locator('#chatReplyPreview')).toBeVisible();
+  await expect(page.locator('#chatBody')).toHaveValue('Yes, I received it.');
+  await page.locator('#chatForm button[type=submit]').click();
+  await expect.poll(()=>saved.length).toBe(1);
+  expect(saved[0].reply_to).toBe('44444444-4444-4444-8444-444444444444');
+  expect(saved[0].body).toBe('Yes, I received it.');
+  await expect(page.locator('#chatReplyPreview')).toBeHidden();
+});
+
+test('emoji actions use the authenticated reaction endpoint instead of a local-only count', async ({ page }) => {
+  await chat(page);
+  let received=null;
+  await page.route('https://*/rest/v1/rpc/react_to_chat_message',route=>{
+    received=route.request().postDataJSON();
+    return route.fulfill({status:200,contentType:'application/json',
+      headers:{'access-control-allow-origin':'*'},body:JSON.stringify('👍')});
+  });
+  await page.getByRole('button',{name:'Message actions',exact:true}).click();
+  await page.getByRole('menuitem',{name:'React with thumbs up'}).click();
+  await expect.poll(()=>received?.p_emoji).toBe('👍');
+  expect(received.p_message_id).toBe('44444444-4444-4444-8444-444444444444');
+});
