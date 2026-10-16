@@ -181,3 +181,21 @@ html[data-chat-compact="true"] .chat-messages { gap: 5px; }
 .chat-page .chat-reaction-chip small{font-size:.71rem;font-variant-numeric:tabular-nums}
 .chat-page .chat-reaction-chip.mine{border:2px solid currentColor;background:color-mix(in srgb,currentColor 16%,transparent)}
 .chat-page .chat-reaction-chip:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+
+.chat-page .chat-group-permissions{display:grid;gap:9px;padding:12px;margin-top:10px;border:1px solid var(--color-border);border-radius:12px}
+.chat-page .chat-group-permissions[hidden]{display:none!important}
+.chat-page .chat-group-permissions h4{margin:0;font-size:.96rem}
+.chat-page .chat-group-permissions label{display:flex;gap:8px;align-items:center;font-size:.82rem}
+.chat-page .chat-group-permissions label:has(select){display:grid}
+.chat-page .chat-group-permissions select{padding:8px;border-radius:8px;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text)}
+.chat-page .chat-group-permissions-hint{font-size:.73rem;color:var(--color-text-muted);line-height:1.4;margin:0}
+.chat-page .group-member-row{flex-wrap:wrap;gap:7px}
+.chat-page .group-member-row select{max-width:145px;min-height:35px;font-size:.78rem;padding:5px;border-radius:7px;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text)}
+.chat-page .chat-bubble-poll{width:100%;min-width:0;margin-top:8px}
+.chat-page .chat-bubble-poll:empty{display:none}
+.chat-page .chat-bubble-poll .timzee-poll{color:var(--color-text);background:var(--color-surface-muted)}
+.chat-page .chat-bubble-poll .timzee-poll .timzee-poll-answers>button{color:var(--color-text)}
+.chat-page .chat-message.self .chat-bubble-poll .timzee-poll{background:color-mix(in srgb,#fff 91%,var(--color-primary));color:#182b2b}
+.chat-page .chat-message.self .chat-bubble-poll .timzee-poll .timzee-poll-answers>button{color:#182b2b}
+.chat-page .chat-message-body a.social-token-link{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.chat-page .chat-message-body code{background:color-mix(in srgb,currentColor 12%,transparent);padding:2px 4px;border-radius:4px}
