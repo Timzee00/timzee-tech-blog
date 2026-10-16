@@ -165,6 +165,7 @@
         activeGroupIndex: -1,
         activeStoryIndex: 0,
         timerId: null,
+        storyRemaining:0,storyDuration:0,storyStartedAt:0,storyHeld:false,storyActiveVideo:null,storyPlaybackVersion:0,
         verified:false
       };
 
@@ -336,13 +337,46 @@
       }
 
       function clearTimer() {
-        if (state.timerId) {
-          clearTimeout(state.timerId);
-          state.timerId = null;
+        if (state.timerId) clearTimeout(state.timerId);
+        if (state.mediaWatchdog) clearTimeout(state.mediaWatchdog);
+        state.timerId=null;state.mediaWatchdog=null;
+        state.storyActiveVideo=null;
+        state.storyDuration=0;state.storyRemaining=0;state.storyStartedAt=0;
+        state.storyHeld=false;
+        state.storyPlaybackVersion++;
+      }
+      function activeStoryFill(){
+        return document.querySelectorAll("#storyProgressRow .story-progress-fill")[state.activeStoryIndex];
+      }
+      function pauseStory(){
+        if(document.getElementById("storyViewer").hidden)return;
+        state.storyHeld=true;
+        state.storyActiveVideo?.pause();
+        if(state.timerId){
+          clearTimeout(state.timerId);state.timerId=null;
+          state.storyRemaining=Math.max(0,state.storyRemaining-(performance.now()-state.storyStartedAt));
         }
-        if (state.mediaWatchdog) {
-          clearTimeout(state.mediaWatchdog);
-          state.mediaWatchdog = null;
+        const fill=activeStoryFill();
+        if(fill && !state.storyActiveVideo){
+          const progress=state.storyDuration?
+            Math.min(100,Math.max(0,((state.storyDuration-state.storyRemaining)/state.storyDuration)*100)):0;
+          fill.style.transition="none";fill.style.width=progress+"%";
+        }
+      }
+      function resumeStory(){
+        if(!state.storyHeld)return;
+        state.storyHeld=false;
+        if(state.storyActiveVideo){
+          void state.storyActiveVideo.play().catch(()=>{});return;
+        }
+        if(state.storyRemaining>0)startProgress(state.storyRemaining,true);
+      }
+      function preloadUpcomingStory(){
+        const group=state.groups[state.activeGroupIndex];
+        const next=group?.stories?.[state.activeStoryIndex+1];
+        if(!next||!isSafeUrl(next.media_url))return;
+        if(next.media_type==='image'){
+          const preload=new Image();preload.decoding='async';preload.src=next.media_url;
         }
       }
 
@@ -356,6 +390,7 @@
 
       function renderActiveStory() {
         clearTimer();
+        const version=state.storyPlaybackVersion;
         const group = state.groups[state.activeGroupIndex];
         if (!group) return closeViewer();
         const story = group.stories[state.activeStoryIndex];
@@ -382,16 +417,17 @@
         media.innerHTML = "";
         const url = isSafeUrl(story.media_url) ? story.media_url : "";
         const mediaError = message => {
-          clearTimer();
-          if (!document.getElementById("storyViewer").hidden) {
-            media.replaceChildren();
-            const notice = document.createElement("p");
-            notice.className = "story-media-error";
-            notice.setAttribute("role", "status");
-            notice.textContent = message;
-            media.appendChild(notice);
-            startProgress(4500);
-          }
+          if(version!==state.storyPlaybackVersion||document.getElementById("storyViewer").hidden)return;
+          if(state.mediaWatchdog){clearTimeout(state.mediaWatchdog);state.mediaWatchdog=null;}
+          media.replaceChildren();
+          const notice=document.createElement("p");
+          notice.className="story-media-error";notice.setAttribute("role","status");
+          notice.textContent=message;media.appendChild(notice);
+          const retry=document.createElement("button");
+          retry.type="button";retry.className="btn ghost";
+          retry.textContent="Retry loading status";
+          retry.addEventListener("click",()=>renderActiveStory());
+          media.appendChild(retry);
         };
         if (!url) {
           mediaError("This story's media is unavailable. Moving to the next story.");
@@ -402,37 +438,58 @@
           video.muted = true; // Browsers block autoplay with sound.
           video.playsInline = true;
           video.controls = true; // Let the user unmute, pause or resume.
-          video.preload = "metadata";
+          video.preload = "auto";
+          state.storyActiveVideo=video;
           const fail = () => { if (media.contains(video)) mediaError("This video cannot be played. Moving to the next story."); };
           video.addEventListener("error", fail, { once: true });
-          video.addEventListener("loadedmetadata", () => {
-            if (!media.contains(video)) return;
-            const length = video.duration * 1000;
-            const duration = Number.isFinite(length) && length > 0
-              ? Math.min(Math.max(length, 2000), 30000)
-              : 5000;
-            // Match the progress bar to real playback rather than a stalled
-            // autoplay attempt. A manual play starts it too.
-            video.addEventListener("playing", () => startProgress(duration), { once: true });
-            if (video.readyState >= 1) {
-              clearTimeout(state.mediaWatchdog);
-              state.mediaWatchdog = null;
+          // A video only finishes when playback actually reaches its end:
+          // buffering and paused playback never consume the status duration.
+          video.addEventListener("timeupdate",()=>{
+            if(version!==state.storyPlaybackVersion)return;
+            const fill=activeStoryFill();
+            if(fill&&Number.isFinite(video.duration)&&video.duration>0){
+              fill.style.transition="none";
+              fill.style.width=Math.min(100,100*video.currentTime/video.duration)+"%";
             }
-          }, { once: true });
-          video.addEventListener("ended", () => advance(1));
+          });
+          video.addEventListener("playing",()=>{
+            if(version!==state.storyPlaybackVersion)return;
+            if(state.mediaWatchdog){clearTimeout(state.mediaWatchdog);state.mediaWatchdog=null;}
+            if(state.storyHeld)video.pause();
+          });
+          video.addEventListener("ended",()=>{
+            if(version===state.storyPlaybackVersion&&!state.storyHeld)advance(1);
+          });
           media.appendChild(video);
-          state.mediaWatchdog = setTimeout(() => {
-            if (media.contains(video) && video.readyState < 1) fail();
-          }, 12000);
-          void video.play().catch(() => {
-            // Native controls provide a manual Play action when autoplay fails.
+          state.mediaWatchdog=setTimeout(()=>{
+            if(version===state.storyPlaybackVersion&&media.contains(video)&&video.readyState<1)
+              fail();
+          },45000);
+          if(!state.storyHeld)void video.play().catch(()=>{
+            // Allow the browser's native play control if autoplay is restricted.
           });
         } else {
           const img = document.createElement("img");
-          img.src = url;
           img.alt = story.caption || "Story photo";
+          img.decoding="async";
+          img.addEventListener("load",()=>{
+            if(version===state.storyPlaybackVersion&&media.contains(img)){
+              if(state.mediaWatchdog){clearTimeout(state.mediaWatchdog);state.mediaWatchdog=null;}
+              startProgress(6000);
+              preloadUpcomingStory();
+            }
+          },{once:true});
+          img.addEventListener("error",()=>mediaError("Could not load this photo."),{once:true});
           media.appendChild(img);
-          startProgress(5000);
+          state.mediaWatchdog=setTimeout(()=>{
+            if(version===state.storyPlaybackVersion&&!img.complete)
+              mediaError("This image is taking longer than expected.");
+          },45000);
+          img.src=url;
+          if(img.complete&&img.naturalWidth>0){
+            if(state.mediaWatchdog){clearTimeout(state.mediaWatchdog);state.mediaWatchdog=null;}
+            startProgress(6000);
+          }
         }
 
         // Update progress bar fill states (completed / active / upcoming)
@@ -444,17 +501,24 @@
         });
       }
 
-      function startProgress(durationMs) {
-        if (state.timerId) clearTimeout(state.timerId);
-        const tracks = document.querySelectorAll("#storyProgressRow .story-progress-track");
-        const fill = tracks[state.activeStoryIndex]?.querySelector(".story-progress-fill");
-        if (fill) {
-          requestAnimationFrame(() => {
-            fill.style.transition = `width ${durationMs}ms linear`;
-            fill.style.width = "100%";
+      function startProgress(durationMs,resuming=false){
+        if(state.timerId)clearTimeout(state.timerId);
+        if(!resuming)state.storyDuration=durationMs;
+        state.storyRemaining=durationMs;
+        if(state.storyHeld)return;
+        state.storyStartedAt=performance.now();
+        const fill=activeStoryFill();
+        if(fill){
+          const startPct=state.storyDuration?
+            100*(state.storyDuration-durationMs)/state.storyDuration:0;
+          fill.style.transition="none";fill.style.width=startPct+"%";
+          requestAnimationFrame(()=>{
+            if(state.storyHeld)return;
+            fill.style.transition=`width ${durationMs}ms linear`;
+            fill.style.width="100%";
           });
         }
-        state.timerId = setTimeout(() => advance(1), durationMs);
+        state.timerId=setTimeout(()=>{state.timerId=null;advance(1);},durationMs);
       }
 
       function advance(direction) {
