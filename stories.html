@@ -291,7 +291,7 @@
           el.className = "story-avatar";
           el.setAttribute("aria-label", `View ${name}'s stories`);
           const ring = document.createElement("span");
-          ring.className = "story-ring";
+          ring.className = "story-ring"+(profile?.is_verified?" story-verified-ring":"");
           const image = document.createElement("img");
           image.src = isSafeUrl(profile?.avatar_url) ? profile.avatar_url : DEFAULT_AVATAR;
           image.alt = "";
@@ -300,6 +300,13 @@
           label.className = "story-avatar-label";
           label.textContent = name;
           el.append(ring, label);
+          if(profile?.is_verified){
+            const badge=document.createElement("span");
+            badge.className="story-verified-badge";
+            badge.textContent="✓";
+            badge.setAttribute("aria-label","Verified creator");
+            badge.title="Verified creator";el.append(badge);
+          }
           el.addEventListener("click", () => openViewer(index));
           // Append ahead of the empty-state notice rather than repeatedly
           // after the add tile: the order must match state.groups indices.
@@ -432,7 +439,8 @@
         document.getElementById("viewerAvatar").src = isSafeUrl(profile?.avatar_url)
           ? profile.avatar_url
           : DEFAULT_AVATAR;
-        document.getElementById("viewerName").textContent = profile?.display_name || "Member";
+        document.getElementById("viewerName").textContent = (profile?.display_name || "Member")+
+          (profile?.is_verified?" ✓ Verified":"");
         document.getElementById("viewerTime").textContent = timeAgo(story.created_at);
         document.getElementById("viewerCaption").textContent = story.caption || "";
         const social=document.getElementById("storyViewerSocial");
