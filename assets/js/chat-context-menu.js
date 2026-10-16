@@ -37,6 +37,7 @@ function createMenu() {
     <button type="button" data-message-action="pin" role="menuitem" hidden>Pin message</button>
     <button type="button" data-message-action="unsend" role="menuitem" hidden>Unsend for everyone</button>
     <button type="button" data-message-action="ask-ai" role="menuitem">Ask AI</button>
+    <button type="button" data-message-action="translate" role="menuitem" hidden>Translate message</button>
     <button type="button" data-message-action="copy-media" role="menuitem" hidden>Copy media link</button>
     <div class="chat-menu-reactions" role="group" aria-label="React to message">
       <button type="button" data-message-action="react" data-emoji="👍" role="menuitem" aria-label="React with thumbs up">👍</button>
@@ -75,6 +76,7 @@ function openMenu(messageEl, x, y) {
   const hasText = Boolean(messageText(messageEl));
   const media = isMediaMessage(messageEl);
   menu.querySelector('[data-message-action="copy"]').hidden = !hasText;
+  menu.querySelector('[data-message-action="translate"]').hidden=!hasText||document.body.dataset.chatVerified!=="true";
   menu.querySelector('[data-message-action="copy-media"]').hidden = !media;
   const own=messageEl.dataset.messageSelf==="true";
   const deleted=messageEl.dataset.messageDeleted==="true";
@@ -180,6 +182,10 @@ async function handleMenuAction(event) {
       if(error)throw error;
       window.dispatchEvent(new CustomEvent("timzee:chat-refresh",{detail:{messageId:messageEl.dataset.messageId}}));
       window.siteToast?.(data?"Message pinned.":"Message unpinned.",{type:"success"});
+    }else if(action==="translate"){
+      window.dispatchEvent(new CustomEvent("timzee:chat-translate",{
+        detail:{messageId:messageEl.dataset.messageId}
+      }));
     }else if (action === "reply") startReply(messageEl);
     else if (action === "copy") {
       const text = messageText(messageEl);
