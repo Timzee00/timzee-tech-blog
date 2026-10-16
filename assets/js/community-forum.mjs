@@ -13,7 +13,7 @@ const state={
  selectedCategory:"All",communitySearch:"",activeCommunity:null,activeThread:null,
  view:"home",mode:"home",sort:"active",feed:[],feedCursor:null,feedHasMore:false,feedBusy:false,feedVersion:0,search:"",
  joined:new Set(),memberRoles:new Map(),saved:new Set(),votes:new Map(),
- pinned:[],replies:[],replyCursor:null,repliesHasMore:false,replyTo:null,loadingReplies:false
+ pinned:[],replies:[],replyCursor:null,repliesHasMore:false,replyTo:null,loadingReplies:false,replyVersion:0,voteBusy:new Set()
 };
 function notify(message,warning=false){
  const node=$("forumNotice");node.textContent=message;node.hidden=false;
@@ -374,7 +374,8 @@ async function toggleJoin(){
  finally{setButtonBusy(button,false);}
 }
 async function voteThread(id,value){
- if(!mustLogin()||!validId(id))return;
+ if(!mustLogin()||!validId(id)||state.voteBusy.has(id))return;
+ state.voteBusy.add(id);
  const old=state.votes.get(id)||0;
  try{
   if(old===value){
@@ -399,6 +400,7 @@ async function voteThread(id,value){
    button.setAttribute("aria-pressed",String(Number(button.dataset.vote)===state.votes.get(id)));
   });
  }catch(e){notify(e.message||"Couldn't register vote.",true);}
+ finally{state.voteBusy.delete(id);}
 }
 async function toggleSave(id){
  if(!mustLogin())return;
@@ -460,6 +462,8 @@ async function openThread(id,{push=true}={}){
     ["pin","unpin","lock","unlock","remove"].map(v=>"<option value='"+v+"'>"+v+"</option>").join("")+
    "</select>":"");
  $("forumReplyForm").hidden=Boolean(data.is_locked);
+ state.replyVersion++;
+ state.loadingReplies=false;
  state.replies=[];state.replyCursor=null;state.repliesHasMore=false;state.replyTo=null;
  $("forumReplyTarget").hidden=true;
  await loadPersonalThreadState([data.id]);
@@ -475,7 +479,8 @@ async function openThread(id,{push=true}={}){
  window.scrollTo({top:0,behavior:"smooth"});
 }
 async function loadReplies(reset=false){
- if(!state.activeThread||state.loadingReplies)return;
+ if(!state.activeThread||(state.loadingReplies&&!reset))return;
+ const version=++state.replyVersion;
  state.loadingReplies=true;
  const threadId=state.activeThread.id;
  if(reset){state.replies=[];state.replyCursor=null;$("forumReplies").innerHTML="<p class='forum-muted'>Loading replies…</p>";}
@@ -491,17 +496,21 @@ async function loadReplies(reset=false){
   }
   const {data,error}=await query.limit(31);
   if(error)throw error;
-  if(state.activeThread?.id!==threadId)return;
+  if(version!==state.replyVersion||state.activeThread?.id!==threadId)return;
   const page=(data||[]).slice(0,30);
   state.repliesHasMore=(data||[]).length>30;
   if(page.length)state.replyCursor=page.at(-1);
   const seen=new Set(state.replies.map(r=>r.id));
   state.replies.push(...page.filter(r=>!seen.has(r.id)));
   renderReplies();
- }catch(e){notify(e.message||"Couldn't load replies.",true);}
+ }catch(e){
+   if(version===state.replyVersion)notify(e.message||"Couldn't load replies.",true);
+ }
  finally{
-  state.loadingReplies=false;
-  $("forumMoreReplies").hidden=!state.repliesHasMore;
+  if(version===state.replyVersion){
+   state.loadingReplies=false;
+   $("forumMoreReplies").hidden=!state.repliesHasMore;
+  }
  }
 }
 function renderReplies(){
