@@ -87,11 +87,21 @@ function openMenu(messageEl, x, y) {
     && Date.now()-messageTime<48*3600*1000;
   menu.querySelector('[data-message-action="info"]').hidden = !own;
   menu.querySelector('[data-message-action="unsend"]').hidden = !canUnsend;
-  const canEdit=own&&!deleted&&Number.isFinite(messageTime)
-    && messageTime-Date.now()<=60000 && Date.now()-messageTime<15*60*1000;
   const editItem=menu.querySelector('[data-message-action="edit"]');
-  editItem.hidden=!own||deleted;
-  editItem.textContent=canEdit?'Edit message':'Edit message · 15-minute limit';
+  editItem.hidden=true; // Server is the authority, never the viewer's clock.
+  editItem.textContent="Edit message";
+  if(own&&!deleted&&messageEl.dataset.messageId){
+    const selectedMessage=messageEl;
+    void supabase.rpc("can_edit_chat_message",{
+      p_message_id:messageEl.dataset.messageId
+    }).then(({data,error})=>{
+      if(!error&&data===true&&currentMessage===selectedMessage&&!menu.hidden){
+        editItem.hidden=false;
+        const rect=menu.getBoundingClientRect();
+        menu.style.top=`${Math.min(parseFloat(menu.style.top)||8,Math.max(8,innerHeight-rect.height-8))}px`;
+      }
+    }).catch(()=>{});
+  }
   const pin=menu.querySelector('[data-message-action="pin"]');
   pin.hidden=deleted||messageEl.dataset.canPin!=="true";
   pin.textContent=messageEl.dataset.messagePinned==="true"?"Unpin message":"Pin message";
@@ -163,13 +173,16 @@ async function handleMenuAction(event) {
   closeMenu();
   try {
     if(action==="edit"){
-      const sentAt=Date.parse(messageEl.dataset.messageCreated||"");
-      if(!Number.isFinite(sentAt)||Date.now()-sentAt>=15*60000){
-        window.siteToast?.("You can only edit a sent message within 15 minutes. Older messages can be copied or unsent when eligible.",{type:"info",title:"Edit unavailable"});
-      }else{
+      const {data,error}=await supabase.rpc('can_edit_chat_message',{
+        p_message_id:messageEl.dataset.messageId
+      });
+      if(error)throw error;
+      if(data===true){
         window.dispatchEvent(new CustomEvent("timzee:chat-edit-message",{
           detail:{messageId:messageEl.dataset.messageId}
         }));
+      }else{
+        window.siteToast?.("The 15-minute edit window has expired.",{type:"info",title:"Edit unavailable"});
       }
     }else if(action==="info"){
       window.dispatchEvent(new CustomEvent("timzee:chat-message-info",{detail:{messageId:messageEl.dataset.messageId}}));
