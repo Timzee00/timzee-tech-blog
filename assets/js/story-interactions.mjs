@@ -143,7 +143,7 @@ export async function showStoryInteractions(story,user,container,{onReshare=()=>
  if(canComment)void reloadComments();
  setupMentionInput(menu.querySelector('[data-comment-form] input'));
  setupMentionInput(menu.querySelector('[data-private-reply] input'));
- if(user?.id&&!own)void supabase.rpc('record_status_view',{p_story_id:story.id}).catch?.(()=>{});
+ if(user?.id&&!own)void supabase.rpc('record_status_view',{p_story_id:story.id}).then(({error})=>{if(error)console.warn('Status view unavailable',error.message);});
  if(user?.id)void reloadLikes();
  if(user?.id)void mountPoll(menu.querySelector('[data-story-poll]'),'story',story.id);
 }
