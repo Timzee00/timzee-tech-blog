@@ -48,6 +48,9 @@ export function setupChatEnhancements({supabase, onPresence}) {
   }
   async function markRead(messageId){
     if(!messageId||!shouldTrack()||state.privacy.read_receipts===false)return;
+    const viewport=byId('chatMessages');
+    // Scrolling through older messages must not mark unseen new messages read.
+    if(viewport&&viewport.scrollHeight-viewport.scrollTop-viewport.clientHeight>120)return;
     try{await supabase.rpc('mark_chat_thread_read',{p_message_id:messageId});}
     catch{/* Receipt delivery must not interrupt chat. */}
   }
@@ -94,6 +97,15 @@ export function setupChatEnhancements({supabase, onPresence}) {
       else if(document.visibilityState!=='visible')onPresence('Chat available',false);
     });
     window.addEventListener('online',()=>{void heartbeat();void updatePresence();});
+    let scrollTimer;
+    byId('chatMessages')?.addEventListener('scroll',()=>{
+      clearTimeout(scrollTimer);
+      scrollTimer=setTimeout(()=>{
+        const messages=[...document.querySelectorAll('#chatMessages .chat-message[data-message-id]')];
+        const last=messages.filter(el=>el.dataset.messageSelf!=='true').at(-1);
+        if(last?.dataset.messageId)void markRead(last.dataset.messageId);
+      },300);
+    },{passive:true});
   }
   async function activate(userId,threadId,friendId=''){
     state.userId=userId||'';state.friendId=friendId;state.threadId=threadId;
