@@ -88,6 +88,7 @@
             <div id="forumReplyTarget" class="forum-reply-target" hidden></div>
             <label for="forumReplyText">Add to this discussion</label>
             <textarea id="forumReplyText" maxlength="10000" rows="4" placeholder="Share something helpful. Use @mention to refer to others." required></textarea>
+            <label class="forum-file-label">Attach a photo or short video (optional, up to 12 MB)<input id="forumReplyMedia" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"></label>
             <div class="forum-reply-footer"><small>Be constructive and respect community rules.</small><button type="submit" class="forum-button primary">Post reply</button></div>
           </form>
         </section>
@@ -123,6 +124,7 @@
       <label>Post type<select name="kind"><option value="discussion">Discussion</option><option value="question">Question</option><option value="guide">Guide / tutorial</option><option value="news">Tech news</option><option value="showcase">Project showcase</option></select></label>
       <label>Title<input name="title" maxlength="180" minlength="5" required placeholder="Write a clear, specific title"></label>
       <label>Details<textarea name="body" maxlength="12000" rows="7" placeholder="Give enough background for meaningful replies."></textarea></label>
+      <label>Photo or short video (optional, up to 12 MB)<input type="file" name="media" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"></label>
       <p id="forumThreadFormError" class="forum-form-error" role="alert"></p>
       <button type="submit" class="forum-button primary">Publish topic</button>
     </form>
