@@ -458,7 +458,20 @@
           .join("");
       }
 
-      function renderActiveStory() {
+      async function signPrivateStoryAsset(storyId,asset){
+        const {data,error}=await supabase.auth.getSession();
+        if(error||!data?.session?.access_token)throw Error("Sign in to view this private status.");
+        const response=await fetch("/.netlify/functions/story-private-media",{
+          method:"POST",cache:"no-store",
+          headers:{"Content-Type":"application/json","Authorization":"Bearer "+data.session.access_token},
+          body:JSON.stringify({story_id:storyId,asset}),
+          signal:AbortSignal.timeout(16000)
+        });
+        const body=await response.json().catch(()=>({}));
+        if(!response.ok||!body.signedUrl)throw Error(body.error||"Private status unavailable.");
+        return body.signedUrl;
+      }
+      async function renderActiveStory() {
         clearTimer();
         const version=state.storyPlaybackVersion;
         const group = state.groups[state.activeGroupIndex];
@@ -477,15 +490,7 @@
         const musicControls=document.getElementById("storyMusicControls");
         const soundtrack=document.getElementById("storyMusicAudio");
         const musicToggle=document.getElementById("storyMusicToggle");
-        const approvedUrl=isSafeUrl(story.music_url)?story.music_url:"";
-        musicControls.hidden=!approvedUrl;
-        if(approvedUrl){
-          soundtrack.src=approvedUrl;
-          soundtrack.preload="metadata";
-          document.getElementById("storyMusicLabel").textContent=story.music_title||"Soundtrack";
-          musicToggle.textContent="▶ Play music";
-          musicToggle.setAttribute("aria-pressed","false");
-        }
+        musicControls.hidden=true;
         const social=document.getElementById("storyViewerSocial");
         if(social)void showStoryInteractions(story,state.user,social,{
           onReshare:async()=>{state.allGroups=await fetchStoriesFeed();await applySavedFilter();}
@@ -498,7 +503,8 @@
 
         const media = document.getElementById("storyViewerMedia");
         media.innerHTML = "";
-        const url = isSafeUrl(story.media_url) ? story.media_url : "";
+        let url=isSafeUrl(story.media_url)?story.media_url:"";
+        let musicUrl=isSafeUrl(story.music_url)?story.music_url:"";
         const mediaError = message => {
           if(version!==state.storyPlaybackVersion||document.getElementById("storyViewer").hidden)return;
           if(state.mediaWatchdog){clearTimeout(state.mediaWatchdog);state.mediaWatchdog=null;}
@@ -512,8 +518,32 @@
           retry.addEventListener("click",()=>renderActiveStory());
           media.appendChild(retry);
         };
+        if(String(story.media_url||"").startsWith("story-private-media/")){
+          const loading=document.createElement("p");
+          loading.className="story-loading-private";
+          loading.setAttribute("role","status");
+          loading.textContent="Securely loading friends-only status…";
+          media.appendChild(loading);
+          try{
+            url=await signPrivateStoryAsset(story.id,"media");
+          }catch(error){mediaError(error.message||"Unable to load this private status.");return;}
+          if(version!==state.storyPlaybackVersion||document.getElementById("storyViewer").hidden)return;
+          media.replaceChildren();
+        }
+        if(String(story.music_url||"").startsWith("story-private-media/")){
+          try{musicUrl=await signPrivateStoryAsset(story.id,"music");}
+          catch(error){musicUrl="";console.warn("Private soundtrack unavailable:",error.message);}
+          if(version!==state.storyPlaybackVersion||document.getElementById("storyViewer").hidden)return;
+        }
+        if(musicUrl){
+          musicControls.hidden=false;
+          soundtrack.src=musicUrl;soundtrack.preload="metadata";
+          document.getElementById("storyMusicLabel").textContent=story.music_title||"Soundtrack";
+          musicToggle.textContent="▶ Play music";
+          musicToggle.setAttribute("aria-pressed","false");
+        }
         if (!url) {
-          mediaError("This story's media is unavailable. Moving to the next story.");
+          mediaError("This story's media is unavailable.");
         } else if (story.media_type === "video") {
           const video = document.createElement("video");
           video.src = url;
