@@ -26,7 +26,7 @@ const AUDIO_EXTENSIONS = new Set(["mp3","wav","ogg","m4a","aac","flac","opus","w
 const state = {
   selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false, editing: null, editSaving: false, replyTo: null, reactions:new Map(), reactionBusy:new Set(),
   drafts: new Map(), previews: new Map(), peopleResults: [], peopleRequest: 0, messageVersions: new Map(), messageRevision: 0,
-  user: null, verified:false, translations:new Map(), translationBusy:new Set(), settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [], directPartners: [], staffDMAllowed: false, canCompose: true,
+  user: null, verified:false, translations:new Map(), translationBusy:new Set(), starred:new Set(),forwardingMessageId:null,settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [], directPartners: [], staffDMAllowed: false, canCompose: true,
   blockedProfiles: new Map(), groups: [], groupMembers: new Map(), messages: [], pinnedMessages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
   searchTerm: "", peopleTerm: "", messageSearchTerm: "", mediaFile: null, mediaType: "", previewUrl: "",
   recorder: null, recorderStream: null, recorderChunks: [], recorderTimer: null, recorderStartedAt: 0, analyserFrame: 0, audioContext: null, analyser: null, recordingStarting: false, recordingRequestId: 0
@@ -256,6 +256,69 @@ async function searchPeople(query) {
   }
 }
 
+async function loadStarred(){
+  if(!state.user||!state.activeThreadId)return;
+  const ids=state.messages.slice(-80).map(m=>m.id);
+  if(!ids.length){state.starred.clear();return;}
+  const {data,error}=await supabase.from('chat_message_stars')
+     .select('message_id').eq('user_id',state.user.id).in('message_id',ids);
+  if(error)throw error;
+  state.starred=new Set((data||[]).map(x=>x.message_id));
+}
+async function toggleMessageStar(id){
+  const message=state.messages.find(m=>m.id===id);
+  if(!message||message.deleted_at)return;
+  const was=state.starred.has(id);
+  const operation=was?supabase.from('chat_message_stars').delete()
+    .eq('message_id',id).eq('user_id',state.user.id):
+    supabase.from('chat_message_stars').insert({message_id:id,user_id:state.user.id});
+  const {error}=await operation;
+  if(error)throw error;
+  if(was)state.starred.delete(id);else state.starred.add(id);
+  renderMessages({preserveScroll:true});
+  window.siteToast?.(was?'Message removed from saved items.':'Message starred.',{type:'success'});
+}
+async function openStarredPanel(){
+  if(!state.activeThreadId||!state.user)return;
+  const list=$("chatStarredList");list.textContent='Loading starred messages…';
+  openModal('chatStarredModal');
+  const {data:stars,error}=await supabase.from('chat_message_stars')
+    .select('message_id').eq('user_id',state.user.id).order('created_at',{ascending:false}).limit(200);
+  if(error){list.textContent=error.message;return;}
+  const ids=(stars||[]).map(x=>x.message_id);
+  if(!ids.length){list.textContent='No starred messages yet.';return;}
+  const {data:messages,error:messageError}=await supabase.from('direct_messages')
+    .select('id,body,media_type,created_at').eq('thread_id',state.activeThreadId).in('id',ids).limit(200);
+  if(messageError){list.textContent=messageError.message;return;}
+  list.innerHTML=(messages||[]).length?(messages||[]).map(m=>`<button class="chat-starred-jump" type="button" data-starred-jump="${escapeHTML(m.id)}"><strong>★ Starred</strong><small>${escapeHTML((m.body||m.media_type||'Attachment').slice(0,140))}</small></button>`).join(''):
+  '<div class="callout">No starred messages in this conversation.</div>';
+}
+function openForwardPicker(id){
+  const message=state.messages.find(m=>m.id===id);
+  if(!message||!message.body||message.media_url||message.media_path){
+    window.siteToast?.("Only text messages can be forwarded right now.",{type:"info"});return;
+  }
+  state.forwardingMessageId=id;
+  const target=$("chatForwardList");
+  target.innerHTML=state.friends.map(friendId=>{
+    const p=profileFor(friendId)||{};
+    return `<button class="chat-forward-choice" type="button" data-forward-friend="${friendId}">${escapeHTML(p.display_name||'Member')}</button>`;
+  }).join('')+state.groups.map(g=>`<button class="chat-forward-choice" type="button" data-forward-group="${g.id}">Group · ${escapeHTML(g.name||'Group')}</button>`).join('')||
+    '<div class="callout">No available conversations.</div>';
+  openModal("chatForwardModal");
+}
+async function forwardTo(destination,recipientId=null){
+  const messageId=state.forwardingMessageId;
+  if(!messageId)return;
+  const {data,error}=await supabase.rpc("forward_chat_text",{
+    p_message_id:messageId,p_thread_id:destination,p_recipient_id:recipientId
+  });
+  if(error)throw error;
+  closeModal("chatForwardModal");state.forwardingMessageId=null;
+  if(destination===state.activeThreadId&&data){mergeMessage(data);renderMessages({preserveScroll:true});}
+  await renderFriends();renderGroups();
+  window.siteToast?.("Text forwarded.",{type:"success"});
+}
 function renderPinnedMessages(){
   const bar=$("chatPinnedBar");
   if(!bar)return;
@@ -399,8 +462,8 @@ function renderMessages({ preserveScroll = false } = {}) { const target=$("chatM
  data-message-id="${m.id}" data-message-self="${self?'true':'false'}"
  data-message-deleted="${deleted?'true':'false'}" data-can-pin="${canPin?'true':'false'}"
  data-message-created="${escapeHTML(m.created_at||'')}"
- data-message-pinned="${m.pinned_at?'true':'false'}"
- data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}${deleted?'':reactionBadges(m)}${!deleted&&String(m.body||'').startsWith('📊 Poll:')?`<div class="chat-bubble-poll" data-chat-poll-id="${escapeHTML(m.id)}"></div>`:''}${state.translations.has(m.id+'::'+state.settings.translateLanguage)?`<div class="chat-message-translation">${escapeHTML(state.translations.get(m.id+'::'+state.settings.translateLanguage))}</div>`:''}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop;
+ data-message-pinned="${m.pinned_at?'true':'false'}" data-starred="${state.starred.has(m.id)?'true':'false'}"
+ data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${state.starred.has(m.id)?'<span class="chat-star-indicator">★ Starred</span>':''}${m.forwarded_from?'<span class="chat-forwarded-indicator">↗ Forwarded</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}${deleted?'':reactionBadges(m)}${!deleted&&String(m.body||'').startsWith('📊 Poll:')?`<div class="chat-bubble-poll" data-chat-poll-id="${escapeHTML(m.id)}"></div>`:''}${state.translations.has(m.id+'::'+state.settings.translateLanguage)?`<div class="chat-message-translation">${escapeHTML(state.translations.get(m.id+'::'+state.settings.translateLanguage))}</div>`:''}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop;
   target.querySelectorAll("[data-chat-poll-id]").forEach(host=>{
     void mountPoll(host,'chat',host.dataset.chatPollId);
   });
@@ -649,7 +712,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
   const group = groupId ? state.groups.find(item => item.id === groupId) : null;
   if (groupId && !group) return;
   closeEditPanel(); cancelReply(); rememberDraft(); stopRecording(false); clearMediaPreview(); closeAttachMenu(); chatEnhancements.deactivate();
-  state.pinnedMessages=[];state.reactions.clear();renderPinnedMessages();
+  state.pinnedMessages=[];state.starred.clear();state.reactions.clear();renderPinnedMessages();
   const selection = ++state.selection;
   void realtime.stop();
   state.activeFriendId = friendId; state.activeGroupId = groupId; state.canCompose=true;
@@ -670,6 +733,9 @@ async function selectConversation({ friendId = '', groupId = '' }) {
     if (selection !== state.selection) return;
     await loadPinnedMessages(threadId);
     if (selection !== state.selection) return;
+    await loadStarred();
+    if (selection !== state.selection) return;
+    renderMessages({preserveScroll:true});
     void refreshReactions(threadId).catch(error=>console.warn("Chat reactions unavailable:",error));
     if (group) await loadGroupMembers(threadId);
     if (selection !== state.selection) return;
@@ -695,7 +761,7 @@ const selectGroup = id => selectConversation({ groupId: id });
 function leaveConversation() {
   closeEditPanel(); cancelReply(); rememberDraft(); ++state.selection; void realtime.stop(); chatEnhancements.deactivate();
   state.activeThreadId = state.activeFriendId = state.activeGroupId = '';
-  state.messages = [];state.pinnedMessages=[];state.reactions.clear();renderPinnedMessages(); state.loadingThread = false; updateComposer(); setView('list');
+  state.messages = [];state.pinnedMessages=[];state.starred.clear();state.reactions.clear();renderPinnedMessages(); state.loadingThread = false; updateComposer(); setView('list');
 }
 function mergeMessage(message) {
   if(state.editing?.id===message.id&&message.deleted_at)closeEditPanel();
@@ -891,6 +957,16 @@ function setupEvents(){
   $("loadOlderMessages")?.addEventListener("click", () => loadOlderMessages().catch(error => reportAppError(error, "Unable to load older messages")));
   setupMentionInput($("chatBody"));
   setupMentionInput($("chatEditBody"));
+  $("chatForwardList")?.addEventListener('click',e=>{
+    const friend=e.target.closest('[data-forward-friend]')?.dataset.forwardFriend;
+    const group=e.target.closest('[data-forward-group]')?.dataset.forwardGroup;
+    if(friend)void forwardTo(threadForFriend(friend),friend).catch(err=>reportAppError(err,'Forwarding failed'));
+    if(group)void forwardTo(group,null).catch(err=>reportAppError(err,'Forwarding failed'));
+  });
+  $("chatStarredList")?.addEventListener('click',e=>{
+    const id=e.target.closest('[data-starred-jump]')?.dataset.starredJump;
+    if(id){closeModal('chatStarredModal');void jumpToPinned(id).catch(err=>reportAppError(err,'Saved message unavailable'));}
+  });
   $("saveGroupPermissions")?.addEventListener("click",()=>void saveGroupPermissions()
     .catch(error=>reportAppError(error,"Unable to save group permissions")));
   $("chatPinnedBar")?.addEventListener("click",e=>{const b=e.target.closest("[data-pinned-id]");if(b)void jumpToPinned(b.dataset.pinnedId).catch(err=>reportAppError(err,"Pinned message unavailable"));});
@@ -978,7 +1054,8 @@ function setupEvents(){
     if (event.target === panel && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) panel.close();
   });
   $("chatMenuToggle")?.addEventListener('click',e=>{e.stopPropagation();$("chatHeaderMenu").hidden?openHeaderMenu():closeHeaderMenu();}); document.addEventListener('click',e=>{if(!e.target.closest('.chat-header-actions'))closeHeaderMenu();});
-  $("chatHeaderMenu")?.addEventListener('click',async e=>{const a=e.target.closest('[data-chat-menu]')?.dataset.chatMenu;if(!a)return;closeHeaderMenu();if(a==='search'){state.messageSearchTerm=await window.appUI.prompt('Search in this chat:',state.messageSearchTerm)||'';renderMessages();}if(a==='details'||a==='media'){openConversationDetails();if(a==='media')setTimeout(()=>$("infoMediaGrid")?.scrollIntoView({block:"nearest"}),50);}if(a==='settings'){defaultSettingsUI();openModal('chatSettingsModal');}if(a==='poll'&&state.activeGroupId){
+  $("chatHeaderMenu")?.addEventListener('click',async e=>{const a=e.target.closest('[data-chat-menu]')?.dataset.chatMenu;if(!a)return;closeHeaderMenu();if(a==='starred')await openStarredPanel();
+    if(a==='search'){state.messageSearchTerm=await window.appUI.prompt('Search in this chat:',state.messageSearchTerm)||'';renderMessages();}if(a==='details'||a==='media'){openConversationDetails();if(a==='media')setTimeout(()=>$("infoMediaGrid")?.scrollIntoView({block:"nearest"}),50);}if(a==='settings'){defaultSettingsUI();openModal('chatSettingsModal');}if(a==='poll'&&state.activeGroupId){
     if(activeGroup()?.settings?.allow_polls===false)window.appUI?.toast?.("Polls disabled by group owner.");
     else await openPollComposer('group',state.activeGroupId,
       async()=>{await refreshRecent(state.activeThreadId);});
@@ -1020,6 +1097,13 @@ function setupEvents(){
   });
   window.addEventListener('timzee:chat-reply-message',e=>{
     if(e.detail?.messageId)startLinkedReply(e.detail.messageId);
+  });
+  window.addEventListener('timzee:chat-star',e=>{
+    if(e.detail?.messageId)void toggleMessageStar(e.detail.messageId)
+      .catch(err=>reportAppError(err,'Unable to star message'));
+  });
+  window.addEventListener('timzee:chat-forward',e=>{
+    if(e.detail?.messageId)openForwardPicker(e.detail.messageId);
   });
   window.addEventListener('timzee:chat-translate',e=>{
     if(e.detail?.messageId)void translateChatMessage(e.detail.messageId);
