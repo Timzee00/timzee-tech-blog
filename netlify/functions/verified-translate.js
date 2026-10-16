@@ -2,8 +2,6 @@
 // Text is supplied to Groq ONLY after the user explicitly requests translation.
 const ALLOWED = new Set(['en','fr','es','pt','ar','de','hi','sw','ha','yo','ig','zh','ja','ko','tr','it','ru','id','nl','bn','ta','ur']);
 const languageNames={en:'English',fr:'French',es:'Spanish',pt:'Portuguese',ar:'Arabic',de:'German',hi:'Hindi',sw:'Swahili',ha:'Hausa',yo:'Yoruba',ig:'Igbo',zh:'Chinese',ja:'Japanese',ko:'Korean',tr:'Turkish',it:'Italian',ru:'Russian',id:'Indonesian',nl:'Dutch',bn:'Bengali',ta:'Tamil',ur:'Urdu'};
-const recent=new Map();
-const LIMIT=18;
 const cors={'content-type':'application/json','cache-control':'no-store'};
 const result=(status,body)=>({statusCode:status,headers:cors,body:JSON.stringify(body)});
 exports.handler=async event=>{
@@ -28,11 +26,20 @@ exports.handler=async event=>{
   if(!profile.ok)return result(503,{error:'Could not check verification'});
   const rows=await profile.json();
   if(rows[0]?.is_verified!==true)return result(403,{error:'Translation is currently for verified creators'});
-  const now=Date.now();
-  for(const [id,times] of recent)if(!times.length||times[times.length-1]<now-3600000)recent.delete(id);
-  const timestamps=(recent.get(user.id)||[]).filter(t=>now-t<3600000);
-  if(timestamps.length>=LIMIT)return result(429,{error:'Translation limit reached. Please try later.'});
-  timestamps.push(now);recent.set(user.id,timestamps);
+  // Count translation use in Postgres; serverless instances cannot share a Map.
+  const quotaResponse=await fetch(url.replace(/\\/$/,'')+'/rest/v1/rpc/consume_verified_translation_quota',{
+    method:'POST',signal:AbortSignal.timeout(9000),
+    headers:{apikey:key,Authorization:'Bearer '+token,'content-type':'application/json'},
+    body:JSON.stringify({p_chars:text.length})
+  });
+  if(!quotaResponse.ok){
+    const failure=await quotaResponse.json().catch(()=>({}));
+    const exhausted=/hourly quota reached/i.test(failure.message||'');
+    return result(exhausted?429:quotaResponse.status===401?401:503,{
+      error:exhausted?'Translation limit reached (18/hour). Try again next hour.':
+        'Translation allowance unavailable. Please try again.'
+    });
+  }
   const response=await fetch('https://api.groq.com/openai/v1/chat/completions',{
    method:'POST',signal:AbortSignal.timeout(16000),
    headers:{Authorization:'Bearer '+groq,'content-type':'application/json'},
