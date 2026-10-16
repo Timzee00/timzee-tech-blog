@@ -138,6 +138,12 @@
               <option value="other">Other</option>
             </select>
             <input type="text" id="videoTags" placeholder="Tags (comma separated)" style="margin-top: 8px;">
+            <fieldset class="video-creator-controls" style="margin:12px 0;padding:12px;border:1px solid var(--color-border);border-radius:12px">
+              <legend>Video creator controls</legend>
+              <label style="display:flex;gap:8px;margin:8px 0"><input id="videoAllowComments" type="checkbox" checked> Enable commenting</label>
+              <label style="display:flex;gap:8px;margin:8px 0"><input id="videoAllowDownload" type="checkbox" checked> Show download button</label>
+              <small>Disabling downloads removes the built-in download action, but cannot stop screen recording or copying publicly accessible files.</small>
+            </fieldset>
             <label for="videoThumbnail" style="display:block; margin-top: 12px; font-size: 13px; color: var(--muted, #5b6573);">
               Thumbnail (optional — we'll use a video frame if you skip this)
             </label>
@@ -882,7 +888,9 @@
               description: document.getElementById("videoDescription").value,
               category: document.getElementById("videoCategory").value,
               tags: [...new Set(document.getElementById("videoTags").value.split(/[\s,]+/).map(t => t.trim().replace(/^#/,"").toLowerCase()).filter(t=>/^[a-z0-9_]{1,32}$/.test(t)))],
-              duration: state.selectedVideoDuration || 0
+              duration: state.selectedVideoDuration || 0,
+              allow_comments: document.getElementById("videoAllowComments").checked,
+              allow_download: document.getElementById("videoAllowDownload").checked
             }
           );
 
