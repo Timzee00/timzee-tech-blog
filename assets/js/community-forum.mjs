@@ -6,7 +6,7 @@ import "./nav.js";
 const $=id=>document.getElementById(id);
 const escape=value=>escapeHTML(String(value??""));
 const validId=value=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(String(value||""));
-const categories=["All","AI & ML","Programming","Gadgets","Cybersecurity","Tech Jobs","Gaming","Startups","Learning","Technology"];
+const categories=["All","AI & ML","Programming","Gadgets","Cybersecurity","Tech Jobs","Gaming","Startups","Learning","Technology","Project Showcase","Sports","Entertainment","World Affairs","General"];
 const PAGE_SIZE=20;
 const state={
  user:null,communities:[],communityPage:0,hasMoreCommunities:false,
@@ -578,8 +578,14 @@ async function savePostingPolicy(){
 }
 async function initializeFromUrl(){
  const params=new URLSearchParams(location.search);
- const thread=params.get("thread"),community=params.get("community");
+ const thread=params.get("thread"),community=params.get("community"),legacy=params.get("topic");
  if(thread&&validId(thread))await openThread(thread,{push:false});
+ else if(legacy&&validId(legacy)){
+   const {data}=await supabase.from("community_legacy_redirects")
+     .select("thread_id").eq("old_topic_id",legacy).maybeSingle();
+   if(data?.thread_id)await openThread(data.thread_id,{push:false});
+   else enterFeed({mode:"home",push:false});
+ }
  else if(community)await openCommunitySlug(community,{push:false});
  else enterFeed({mode:"home",push:false});
 }
