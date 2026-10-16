@@ -14,10 +14,11 @@ async function ownChat(page, older=false) {
   await mockSite(page,{role:'user'});
   let message={
     id:MESSAGE_ID,thread_id:thread,sender_id:USER_ID,recipient_id:FRIEND,
-    body:'Original message',media_url:null,created_at:new Date(Date.now()-(older?20:2)*60000).toISOString(),
+    body:'Original message',media_url:null,created_at:new Date(Date.now()-(older?20:2)*60000).toISOString().slice(0,-1),
     edited_at:null,edit_count:0
   };
   const edits=[];
+  await page.route('https://*/rest/v1/rpc/can_edit_chat_message',route=>respond(route,!older));
   await page.route('https://*/rest/v1/rpc/edit_chat_message',async route=>{
     const payload=route.request().postDataJSON();
     edits.push(payload);
@@ -72,10 +73,8 @@ test('editing can be cancelled without overwriting a draft',async({page})=>{
   expect(edits).toHaveLength(0);
 });
 
-test('older sent messages show an expired Edit explanation rather than a missing button',async({page})=>{
+test('expired messages hide Edit as decided by the database',async({page})=>{
   await ownChat(page,true);
   await page.getByRole('button',{name:'Message actions',exact:true}).click();
-  await expect(page.getByRole('menuitem',{name:/Edit message.*15-minute limit/})).toBeVisible();
-  await page.getByRole('menuitem',{name:/Edit message.*15-minute limit/}).click();
-  await expect(page.locator('#chatEditPanel')).toBeHidden();
+  await expect(page.getByRole('menuitem',{name:'Edit message'})).toBeHidden();
 });
