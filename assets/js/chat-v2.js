@@ -3,6 +3,7 @@ import { setupChatEnhancements } from "./chat-enhancements.mjs";
 import {openPollComposer,mountPoll} from "./content-polls.mjs";
 import {setupMentionInput} from "./mentions.js";
 import {renderChatText} from "./chat-rich-format.mjs";
+import {translateVerifiedText} from "./chat-translator.mjs";
 import { voicePlayerHtml,setupChatVoicePlayers } from "./chat-voice-player.mjs";
 import { bindSearch } from "./search-input.js";
 import { fetchMessagePage } from "./chat-history.mjs";
@@ -17,7 +18,7 @@ import { submitModerationReport } from "./moderation-reports.mjs";
 const DEFAULT_AVATAR = "/assets/img/avatar-placeholder.svg";
 const DEFAULT_GROUP_AVATAR = "/assets/img/group-placeholder.svg";
 const SETTINGS_KEY = "timzee_chat_settings_v2";
-const DEFAULT_SETTINGS = { notifications: true, enterToSend: true, compact: false };
+const DEFAULT_SETTINGS = { notifications: true, enterToSend: true, compact: false, autoTranslate:false,translateLanguage:"en" };
 const IMAGE_EXTENSIONS = new Set(["jpg","jpeg","png","gif","webp","bmp","svg","avif","heic","heif"]);
 const VIDEO_EXTENSIONS = new Set(["mp4","webm","mov","m4v","mkv","avi","wmv","flv","3gp"]);
 const AUDIO_EXTENSIONS = new Set(["mp3","wav","ogg","m4a","aac","flac","opus","webm"]);
@@ -25,7 +26,7 @@ const AUDIO_EXTENSIONS = new Set(["mp3","wav","ogg","m4a","aac","flac","opus","w
 const state = {
   selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false, editing: null, editSaving: false, replyTo: null, reactions:new Map(), reactionBusy:new Set(),
   drafts: new Map(), previews: new Map(), peopleResults: [], peopleRequest: 0, messageVersions: new Map(), messageRevision: 0,
-  user: null, settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [], directPartners: [], staffDMAllowed: false, canCompose: true,
+  user: null, verified:false, translations:new Map(), translationBusy:new Set(), settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [], directPartners: [], staffDMAllowed: false, canCompose: true,
   blockedProfiles: new Map(), groups: [], groupMembers: new Map(), messages: [], pinnedMessages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
   searchTerm: "", peopleTerm: "", messageSearchTerm: "", mediaFile: null, mediaType: "", previewUrl: "",
   recorder: null, recorderStream: null, recorderChunks: [], recorderTimer: null, recorderStartedAt: 0, analyserFrame: 0, audioContext: null, analyser: null, recordingStarting: false, recordingRequestId: 0
@@ -399,7 +400,7 @@ function renderMessages({ preserveScroll = false } = {}) { const target=$("chatM
  data-message-deleted="${deleted?'true':'false'}" data-can-pin="${canPin?'true':'false'}"
  data-message-created="${escapeHTML(m.created_at||'')}"
  data-message-pinned="${m.pinned_at?'true':'false'}"
- data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}${deleted?'':reactionBadges(m)}${!deleted&&String(m.body||'').startsWith('📊 Poll:')?`<div class="chat-bubble-poll" data-chat-poll-id="${escapeHTML(m.id)}"></div>`:''}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop;
+ data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}${deleted?'':reactionBadges(m)}${!deleted&&String(m.body||'').startsWith('📊 Poll:')?`<div class="chat-bubble-poll" data-chat-poll-id="${escapeHTML(m.id)}"></div>`:''}${state.translations.has(m.id+'::'+state.settings.translateLanguage)?`<div class="chat-message-translation">${escapeHTML(state.translations.get(m.id+'::'+state.settings.translateLanguage))}</div>`:''}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop;
   target.querySelectorAll("[data-chat-poll-id]").forEach(host=>{
     void mountPoll(host,'chat',host.dataset.chatPollId);
   });
@@ -443,6 +444,40 @@ async function modifyGroupMember(memberId,action){
   if(error)throw error;
   await loadGroupMembers(groupId);
   window.siteToast?.("Group membership updated.",{type:"success"});
+}
+async function translateChatMessage(messageId,{automatic=false}={}){
+  if(!state.verified||!state.user||!state.activeThreadId)return;
+  const message=state.messages.find(m=>m.id===messageId);
+  if(!message||message.deleted_at||!String(message.body||'').trim())return;
+  const lang=state.settings.translateLanguage||'en';
+  const cacheKey=message.id+'::'+lang;
+  if(state.translations.has(cacheKey)||state.translationBusy.has(cacheKey))return;
+  if(automatic&&!state.settings.autoTranslate)return;
+  state.translationBusy.add(cacheKey);
+  try{
+    const text=await translateVerifiedText(message.body,lang);
+    if(!text)return;
+    state.translations.set(cacheKey,text);
+    if(state.messages.some(row=>row.id===messageId)&&state.activeThreadId===message.thread_id){
+      const el=[...$("chatMessages").querySelectorAll(".chat-message")]
+        .find(node=>node.dataset.messageId===messageId);
+      let target=el?.querySelector(".chat-message-translation");
+      if(el&&!target){
+        target=document.createElement("div");target.className="chat-message-translation";
+        el.querySelector(".chat-message-meta")?.before(target);
+      }
+      if(target)target.textContent=text;
+    }
+  }catch(error){
+    if(!automatic)reportAppError(error,'Translation unavailable');
+  }finally{state.translationBusy.delete(cacheKey);}
+}
+async function autoTranslateVisibleMessages(){
+  if(!state.verified||!state.settings.autoTranslate)return;
+  for(const m of state.messages.slice(-5)){
+    if(m.sender_id!==state.user?.id&&m.body&&!m.deleted_at)
+      await translateChatMessage(m.id,{automatic:true});
+  }
 }
 async function saveGroupPermissions(){
   const group=activeGroup();if(!group||!isOwnerOfActiveGroup())return;
@@ -646,6 +681,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
       }
     });
     renderInfoMedia(); void renderFriends(); renderGroups();
+    void autoTranslateVisibleMessages();
     void realtime.start(threadId).catch(error => reportAppError(error, 'Chat connection failed'));
   } catch (error) {
     if (selection !== state.selection) return;
@@ -705,6 +741,8 @@ const realtime = createChatRealtime(supabase, {
     if (event === 'UPDATE' && !exists) { void loadPinnedMessages(threadId).catch(console.warn); return; }
     state.messageVersions.set(message.id, ++state.messageRevision);
     mergeMessage(message); renderMessages({ preserveScroll: true }); renderInfoMedia(); void renderFriends();
+    if(event!=='DELETE'&&message.sender_id!==state.user?.id&&message.body)
+      void translateChatMessage(message.id,{automatic:true});
     if(event==="UPDATE")void loadPinnedMessages(threadId).catch(console.warn);
     if(message.sender_id!==state.user.id)void chatEnhancements.markRead(message.id);
     await loadProfiles([message.sender_id]);
@@ -884,6 +922,12 @@ function setupEvents(){
     const id=e.target.closest('[data-replied-id]')?.dataset.repliedId;
     if(id)void jumpToPinned(id).catch(err=>reportAppError(err,"Unable to load replied message"));
   });
+  $("chatTranslateLanguage")?.addEventListener('change',e=>{
+    state.settings.translateLanguage=e.target.value;
+    void saveSettings();
+    renderMessages({preserveScroll:true});
+    void autoTranslateVisibleMessages();
+  });
   $("chatEditSave")?.addEventListener('click',()=>void saveEditedMessage());
   $("chatEditCancel")?.addEventListener('click',()=>closeEditPanel(true));
   $("chatEditBody")?.addEventListener('keydown',e=>{
@@ -977,6 +1021,9 @@ function setupEvents(){
   window.addEventListener('timzee:chat-reply-message',e=>{
     if(e.detail?.messageId)startLinkedReply(e.detail.messageId);
   });
+  window.addEventListener('timzee:chat-translate',e=>{
+    if(e.detail?.messageId)void translateChatMessage(e.detail.messageId);
+  });
   window.addEventListener('timzee:chat-edit-message',e=>{
     if(e.detail?.messageId)beginEditMessage(e.detail.messageId);
   });
@@ -989,5 +1036,14 @@ function setupEvents(){
 }
 async function handleRequests(e){const b=e.target.closest('button[data-request]');if(!b)return;const row=state.friendships.find(r=>r.id===b.dataset.id);if(!row)return;if(b.dataset.request==='accept'){const r=await supabase.from('friendships').update({status:'accepted',updated_at:new Date().toISOString()}).eq('id',row.id);if(r.error)throw r.error;}else{const r=await supabase.from('friendships').delete().eq('id',row.id);if(r.error)throw r.error;}await loadAllChatData();renderRequests();renderBlocked();await renderFriends();renderPeopleResults();}
 
-async function boot(){setupTabs();setupEvents();chatEnhancements.setup();setupChatVoicePlayers();state.settings=readSettings();applySettings();state.user=await getCurrentUserWithRole();if(!state.user){$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}const preferences=await loadUserPreferences(state.user);state.settings={...DEFAULT_SETTINGS,...preferences.chat};applySettings();document.documentElement.dataset.groupTags=preferences.groups?.showMemberTags===false?"hidden":"visible";await loadAllChatData();const staffPermission=await supabase.rpc('can_start_staff_dm');state.staffDMAllowed=staffPermission.data===true&&!staffPermission.error;renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('user'))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
+async function boot(){setupTabs();setupEvents();chatEnhancements.setup();setupChatVoicePlayers();state.settings=readSettings();applySettings();state.user=await getCurrentUserWithRole();if(!state.user){$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}const verifiedResult=await supabase.from('profiles')
+    .select('is_verified').eq('id',state.user.id).maybeSingle();
+    state.verified=verifiedResult.data?.is_verified===true;
+    document.body.dataset.chatVerified=String(state.verified);
+    $("chatVerifiedTranslation").hidden=!state.verified;
+    const preferences=await loadUserPreferences(state.user);
+    state.settings={...DEFAULT_SETTINGS,...preferences.chat};
+    if(!state.verified)state.settings.autoTranslate=false;
+    applySettings();
+    $("chatTranslateLanguage").value=state.settings.translateLanguage||'en';document.documentElement.dataset.groupTags=preferences.groups?.showMemberTags===false?"hidden":"visible";await loadAllChatData();const staffPermission=await supabase.rpc('can_start_staff_dm');state.staffDMAllowed=staffPermission.data===true&&!staffPermission.error;renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('user'))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
 boot().catch(err=>{reportAppError(err,'Chat initialization failed');if($("chatMessages"))$("chatMessages").innerHTML=`<div class="chat-no-messages">Unable to load chats right now. ${escapeHTML(err.message||'Please try again.')}</div>`;});
