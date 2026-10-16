@@ -131,6 +131,11 @@
                   </div>
                 </div>
               </section>
+              <div class="chat-reply-preview" id="chatReplyPreview" hidden aria-label="Replying to message">
+                <div class="chat-reply-marker" aria-hidden="true"></div>
+                <div class="chat-reply-copy"><strong id="chatReplyAuthor">Reply to message</strong><span id="chatReplyExcerpt"></span></div>
+                <button type="button" id="chatReplyCancel" class="chat-reply-cancel" aria-label="Cancel reply" title="Cancel reply">×</button>
+              </div>
               <div class="chat-attachment-preview" id="chatMediaPreview" aria-live="polite"></div>
               <div class="chat-attach-menu" id="chatAttachMenu" role="menu" aria-label="Choose attachment type" hidden>
                 <button type="button" role="menuitem" data-attach-kind="photo"><span aria-hidden="true">🖼️</span><span>Photo or video</span></button>
