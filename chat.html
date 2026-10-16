@@ -241,6 +241,24 @@
               <label class="chat-setting-row"><span><strong>Message notifications</strong><small>Keep new-message alerts visible.</small></span><input type="checkbox" data-chat-setting="notifications"></label>
               <label class="chat-setting-row"><span><strong>Enter to send</strong><small>Use Enter to send and Shift+Enter for a new line.</small></span><input type="checkbox" data-chat-setting="enterToSend"></label>
               <label class="chat-setting-row"><span><strong>Compact messages</strong><small>Reduce bubble spacing for busy conversations.</small></span><input type="checkbox" data-chat-setting="compact"></label>
+              <div class="chat-appearance-options">
+                <label>Message text size<select id="chatTextSize">
+                  <option value="0.875">Small</option>
+                  <option value="1">Normal</option>
+                  <option value="1.125">Large</option>
+                  <option value="1.25">Extra large</option>
+                </select></label>
+                <label>Conversation backdrop<select id="chatWallpaper">
+                  <option value="default">Default</option>
+                  <option value="linen">Soft linen</option>
+                  <option value="dark">Midnight</option>
+                  <option value="forest">Forest</option>
+                  <option value="oxblood">Oxblood</option>
+                  <option value="aurora" data-chat-premium>Verified · Aurora</option>
+                  <option value="platinum" data-chat-premium>Verified · Platinum</option>
+                </select></label>
+                <p class="chat-appearance-hint">These settings sync with your account. Aurora and Platinum are reserved for verified members.</p>
+              </div>
               <label class="chat-setting-row"><span><strong>Read receipts</strong><small>Share when you have opened a chat; switch this off for privacy.</small></span><input type="checkbox" id="chatReadReceipts" checked></label>
               <label class="chat-setting-row"><span><strong>Show when active in chat</strong><small>Only people you have chatted with or accepted as friends can see recent chat activity.</small></span><input type="checkbox" id="chatShowOnline" checked></label>
               <div id="chatVerifiedTranslation" class="chat-verified-translation" hidden>
