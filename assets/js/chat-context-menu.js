@@ -103,14 +103,10 @@ function closeMenu(restoreFocus = true) {
 }
 
 function startReply(messageEl) {
-  const input = document.getElementById("chatBody");
-  if (!input || input.disabled || !messageEl.isConnected) return;
-  const text = messageText(messageEl);
-  const author = messageAuthor(messageEl);
-  const quote = text ? `> ${author}: ${text.replace(/\n/g, "\n> ")}\n\n` : `Replying to ${author}: `;
-  input.value = `${quote}${input.value}`;
-  input.focus();
-  input.dispatchEvent(new Event("input", { bubbles: true }));
+  if (!messageEl?.dataset.messageId)return;
+  window.dispatchEvent(new CustomEvent("timzee:chat-reply-message",{
+    detail:{messageId:messageEl.dataset.messageId}
+  }));
 }
 
 async function askAI(messageEl) {
