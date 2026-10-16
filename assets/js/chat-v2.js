@@ -23,7 +23,7 @@ const state = {
   selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false,
   drafts: new Map(), previews: new Map(), peopleResults: [], peopleRequest: 0, messageVersions: new Map(), messageRevision: 0,
   user: null, settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [], directPartners: [], staffDMAllowed: false, canCompose: true,
-  blockedProfiles: new Map(), groups: [], groupMembers: new Map(), messages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
+  blockedProfiles: new Map(), groups: [], groupMembers: new Map(), messages: [], pinnedMessages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
   searchTerm: "", peopleTerm: "", messageSearchTerm: "", mediaFile: null, mediaType: "", previewUrl: "",
   recorder: null, recorderStream: null, recorderChunks: [], recorderTimer: null, recorderStartedAt: 0, analyserFrame: 0, audioContext: null, analyser: null, recordingStarting: false, recordingRequestId: 0
 };
@@ -251,6 +251,45 @@ async function searchPeople(query) {
   }
 }
 
+function renderPinnedMessages(){
+  const bar=$("chatPinnedBar");
+  if(!bar)return;
+  const items=state.pinnedMessages;
+  bar.hidden=!items.length;
+  if(!items.length){bar.replaceChildren();return;}
+  bar.innerHTML=items.map((m,index)=>{
+    const snippet=escapeHTML((m.body|| (m.media_type?'📎 '+m.media_type:'Pinned message')).slice(0,95));
+    return `<button type="button" class="chat-pinned-link" data-pinned-id="${m.id}" title="Go to pinned message">
+      <span aria-hidden="true">📌</span><span class="chat-pinned-text"><strong>${index===0?'Pinned message':`Pinned ${index+1}`}</strong><small>${snippet}</small></span></button>`;
+  }).join("");
+}
+async function loadPinnedMessages(threadId){
+  if(!threadId)return;
+  const result=await supabase.from('direct_messages')
+    .select('id,body,media_type,pinned_at,created_at')
+    .eq('thread_id',threadId).not('pinned_at','is',null)
+    .order('pinned_at',{ascending:false}).limit(3);
+  if(result.error)throw result.error;
+  if(threadId!==state.activeThreadId)return;
+  state.pinnedMessages=result.data||[];
+  renderPinnedMessages();
+}
+async function jumpToPinned(messageId){
+  if(!messageId||!state.activeThreadId)return;
+  let message=state.messages.find(m=>m.id===messageId);
+  if(!message){
+    const result=await supabase.from('direct_messages').select('*')
+      .eq('id',messageId).eq('thread_id',state.activeThreadId).maybeSingle();
+    if(result.error)throw result.error;
+    if(!result.data)return;
+    message=result.data;mergeMessage(message);await loadProfiles([message.sender_id]);
+    renderMessages({preserveScroll:true});
+  }
+  const target=[...$("chatMessages").querySelectorAll('[data-message-id]')]
+    .find(el=>el.dataset.messageId===messageId);
+  if(target){target.scrollIntoView({behavior:'smooth',block:'center'});target.classList.add('is-highlighted');
+    setTimeout(()=>target.classList.remove('is-highlighted'),1400);}
+}
 async function loadMessages(threadId, selection) {
   state.messages = [];
   state.historyCursor = null;
@@ -363,6 +402,8 @@ async function selectConversation({ friendId = '', groupId = '' }) {
   try {
     await loadMessages(threadId, selection);
     if (selection !== state.selection) return;
+    await loadPinnedMessages(threadId);
+    if (selection !== state.selection) return;
     if (group) await loadGroupMembers(threadId);
     if (selection !== state.selection) return;
     state.loadingThread = false; updateComposer();
@@ -386,7 +427,7 @@ const selectGroup = id => selectConversation({ groupId: id });
 function leaveConversation() {
   rememberDraft(); ++state.selection; void realtime.stop(); chatEnhancements.deactivate();
   state.activeThreadId = state.activeFriendId = state.activeGroupId = '';
-  state.messages = []; state.loadingThread = false; updateComposer(); setView('list');
+  state.messages = [];state.pinnedMessages=[];renderPinnedMessages(); state.loadingThread = false; updateComposer(); setView('list');
 }
 function mergeMessage(message) {
   const index = state.messages.findIndex(item => item.id === message.id);
@@ -407,6 +448,7 @@ async function refreshRecent(threadId) {
   renderMessages({ preserveScroll: true }); renderInfoMedia(); void renderFriends();
   const latestIncoming=state.messages.filter(m=>m.sender_id!==state.user.id).at(-1);
   if(latestIncoming)void chatEnhancements.markRead(latestIncoming.id);
+  void loadPinnedMessages(threadId).catch(err=>console.warn("Pinned messages unavailable",err));
 }
 const realtime = createChatRealtime(supabase, {
   canConnect: () => navigator.onLine,
@@ -425,6 +467,7 @@ const realtime = createChatRealtime(supabase, {
     if (event === 'UPDATE' && !exists) return;
     state.messageVersions.set(message.id, ++state.messageRevision);
     mergeMessage(message); renderMessages({ preserveScroll: true }); renderInfoMedia(); void renderFriends();
+    if(event==="UPDATE")void loadPinnedMessages(threadId).catch(console.warn);
     if(message.sender_id!==state.user.id)void chatEnhancements.markRead(message.id);
     await loadProfiles([message.sender_id]);
     if (threadId !== state.activeThreadId || selection !== state.selection) return;
@@ -568,6 +611,7 @@ async function toggleChatMemberFlag(kind){const threadId=state.activeThreadId;if
 function setupTabs(){const tabs=document.querySelectorAll('.chat-tab'),panels=document.querySelectorAll('.chat-tab-panel');tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(t=>{const a=t===tab;t.classList.toggle('active',a);t.setAttribute('aria-selected',String(a));});panels.forEach(p=>p.hidden=p.dataset.panel!==tab.dataset.tab);$("peopleSearchPanel").hidden=true;}));}
 function setupEvents(){
   $("loadOlderMessages")?.addEventListener("click", () => loadOlderMessages().catch(error => reportAppError(error, "Unable to load older messages")));
+  $("chatPinnedBar")?.addEventListener("click",e=>{const b=e.target.closest("[data-pinned-id]");if(b)void jumpToPinned(b.dataset.pinnedId).catch(err=>reportAppError(err,"Pinned message unavailable"));});
   $("chatSearch")?.addEventListener('input',async e=>{state.searchTerm=e.target.value||'';await renderFriends();renderGroups();}); bindSearch($("peopleSearch"), searchPeople);
   $("friendList")?.addEventListener('click',e=>{const r=e.target.closest('[data-friend-id]');if(r)selectFriend(r.dataset.friendId).catch(err=>reportAppError(err,'Chat open failed'));}); $("groupList")?.addEventListener('click',e=>{const r=e.target.closest('[data-group-id]');if(r)selectGroup(r.dataset.groupId).catch(err=>reportAppError(err,'Group open failed'));});
   $("friendRequests")?.addEventListener('click',handleRequests); $("friendRequestsSent")?.addEventListener('click',handleRequests);
@@ -633,8 +677,20 @@ function setupEvents(){
   $("peopleSearchToggle")?.addEventListener('click',()=>{$("peopleSearchPanel").hidden=!$("peopleSearchPanel").hidden;if(!$("peopleSearchPanel").hidden){$("peopleSearch").focus();renderPeopleResults();}}); $("newGroupBtn")?.addEventListener('click',()=>{renderGroupPicker();openModal('friendPickerModal');}); $("friendPickerClose")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCancel")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCreate")?.addEventListener('click',()=>createGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Create group'})));
   $("groupMemberSearch")?.addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#groupMemberPicker .chat-picker-row').forEach(r=>r.hidden=!r.innerText.toLowerCase().includes(q));}); $("editGroupBtn")?.addEventListener('click',()=>{const g=activeGroup();if(g){$("groupAvatarPreview").src=g.avatar_url||DEFAULT_GROUP_AVATAR;$("groupNameInput").value=g.name||'';$("groupDescriptionInput").value=g.description||'';$("groupEditor").hidden=false;}}); $("groupAvatarInput")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)$("groupAvatarPreview").src=URL.createObjectURL(f);}); $("cancelGroupBtn")?.addEventListener('click',()=>{$("groupEditor").hidden=true;}); $("saveGroupBtn")?.addEventListener('click',()=>editGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Group settings'}))); $("infoGroupMembers")?.addEventListener('click',e=>{const b=e.target.closest('[data-edit-member-tags]');if(b)editMemberTags(b.dataset.editMemberTags).catch(err=>window.siteToast?.(err.message,{type:'error',title:'Member tag'}));});
   window.addEventListener('online',()=>{if(state.activeThreadId&&!state.loadingThread)void realtime.start(state.activeThreadId);}); window.addEventListener('offline',()=>{void realtime.stop();if(state.activeThreadId)setHeaderStatus('Offline');});
-  window.addEventListener('timzee:chat-refresh',()=>{
-    if(state.activeThreadId)void refreshRecent(state.activeThreadId).catch(err=>reportAppError(err,'Unable to refresh chat'));
+  window.addEventListener('timzee:chat-refresh',e=>{
+    const threadId=state.activeThreadId,messageId=e.detail?.messageId;
+    if(!threadId)return;
+    void (async()=>{
+      if(messageId){
+        const {data,error}=await supabase.from('direct_messages').select('*')
+          .eq('id',messageId).eq('thread_id',threadId).maybeSingle();
+        if(error)throw error;
+        if(data&&state.activeThreadId===threadId){
+          mergeMessage(data);renderMessages({preserveScroll:true});
+        }
+      }
+      await refreshRecent(threadId);
+    })().catch(err=>reportAppError(err,'Unable to refresh chat'));
   });
   window.addEventListener('timzee:chat-message-info',e=>{
     if(e.detail?.messageId)void chatEnhancements.messageInfo(e.detail.messageId)
