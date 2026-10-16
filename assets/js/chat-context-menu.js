@@ -32,6 +32,9 @@ function createMenu() {
   menu.innerHTML = `
     <button type="button" data-message-action="reply" role="menuitem">Reply</button>
     <button type="button" data-message-action="copy" role="menuitem">Copy message</button>
+    <button type="button" data-message-action="info" role="menuitem" hidden>Message info</button>
+    <button type="button" data-message-action="pin" role="menuitem" hidden>Pin message</button>
+    <button type="button" data-message-action="unsend" role="menuitem" hidden>Unsend for everyone</button>
     <button type="button" data-message-action="ask-ai" role="menuitem">Ask AI</button>
     <button type="button" data-message-action="copy-media" role="menuitem" hidden>Copy media link</button>
     <button type="button" data-message-action="report" role="menuitem">Report message</button>
@@ -64,6 +67,17 @@ function openMenu(messageEl, x, y) {
   const media = isMediaMessage(messageEl);
   menu.querySelector('[data-message-action="copy"]').hidden = !hasText;
   menu.querySelector('[data-message-action="copy-media"]').hidden = !media;
+  const own=messageEl.dataset.messageSelf==="true";
+  const deleted=messageEl.dataset.messageDeleted==="true";
+  const messageTime=Date.parse(messageEl.dataset.messageCreated||"");
+  const canUnsend=own&&!deleted&&Number.isFinite(messageTime)
+    && Date.now()-messageTime<48*3600*1000;
+  menu.querySelector('[data-message-action="info"]').hidden = !own;
+  menu.querySelector('[data-message-action="unsend"]').hidden = !canUnsend;
+  const pin=menu.querySelector('[data-message-action="pin"]');
+  pin.hidden=deleted||messageEl.dataset.canPin!=="true";
+  pin.textContent=messageEl.dataset.messagePinned==="true"?"Unpin message":"Pin message";
+  menu.querySelector('[data-message-action="reply"]').hidden=deleted;
   menu.hidden = false;
   menu.style.left = "0px";
   menu.style.top = "0px";
@@ -129,7 +143,20 @@ async function handleMenuAction(event) {
   const messageEl = currentMessage;
   closeMenu();
   try {
-    if (action === "reply") startReply(messageEl);
+    if(action==="info"){
+      window.dispatchEvent(new CustomEvent("timzee:chat-message-info",{detail:{messageId:messageEl.dataset.messageId}}));
+    }else if(action==="unsend"){
+      if(!await window.appUI.confirm("Unsend this message for everyone? Recipients may already have downloaded or viewed it."))return;
+      const {error}=await supabase.rpc("unsend_chat_message",{p_message_id:messageEl.dataset.messageId});
+      if(error)throw error;
+      window.dispatchEvent(new Event("timzee:chat-refresh"));
+      window.siteToast?.("Message unsent from the conversation.",{type:"success"});
+    }else if(action==="pin"){
+      const {data,error}=await supabase.rpc("toggle_chat_message_pin",{p_message_id:messageEl.dataset.messageId});
+      if(error)throw error;
+      window.dispatchEvent(new Event("timzee:chat-refresh"));
+      window.siteToast?.(data?"Message pinned.":"Message unpinned.",{type:"success"});
+    }else if (action === "reply") startReply(messageEl);
     else if (action === "copy") {
       const text = messageText(messageEl);
       if (!text || !navigator.clipboard?.writeText) throw new Error("Clipboard unavailable. Select the message text to copy it.");
