@@ -7,7 +7,7 @@ import { uploadMedia } from "./media.js";
 export async function fetchStoriesFeed() {
   const result = await supabase
     .from("stories")
-    .select("id, user_id, media_url, media_type, caption, visibility, created_at, expires_at")
+    .select("id, user_id, media_url, media_type, caption, visibility, created_at, expires_at, allow_reshare, allow_public_comments, original_story_id")
     .order("created_at", { ascending: true });
 
   if (result.error) {
@@ -51,7 +51,7 @@ export async function fetchStoriesFeed() {
 export async function fetchUserStories(userId) {
   const result = await supabase
     .from("stories")
-    .select("id, user_id, media_url, media_type, caption, visibility, created_at, expires_at")
+    .select("id, user_id, media_url, media_type, caption, visibility, created_at, expires_at, allow_reshare, allow_public_comments, original_story_id")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
   if (result.error) {
@@ -61,7 +61,7 @@ export async function fetchUserStories(userId) {
   return result.data || [];
 }
 
-export async function createStory({ userId, file, caption = "", visibility = "public" }) {
+export async function createStory({ userId, file, caption = "", visibility = "public", durationHours = 24, allowReshare = true, allowPublicComments = true }) {
   if (!userId || !file) {
     return { error: { message: "A user and a media file are required." } };
   }
@@ -83,7 +83,10 @@ export async function createStory({ userId, file, caption = "", visibility = "pu
       media_url: mediaUrl,
       media_type: isVideo ? "video" : "image",
       caption: caption.trim() || null,
-      visibility: visibility === "private" ? "private" : "public"
+      visibility: visibility === "private" ? "private" : "public",
+      expires_at:new Date(Date.now()+Math.max(1,Math.min(72,Number(durationHours)||24))*3600000).toISOString(),
+      allow_reshare: Boolean(allowReshare),
+      allow_public_comments: Boolean(allowPublicComments)
     })
     .select()
     .single();
