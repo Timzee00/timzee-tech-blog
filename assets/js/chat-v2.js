@@ -331,10 +331,27 @@ async function loadOlderMessages() {
   }
 }
 function messageMediaHtml(m) { const url=m.media_url&&isSafeUrl(m.media_url)?m.media_url:''; if(!url)return ''; const type=resolveAttachmentType({mediaType:m.media_type,mediaUrl:url}); if(type==='image')return `<img class="message-attachment-image" src="${escapeHTML(url)}" alt="Message attachment" loading="lazy">`; if(type==='video')return `<video class="message-attachment-video" controls preload="metadata" src="${escapeHTML(url)}"></video>`; if(type==='audio')return voicePlayerHtml(escapeHTML(url)); return `<a class="message-file" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" download><strong>${escapeHTML(getDisplayFileName(url))}</strong><small>${escapeHTML(m.media_type||'File')} · Open or download</small></a>`; }
+function updateReactionBadges(){
+  // Never recreate a playing video, audio clip, or focused message while
+  // another participant reacts. Replace only each message's reaction chips.
+  const container=$("chatMessages");
+  if(!container)return;
+  for(const item of container.querySelectorAll(".chat-message[data-message-id]")){
+    const m=state.messages.find(row=>row.id===item.dataset.messageId);
+    if(!m)continue;
+    const existing=item.querySelector(".chat-message-reactions");
+    const html=m.deleted_at?'':reactionBadges(m);
+    if(!html){existing?.remove();continue;}
+    const holder=document.createElement('template');holder.innerHTML=html.trim();
+    const replacement=holder.content.firstElementChild;
+    if(existing)existing.replaceWith(replacement);
+    else item.querySelector(".chat-message-meta")?.before(replacement);
+  }
+}
 async function refreshReactions(threadId=state.activeThreadId){
   const ids=state.messages.slice(-80).filter(m=>!m.deleted_at).map(m=>m.id);
   if(!threadId||!ids.length){
-    if(threadId===state.activeThreadId){state.reactions.clear();renderMessages({preserveScroll:true});}
+    if(threadId===state.activeThreadId){state.reactions.clear();updateReactionBadges();}
     return;
   }
   const {data,error}=await supabase.rpc('chat_reaction_counts',{p_message_ids:ids});
@@ -346,7 +363,7 @@ async function refreshReactions(threadId=state.activeThreadId){
     grouped.get(row.message_id).push(row);
   }
   state.reactions=grouped;
-  renderMessages({preserveScroll:true});
+  updateReactionBadges();
 }
 async function reactToMessage(messageId,emoji){
   if(!messageId||!['👍','❤️','😂','😮','😢','🔥'].includes(emoji))return;
