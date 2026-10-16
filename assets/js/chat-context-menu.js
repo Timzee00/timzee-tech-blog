@@ -33,6 +33,8 @@ function createMenu() {
     <button type="button" data-message-action="reply" role="menuitem">Reply</button>
     <button type="button" data-message-action="edit" role="menuitem" hidden>Edit message</button>
     <button type="button" data-message-action="copy" role="menuitem">Copy message</button>
+    <button type="button" data-message-action="star" role="menuitem" hidden>Star message</button>
+    <button type="button" data-message-action="forward" role="menuitem" hidden>Forward text</button>
     <button type="button" data-message-action="info" role="menuitem" hidden>Message info</button>
     <button type="button" data-message-action="pin" role="menuitem" hidden>Pin message</button>
     <button type="button" data-message-action="unsend" role="menuitem" hidden>Unsend for everyone</button>
@@ -94,6 +96,10 @@ function openMenu(messageEl, x, y) {
   pin.hidden=deleted||messageEl.dataset.canPin!=="true";
   pin.textContent=messageEl.dataset.messagePinned==="true"?"Unpin message":"Pin message";
   menu.querySelector('[data-message-action="reply"]').hidden=deleted;
+  const star=menu.querySelector('[data-message-action="star"]');
+  star.hidden=deleted;
+  star.textContent=messageEl.dataset.starred==="true"?"Remove star":"Star message";
+  menu.querySelector('[data-message-action="forward"]').hidden=deleted||!hasText||media;
   menu.querySelector('.chat-menu-reactions').hidden=deleted;
   menu.hidden = false;
   menu.style.left = "0px";
@@ -182,6 +188,14 @@ async function handleMenuAction(event) {
       if(error)throw error;
       window.dispatchEvent(new CustomEvent("timzee:chat-refresh",{detail:{messageId:messageEl.dataset.messageId}}));
       window.siteToast?.(data?"Message pinned.":"Message unpinned.",{type:"success"});
+    }else if(action==="star"){
+      window.dispatchEvent(new CustomEvent('timzee:chat-star',{
+        detail:{messageId:messageEl.dataset.messageId}
+      }));
+    }else if(action==="forward"){
+      window.dispatchEvent(new CustomEvent('timzee:chat-forward',{
+        detail:{messageId:messageEl.dataset.messageId}
+      }));
     }else if(action==="translate"){
       window.dispatchEvent(new CustomEvent("timzee:chat-translate",{
         detail:{messageId:messageEl.dataset.messageId}
