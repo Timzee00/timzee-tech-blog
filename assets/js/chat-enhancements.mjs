@@ -1,7 +1,7 @@
 // Private, authenticated chat enhancements. Online means recently active in
 // the chat page, never merely that the local WebSocket is connected.
 export function setupChatEnhancements({supabase, onPresence}) {
-  const state={userId:'',friendId:'',threadId:'',timer:null,privacy:{read_receipts:true,show_online:true}};
+  const state={userId:'',friendId:'',threadId:'',timer:null,generation:0,privacy:{read_receipts:true,show_online:true}};
   const byId=id=>document.getElementById(id);
   const shouldTrack=()=>document.visibilityState==='visible' && navigator.onLine && !!state.userId;
   const formatLastSeen=iso=>{
@@ -108,14 +108,16 @@ export function setupChatEnhancements({supabase, onPresence}) {
     },{passive:true});
   }
   async function activate(userId,threadId,friendId=''){
+    const generation=++state.generation;
     state.userId=userId||'';state.friendId=friendId;state.threadId=threadId;
     clearInterval(state.timer);
     await refreshPrivacy();
+    if(generation!==state.generation)return;
     if(state.threadId){void heartbeat();void updatePresence();}
     state.timer=setInterval(()=>{void heartbeat();void updatePresence();},45000);
   }
   function deactivate(){
-    clearInterval(state.timer);state.timer=null;
+    ++state.generation;clearInterval(state.timer);state.timer=null;
     state.friendId='';state.threadId='';
   }
   return {setup,activate,deactivate,markRead,messageInfo,refreshPrivacy};
