@@ -5,3 +5,9 @@
 
 .chat-message-actions{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;font:700 1rem var(--font-body,system-ui);cursor:pointer;}
 .chat-message-actions:hover{background:var(--color-surface-muted);color:var(--color-text);}
+
+/* Reactions remain accessible even on narrow phones. */
+.chat-message-context-menu{max-height:min(82dvh,620px);overflow-y:auto;overscroll-behavior:contain}
+.chat-message-context-menu .chat-menu-reactions{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;border-block:1px solid var(--color-border-strong);padding:7px 0;margin:4px 0}
+.chat-message-context-menu .chat-menu-reactions[hidden]{display:none!important}
+.chat-message-context-menu .chat-menu-reactions button{display:grid;place-items:center;width:100%;min-width:0;min-height:36px;padding:4px 0;text-align:center;font:1.15rem system-ui}
