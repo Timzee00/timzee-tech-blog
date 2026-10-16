@@ -337,3 +337,20 @@
 .story-tap-zone{z-index:2}
 .story-viewer-media,.story-viewer-caption,.story-viewer-header{position:relative;z-index:1}
 @media(max-width:480px){.story-viewer-social{max-height:36dvh}.story-viewer-caption{padding:5px 14px 8px}}
+
+/* Non-destructive phone-friendly status photo editor. */
+.status-photo-editor{width:min(740px,calc(100vw - 14px));max-height:min(94dvh,920px);overflow:auto;border:1px solid #4a626d;border-radius:17px;background:#131f28;color:#f6fafb;padding:0;box-shadow:0 28px 80px #0009}
+.status-photo-editor::backdrop{background:#040d14db}
+.status-photo-editor-inner{display:grid;gap:10px;padding:12px}
+.status-photo-editor-inner header,.status-photo-editor-inner footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.status-photo-editor-inner header button,.status-photo-editor-inner footer button,.status-photo-editor-tools button{padding:9px 12px;border-radius:8px;border:1px solid #617882;background:#27343e;color:#fff;cursor:pointer}
+.status-photo-editor-inner footer [data-save]{background:#078b78;border-color:#078b78}
+.status-photo-editor canvas{display:block;max-height:40dvh;max-width:100%;width:auto;height:auto;margin:auto;border-radius:8px;touch-action:none}
+.status-photo-editor-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-height:28dvh;overflow-y:auto}
+.status-photo-editor-tools label{display:grid;gap:4px;font-size:.78rem}
+.status-photo-editor-tools label:has([type="checkbox"]){display:flex;gap:8px;align-items:center}
+.status-photo-editor-tools input:not([type="checkbox"]),.status-photo-editor-tools select{min-width:0;width:100%;box-sizing:border-box}
+.status-photo-editor-tools input[type="text"],.status-photo-editor-tools input:not([type]){padding:9px;border:1px solid #607482;border-radius:7px;color:#fff;background:#223541}
+.status-photo-editor-tools select{padding:8px;border-radius:8px;background:#27343e;color:#fff}
+.status-photo-editor [data-status]{font-size:.76rem;color:#aad0c9;margin:0}
+@media(max-width:470px){.status-photo-editor-tools{grid-template-columns:1fr;max-height:32dvh}.status-photo-editor canvas{max-height:34dvh}}
