@@ -137,17 +137,19 @@ export async function createStory({
       if(!musicUrl)throw Error("Soundtrack upload failed.");
       uploaded.push(musicUrl);
     }
-    const {data,error}=await supabase.from("stories").insert({
-      user_id:userId,media_url:mediaUrl,
-      media_type:file.type?.startsWith("video")?"video":"image",
-      caption:caption.trim()||null,
-      visibility:visibility==="private"?"private":"public",
-      expires_at:new Date(Date.now()+Math.max(1,Math.min(72,Number(durationHours)||24))*3600000).toISOString(),
-      allow_reshare:Boolean(allowReshare),
-      allow_public_comments:Boolean(allowPublicComments),
-      music_url:musicUrl,music_title:musicUrl?musicTitle.trim():null,
-      music_rights_confirmed:Boolean(musicUrl&&musicRightsConfirmed)
-    }).select().single();
+    // Publishing uses the server clock and validates the creator's account.
+    const {data,error}=await supabase.rpc("publish_story",{
+      p_media_url:mediaUrl,
+      p_media_type:file.type?.startsWith("video")?"video":"image",
+      p_caption:caption.trim()||null,
+      p_visibility:visibility==="private"?"private":"public",
+      p_duration_hours:Number(durationHours)||24,
+      p_allow_reshare:Boolean(allowReshare),
+      p_allow_public_comments:Boolean(allowPublicComments),
+      p_music_url:musicUrl,
+      p_music_title:musicUrl?musicTitle.trim():null,
+      p_music_rights_confirmed:Boolean(musicUrl&&musicRightsConfirmed)
+    });
     if(error)throw error;
     return {data,error:null};
   }catch(error){
