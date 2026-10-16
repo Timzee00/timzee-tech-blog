@@ -38,6 +38,14 @@ function createMenu() {
     <button type="button" data-message-action="unsend" role="menuitem" hidden>Unsend for everyone</button>
     <button type="button" data-message-action="ask-ai" role="menuitem">Ask AI</button>
     <button type="button" data-message-action="copy-media" role="menuitem" hidden>Copy media link</button>
+    <div class="chat-menu-reactions" role="group" aria-label="React to message">
+      <button type="button" data-message-action="react" data-emoji="👍" role="menuitem" aria-label="React with thumbs up">👍</button>
+      <button type="button" data-message-action="react" data-emoji="❤️" role="menuitem" aria-label="React with heart">❤️</button>
+      <button type="button" data-message-action="react" data-emoji="😂" role="menuitem" aria-label="React with laughing face">😂</button>
+      <button type="button" data-message-action="react" data-emoji="😮" role="menuitem" aria-label="React with surprised face">😮</button>
+      <button type="button" data-message-action="react" data-emoji="😢" role="menuitem" aria-label="React with sad face">😢</button>
+      <button type="button" data-message-action="react" data-emoji="🔥" role="menuitem" aria-label="React with fire">🔥</button>
+    </div>
     <button type="button" data-message-action="report" role="menuitem">Report message</button>
   `;
   document.body.appendChild(menu);
@@ -84,6 +92,7 @@ function openMenu(messageEl, x, y) {
   pin.hidden=deleted||messageEl.dataset.canPin!=="true";
   pin.textContent=messageEl.dataset.messagePinned==="true"?"Unpin message":"Pin message";
   menu.querySelector('[data-message-action="reply"]').hidden=deleted;
+  menu.querySelector('.chat-menu-reactions').hidden=deleted;
   menu.hidden = false;
   menu.style.left = "0px";
   menu.style.top = "0px";
@@ -156,6 +165,10 @@ async function handleMenuAction(event) {
       }
     }else if(action==="info"){
       window.dispatchEvent(new CustomEvent("timzee:chat-message-info",{detail:{messageId:messageEl.dataset.messageId}}));
+    }else if(action==="react"){
+      window.dispatchEvent(new CustomEvent("timzee:chat-react",{
+        detail:{messageId:messageEl.dataset.messageId,emoji:button.dataset.emoji}
+      }));
     }else if(action==="unsend"){
       if(!await window.appUI.confirm("Unsend this message for everyone? Recipients may already have downloaded or viewed it."))return;
       const {error}=await supabase.rpc("unsend_chat_message",{p_message_id:messageEl.dataset.messageId});
