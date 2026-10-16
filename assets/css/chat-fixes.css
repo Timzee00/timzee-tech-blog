@@ -106,3 +106,21 @@ html[data-chat-compact="true"] .chat-messages { gap: 5px; }
  .chat-page .chat-attachment-preview:has(.voice-player){grid-template-columns:minmax(0,1fr) auto}
  .chat-page .voice-player-play{flex-basis:36px;width:36px;height:36px}
 }
+
+/* Pinned messages have a real persistent location above the scrolling history. */
+.chat-page .chat-conversation{grid-template-rows:auto auto auto minmax(0,1fr) auto}
+.chat-page .chat-pinned-bar{grid-row:2;min-width:0;display:flex;flex-wrap:wrap;gap:6px;padding:7px 12px;border-bottom:1px solid var(--color-border);background:var(--color-surface-muted)}
+.chat-page .chat-pinned-bar[hidden]{display:none!important}
+.chat-page .chat-pinned-link{display:flex;align-items:center;gap:8px;flex:1 1 120px;max-width:100%;min-width:0;padding:5px 9px;border:1px solid var(--color-border-strong);border-radius:10px;background:var(--color-surface);color:var(--color-text);font:inherit;cursor:pointer;text-align:left}
+.chat-page .chat-pinned-link:hover{border-color:var(--color-primary)}
+.chat-page .chat-pinned-text{display:flex;flex-direction:column;gap:2px;min-width:0;max-width:100%}
+.chat-page .chat-pinned-text strong{font-size:.7rem}
+.chat-page .chat-pinned-text small{font-size:.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.chat-page #loadOlderMessages{grid-row:3}
+.chat-page .chat-messages{grid-row:4}
+.chat-page .chat-composer{grid-row:5}
+.chat-page .chat-message.is-highlighted{outline:3px solid var(--color-primary);outline-offset:3px}
+@media(max-width:480px){
+ .chat-page .chat-pinned-bar{padding:5px 7px;gap:4px}
+ .chat-page .chat-pinned-link{flex-basis:90px;padding:5px;gap:5px}
+}
