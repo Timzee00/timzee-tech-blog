@@ -33,6 +33,15 @@ const state = {
 };
 
 const $ = (id) => document.getElementById(id);
+// Postgres direct_messages.created_at is UTC timestamp WITHOUT TIME ZONE.
+// PostgREST returns a timezone-less string, which JS otherwise treats as local.
+function asUtcTimestamp(input){
+  const value=String(input||"");
+  if(!value)return "";
+  const normalized=value.replace(" ","T");
+  return /(?:Z|[+-]\d\d(?::?\d\d)?)$/i.test(normalized)?normalized:normalized+"Z";
+}
+const chatTimeAgo=value=>timeAgo(asUtcTimestamp(value));
 const chatEnhancements=setupChatEnhancements({
   supabase,
   onPresence:(label,active)=>{
@@ -188,7 +197,7 @@ function renderFriends() {
   const rows=[...new Set([...state.friends,...state.directPartners])].map(friendId=>({friendId,profile:profileFor(friendId)||{},preview:previewMap.get(threadForFriend(friendId))||null}));
   const q=state.searchTerm.trim().toLowerCase();
   const filtered=rows.filter(({profile})=>!q||[profile.display_name,profile.username,profile.email].some(v=>String(v||"").toLowerCase().includes(q))).sort((a,b)=>new Date(b.preview?.created_at||0)-new Date(a.preview?.created_at||0));
-  target.innerHTML=filtered.length?filtered.map(({friendId,profile,preview})=>`<button class="chat-list-row ${friendId===state.activeFriendId?'active':''}" type="button" data-friend-id="${friendId}"><img class="chat-list-avatar" src="${escapeHTML(profile.avatar_url||DEFAULT_AVATAR)}" alt=""><span class="chat-list-copy"><strong>${escapeHTML(profile.display_name||"Member")}${["super","admin","moderator"].includes(profile.role)?' <span class="chat-staff-label">Staff</span>':''}</strong><small>${escapeHTML(preview?.body||(preview?.media_type?`Sent ${preview.media_type}`:'Start a conversation'))}</small></span><span class="chat-list-time">${preview?timeAgo(preview.created_at):''}</span></button>`).join(''):`<div class="callout">${q?'No matching chats.':'No friends yet. Use Find people to connect.'}</div>`;
+  target.innerHTML=filtered.length?filtered.map(({friendId,profile,preview})=>`<button class="chat-list-row ${friendId===state.activeFriendId?'active':''}" type="button" data-friend-id="${friendId}"><img class="chat-list-avatar" src="${escapeHTML(profile.avatar_url||DEFAULT_AVATAR)}" alt=""><span class="chat-list-copy"><strong>${escapeHTML(profile.display_name||"Member")}${["super","admin","moderator"].includes(profile.role)?' <span class="chat-staff-label">Staff</span>':''}</strong><small>${escapeHTML(preview?.body||(preview?.media_type?`Sent ${preview.media_type}`:'Start a conversation'))}</small></span><span class="chat-list-time">${preview?chatTimeAgo(preview.created_at):''}</span></button>`).join(''):`<div class="callout">${q?'No matching chats.':'No friends yet. Use Find people to connect.'}</div>`;
 }
 function renderGroups() {
   const target=$("groupList"); if(!target)return; const q=state.searchTerm.trim().toLowerCase();
@@ -461,9 +470,9 @@ function renderMessages({ preserveScroll = false } = {}) { const target=$("chatM
  return `<article class="chat-message ${self?'self':'received'} ${deleted?'is-unsent':''} ${m.pinned_at?'is-pinned':''}"
  data-message-id="${m.id}" data-message-self="${self?'true':'false'}"
  data-message-deleted="${deleted?'true':'false'}" data-can-pin="${canPin?'true':'false'}"
- data-message-created="${escapeHTML(m.created_at||'')}"
+ data-message-created="${escapeHTML(asUtcTimestamp(m.created_at))}"
  data-message-pinned="${m.pinned_at?'true':'false'}" data-starred="${state.starred.has(m.id)?'true':'false'}"
- data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${state.starred.has(m.id)?'<span class="chat-star-indicator">★ Starred</span>':''}${m.forwarded_from?'<span class="chat-forwarded-indicator">↗ Forwarded</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}${deleted?'':reactionBadges(m)}${!deleted&&String(m.body||'').startsWith('📊 Poll:')?`<div class="chat-bubble-poll" data-chat-poll-id="${escapeHTML(m.id)}"></div>`:''}${state.translations.has(m.id+'::'+state.settings.translateLanguage)?`<div class="chat-message-translation">${escapeHTML(state.translations.get(m.id+'::'+state.settings.translateLanguage))}</div>`:''}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop;
+ data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${state.starred.has(m.id)?'<span class="chat-star-indicator">★ Starred</span>':''}${m.forwarded_from?'<span class="chat-forwarded-indicator">↗ Forwarded</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}${deleted?'':reactionBadges(m)}${!deleted&&String(m.body||'').startsWith('📊 Poll:')?`<div class="chat-bubble-poll" data-chat-poll-id="${escapeHTML(m.id)}"></div>`:''}${state.translations.has(m.id+'::'+state.settings.translateLanguage)?`<div class="chat-message-translation">${escapeHTML(state.translations.get(m.id+'::'+state.settings.translateLanguage))}</div>`:''}<div class="chat-message-meta"><span>${chatTimeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop;
   target.querySelectorAll("[data-chat-poll-id]").forEach(host=>{
     void mountPoll(host,'chat',host.dataset.chatPollId);
   });
@@ -595,10 +604,7 @@ function beginEditMessage(messageId){
   if(state.sending||state.loadingThread||!state.activeThreadId||!state.canCompose)return;
   const message=state.messages.find(m=>m.id===messageId);
   if(!message||message.sender_id!==state.user?.id||message.deleted_at)return;
-  const elapsed=Date.now()-new Date(message.created_at).getTime();
-  if(!Number.isFinite(elapsed)||elapsed< -60000||elapsed>=15*60*1000){
-    window.siteToast?.('Messages can only be edited within 15 minutes of sending.',{type:'info',title:'Edit message'});return;
-  }
+  // Entry is granted by the authoritative Supabase RPC, not client time.
   const panel=$("chatEditPanel"),area=$("chatEditBody");
   if(!panel||!area)return;
   // Editing gets its own text area: never replace or discard an unsent draft.
@@ -607,8 +613,7 @@ function beginEditMessage(messageId){
   area.value=String(message.body||'');
   area.disabled=false;
   panel.hidden=false;
-  const available=Math.max(1,Math.ceil((15*60*1000-elapsed)/60000));
-  $("chatEditRemaining").textContent=`${available} minute${available===1?'':'s'} remaining`;
+  $("chatEditRemaining").textContent='15-minute limit · checked by server';
   $("chatEditStatus").textContent='Edit text or caption. Your current draft is preserved.';
   area.focus();
   area.setSelectionRange(area.value.length,area.value.length);
@@ -921,7 +926,7 @@ async function sendMessage() {
     // function can renew access for the recipient after expiry.
     const mediaPath = file ? getChatMediaPath(mediaUrl) : null;
     if (file && !mediaPath) throw new Error('Uploaded chat attachment has no valid private path.');
-    const payload = { id: crypto.randomUUID(), thread_id: threadId, sender_id: state.user.id, recipient_id: recipientId, body, reply_to:reply?.id||null, media_url: mediaUrl, media_path: mediaPath, media_type: mediaType || '', created_at: new Date().toISOString() };
+    const payload = { id: crypto.randomUUID(), thread_id: threadId, sender_id: state.user.id, recipient_id: recipientId, body, reply_to:reply?.id||null, media_url: mediaUrl, media_path: mediaPath, media_type: mediaType || '' };
     const result = await supabase.from('direct_messages').insert(payload).select().single();
     if (result.error) throw result.error;
     const saved = result.data || payload;
