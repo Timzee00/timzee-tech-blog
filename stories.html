@@ -60,6 +60,7 @@
             <small>24 hours · up to 72 hours for verified creators</small>
           </span>
         </button>
+        <button type="button" id="savedStoryToggle" class="btn ghost sm" hidden aria-pressed="false">☆ Saved statuses</button>
         <div class="stories-rail" id="storiesRail">
           <button type="button" class="story-avatar story-avatar-add" id="addStoryBtn" aria-label="Add your story">
             <div class="story-ring story-ring-add">
@@ -160,7 +161,7 @@
 
       const state = {
         user: null,
-        groups: [], // [{ userId, profile, stories: [] }]
+        groups: [], allGroups: [], savedOnly:false, // [{ userId, profile, stories: [] }]
         activeGroupIndex: -1,
         activeStoryIndex: 0,
         timerId: null,
@@ -169,6 +170,15 @@
 
       async function init() {
         state.user = await getCurrentUser();
+        if(state.user){
+          const toggle=document.getElementById("savedStoryToggle");toggle.hidden=false;
+          toggle.addEventListener('click',async()=>{
+            state.savedOnly=!state.savedOnly;
+            toggle.textContent=state.savedOnly?'★ Saved statuses · Show all':'☆ Saved statuses';
+            toggle.setAttribute('aria-pressed',String(state.savedOnly));
+            await applySavedFilter();
+          });
+        }
         if(state.user){
           const {data}=await supabase.from('profiles').select('is_verified').eq('id',state.user.id).maybeSingle();
           state.verified=data?.is_verified===true;
@@ -195,7 +205,8 @@
         }
 
         try {
-          state.groups = await fetchStoriesFeed();
+          state.allGroups = await fetchStoriesFeed();
+          state.groups=state.allGroups;
         } catch (error) {
           state.groups = [];
           const empty = document.getElementById("storiesEmpty");
@@ -217,6 +228,20 @@
         setupViewerControls();
       }
 
+      async function applySavedFilter(){
+        if(!state.savedOnly||!state.user){
+          state.groups=state.allGroups;
+          renderRail();return;
+        }
+        const {data,error}=await supabase.from('story_saves')
+          .select('story_id').eq('user_id',state.user.id).order('created_at',{ascending:false}).limit(300);
+        if(error){window.appUI?.toast?.(error.message);return;}
+        const ids=new Set((data||[]).map(row=>row.story_id));
+        state.groups=state.allGroups.map(group=>({
+          ...group,stories:group.stories.filter(story=>ids.has(story.id))
+        })).filter(group=>group.stories.length);
+        renderRail();
+      }
       function renderRail() {
         const rail = document.getElementById("storiesRail");
         const empty = document.getElementById("storiesEmpty");
@@ -345,7 +370,7 @@
         document.getElementById("viewerCaption").textContent = story.caption || "";
         const social=document.getElementById("storyViewerSocial");
         if(social)void showStoryInteractions(story,state.user,social,{
-          onReshare:async()=>{state.groups=await fetchStoriesFeed();renderRail();}
+          onReshare:async()=>{state.allGroups=await fetchStoriesFeed();await applySavedFilter();}
         });
 
         const isOwn = state.user && story.user_id === state.user.id;
@@ -598,8 +623,8 @@
 
           closeComposer();
           try {
-            state.groups = await fetchStoriesFeed();
-            renderRail();
+            state.allGroups = await fetchStoriesFeed();
+            await applySavedFilter();
           } catch (error) {
             console.warn("Story posted, but refreshing stories failed:", error);
             window.appUI?.toast?.("Your story was posted, but the feed could not refresh. Reload to see it.", {
