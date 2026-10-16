@@ -266,7 +266,24 @@ async function uploadForumFile(file,folder){
  const {uploadMedia}=await import("./media.js");
  const url=await uploadMedia(file,folder+"/"+state.user.id);
  if(!url)throw Error("Unable to upload attachment.");
- return {url,type:file.type.startsWith("video")?"video":"image"};
+ const expected="/storage/v1/object/public/media/"+folder+"/"+state.user.id+"/";
+ let path=null;
+ try{
+  const parsed=new URL(url);
+  if(parsed.hostname.endsWith(".supabase.co")&&parsed.pathname.startsWith(expected)&&
+   !parsed.pathname.includes("..")&&!parsed.search){
+    path=decodeURIComponent(parsed.pathname.slice("/storage/v1/object/public/media/".length));
+  }
+ }catch{ /* Upload succeeded; backend will still reference the returned URL. */ }
+ return {url,type:file.type.startsWith("video")?"video":"image",path};
+}
+async function discardRejectedUpload(attachment){
+ if(!attachment?.path||!state.user)return;
+ const allowed=["community-threads/","community-replies/"].some(prefix=>
+  attachment.path.startsWith(prefix+state.user.id+"/"));
+ if(!allowed)return;
+ const {error}=await supabase.storage.from("media").remove([attachment.path]);
+ if(error)console.warn("Could not reclaim failed community upload:",error.message);
 }
 function threadCard(thread,{pinned=false}={}){
  const community=findCommunity(thread.community_id);
@@ -554,8 +571,9 @@ async function createThread(event){
  const communityId=String(values.get("community_id")||"");
  if(!validId(communityId)){$("forumThreadFormError").textContent="Choose a community.";return;}
  setButtonBusy(button,true);$("forumThreadFormError").textContent="";
+ let attachment=null;
  try{
-  const attachment=await uploadForumFile(mediaFile(form.querySelector("[name=media]")),"community-threads");
+  attachment=await uploadForumFile(mediaFile(form.querySelector("[name=media]")),"community-threads");
   const {data,error}=await supabase.from("community_threads").insert({
     community_id:communityId,author_id:state.user.id,author_name:memberName(),
     media_url:attachment.url,media_type:attachment.type,
@@ -565,9 +583,13 @@ async function createThread(event){
   }).select("id").single();
   if(error)throw error;
   $("forumThreadDialog").close();form.reset();
+  attachment=null;
   await openThread(data.id);
   notify("Topic published.");
- }catch(e){$("forumThreadFormError").textContent=e.message||"Unable to publish.";}
+ }catch(e){
+  await discardRejectedUpload(attachment);
+  $("forumThreadFormError").textContent=e.message||"Unable to publish.";
+}
  finally{setButtonBusy(button,false);}
 }
 async function submitReply(event){
@@ -577,19 +599,21 @@ async function submitReply(event){
  const selectedMedia=mediaFile($("forumReplyMedia"));
  if(!body&&!selectedMedia){notify("Write a reply or attach media.",true);return;}
  const button=event.currentTarget.querySelector("[type=submit]");setButtonBusy(button,true);
+ let attachment=null;
  try{
-  const attachment=await uploadForumFile(selectedMedia,"community-replies");
+  attachment=await uploadForumFile(selectedMedia,"community-replies");
   const {error}=await supabase.from("discussion_messages").insert({
     id:crypto.randomUUID(),thread_id:state.activeThread.id,topic_id:state.activeThread.community_id,
     author_id:state.user.id,author_name:memberName(),body,reply_to:state.replyTo,
     media_url:attachment.url,media_type:attachment.type
   });
   if(error)throw error;
+  attachment=null;
   $("forumReplyText").value="";$("forumReplyMedia").value="";state.replyTo=null;$("forumReplyTarget").hidden=true;
   state.activeThread.reply_count=Number(state.activeThread.reply_count||0)+1;
   state.replies=[];state.replyCursor=null;await loadReplies(true);
   notify("Reply posted.");
- }catch(e){notify(e.message||"Unable to post a reply.",true);}
+ }catch(e){await discardRejectedUpload(attachment);notify(e.message||"Unable to post a reply.",true);}
  finally{setButtonBusy(button,false);}
 }
 async function moderateThread(action){
