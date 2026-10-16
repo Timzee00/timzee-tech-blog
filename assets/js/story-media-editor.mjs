@@ -1,7 +1,15 @@
 // Local photo edits: no upload until the member publishes the edited file.
 export async function editStatusPhoto(file,{verified=false}={}){
  if(!file?.type?.startsWith("image/"))throw Error("Choose an image first.");
- const image=await createImageBitmap(file);
+ let image;
+ try{image=await createImageBitmap(file);}
+ catch{
+   const url=URL.createObjectURL(file);
+   try{
+     const fallback=new Image();fallback.src=url;
+     await fallback.decode();image=fallback;
+   }finally{URL.revokeObjectURL(url);}
+ }
  const dialog=document.createElement("dialog");
  dialog.className="status-photo-editor";
  dialog.innerHTML=`<div class="status-photo-editor-inner">
@@ -24,11 +32,11 @@ export async function editStatusPhoto(file,{verified=false}={}){
  const c=dialog.querySelector("canvas"),ctx=c.getContext("2d");
  const q=k=>dialog.querySelector("[data-"+k+"]");
  const state={angle:0,crop:0,bright:100,contrast:100,saturation:100,text:"",colour:"#ffffff",position:65,strokes:[]};
- const render=()=>{
+ const render=(exportMode=false)=>{
    const turning=state.angle%180!==0,sw=turning?image.height:image.width,sh=turning?image.width:image.height;
    const ratio=state.crop||sw/sh;
    let w=sw,h=sh;if(w/h>ratio)w=h*ratio;else h=w/ratio;
-   const scale=Math.min(1,(verified?1920:1440)/Math.max(w,h));
+   const scale=Math.min(1,(exportMode?(verified?1920:1440):850)/Math.max(w,h));
    c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));
    ctx.save();ctx.fillStyle="#101820";ctx.fillRect(0,0,c.width,c.height);
    ctx.translate(c.width/2,c.height/2);ctx.rotate(state.angle*Math.PI/180);
@@ -73,7 +81,7 @@ export async function editStatusPhoto(file,{verified=false}={}){
    q("save").onclick=async()=>{
      q("save").disabled=true;q("status").textContent="Exporting photo…";
      try{
-       render();const blob=await new Promise((ok,fail)=>c.toBlob(b=>b?ok(b):fail(Error("Export failed")),"image/jpeg",.9));
+       render(true);const blob=await new Promise((ok,fail)=>c.toBlob(b=>b?ok(b):fail(Error("Export failed")),"image/jpeg",.9));
        done(new File([blob],"story-edited-"+Date.now()+".jpg",{type:"image/jpeg"}));
      }catch(e){q("status").textContent=e.message;q("save").disabled=false;}
    };
