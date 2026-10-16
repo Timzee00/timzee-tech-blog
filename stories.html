@@ -479,6 +479,10 @@
       }
 
       function setupViewerControls() {
+        const socialControls=document.getElementById("storyViewerSocial");
+        socialControls?.addEventListener("pointerdown",clearTimer,{passive:true,capture:true});
+        socialControls?.addEventListener("focusin",clearTimer);
+        socialControls?.addEventListener("touchstart",clearTimer,{passive:true});
         document.getElementById("storyPrevZone").addEventListener("click", () => advance(-1));
         document.getElementById("storyNextZone").addEventListener("click", () => advance(1));
         document.getElementById("viewerCloseBtn").addEventListener("click", closeViewer);
