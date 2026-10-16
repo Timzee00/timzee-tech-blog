@@ -32,7 +32,7 @@ export async function showStoryInteractions(story,user,container,{onReshare=()=>
    <button type="button" data-action="like">♡ Like</button>
    <button type="button" data-action="save">☆ Save</button>
    <button type="button" data-action="share">↗ Forward</button>
-   <button type="button" data-action="reshare" ${story.allow_reshare===false?"disabled":""}>⟳ Reshare</button>
+   <button type="button" data-action="reshare" ${story.allow_reshare===false||story.visibility!=="public"?"disabled":""}>⟳ Reshare</button>
    <button type="button" data-action="reply" ${own?"disabled":""}>↩ Private reply</button>
    ${own?'<button type="button" data-action="poll">+ Poll</button>':''}
  </div>
