@@ -119,6 +119,18 @@
 
 
             <form novalidate id="chatForm" class="chat-composer">
+              <section class="chat-edit-panel" id="chatEditPanel" aria-labelledby="chatEditTitle" hidden>
+                <div class="chat-edit-panel-top"><strong id="chatEditTitle">Edit message</strong><span class="chat-edit-remaining" id="chatEditRemaining">Available for 15 minutes after sending</span></div>
+                <label for="chatEditBody" class="sr-only">Edit message text or media caption</label>
+                <textarea id="chatEditBody" rows="2" maxlength="10000" placeholder="Edit your message…" aria-describedby="chatEditStatus"></textarea>
+                <div class="chat-edit-panel-bottom">
+                  <span id="chatEditStatus" role="status" aria-live="polite">Only the text or caption changes. Attachments stay as sent.</span>
+                  <div class="chat-edit-actions">
+                    <button type="button" class="chat-edit-cancel" id="chatEditCancel">Cancel</button>
+                    <button type="button" class="chat-edit-save" id="chatEditSave">Save edit</button>
+                  </div>
+                </div>
+              </section>
               <div class="chat-attachment-preview" id="chatMediaPreview" aria-live="polite"></div>
               <div class="chat-attach-menu" id="chatAttachMenu" role="menu" aria-label="Choose attachment type" hidden>
                 <button type="button" role="menuitem" data-attach-kind="photo"><span aria-hidden="true">🖼️</span><span>Photo or video</span></button>
