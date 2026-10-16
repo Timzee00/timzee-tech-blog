@@ -20,7 +20,7 @@ const VIDEO_EXTENSIONS = new Set(["mp4","webm","mov","m4v","mkv","avi","wmv","fl
 const AUDIO_EXTENSIONS = new Set(["mp3","wav","ogg","m4a","aac","flac","opus","webm"]);
 
 const state = {
-  selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false, editing: null, editSaving: false, replyTo: null,
+  selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false, editing: null, editSaving: false, replyTo: null, reactions:new Map(), reactionBusy:new Set(),
   drafts: new Map(), previews: new Map(), peopleResults: [], peopleRequest: 0, messageVersions: new Map(), messageRevision: 0,
   user: null, settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [], directPartners: [], staffDMAllowed: false, canCompose: true,
   blockedProfiles: new Map(), groups: [], groupMembers: new Map(), messages: [], pinnedMessages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
@@ -331,6 +331,45 @@ async function loadOlderMessages() {
   }
 }
 function messageMediaHtml(m) { const url=m.media_url&&isSafeUrl(m.media_url)?m.media_url:''; if(!url)return ''; const type=resolveAttachmentType({mediaType:m.media_type,mediaUrl:url}); if(type==='image')return `<img class="message-attachment-image" src="${escapeHTML(url)}" alt="Message attachment" loading="lazy">`; if(type==='video')return `<video class="message-attachment-video" controls preload="metadata" src="${escapeHTML(url)}"></video>`; if(type==='audio')return voicePlayerHtml(escapeHTML(url)); return `<a class="message-file" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" download><strong>${escapeHTML(getDisplayFileName(url))}</strong><small>${escapeHTML(m.media_type||'File')} · Open or download</small></a>`; }
+async function refreshReactions(threadId=state.activeThreadId){
+  const ids=state.messages.slice(-80).filter(m=>!m.deleted_at).map(m=>m.id);
+  if(!threadId||!ids.length){
+    if(threadId===state.activeThreadId){state.reactions.clear();renderMessages({preserveScroll:true});}
+    return;
+  }
+  const {data,error}=await supabase.rpc('chat_reaction_counts',{p_message_ids:ids});
+  if(error)throw error;
+  if(threadId!==state.activeThreadId)return;
+  const grouped=new Map();
+  for(const row of data||[]){
+    if(!grouped.has(row.message_id))grouped.set(row.message_id,[]);
+    grouped.get(row.message_id).push(row);
+  }
+  state.reactions=grouped;
+  renderMessages({preserveScroll:true});
+}
+async function reactToMessage(messageId,emoji){
+  if(!messageId||!['👍','❤️','😂','😮','😢','🔥'].includes(emoji))return;
+  const m=state.messages.find(x=>x.id===messageId);
+  if(!m||m.deleted_at||state.reactionBusy.has(messageId))return;
+  const threadId=state.activeThreadId;
+  state.reactionBusy.add(messageId);
+  try{
+    const {error}=await supabase.rpc('react_to_chat_message',{p_message_id:messageId,p_emoji:emoji});
+    if(error)throw error;
+    if(threadId===state.activeThreadId)await refreshReactions(threadId);
+  }finally{state.reactionBusy.delete(messageId);}
+}
+function reactionBadges(m){
+  const items=state.reactions.get(m.id)||[];
+  if(!items.length)return '';
+  return `<div class="chat-message-reactions" aria-label="Message reactions">${items.map(r=>`
+    <button type="button" data-react-message="${escapeHTML(m.id)}" data-react-emoji="${escapeHTML(r.emoji)}"
+      class="chat-reaction-chip ${r.mine?'mine':''}" aria-pressed="${r.mine?'true':'false'}"
+      aria-label="${escapeHTML(r.emoji)} reaction: ${Number(r.reaction_count)||0}, ${r.mine?'you reacted':'tap to react'}">
+      <span aria-hidden="true">${escapeHTML(r.emoji)}</span><small>${Number(r.reaction_count)||0}</small>
+    </button>`).join('')}</div>`;
+}
 function renderMessages({ preserveScroll = false } = {}) { const target=$("chatMessages"); if(!target)return; const previousTop=target.scrollTop; const followBottom=!preserveScroll||target.scrollHeight-target.scrollTop-target.clientHeight<80; const q=state.messageSearchTerm.trim().toLowerCase(); const msgs=q?state.messages.filter(m=>String(m.body||'').toLowerCase().includes(q)):state.messages;const replyMap=new Map(state.messages.map(m=>[m.id,m])); if(!msgs.length){target.innerHTML=`<div class="chat-no-messages">${q?'No messages match your search.':'No messages yet. Start the conversation.'}</div>`;return;} target.innerHTML=msgs.map(m=>{const self=m.sender_id===state.user.id;const p=profileFor(m.sender_id)||{};const deleted=Boolean(m.deleted_at);
  const body=deleted?'This message was unsent':m.body?escapeHTML(m.body).replace(/\n/g,'<br>'):'';
  const canPin=!state.activeGroupId||isOwnerOfActiveGroup();
@@ -339,7 +378,7 @@ function renderMessages({ preserveScroll = false } = {}) { const target=$("chatM
  data-message-deleted="${deleted?'true':'false'}" data-can-pin="${canPin?'true':'false'}"
  data-message-created="${escapeHTML(m.created_at||'')}"
  data-message-pinned="${m.pinned_at?'true':'false'}"
- data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop; }
+ data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}${deleted?'':reactionBadges(m)}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop; }
 function renderInfoMedia(){const grid=$("infoMediaGrid");if(!grid)return;const items=state.messages.filter(m=>{const t=resolveAttachmentType({mediaType:m.media_type,mediaUrl:m.media_url});return isSafeUrl(m.media_url||'')&&['image','video'].includes(t)}).slice(-18).reverse();grid.innerHTML=items.length?items.map(m=>{const t=resolveAttachmentType({mediaType:m.media_type,mediaUrl:m.media_url});return t==='video'?`<a href="${escapeHTML(m.media_url)}" target="_blank" rel="noopener noreferrer"><video src="${escapeHTML(m.media_url)}" muted preload="metadata"></video></a>`:`<a href="${escapeHTML(m.media_url)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHTML(m.media_url)}" alt="Shared media" loading="lazy"></a>`}).join(''):`<div class="callout">No media shared yet.</div>`;}
 async function loadGroupMembers(threadId){const result=await supabase.from('chat_members').select('id,user_id,role,tags,is_muted,is_pinned,last_read_at').eq('thread_id',threadId);if(result.error)throw result.error;const members=result.data||[];await loadProfiles(members.map(m=>m.user_id));state.groupMembers.set(threadId,members);renderGroupMembers();}
 function renderGroupMembers(){const target=$("infoGroupMembers"),section=$("groupMembersSection");if(!target||!section||!state.activeGroupId)return;const members=state.groupMembers.get(state.activeGroupId)||[];section.hidden=false;$("groupMemberCount").textContent=String(members.length);const owner=isOwnerOfActiveGroup();target.innerHTML=members.map(m=>{const p=profileFor(m.user_id)||{};const tags=Array.isArray(m.tags)?m.tags:[];return `<div class="group-member-row"><img class="chat-member-avatar" src="${escapeHTML(p.avatar_url||DEFAULT_AVATAR)}" alt=""><div class="group-member-copy"><strong>${escapeHTML(p.display_name||'Member')}${m.role==='owner'?' · Owner':''}</strong><div class="member-tag-list">${tags.map(tag=>`<span class="member-tag">${escapeHTML(tag)}</span>`).join('')||'<span class="member-tag muted">No tag</span>'}</div></div>${owner?`<button class="btn ghost sm" data-edit-member-tags="${m.id}" type="button">Edit tag</button>`:''}</div>`}).join('');}
@@ -490,7 +529,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
   const group = groupId ? state.groups.find(item => item.id === groupId) : null;
   if (groupId && !group) return;
   closeEditPanel(); cancelReply(); rememberDraft(); stopRecording(false); clearMediaPreview(); closeAttachMenu(); chatEnhancements.deactivate();
-  state.pinnedMessages=[];renderPinnedMessages();
+  state.pinnedMessages=[];state.reactions.clear();renderPinnedMessages();
   const selection = ++state.selection;
   void realtime.stop();
   state.activeFriendId = friendId; state.activeGroupId = groupId; state.canCompose=true;
@@ -511,6 +550,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
     if (selection !== state.selection) return;
     await loadPinnedMessages(threadId);
     if (selection !== state.selection) return;
+    void refreshReactions(threadId).catch(error=>console.warn("Chat reactions unavailable:",error));
     if (group) await loadGroupMembers(threadId);
     if (selection !== state.selection) return;
     state.loadingThread = false; updateComposer();
@@ -534,7 +574,7 @@ const selectGroup = id => selectConversation({ groupId: id });
 function leaveConversation() {
   closeEditPanel(); cancelReply(); rememberDraft(); ++state.selection; void realtime.stop(); chatEnhancements.deactivate();
   state.activeThreadId = state.activeFriendId = state.activeGroupId = '';
-  state.messages = [];state.pinnedMessages=[];renderPinnedMessages(); state.loadingThread = false; updateComposer(); setView('list');
+  state.messages = [];state.pinnedMessages=[];state.reactions.clear();renderPinnedMessages(); state.loadingThread = false; updateComposer(); setView('list');
 }
 function mergeMessage(message) {
   if(state.editing?.id===message.id&&message.deleted_at)closeEditPanel();
@@ -557,6 +597,7 @@ async function refreshRecent(threadId) {
   const latestIncoming=state.messages.filter(m=>m.sender_id!==state.user.id).at(-1);
   if(latestIncoming)void chatEnhancements.markRead(latestIncoming.id);
   void loadPinnedMessages(threadId).catch(err=>console.warn("Pinned messages unavailable",err));
+  void refreshReactions(threadId).catch(err=>console.warn("Chat reactions unavailable",err));
 }
 const realtime = createChatRealtime(supabase, {
   canConnect: () => navigator.onLine,
@@ -567,6 +608,10 @@ const realtime = createChatRealtime(supabase, {
     setHeaderStatus(label,status==='connected'&&state.peerPresenceLabel==='Active in chat');
   },
   onError: error => console.warn('Chat updates unavailable:', error),
+  onReactionsChanged:threadId=>{
+    if(threadId===state.activeThreadId)void refreshReactions(threadId)
+      .catch(error=>console.warn("Reaction update unavailable:",error));
+  },
   onConnected: refreshRecent,
   async onMessage(event, message, threadId) {
     const selection = state.selection;
@@ -742,6 +787,11 @@ function setupEvents(){
   });
   $("chatReplyCancel")?.addEventListener('click',()=>{cancelReply();$("chatBody")?.focus();});
   $("chatMessages")?.addEventListener('click',e=>{
+    const button=e.target.closest('[data-react-message][data-react-emoji]');
+    if(button)void reactToMessage(button.dataset.reactMessage,button.dataset.reactEmoji)
+      .catch(err=>reportAppError(err,'Could not update reaction'));
+  });
+  $("chatMessages")?.addEventListener('click',e=>{
     const id=e.target.closest('[data-replied-id]')?.dataset.repliedId;
     if(id)void jumpToPinned(id).catch(err=>reportAppError(err,"Unable to load replied message"));
   });
@@ -814,6 +864,10 @@ function setupEvents(){
       }
       await refreshRecent(threadId);
     })().catch(err=>reportAppError(err,'Unable to refresh chat'));
+  });
+  window.addEventListener('timzee:chat-react',e=>{
+    if(e.detail?.messageId&&e.detail.emoji)void reactToMessage(e.detail.messageId,e.detail.emoji)
+      .catch(err=>reportAppError(err,'Could not update reaction'));
   });
   window.addEventListener('timzee:chat-reply-message',e=>{
     if(e.detail?.messageId)startLinkedReply(e.detail.messageId);
