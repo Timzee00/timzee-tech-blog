@@ -115,3 +115,13 @@ test('Brevo transactional worker has one explicit 15-minute schedule',()=>{
  assert.match(worker,/claim_email_jobs/);
  assert.match(worker,/is_email_suppressed/);
 });
+
+test('verified translation usage is tracked in Postgres rather than worker memory',()=>{
+ const worker=load('netlify/functions/verified-translate.js');
+ const migration=load('supabase/migrations/20261017004500_verified_translation_quota.sql');
+ assert.match(worker,/consume_verified_translation_quota/);
+ assert.doesNotMatch(worker,/const recent=new Map/);
+ assert.match(migration,/ON CONFLICT\(user_id,window_start\)/);
+ assert.match(migration,/requests<18/);
+ assert.match(migration,/ENABLE ROW LEVEL SECURITY/);
+});
