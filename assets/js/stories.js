@@ -21,7 +21,7 @@ export async function fetchStoriesFeed() {
 
   const profilesResult = await supabase
     .from("public_profiles")
-    .select("id, display_name, avatar_url")
+    .select("id, display_name, avatar_url, is_verified")
     .in("id", userIds);
   if (profilesResult.error) {
     console.error("Failed to load story profiles:", profilesResult.error);
