@@ -42,7 +42,9 @@ test('message actions work by keyboard and restore focus without page overflow',
   await page.keyboard.press('Shift+F10'); await expect(menu).toBeVisible();
   await menu.getByRole('menuitem', { name: 'Reply', exact: true }).click();
   await expect(page.locator('#chatBody')).toBeFocused();
-  await expect(page.locator('#chatBody')).toHaveValue('> Ada Reader: Private message: 100% accurate\n\n');
+  await expect(page.locator('#chatReplyPreview')).toBeVisible();
+  await expect(page.locator('#chatReplyExcerpt')).toContainText('Private message: 100% accurate');
+  await expect(page.locator('#chatBody')).toHaveValue('');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
