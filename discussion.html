@@ -1,175 +1,133 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Discussion - Timzee Tech Hub</title>
-    <meta name="description" content="Join real-time tech discussions, share ideas, and connect with builders on Timzee Tech Hub.">
-    <meta name="keywords" content="Timzee Tech Hub, tech discussion, community forum, tech chat, builders">
-    <meta name="robots" content="index, follow">
-    <meta name="theme-color" content="#087f73">
-    <link rel="canonical" href="https://timzee-tech-blog.netlify.app/discussion.html">
-    <meta property="og:site_name" content="Timzee Tech Hub">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Discussion - Timzee Tech Hub">
-    <meta property="og:description" content="Join real-time tech discussions, share ideas, and connect with builders.">
-    <meta property="og:url" content="https://timzee-tech-blog.netlify.app/discussion.html">
-    <meta property="og:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Discussion - Timzee Tech Hub">
-    <meta name="twitter:description" content="Join real-time tech discussions, share ideas, and connect with builders.">
-    <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
-    <link rel="stylesheet" href="assets/css/styles.css">
-      <script defer src="assets/js/theme-init.js"></script>
-  </head>
-  <body>
-    <a class="skip-link" href="#main-content">Skip to main content</a>
-    <header class="site-header">
-      <div class="container wrap">
-        <a class="brand" href="index.html">
-          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
-          <span class="tagline" id="siteTagline">Real-time conversations on tech and daily tools.</span>
-        </a>
-        <nav class="nav-pill">
-          <a href="discussion.html">Discussion</a>
-          <a href="marketplace.html">Marketplace</a>
-          <a href="videos.html">Videos</a>
-          <a href="novels.html">Novels</a>
-          <div class="nav-more">
-            <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
-            <div class="nav-more-menu">
-              <a href="announcements.html">Announcements</a>
-              <a href="ads.html">Advertise</a>
-              <a href="newsletter.html">Newsletter</a>
-              <a href="contact.html">Contact</a>
-              <a href="support.html">Support</a>
-            </div>
-          </div>
-        </nav>
-        <div class="header-actions">
-          <a class="icon-btn" href="stories.html" data-label="Stories" aria-label="Stories" title="Stories">&#128247;</a>
-          <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
-          <div class="auth-actions" id="authActions"></div>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#087f73">
+  <meta name="description" content="Explore Timzee technology communities: discover forums, share questions and guides, and discuss what matters.">
+  <title>Communities & Forums · Timzee Tech Hub</title>
+  <link rel="canonical" href="https://timzee-tech-blog.netlify.app/discussion.html">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="assets/css/community-forum.css">
+  <script defer src="assets/js/theme-init.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container wrap">
+      <a class="brand" href="index.html"><span class="logo">Timzee <span>Tech</span> Hub</span><span class="tagline">Community knowledge, real conversations.</span></a>
+      <nav class="nav-pill" aria-label="Main navigation">
+        <a href="discussion.html" aria-current="page">Communities</a>
+        <a href="videos.html">Videos</a>
+        <a href="stories.html">Status</a>
+        <div class="nav-more"><button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+          <div class="nav-more-menu"><a href="index.html">Home</a><a href="marketplace.html">Marketplace</a><a href="newsletter.html">Newsletter</a><a href="support.html">Support</a></div>
         </div>
+      </nav>
+      <div class="header-actions"><a class="icon-btn" href="chat.html" aria-label="Chat" title="Chat">✉</a><div class="auth-actions" id="authActions"></div></div>
+    </div>
+  </header>
+  <main id="main-content" class="forum-page container">
+    <section class="forum-intro">
+      <div><p class="forum-eyebrow">TIMZEE COMMUNITIES</p><h1>Find your people.<br><span>Go deeper into tech.</span></h1>
+        <p>Join dedicated communities, start a topic, share what you know, and learn from useful answers.</p></div>
+      <div class="forum-hero-actions">
+        <button id="createThreadButton" class="forum-button primary" type="button">+ New topic</button>
+        <button id="createCommunityButton" class="forum-button secondary" type="button">+ Community</button>
       </div>
-    </header>
-
-    <main id="main-content" class="page-shell">
-      <div class="container">
-        <div class="page-heading">
-          <h1>Communities</h1>
-          <p>Find your people, share ideas and build something together.</p>
+    </section>
+    <div id="forumNotice" class="forum-notice" role="status" aria-live="polite" hidden></div>
+    <div class="forum-layout">
+      <aside class="forum-sidebar" aria-label="Explore communities">
+        <div class="forum-panel forum-navigation">
+          <h2>Explore</h2>
+          <button type="button" data-forum-nav="home" class="forum-nav-item active"><span aria-hidden="true">⌂</span> Community feed</button>
+          <button type="button" data-forum-nav="joined" class="forum-nav-item"><span aria-hidden="true">★</span> My communities</button>
+          <button type="button" data-forum-nav="saved" class="forum-nav-item"><span aria-hidden="true">▣</span> Saved topics</button>
+          <hr>
+          <label class="forum-search-label" for="forumCommunitySearch">Find a community</label>
+          <input id="forumCommunitySearch" type="search" maxlength="70" placeholder="Search tech communities…">
+          <div id="forumCategories" class="forum-category-filters" aria-label="Community categories"></div>
+          <div class="forum-list-heading"><h3>Community boards</h3><span id="communityListCount"></span></div>
+          <div id="forumCommunityList" class="forum-community-list" aria-live="polite"><p class="forum-muted">Loading communities…</p></div>
+          <button type="button" id="moreCommunities" class="forum-more-communities" hidden>Show more communities</button>
         </div>
-      </div>
-      <div class="container discussion-shell" id="discussionShell">
-        <aside class="discussion-sidebar">
-          <div class="discussion-card" data-reveal>
-            <div class="discussion-sidebar-head">
-              <h2>Communities</h2>
-              <span class="topic-count-chip" id="topicCount"></span>
-            </div>
-            <div class="search-box discussion-search">
-              <input type="search" id="topicSearch" placeholder="Search communities...">
-            </div>
-            <div class="topic-list" id="topicList"></div>
+      </aside>
+      <div class="forum-center">
+        <section id="forumFeedView" class="forum-panel" aria-labelledby="forumFeedTitle">
+          <div class="forum-content-header">
+            <div><p id="forumFeedKicker" class="forum-eyebrow">FOR YOU</p><h2 id="forumFeedTitle">The community feed</h2>
+              <p id="forumFeedSubtitle">Topic threads from across tech communities.</p></div>
+            <button id="forumJoinButton" class="forum-button secondary" type="button" hidden>Join community</button>
           </div>
-
-          <div class="discussion-card" data-reveal>
-            <h3>Start a Community</h3>
-            <form novalidate id="topicForm" class="form-grid">
-              <input type="text" id="topicTitle" placeholder="Community name" required>
-              <div class="editor-toolbar" id="topicToolbar">
-                <button type="button" data-action="h2">H2</button>
-                <button type="button" data-action="h3">H3</button>
-                <button type="button" data-action="bold">Bold</button>
-                <button type="button" data-action="italic">Italic</button>
-                <button type="button" data-action="quote">Quote</button>
-                <button type="button" data-action="ul">List</button>
-                <button type="button" data-action="ol">1-2-3</button>
-                <button type="button" data-action="link">Link</button>
-              </div>
-              <textarea id="topicDescription" placeholder="Short description" required class="resize-none"></textarea>
-              <select id="topicThemeSelect">
-                <option value="">Default theme</option>
-              </select>
-              <input type="file" id="topicMediaFile" accept="image/*,video/*">
-              <div id="topicMediaPreview" class="image-preview">Topic media preview (optional)</div>
-              <button class="btn" type="submit">Create Community</button>
-            </form>
-            <div class="callout" id="topicStatus" style="margin-top:12px; display:none;"></div>
-          </div>
-        </aside>
-
-        <section class="discussion-chat">
-          <div class="discussion-card" data-reveal>
-            <div class="discussion-header-row">
-              <button class="btn ghost thread-back-btn" id="backToTopicsBtn" type="button" aria-label="Back to topics">← Communities</button>
-              <div class="discussion-header" id="topicHeader">Select a community to start browsing</div>
-              <div class="inline-actions">
-                <select id="discussionSort" class="sort-select">
-                  <option value="top">Top</option>
-                  <option value="new">New</option>
-                  <option value="oldest">Oldest</option>
-                </select>
-                <button class="btn ghost" id="followTopicBtn" type="button" style="display:none;">Follow</button>
-              </div>
+          <div id="forumCommunityDetails" class="forum-community-details" hidden></div>
+          <div class="forum-feed-controls">
+            <div class="forum-filter-buttons" role="group" aria-label="Sort topics">
+              <button type="button" data-forum-sort="active" aria-pressed="true">Active</button>
+              <button type="button" data-forum-sort="new" aria-pressed="false">New</button>
+              <button type="button" data-forum-sort="top" aria-pressed="false">Top</button>
+              <button type="button" data-forum-sort="unanswered" aria-pressed="false">Unanswered</button>
             </div>
-            <div class="topic-meta" id="topicMeta"></div>
-            <div id="topicMedia" class="topic-media"></div>
-            <div class="pinned-list" id="pinnedList"></div>
-            <div class="message-list" id="messageList"></div>
-            <form novalidate id="messageForm" class="comment-form">
-              <div class="reply-preview hidden" id="replyPreview"></div>
-              <textarea id="messageBody" placeholder="Write a post..." required class="resize-none"></textarea>
-              <div class="message-tools">
-                <input type="file" id="messageMedia" accept="image/*,video/*">
-                <select id="messageMediaType">
-                  <option value="image">Image</option>
-                  <option value="sticker">Sticker</option>
-                  <option value="video">Video</option>
-                </select>
-              </div>
-              <div id="messageMediaPreview" class="media-preview"></div>
-              <button type="submit" class="btn" id="messageSubmitBtn">Post</button>
-            </form>
-            <div class="callout" id="messageStatus" style="margin-top:12px; display:none;"></div>
+            <label class="forum-thread-search-label" for="forumThreadSearch">Search topics
+              <input id="forumThreadSearch" type="search" maxlength="90" placeholder="Search titles">
+            </label>
           </div>
-
-          <div class="discussion-card" id="topicControls" style="display:none;">
-            <h3>Topic Controls</h3>
-            <div class="form-grid">
-              <label class="badge">Moderation</label>
-              <select id="topicModerationMode">
-                <option value="off">Off</option>
-                <option value="block">Block banned words</option>
-                <option value="mask">Mask banned words</option>
-              </select>
-              <label class="badge">Banned words (comma separated)</label>
-              <textarea id="topicBannedWords" placeholder="spam, scam, hate" class="resize-none"></textarea>
-              <button class="btn" id="saveTopicRules" type="button">Save Rules</button>
-            </div>
-            <div class="callout" id="topicRulesStatus" style="margin-top:12px; display:none;"></div>
-            <div class="discussion-header" style="margin-top:16px;">Banned Members</div>
-            <div id="bannedUsersList" class="topic-list"></div>
-          </div>
+          <div id="forumPinnedThreads" class="forum-pinned-threads"></div>
+          <div id="forumThreadFeed" class="forum-thread-feed" aria-live="polite"><p class="forum-muted">Loading discussions…</p></div>
+          <button type="button" id="forumLoadMore" class="forum-load-more" hidden>Load more topics</button>
+        </section>
+        <section id="forumThreadView" class="forum-panel forum-thread-view" hidden aria-labelledby="forumThreadTitle">
+          <button type="button" id="forumBackButton" class="forum-back-button">← Back to topics</button>
+          <div id="forumThreadHeader"></div>
+          <article id="forumThreadBody" class="forum-topic-body"></article>
+          <div class="forum-thread-interactions" id="forumThreadActions"></div>
+          <div class="forum-replies-heading"><h2 id="forumThreadTitle">Replies</h2><button type="button" id="forumRefreshReplies">↻ Refresh</button></div>
+          <div id="forumReplies" class="forum-replies" aria-live="polite"></div>
+          <button id="forumMoreReplies" type="button" class="forum-load-more" hidden>Load earlier replies</button>
+          <form id="forumReplyForm" class="forum-reply-form">
+            <div id="forumReplyTarget" class="forum-reply-target" hidden></div>
+            <label for="forumReplyText">Add to this discussion</label>
+            <textarea id="forumReplyText" maxlength="10000" rows="4" placeholder="Share something helpful. Use @mention to refer to others." required></textarea>
+            <div class="forum-reply-footer"><small>Be constructive and respect community rules.</small><button type="submit" class="forum-button primary">Post reply</button></div>
+          </form>
         </section>
       </div>
-    </main>
-
-    <footer class="footer">
-      <div class="container">
-        <div class="footer-links">
-          <a href="support.html">Support</a>
-          <a href="contact.html">Contact Us</a>
-          <a href="newsletter.html">Newsletter</a>
-          <a href="ads.html">Advertise</a>
-        </div>
-      </div>
-    </footer>
-
-    <script type="module" src="assets/js/discussion.js"></script>
-  </body>
+      <aside class="forum-aside" aria-label="Community guidance">
+        <section class="forum-panel forum-quick-guide"><h2>Better together</h2>
+          <p>One community can hold thousands of separate discussions—guides, questions, feedback, and announcements.</p>
+          <div class="forum-guide-row"><span>01</span><p>Choose a community that fits your topic</p></div>
+          <div class="forum-guide-row"><span>02</span><p>Read existing threads before asking</p></div>
+          <div class="forum-guide-row"><span>03</span><p>Post useful replies and vote thoughtfully</p></div>
+        </section>
+        <section class="forum-panel"><h2>Suggested communities</h2><div id="forumSuggestions" class="forum-suggestions"></div></section>
+        <section class="forum-panel forum-conduct"><h2>Community standards</h2><p>No impersonation, harassment, scam links, unwanted ads, or misleading official claims.</p><a href="support.html">Report a problem ↗</a></section>
+      </aside>
+    </div>
+  </main>
+  <dialog id="forumCommunityDialog" class="forum-dialog" aria-labelledby="forumCommunityDialogTitle">
+    <form id="forumCommunityForm" class="forum-form">
+      <div class="forum-modal-head"><h2 id="forumCommunityDialogTitle">Create a community</h2><button type="button" data-close-forum-dialog aria-label="Close">×</button></div>
+      <p>Build a lasting home for useful conversations—not just another group chat.</p>
+      <label>Community name<input name="title" maxlength="70" minlength="3" required placeholder="e.g. Nigerian Web Developers"></label>
+      <label>Category<select name="category" id="forumCommunityCategory"></select></label>
+      <label>Description<textarea name="description" maxlength="700" minlength="20" rows="4" required placeholder="What is this community for?"></textarea></label>
+      <label>Who can post?<select name="posting_policy"><option value="everyone">Everyone with an account</option><option value="members">Community members</option><option value="staff">Moderators only</option></select></label>
+      <p id="forumCommunityFormError" class="forum-form-error" role="alert"></p>
+      <button type="submit" class="forum-button primary">Create community</button>
+    </form>
+  </dialog>
+  <dialog id="forumThreadDialog" class="forum-dialog" aria-labelledby="forumThreadDialogTitle">
+    <form id="forumThreadForm" class="forum-form">
+      <div class="forum-modal-head"><h2 id="forumThreadDialogTitle">Start a topic</h2><button type="button" data-close-forum-dialog aria-label="Close">×</button></div>
+      <label>Community<select id="forumThreadCommunity" name="community_id" required></select></label>
+      <label>Post type<select name="kind"><option value="discussion">Discussion</option><option value="question">Question</option><option value="guide">Guide / tutorial</option><option value="news">Tech news</option><option value="showcase">Project showcase</option></select></label>
+      <label>Title<input name="title" maxlength="180" minlength="5" required placeholder="Write a clear, specific title"></label>
+      <label>Details<textarea name="body" maxlength="12000" rows="7" placeholder="Give enough background for meaningful replies."></textarea></label>
+      <p id="forumThreadFormError" class="forum-form-error" role="alert"></p>
+      <button type="submit" class="forum-button primary">Publish topic</button>
+    </form>
+  </dialog>
+  <footer class="footer"><div class="container"><div class="footer-links"><a href="support.html">Support</a><a href="contact.html">Contact</a><a href="newsletter.html">Newsletter</a><a href="index.html">Home</a></div></div></footer>
+  <script type="module" src="assets/js/community-forum.mjs"></script>
+</body>
 </html>
-
-
-
