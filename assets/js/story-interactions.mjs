@@ -1,5 +1,7 @@
 import { supabase } from "./supabase.js";
 import { escapeHTML } from "./utils.js";
+import {setupMentionInput} from "./mentions.js";
+import {renderSocialText} from "./social-rich-text.mjs";
 import { mountPoll,openPollComposer } from "./content-polls.mjs";
 
 const uid=value=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(value||"");
@@ -37,6 +39,7 @@ export async function showStoryInteractions(story,user,container,{onReshare=()=>
    ${own?'<button type="button" data-action="poll">+ Poll</button>':''}
  </div>
  <div class="story-status-feedback" role="status" aria-live="polite"></div>
+ <div class="story-social-metrics" aria-live="polite" data-story-metrics></div>
  <div class="story-social-poll" data-story-poll></div>
  ${canComment?`<details class="story-comments-panel"><summary>Public comments <span data-comment-count></span></summary>
   <div class="story-comments-feed" data-comments-feed></div>
@@ -60,6 +63,16 @@ export async function showStoryInteractions(story,user,container,{onReshare=()=>
   const l=menu.querySelector('[data-action=like]'),s=menu.querySelector('[data-action=save]');
   if(l){l.textContent=liked?'♥ Liked':'♡ Like';l.setAttribute('aria-pressed',String(liked));}
   if(s){s.textContent=saved?'★ Saved':'☆ Save';s.setAttribute('aria-pressed',String(saved));}
+  void refreshMetrics();
+ }
+ async function refreshMetrics(){
+  const likes=await supabase.from('story_likes').select('*',{count:'exact',head:true}).eq('story_id',story.id);
+  const views=own?await supabase.from('story_views').select('*',{count:'exact',head:true})
+   .eq('story_id',story.id):null;
+  if(gen!==generation)return;
+  const metrics=menu.querySelector('[data-story-metrics]');
+  if(metrics)metrics.textContent=(likes.count||0)+' likes'+
+    (own?' · '+(views?.count||0)+' views (receipts enabled only)':'');
  }
  async function reloadComments(){
   const list=menu.querySelector('[data-comments-feed]');if(!list)return;
@@ -77,7 +90,7 @@ export async function showStoryInteractions(story,user,container,{onReshare=()=>
   }
   if(gen!==generation)return;
   list.innerHTML=rows.map(r=>`<article><strong>${esc(nameMap.get(r.user_id)||'Member')}</strong>
-    <p>${esc(r.body)}</p><small>${esc(fmtDate(r.created_at))}</small></article>`).join('')||
+    <p>${renderSocialText(r.body)}</p><small>${esc(fmtDate(r.created_at))}</small></article>`).join('')||
    '<p>No public comments yet.</p>';
   menu.querySelector('[data-comment-count]').textContent='('+rows.length+')';
  }
@@ -128,6 +141,9 @@ export async function showStoryInteractions(story,user,container,{onReshare=()=>
   }catch(e){if(e.name!=='AbortError')note(e.message||'Action unavailable.');}
  });
  if(canComment)void reloadComments();
+ setupMentionInput(menu.querySelector('[data-comment-form] input'));
+ setupMentionInput(menu.querySelector('[data-private-reply] input'));
+ if(user?.id&&!own)void supabase.rpc('record_status_view',{p_story_id:story.id}).catch?.(()=>{});
  if(user?.id)void reloadLikes();
  if(user?.id)void mountPoll(menu.querySelector('[data-story-poll]'),'story',story.id);
 }
