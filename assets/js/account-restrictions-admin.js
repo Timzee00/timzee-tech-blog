@@ -44,6 +44,53 @@ async function load(){
   }
  }catch(err){target.replaceChildren(text("p",err.message));}
 }
+const lookup=$("memberSearch");
+const results=$("memberSearchResults");
+let lookupVersion=0;
+let lookupTimer=null;
+function selectMember(member){
+ $("targetId").value=member.id;
+ $("selectedMemberHint").textContent=(member.display_name||member.username||member.email||"Member")+" selected. You can review this account's restrictions.";
+ results.replaceChildren();
+ void load();
+}
+function showMatches(rows){
+ results.replaceChildren();
+ for(const member of rows){
+   const button=document.createElement("button");
+   button.type="button";button.setAttribute("role","option");
+   const name=text("strong",member.display_name||member.username||"Member");
+   const detail=text("small",[member.username?"@"+member.username:"",member.email||""].filter(Boolean).join(" · "));
+   button.append(name,detail);
+   button.addEventListener("click",()=>selectMember(member));
+   results.append(button);
+ }
+ if(!rows.length)results.append(text("p","No matching members found."));
+}
+lookup?.addEventListener("input",()=>{
+ const version=++lookupVersion;
+ clearTimeout(lookupTimer);
+ const query=lookup.value.trim().replace(/[%,()."\\]/g,"").slice(0,60);
+ results.replaceChildren();
+ if(query.length<2)return;
+ lookupTimer=setTimeout(async()=>{
+   if(!staff)return;
+   try{
+     const {data,error}=await supabase.from("profiles")
+       .select("id,display_name,username,email")
+       .or(`display_name.ilike.%${query}%,username.ilike.%${query}%,email.ilike.%${query}%`)
+       .limit(10);
+     if(error)throw error;
+     if(version===lookupVersion)showMatches(data||[]);
+   }catch(error){if(version===lookupVersion)results.replaceChildren(text("p","Search temporarily unavailable. You can still select a user from the Users admin page."));}
+ },250);
+});
+const preselected=new URLSearchParams(location.search).get("user")||"";
+if(/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(preselected)){
+  $("targetId").value=preselected;
+  $("selectedMemberHint").textContent="Member selected from Users. Review or apply timed restrictions below.";
+  void authorized().then(ok=>{if(ok)void load();});
+}
 $("lookupForm").addEventListener("submit",e=>{e.preventDefault();void load();});
 $("restrictionForm").addEventListener("submit",async e=>{
  e.preventDefault();
