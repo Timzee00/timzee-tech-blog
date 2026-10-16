@@ -1809,7 +1809,7 @@ function renderRequests() {
           <td data-label="Status">${requestStatusCell(item.status)}</td>
           <td data-label="Actions"><div class="inline-actions">
             <button class="muted" type="button" data-admin-request="view" data-id="${item.id}">View</button>
-            ${["approved","rejected"].includes(item.status) ? `<button class="muted" type="button" data-admin-request="pending" data-id="${item.id}">Reopen</button>` : `
+            ${getUserRole(state.user)!=="super" ? '<span class="hint">Super Admin approval required</span>' : ["approved","rejected"].includes(item.status) ? `<button class="muted" type="button" data-admin-request="pending" data-id="${item.id}">Reopen</button>` : `
               <button class="muted" type="button" data-admin-request="approved" data-id="${item.id}">Approve request</button>
               <button class="danger" type="button" data-admin-request="rejected" data-id="${item.id}">Reject</button>
             `}
