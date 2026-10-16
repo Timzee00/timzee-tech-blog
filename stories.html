@@ -99,6 +99,11 @@
       </div>
       <div class="story-viewer-media" id="storyViewerMedia"></div>
       <div class="story-viewer-caption" id="viewerCaption"></div>
+      <div class="story-music-controls" id="storyMusicControls" hidden>
+        <button type="button" id="storyMusicToggle" aria-label="Play soundtrack">▶ Music</button>
+        <span id="storyMusicLabel"></span>
+        <audio id="storyMusicAudio" preload="none" loop></audio>
+      </div>
       <div class="story-viewer-social" id="storyViewerSocial"></div>
       <button class="story-tap-zone story-tap-prev" id="storyPrevZone" type="button" aria-label="Previous story"></button>
       <button class="story-tap-zone story-tap-next" id="storyNextZone" type="button" aria-label="Next story"></button>
@@ -119,6 +124,21 @@
         <input type="file" id="storyFile" accept="image/*,video/*" hidden required>
         <button type="button" id="storyEditPhoto" class="btn ghost" hidden>Edit photo: crop, rotate, text, draw</button>
         <textarea id="storyCaption" placeholder="Add a caption · @mention a member" rows="2" maxlength="200" class="resize-none"></textarea>
+        <fieldset class="story-music-composer">
+          <legend>Optional soundtrack</legend>
+          <label for="storyMusicFile">Upload music you own or are licensed to use
+            <input id="storyMusicFile" type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/ogg,audio/webm,.mp3,.m4a,.ogg,.webm">
+          </label>
+          <label for="storyMusicTitle">Soundtrack title
+            <input id="storyMusicTitle" type="text" maxlength="90" placeholder="Track title">
+          </label>
+          <label class="story-music-rights">
+            <input id="storyMusicRights" type="checkbox">
+            I own this audio or have permission to use it in a public post.
+          </label>
+          <small>MP3, M4A, OGG or WebM; 10 MB maximum. Music plays alongside your status; it is not embedded in downloaded video files. No copyrighted catalogue is provided without licensing.</small>
+          <audio id="storyMusicPreview" controls hidden preload="metadata"></audio>
+        </fieldset>
         <div class="story-composer-extras">
           <label for="storyDuration">Status duration<select id="storyDuration">
             <option value="24">24 hours (standard)</option>
@@ -175,7 +195,8 @@
         activeStoryIndex: 0,
         timerId: null,
         storyRemaining:0,storyDuration:0,storyStartedAt:0,storyHeld:false,storyActiveVideo:null,storyPlaybackVersion:0,
-        verified:false
+        verified:false,
+        storyMusicWasPlaying:false
       };
 
       async function init() {
@@ -382,6 +403,9 @@
         state.storyActiveVideo=null;
         state.storyDuration=0;state.storyRemaining=0;state.storyStartedAt=0;
         state.storyHeld=false;
+        const music=document.getElementById("storyMusicAudio");
+        if(music){music.pause();music.removeAttribute("src");music.load();}
+        state.storyMusicWasPlaying=false;
         state.storyPlaybackVersion++;
       }
       function activeStoryFill(){
@@ -391,6 +415,9 @@
         if(document.getElementById("storyViewer").hidden)return;
         state.storyHeld=true;
         state.storyActiveVideo?.pause();
+        const soundtrack=document.getElementById("storyMusicAudio");
+        state.storyMusicWasPlaying=Boolean(soundtrack&&!soundtrack.paused);
+        soundtrack?.pause();
         if(state.timerId){
           clearTimeout(state.timerId);state.timerId=null;
           state.storyRemaining=Math.max(0,state.storyRemaining-(performance.now()-state.storyStartedAt));
@@ -405,6 +432,10 @@
       function resumeStory(){
         if(!state.storyHeld)return;
         state.storyHeld=false;
+        const soundtrack=document.getElementById("storyMusicAudio");
+        if(state.storyMusicWasPlaying&&soundtrack?.src)
+          void soundtrack.play().catch(()=>{});
+        state.storyMusicWasPlaying=false;
         if(state.storyActiveVideo){
           void state.storyActiveVideo.play().catch(()=>{});return;
         }
@@ -443,6 +474,18 @@
           (profile?.is_verified?" ✓ Verified":"");
         document.getElementById("viewerTime").textContent = timeAgo(story.created_at);
         document.getElementById("viewerCaption").textContent = story.caption || "";
+        const musicControls=document.getElementById("storyMusicControls");
+        const soundtrack=document.getElementById("storyMusicAudio");
+        const musicToggle=document.getElementById("storyMusicToggle");
+        const approvedUrl=isSafeUrl(story.music_url)?story.music_url:"";
+        musicControls.hidden=!approvedUrl;
+        if(approvedUrl){
+          soundtrack.src=approvedUrl;
+          soundtrack.preload="metadata";
+          document.getElementById("storyMusicLabel").textContent=story.music_title||"Soundtrack";
+          musicToggle.textContent="▶ Play music";
+          musicToggle.setAttribute("aria-pressed","false");
+        }
         const social=document.getElementById("storyViewerSocial");
         if(social)void showStoryInteractions(story,state.user,social,{
           onReshare:async()=>{state.allGroups=await fetchStoriesFeed();await applySavedFilter();}
@@ -608,6 +651,21 @@
       }
 
       function setupViewerControls() {
+        const soundtrack=document.getElementById("storyMusicAudio");
+        const toggle=document.getElementById("storyMusicToggle");
+        toggle?.addEventListener("click",async()=>{
+          if(!soundtrack?.src)return;
+          if(!soundtrack.paused){soundtrack.pause();return;}
+          try{await soundtrack.play();}catch{
+            window.appUI?.toast?.("Music playback was blocked. Tap Play again.");
+          }
+        });
+        soundtrack?.addEventListener("play",()=>{
+          toggle.textContent="❚❚ Pause music";toggle.setAttribute("aria-pressed","true");
+        });
+        soundtrack?.addEventListener("pause",()=>{
+          toggle.textContent="▶ Play music";toggle.setAttribute("aria-pressed","false");
+        });
         const socialControls=document.getElementById("storyViewerSocial");
         // Press-and-hold pauses anywhere on the content, including navigation sides.
         // Brief taps on either side still navigate. A held side never skips.
@@ -690,6 +748,12 @@
         composer.hidden = true;
         composer.setAttribute("aria-hidden", "true");
         document.getElementById("storyForm").reset();
+        const soundtrackPreview=document.getElementById("storyMusicPreview");
+        if(soundtrackPreview){
+          soundtrackPreview.pause();
+          if(soundtrackPreview.src)URL.revokeObjectURL(soundtrackPreview.src);
+          soundtrackPreview.removeAttribute("src");soundtrackPreview.hidden=true;
+        }
         document.getElementById("storyFilePreview").innerHTML = "";
         revokeStoryPreview();
         editedStoryFile=null;
@@ -705,6 +769,18 @@
         document.getElementById("composerBackdrop").addEventListener("click", closeComposer);
 
         const fileInput = document.getElementById("storyFile");
+        document.getElementById("storyMusicFile").addEventListener("change",event=>{
+          const chosen=event.target.files?.[0];
+          const preview=document.getElementById("storyMusicPreview");
+          preview.pause();
+          if(preview.src)URL.revokeObjectURL(preview.src);
+          preview.removeAttribute("src");preview.hidden=!chosen;
+          if(chosen){
+            preview.src=URL.createObjectURL(chosen);
+            const title=document.getElementById("storyMusicTitle");
+            if(!title.value.trim())title.value=chosen.name.replace(/\.[^.]+$/,"").slice(0,90);
+          }
+        });
         fileInput.addEventListener("change", () => {
           const file = fileInput.files?.[0];
           const preview = document.getElementById("storyFilePreview");
@@ -773,10 +849,14 @@
           submitBtn.disabled = true;
           submitBtn.textContent = "Posting...";
           const durationHours=state.verified?Number(document.getElementById("storyDuration").value):24;
+          const musicFile=document.getElementById("storyMusicFile").files?.[0]||null;
           const result = await createStory({
             userId:state.user.id,file,caption,visibility,durationHours,
             allowReshare:document.getElementById("storyAllowReshare").checked,
-            allowPublicComments:document.getElementById("storyAllowComments").checked
+            allowPublicComments:document.getElementById("storyAllowComments").checked,
+            musicFile,
+            musicTitle:document.getElementById("storyMusicTitle").value.trim(),
+            musicRightsConfirmed:document.getElementById("storyMusicRights").checked
           });
           submitBtn.disabled = false;
           submitBtn.textContent = "Post Story";
