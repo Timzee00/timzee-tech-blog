@@ -174,3 +174,10 @@ html[data-chat-compact="true"] .chat-messages { gap: 5px; }
 .chat-page .chat-message-reply-ref{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;max-width:100%;min-width:0;margin-bottom:6px;padding:7px 10px;border:0;border-left:3px solid currentColor;border-radius:7px;text-align:left;background:color-mix(in srgb,currentColor 9%,transparent);color:inherit;cursor:pointer}
 .chat-page .chat-message-reply-ref strong{font-size:.75rem}
 .chat-page .chat-message-reply-ref span{font-size:.73rem;line-height:1.3;opacity:.85;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+
+/* Message reactions are server-counted and per-member. */
+.chat-page .chat-message-reactions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-width:100%}
+.chat-page .chat-reaction-chip{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:31px;min-width:40px;padding:4px 7px;border-radius:999px;border:1px solid color-mix(in srgb,currentColor 25%,transparent);background:color-mix(in srgb,currentColor 7%,transparent);color:inherit;font:600 .82rem system-ui;cursor:pointer}
+.chat-page .chat-reaction-chip small{font-size:.71rem;font-variant-numeric:tabular-nums}
+.chat-page .chat-reaction-chip.mine{border:2px solid currentColor;background:color-mix(in srgb,currentColor 16%,transparent)}
+.chat-page .chat-reaction-chip:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
