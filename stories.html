@@ -13,6 +13,7 @@
     <meta property="og:title" content="Stories - Timzee Tech Hub">
     <meta property="og:description" content="Share a public or friends-only story that disappears after 24 hours.">
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/content-polls.css">
     <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
@@ -56,7 +57,7 @@
           <span class="story-create-action-icon" aria-hidden="true">+</span>
           <span class="story-create-action-copy">
             <strong>Create story</strong>
-            <small>Photo or video · visible for 24 hours</small>
+            <small>24 hours · up to 72 hours for verified creators</small>
           </span>
         </button>
         <div class="stories-rail" id="storiesRail">
@@ -90,6 +91,7 @@
       </div>
       <div class="story-viewer-media" id="storyViewerMedia"></div>
       <div class="story-viewer-caption" id="viewerCaption"></div>
+      <div class="story-viewer-social" id="storyViewerSocial"></div>
       <button class="story-tap-zone story-tap-prev" id="storyPrevZone" type="button" aria-label="Previous story"></button>
       <button class="story-tap-zone story-tap-next" id="storyNextZone" type="button" aria-label="Next story"></button>
     </div>
@@ -107,7 +109,17 @@
           <div class="story-file-preview" id="storyFilePreview"></div>
         </label>
         <input type="file" id="storyFile" accept="image/*,video/*" hidden required>
-        <textarea id="storyCaption" placeholder="Add a caption (optional)" rows="2" maxlength="200" class="resize-none"></textarea>
+        <textarea id="storyCaption" placeholder="Add a caption · @mention a member" rows="2" maxlength="200" class="resize-none"></textarea>
+        <div class="story-composer-extras">
+          <label for="storyDuration">Status duration<select id="storyDuration">
+            <option value="24">24 hours (standard)</option>
+            <option value="48" data-verified-only disabled hidden>48 hours (verified)</option>
+            <option value="72" data-verified-only disabled hidden>72 hours (verified)</option>
+          </select></label>
+          <label><input type="checkbox" id="storyAllowReshare" checked> Allow others to reshare</label>
+          <label><input type="checkbox" id="storyAllowComments" checked> Allow public comments</label>
+          <p id="storyCreatorEntitlements" class="story-creator-note"></p>
+        </div>
         <div class="story-visibility-toggle">
           <label>
             <input type="radio" name="storyVisibility" value="public" checked>
@@ -139,6 +151,9 @@
       import { getCurrentUser, getDisplayName } from "./assets/js/supabase.js";
       import { fetchStoriesFeed, fetchUserStories, createStory, deleteStory } from "./assets/js/stories.js";
       import { escapeHTML, isSafeUrl, timeAgo } from "./assets/js/utils.js";
+      import {setupMentionInput} from "./assets/js/mentions.js";
+      import {showStoryInteractions} from "./assets/js/story-interactions.mjs";
+      import {supabase} from "./assets/js/supabase.js";
       import "./assets/js/nav.js";
 
       const DEFAULT_AVATAR = "/assets/img/avatar-placeholder.svg";
@@ -148,11 +163,20 @@
         groups: [], // [{ userId, profile, stories: [] }]
         activeGroupIndex: -1,
         activeStoryIndex: 0,
-        timerId: null
+        timerId: null,
+        verified:false
       };
 
       async function init() {
         state.user = await getCurrentUser();
+        if(state.user){
+          const {data}=await supabase.from('profiles').select('is_verified').eq('id',state.user.id).maybeSingle();
+          state.verified=data?.is_verified===true;
+          document.querySelectorAll('#storyDuration [data-verified-only]')
+           .forEach(option=>{option.hidden=!state.verified;option.disabled=!state.verified;});
+          document.getElementById("storyCreatorEntitlements").textContent=state.verified
+            ?"Verified creator: choose 24, 48 or 72 hours.":"Standard statuses last 24 hours.";
+        }
         const loginNotice = document.getElementById("storiesLoginNotice");
         const addBtn = document.getElementById("addStoryBtn");
         const createAction = document.getElementById("createStatusAction");
@@ -319,6 +343,10 @@
         document.getElementById("viewerName").textContent = profile?.display_name || "Member";
         document.getElementById("viewerTime").textContent = timeAgo(story.created_at);
         document.getElementById("viewerCaption").textContent = story.caption || "";
+        const social=document.getElementById("storyViewerSocial");
+        if(social)void showStoryInteractions(story,state.user,social,{
+          onReshare:async()=>{state.groups=await fetchStoriesFeed();renderRail();}
+        });
 
         const isOwn = state.user && story.user_id === state.user.id;
         const deleteBtn = document.getElementById("viewerDeleteBtn");
@@ -531,6 +559,7 @@
           }
         });
 
+        setupMentionInput(document.getElementById("storyCaption"));
         document.getElementById("storyForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           if (!state.user) return;
@@ -548,7 +577,12 @@
 
           submitBtn.disabled = true;
           submitBtn.textContent = "Posting...";
-          const result = await createStory({ userId: state.user.id, file, caption, visibility });
+          const durationHours=state.verified?Number(document.getElementById("storyDuration").value):24;
+          const result = await createStory({
+            userId:state.user.id,file,caption,visibility,durationHours,
+            allowReshare:document.getElementById("storyAllowReshare").checked,
+            allowPublicComments:document.getElementById("storyAllowComments").checked
+          });
           submitBtn.disabled = false;
           submitBtn.textContent = "Post Story";
 
