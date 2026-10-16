@@ -149,12 +149,12 @@ async function handleMenuAction(event) {
       if(!await window.appUI.confirm("Unsend this message for everyone? Recipients may already have downloaded or viewed it."))return;
       const {error}=await supabase.rpc("unsend_chat_message",{p_message_id:messageEl.dataset.messageId});
       if(error)throw error;
-      window.dispatchEvent(new Event("timzee:chat-refresh"));
+      window.dispatchEvent(new CustomEvent("timzee:chat-refresh",{detail:{messageId:messageEl.dataset.messageId}}));
       window.siteToast?.("Message unsent from the conversation.",{type:"success"});
     }else if(action==="pin"){
       const {data,error}=await supabase.rpc("toggle_chat_message_pin",{p_message_id:messageEl.dataset.messageId});
       if(error)throw error;
-      window.dispatchEvent(new Event("timzee:chat-refresh"));
+      window.dispatchEvent(new CustomEvent("timzee:chat-refresh",{detail:{messageId:messageEl.dataset.messageId}}));
       window.siteToast?.(data?"Message pinned.":"Message unpinned.",{type:"success"});
     }else if (action === "reply") startReply(messageEl);
     else if (action === "copy") {
