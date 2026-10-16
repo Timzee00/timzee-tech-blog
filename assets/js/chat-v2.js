@@ -384,6 +384,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
   const group = groupId ? state.groups.find(item => item.id === groupId) : null;
   if (groupId && !group) return;
   rememberDraft(); stopRecording(false); clearMediaPreview(); closeAttachMenu(); chatEnhancements.deactivate();
+  state.pinnedMessages=[];renderPinnedMessages();
   const selection = ++state.selection;
   void realtime.stop();
   state.activeFriendId = friendId; state.activeGroupId = groupId; state.canCompose=true;
@@ -464,7 +465,7 @@ const realtime = createChatRealtime(supabase, {
     const selection = state.selection;
     if (threadId !== state.activeThreadId) return;
     const exists = state.messages.some(item => item.id === message.id);
-    if (event === 'UPDATE' && !exists) return;
+    if (event === 'UPDATE' && !exists) { void loadPinnedMessages(threadId).catch(console.warn); return; }
     state.messageVersions.set(message.id, ++state.messageRevision);
     mergeMessage(message); renderMessages({ preserveScroll: true }); renderInfoMedia(); void renderFriends();
     if(event==="UPDATE")void loadPinnedMessages(threadId).catch(console.warn);
