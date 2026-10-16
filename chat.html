@@ -108,6 +108,7 @@
                   <button type="button" data-chat-menu="mute">Mute notifications</button>
                   <button type="button" data-chat-menu="pin">Pin chat</button>
                   <button type="button" data-chat-menu="settings">Chat settings</button>
+                  <button type="button" data-chat-menu="starred">Starred messages</button>
                   <button type="button" data-chat-menu="poll" hidden>New group poll</button>
                   <button type="button" data-chat-menu="report">Report</button>
                 </div>
@@ -217,6 +218,21 @@
           </div>
         </dialog>
 
+        <dialog class="chat-modal-overlay" id="chatForwardModal" aria-labelledby="chatForwardTitle">
+          <div class="chat-modal compact">
+            <div class="chat-modal-head"><h2 id="chatForwardTitle">Forward message</h2>
+              <button class="chat-icon-btn" data-close-modal="chatForwardModal" type="button" aria-label="Close">×</button></div>
+            <p>Choose where to forward this text. Private media is not copied to another conversation.</p>
+            <div class="chat-pick-list" id="chatForwardList"></div>
+          </div>
+        </dialog>
+        <dialog class="chat-modal-overlay" id="chatStarredModal" aria-labelledby="chatStarredTitle">
+          <div class="chat-modal compact">
+            <div class="chat-modal-head"><h2 id="chatStarredTitle">Starred messages</h2>
+              <button class="chat-icon-btn" data-close-modal="chatStarredModal" type="button" aria-label="Close">×</button></div>
+            <div class="chat-pick-list" id="chatStarredList"></div>
+          </div>
+        </dialog>
         <dialog class="chat-modal-overlay" id="chatSettingsModal" aria-labelledby="chatSettingsTitle">
           <div class="chat-modal compact" aria-labelledby="chatSettingsTitle">
             <div class="chat-modal-head"><div><span class="chat-page-kicker">Preferences</span><h2 id="chatSettingsTitle">Chat settings</h2></div><button class="chat-icon-btn" data-close-modal="chatSettingsModal" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
