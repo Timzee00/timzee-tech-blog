@@ -199,3 +199,12 @@ html[data-chat-compact="true"] .chat-messages { gap: 5px; }
 .chat-page .chat-message.self .chat-bubble-poll .timzee-poll .timzee-poll-answers>button{color:#182b2b}
 .chat-page .chat-message-body a.social-token-link{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .chat-page .chat-message-body code{background:color-mix(in srgb,currentColor 12%,transparent);padding:2px 4px;border-radius:4px}
+
+.chat-page .chat-verified-translation{display:grid;gap:8px;border:1px solid var(--color-border-strong);padding:10px;border-radius:10px}
+.chat-page .chat-verified-translation[hidden]{display:none!important}
+.chat-page .chat-verified-translation h3{font-size:.9rem;margin:0}
+.chat-page .chat-verified-translation p{font-size:.76rem;line-height:1.45;margin:0;color:var(--color-text-muted)}
+.chat-page .chat-verified-translation label:has(select){display:grid;gap:5px}
+.chat-page .chat-verified-translation select{padding:9px;background:var(--color-surface);color:var(--color-text);border-radius:8px;border:1px solid var(--color-border)}
+.chat-page .chat-message-translation{margin-top:8px;padding:9px 10px;border-inline-start:3px solid currentColor;background:color-mix(in srgb,currentColor 9%,transparent);white-space:pre-wrap;line-height:1.4;font-size:.8rem;overflow-wrap:anywhere}
+.chat-page .chat-message-translation::before{content:"Translated · Groq";display:block;font-size:.65rem;font-weight:700;margin-bottom:3px;opacity:.7}
