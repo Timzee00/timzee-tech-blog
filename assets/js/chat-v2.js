@@ -20,7 +20,7 @@ const VIDEO_EXTENSIONS = new Set(["mp4","webm","mov","m4v","mkv","avi","wmv","fl
 const AUDIO_EXTENSIONS = new Set(["mp3","wav","ogg","m4a","aac","flac","opus","webm"]);
 
 const state = {
-  selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false,
+  selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false, editing: null, editSaving: false,
   drafts: new Map(), previews: new Map(), peopleResults: [], peopleRequest: 0, messageVersions: new Map(), messageRevision: 0,
   user: null, settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [], directPartners: [], staffDMAllowed: false, canCompose: true,
   blockedProfiles: new Map(), groups: [], groupMembers: new Map(), messages: [], pinnedMessages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
@@ -339,7 +339,7 @@ function renderMessages({ preserveScroll = false } = {}) { const target=$("chatM
  data-message-deleted="${deleted?'true':'false'}" data-can-pin="${canPin?'true':'false'}"
  data-message-created="${escapeHTML(m.created_at||'')}"
  data-message-pinned="${m.pinned_at?'true':'false'}"
- data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span><button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop; }
+ data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<div class="chat-message-author">${escapeHTML(p.display_name||'Member')}</div>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}<div class="chat-message-meta"><span>${timeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop; }
 function renderInfoMedia(){const grid=$("infoMediaGrid");if(!grid)return;const items=state.messages.filter(m=>{const t=resolveAttachmentType({mediaType:m.media_type,mediaUrl:m.media_url});return isSafeUrl(m.media_url||'')&&['image','video'].includes(t)}).slice(-18).reverse();grid.innerHTML=items.length?items.map(m=>{const t=resolveAttachmentType({mediaType:m.media_type,mediaUrl:m.media_url});return t==='video'?`<a href="${escapeHTML(m.media_url)}" target="_blank" rel="noopener noreferrer"><video src="${escapeHTML(m.media_url)}" muted preload="metadata"></video></a>`:`<a href="${escapeHTML(m.media_url)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHTML(m.media_url)}" alt="Shared media" loading="lazy"></a>`}).join(''):`<div class="callout">No media shared yet.</div>`;}
 async function loadGroupMembers(threadId){const result=await supabase.from('chat_members').select('id,user_id,role,tags,is_muted,is_pinned,last_read_at').eq('thread_id',threadId);if(result.error)throw result.error;const members=result.data||[];await loadProfiles(members.map(m=>m.user_id));state.groupMembers.set(threadId,members);renderGroupMembers();}
 function renderGroupMembers(){const target=$("infoGroupMembers"),section=$("groupMembersSection");if(!target||!section||!state.activeGroupId)return;const members=state.groupMembers.get(state.activeGroupId)||[];section.hidden=false;$("groupMemberCount").textContent=String(members.length);const owner=isOwnerOfActiveGroup();target.innerHTML=members.map(m=>{const p=profileFor(m.user_id)||{};const tags=Array.isArray(m.tags)?m.tags:[];return `<div class="group-member-row"><img class="chat-member-avatar" src="${escapeHTML(p.avatar_url||DEFAULT_AVATAR)}" alt=""><div class="group-member-copy"><strong>${escapeHTML(p.display_name||'Member')}${m.role==='owner'?' · Owner':''}</strong><div class="member-tag-list">${tags.map(tag=>`<span class="member-tag">${escapeHTML(tag)}</span>`).join('')||'<span class="member-tag muted">No tag</span>'}</div></div>${owner?`<button class="btn ghost sm" data-edit-member-tags="${m.id}" type="button">Edit tag</button>`:''}</div>`}).join('');}
@@ -357,6 +357,79 @@ function openConversationDetails() {
   if (!state.activeThreadId || state.loadingThread) return;
   refreshInfoProfile();
   $("chatInfoPanel").showModal();
+}
+function closeEditPanel(){
+  state.editing=null;
+  state.editSaving=false;
+  const panel=$("chatEditPanel");
+  if(panel)panel.hidden=true;
+  if($("chatEditStatus"))$("chatEditStatus").textContent='Only the text or caption changes. Attachments stay as sent.';
+  if($("chatEditSave"))$("chatEditSave").disabled=false;
+  if($("chatEditCancel"))$("chatEditCancel").disabled=false;
+  if($("chatEditBody"))$("chatEditBody").disabled=false;
+}
+function beginEditMessage(messageId){
+  if(state.sending||state.loadingThread||!state.activeThreadId||!state.canCompose)return;
+  const message=state.messages.find(m=>m.id===messageId);
+  if(!message||message.sender_id!==state.user?.id||message.deleted_at)return;
+  const elapsed=Date.now()-new Date(message.created_at).getTime();
+  if(!Number.isFinite(elapsed)||elapsed< -60000||elapsed>=15*60*1000){
+    window.siteToast?.('Messages can only be edited within 15 minutes of sending.',{type:'info',title:'Edit message'});return;
+  }
+  const panel=$("chatEditPanel"),area=$("chatEditBody");
+  if(!panel||!area)return;
+  // Editing gets its own text area: never replace or discard an unsent draft.
+  state.editing={id:message.id,threadId:state.activeThreadId,expectedBody:message.body??null};
+  state.editSaving=false;
+  area.value=String(message.body||'');
+  area.disabled=false;
+  panel.hidden=false;
+  const available=Math.max(1,Math.ceil((15*60*1000-elapsed)/60000));
+  $("chatEditRemaining").textContent=`${available} minute${available===1?'':'s'} remaining`;
+  $("chatEditStatus").textContent='Edit text or caption. Your current draft is preserved.';
+  area.focus();
+  area.setSelectionRange(area.value.length,area.value.length);
+  panel.scrollIntoView({block:'nearest',behavior:'auto'});
+}
+async function saveEditedMessage(){
+  const editing=state.editing,body=$("chatEditBody")?.value;
+  if(!editing||state.editSaving||editing.threadId!==state.activeThreadId)return;
+  const value=String(body??'').trim();
+  const message=state.messages.find(m=>m.id===editing.id);
+  if(!message||message.deleted_at){closeEditPanel();return;}
+  if(!value&&!message.media_url&&!message.media_path){
+    $("chatEditStatus").textContent='Text messages cannot be empty. Use Unsend to remove one.';
+    $("chatEditBody")?.focus();return;
+  }
+  if(value.length>10000){$("chatEditStatus").textContent='Maximum 10,000 characters.';return;}
+  state.editSaving=true;
+  const save=$("chatEditSave"),cancel=$("chatEditCancel"),area=$("chatEditBody");
+  save.disabled=true;cancel.disabled=true;area.disabled=true;
+  $("chatEditStatus").textContent='Saving edit…';
+  try{
+    const {data,error}=await supabase.rpc('edit_chat_message',{
+      p_message_id:editing.id,p_new_body:value,p_expected_body:editing.expectedBody
+    });
+    if(error)throw error;
+    if(state.activeThreadId===editing.threadId){
+      if(data)mergeMessage(data);
+      closeEditPanel();
+      renderMessages({preserveScroll:true});
+      void renderFriends();
+      window.siteToast?.('Message edited.',{type:'success',title:'Chat'});
+    }else{
+      closeEditPanel();
+    }
+  }catch(error){
+    if(state.editing===editing){
+      $("chatEditStatus").textContent=error.message||'Unable to save edit. Your text is still here.';
+    }
+  }finally{
+    state.editSaving=false;
+    if(state.editing===editing){
+      save.disabled=false;cancel.disabled=false;area.disabled=false;
+    }
+  }
 }
 function rememberDraft() {
   if (state.activeThreadId) state.drafts.set(state.activeThreadId, { body: $("chatBody").value, file: state.mediaFile });
@@ -383,7 +456,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
   }
   const group = groupId ? state.groups.find(item => item.id === groupId) : null;
   if (groupId && !group) return;
-  rememberDraft(); stopRecording(false); clearMediaPreview(); closeAttachMenu(); chatEnhancements.deactivate();
+  closeEditPanel(); rememberDraft(); stopRecording(false); clearMediaPreview(); closeAttachMenu(); chatEnhancements.deactivate();
   state.pinnedMessages=[];renderPinnedMessages();
   const selection = ++state.selection;
   void realtime.stop();
@@ -426,11 +499,12 @@ async function selectConversation({ friendId = '', groupId = '' }) {
 const selectFriend = id => selectConversation({ friendId: id });
 const selectGroup = id => selectConversation({ groupId: id });
 function leaveConversation() {
-  rememberDraft(); ++state.selection; void realtime.stop(); chatEnhancements.deactivate();
+  closeEditPanel(); rememberDraft(); ++state.selection; void realtime.stop(); chatEnhancements.deactivate();
   state.activeThreadId = state.activeFriendId = state.activeGroupId = '';
   state.messages = [];state.pinnedMessages=[];renderPinnedMessages(); state.loadingThread = false; updateComposer(); setView('list');
 }
 function mergeMessage(message) {
+  if(state.editing?.id===message.id&&message.deleted_at)closeEditPanel();
   const index = state.messages.findIndex(item => item.id === message.id);
   if (index < 0) state.messages.push(message); else state.messages[index] = { ...state.messages[index], ...message };
   state.messages.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
@@ -631,6 +705,14 @@ function setupEvents(){
     } catch (error) { reportAppError(error, 'Unable to start conversation or friend request'); }
     finally { if (button.isConnected) button.disabled = false; }
   });
+  $("chatEditSave")?.addEventListener('click',()=>void saveEditedMessage());
+  $("chatEditCancel")?.addEventListener('click',closeEditPanel);
+  $("chatEditBody")?.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();closeEditPanel();}
+    if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){
+      e.preventDefault();void saveEditedMessage();
+    }
+  });
   $("chatBody")?.addEventListener('input',()=>{const t=$("chatBody");t.style.height='auto';t.style.height=`${Math.min(t.scrollHeight,140)}px`;});
   $("chatBody")?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&state.settings.enterToSend){e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));}}); $("chatForm")?.addEventListener('submit',e=>{e.preventDefault();sendMessage().catch(err=>reportAppError(err,'Message send failed'));});
   $("chatMedia")?.addEventListener('change',e=>{
@@ -692,6 +774,9 @@ function setupEvents(){
       }
       await refreshRecent(threadId);
     })().catch(err=>reportAppError(err,'Unable to refresh chat'));
+  });
+  window.addEventListener('timzee:chat-edit-message',e=>{
+    if(e.detail?.messageId)beginEditMessage(e.detail.messageId);
   });
   window.addEventListener('timzee:chat-message-info',e=>{
     if(e.detail?.messageId)void chatEnhancements.messageInfo(e.detail.messageId)
