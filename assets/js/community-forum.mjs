@@ -163,7 +163,9 @@ function enterFeed({mode="home",community=null,push=true,sort=null}={}){
   " · "+Number(community.member_count||0)+" members</span><p>"+
   escape(community.description||"Join this community to discuss technology.")+"</p></div></div>"+
   (community.rules?"<details><summary>Community rules</summary><p>"+escape(community.rules)+"</p></details>":"")+
-  (community.visibility!=="public"?"<p class='forum-privacy-label'>"+(community.visibility==="private"?"Private community":"Restricted: member-only discussions")+"</p>":"")+
+  (community.visibility!=="public"?"<p class='forum-privacy-label'>"+
+   (community.visibility==="private"?"Private community":"Restricted: member-only discussions")+"</p>"+
+   "<button type='button' class='forum-invite-copy' data-copy-invite='"+escape(community.id)+"'>Copy invite link</button>":"")+
   (role==="owner"?"<div class='forum-owner-controls'><label>Who may post? <select id='forumPostingPolicy'>"+
     ["everyone","members","staff"].map(policy=>"<option value='"+policy+"' "+(community.posting_policy===policy?"selected":"")+">"+
      (policy==="everyone"?"Everyone":policy==="members"?"Members":"Moderators")+"</option>").join("")+
@@ -1057,6 +1059,15 @@ function bindEvents(){
   const data=element.dataset;
   if(data.openCommunity){event.preventDefault();await openCommunity(data.openCommunity);return;}
   if(data.openThread){await openThread(data.openThread);return;}
+  if(data.copyInvite){
+   const invite=new URL("discussion.html",location.href);
+   invite.searchParams.set("community",data.copyInvite);
+   try{
+     await navigator.clipboard.writeText(invite.href);
+     notify("Invite link copied. New members must be approved by moderators.");
+   }catch(error){notify("Could not copy invite link.",true);}
+   return;
+  }
   if(data.privateInvite){
    if(!mustLogin())return;
    const {error}=await supabase.rpc("community_request_join",{
