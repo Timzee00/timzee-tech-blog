@@ -1,6 +1,7 @@
 import {supabase,getCurrentUser,getDisplayName,signOut} from "./supabase.js";
 import {escapeHTML,timeAgo,reportAppError,isSafeUrl} from "./utils.js";
 import {setupMentionInput} from "./mentions.js";
+import {renderCommunityMarkdown,insertCommunityFormatting} from "./community-markdown.mjs";
 import "./nav.js";
 
 const $=id=>document.getElementById(id);
@@ -9,7 +10,7 @@ const validId=value=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(Strin
 const categories=["All","AI & ML","Programming","Gadgets","Cybersecurity","Tech Jobs","Gaming","Startups","Learning","Technology","Project Showcase","Sports","Entertainment","World Affairs","General"];
 const PAGE_SIZE=20;
 const state={
- user:null,platformStaff:false,reportTarget:null,communities:[],communityPage:0,hasMoreCommunities:false,
+ user:null,platformStaff:false,reportTarget:null,interests:new Set(),communities:[],communityPage:0,hasMoreCommunities:false,
  selectedCategory:"All",communitySearch:"",activeCommunity:null,activeThread:null,
  view:"home",mode:"home",sort:"active",feed:[],feedCursor:null,feedHasMore:false,feedBusy:false,feedVersion:0,search:"",
  joined:new Set(),memberRoles:new Map(),saved:new Set(),votes:new Map(),
@@ -84,7 +85,7 @@ function renderCategories(){
 async function loadCommunities(reset=true){
  if(reset){state.communityPage=0;state.communities=[];}
  let query=supabase.from("discussion_topics").select(
-  "id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,rules,icon_emoji,created_at")
+  "id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,visibility,rules,icon_emoji,created_at")
   .eq("community_state","active")
   .order("member_count",{ascending:false}).order("created_at",{ascending:false});
  if(state.selectedCategory!=="All")query=query.eq("category",state.selectedCategory);
@@ -138,16 +139,16 @@ function enterFeed({mode="home",community=null,push=true,sort=null}={}){
  if(sort)state.sort=sort;
  $("forumFeedView").hidden=false;$("forumThreadView").hidden=true;
  $("forumFeedTitle").textContent=community?community.title:
-  mode==="joined"?"Your communities":mode==="saved"?"Saved topics":"The community feed";
+  mode==="joined"?"Your communities":mode==="saved"?"Saved topics":mode==="personal"?"My Tech · For You":"The community feed";
  $("forumFeedKicker").textContent=community?"COMMUNITY / "+String(community.category||"TECH").toUpperCase():
-  mode==="joined"?"YOUR SUBSCRIPTIONS":mode==="saved"?"READ LATER":"DISCOVER";
+  mode==="joined"?"YOUR SUBSCRIPTIONS":mode==="saved"?"READ LATER":mode==="personal"?"PERSONALIZED":"DISCOVER";
  $("forumFeedSubtitle").textContent=community?community.description||"Explore community threads.":
   mode==="joined"?"New conversations in communities you've joined.":
-  mode==="saved"?"The useful topics you saved for later.":"Ask questions, exchange ideas and share practical tech knowledge.";
+  mode==="saved"?"The useful topics you saved for later.":mode==="personal"?"Ranked by your chosen interests, communities, freshness, and conversation quality.":"Ask questions, exchange ideas and share practical tech knowledge.";
  $("forumJoinButton").hidden=!community||!state.user;
  $("forumModerationButton").hidden=!community||!isCommunityStaff(community.id);
  if(community){
-  $("forumJoinButton").textContent=state.joined.has(community.id)?"Joined ✓":"Join community";
+  $("forumJoinButton").textContent=state.joined.has(community.id)?"Joined ✓":community.visibility==="public"?"Join community":"Request to join";
   $("forumJoinButton").setAttribute("aria-pressed",String(state.joined.has(community.id)));
  }
  const details=$("forumCommunityDetails");
@@ -159,6 +160,7 @@ function enterFeed({mode="home",community=null,push=true,sort=null}={}){
   " · "+Number(community.member_count||0)+" members</span><p>"+
   escape(community.description||"Join this community to discuss technology.")+"</p></div></div>"+
   (community.rules?"<details><summary>Community rules</summary><p>"+escape(community.rules)+"</p></details>":"")+
+  (community.visibility!=="public"?"<p class='forum-privacy-label'>"+(community.visibility==="private"?"Private community":"Restricted: member-only discussions")+"</p>":"")+
   (role==="owner"?"<div class='forum-owner-controls'><label>Who may post? <select id='forumPostingPolicy'>"+
     ["everyone","members","staff"].map(policy=>"<option value='"+policy+"' "+(community.posting_policy===policy?"selected":"")+">"+
      (policy==="everyone"?"Everyone":policy==="members"?"Members":"Moderators")+"</option>").join("")+
@@ -183,6 +185,19 @@ async function loadFeed(reset=false){
   }
   if(state.mode==="saved"&&!state.activeCommunity&&!state.user){
    state.feed=[];renderFeed();return;
+  }
+  if(state.mode==="personal"&&!state.activeCommunity){
+   const {data,error}=await supabase.rpc("community_personal_feed",{
+     p_limit:PAGE_SIZE,p_offset:reset?0:state.feed.length
+   });
+   if(error)throw error;
+   if(version!==state.feedVersion)return;
+   const page=data||[];
+   state.feedHasMore=page.length===PAGE_SIZE&&state.feed.length<200;
+   state.feed.push(...page.filter(row=>!state.feed.some(old=>old.id===row.id)));
+   await loadPersonalThreadState(page.map(row=>row.id));
+   if(version===state.feedVersion)renderFeed();
+   return;
   }
   const selected=state.activeCommunity;
   if(reset&&selected){
@@ -304,6 +319,8 @@ function threadCard(thread,{pinned=false}={}){
   "<span>· "+escape(preferredDate(thread.created_at))+"</span></div>"+
   "<button class='forum-thread-title' data-open-thread='"+escape(thread.id)+"' type='button'>"+escape(thread.title)+"</button>"+
   (intro?"<p>"+escape(intro)+"</p>":"")+
+  (thread.ranking_reason&&state.mode==="personal"?"<small class='forum-ranking-reason'>"+
+   escape(thread.ranking_reason)+"</small>":"")+
   (thread.media_url?"<span class='forum-topic-media-indicator'>◈ Media attached</span>":"")+
   "<div class='forum-thread-footer'><span>By "+escape(thread.author_name||"Member")+"</span>"+
   "<button type='button' data-open-thread='"+escape(thread.id)+"'>"+
@@ -311,6 +328,7 @@ function threadCard(thread,{pinned=false}={}){
   "<button type='button' data-save-thread='"+escape(thread.id)+"' aria-pressed='"+state.saved.has(thread.id)+"'>"+
    (state.saved.has(thread.id)?"★ Saved":"☆ Save")+"</button>"+
   "<button type='button' data-copy-thread='"+escape(thread.id)+"'>↗ Share</button>"+
+  (state.mode==="personal"?"<button type='button' data-not-interested='"+escape(thread.id)+"'>Not interested</button>":"")+
   "<button type='button' data-report-thread='"+escape(thread.id)+"'>Report</button></div></div></article>";
 }
 function renderPinned(){
@@ -334,7 +352,7 @@ async function openCommunity(id,{push=true}={}){
  let board=findCommunity(id);
  if(!board){
   const {data,error}=await supabase.from("discussion_topics")
-    .select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,rules,icon_emoji,created_at")
+    .select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,visibility,rules,icon_emoji,created_at")
     .eq("id",id).maybeSingle();
   if(error||!data){notify("Community not available.",true);return;}
   board=data;state.communities.push(board);
@@ -347,7 +365,7 @@ async function openCommunitySlug(slug,{push=false}={}){
  if(existing){await openCommunity(existing.id,{push});return;}
  const field=validId(slug)?"id":"slug";
  const {data,error}=await supabase.from("discussion_topics")
-  .select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,rules,icon_emoji,created_at")
+  .select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,visibility,rules,icon_emoji,created_at")
   .eq(field,slug).maybeSingle();
  if(error||!data){notify("Community not found.",true);return;}
  state.communities.push(data);
@@ -363,6 +381,14 @@ async function toggleJoin(){
    if(role==="owner"){notify("The community owner can't leave their own community.",true);return;}
    const {error}=await supabase.from("community_members").delete().eq("community_id",c.id).eq("user_id",state.user.id);
    if(error)throw error;state.joined.delete(c.id);state.memberRoles.delete(c.id);c.member_count=Math.max(0,Number(c.member_count)-1);
+  }else if(c.visibility!=="public"){
+   const {error}=await supabase.from("community_join_requests").insert({
+     community_id:c.id,user_id:state.user.id,status:"pending"
+   });
+   if(error)throw error;
+   button.textContent="Request pending";button.disabled=true;
+   notify("Request sent. Community moderators will review your membership.");
+   return;
   }else{
    const {error}=await supabase.from("community_members").insert({community_id:c.id,user_id:state.user.id,role:"member"});
    if(error)throw error;state.joined.add(c.id);state.memberRoles.set(c.id,"member");c.member_count=Number(c.member_count||0)+1;
@@ -437,7 +463,7 @@ async function openThread(id,{push=true}={}){
  if(!state.activeCommunity||state.activeCommunity.id!==data.community_id){
   if(board)state.activeCommunity=board;
   else{
-   const q=await supabase.from("discussion_topics").select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,rules,icon_emoji").eq("id",data.community_id).maybeSingle();
+   const q=await supabase.from("discussion_topics").select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,visibility,rules,icon_emoji").eq("id",data.community_id).maybeSingle();
    if(q.data){state.activeCommunity=q.data;state.communities.push(q.data);}
   }
  }
@@ -563,7 +589,7 @@ async function createCommunity(event){
     posting_policy:String(values.get("posting_policy")||"everyone"),
     author_id:state.user.id,author_name:memberName(),
     created_at:new Date().toISOString(),updated_at:new Date().toISOString()
-  }).select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,rules,icon_emoji,created_at").single();
+  }).select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,visibility,rules,icon_emoji,created_at").single();
   if(error)throw error;
   state.communities.unshift(data);state.joined.add(id);state.memberRoles.set(id,"owner");
   $("forumCommunityDialog").close();form.reset();
