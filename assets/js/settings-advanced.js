@@ -118,7 +118,10 @@ export async function initializeAdvancedSettings({user,preferences,getPreference
  if(!user?.id)return;
  const uid=user.id,notify=(message,error=false)=>onStatus?.(message,error?"error":"success");
  const interestHost=el("interestOptions"),selected=new Set(),busy=new Set();
- const results=await supabase.from("community_user_interests").select("topic").eq("user_id",uid).limit(30);
+ let results;
+ try{
+   results=await supabase.from("community_user_interests").select("topic").eq("user_id",uid).limit(30);
+ }catch(error){results={data:null,error};}
  const loadFailed=Boolean(results.error);
  if(!loadFailed)for(const row of results.data||[])if(topics.includes(row.topic))selected.add(row.topic);
  const renderInterests=()=>{
@@ -158,7 +161,10 @@ export async function initializeAdvancedSettings({user,preferences,getPreference
   }catch(error){note("interestStatus",error.message,true);}finally{button.disabled=false;}
  });
 
- const privacy=await supabase.from("chat_privacy").select("read_receipts,show_online").eq("user_id",uid).maybeSingle();
+ let privacy;
+ try{
+   privacy=await supabase.from("chat_privacy").select("read_receipts,show_online").eq("user_id",uid).maybeSingle();
+ }catch(error){privacy={data:null,error};}
  const privacyValues={read_receipts:privacy.data?.read_receipts!==false,show_online:privacy.data?.show_online!==false};
  document.querySelectorAll("[data-chat-privacy]").forEach(input=>{
   const key=input.dataset.chatPrivacy;input.checked=privacyValues[key];input.disabled=Boolean(privacy.error);
