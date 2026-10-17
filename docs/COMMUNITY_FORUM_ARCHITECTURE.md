@@ -68,7 +68,8 @@ The archived original source is kept intact; the public new frontend uses the re
 ## Known limitations, deliberate follow-ups
 
 - Currently no video transcoding, streaming ladder, or resumable multi-GB uploads. Short files with lazy loading are appropriate to this release and free-tier limits.
-- Multiple images per post, nested Reddit-like voting on each individual comment, private communities, user-created topic flairs, richer Markdown editor, and native community polls remain future upgrades; do not advertise these as implemented.
+- Implemented in the existing PR (not production-deployed): up to six photos per thread, private/restricted communities with approval requests, owner-only private media, native single-choice polls with optional end times, Markdown authoring/preview, explicit My Tech interest preferences, a diverse ranked feed, and a staff-review auto-moderation queue.
+- Still pending: per-comment Reddit-style voting, user-defined topic flairs, official company posting workspaces, multi-video upload/transcoding, richer editor embeds, advanced moderation appeals, and production authentication/mobile load testing.
 - Per-thread OpenGraph previews need SSR/Edge or dynamic rendering once hosting is restored.
 - Ownerless, system-created community boards are moderated by platform admins, who can appoint a moderator from existing members. Do not assign fake ownership to deleted legacy accounts.
 - Users with more than 200 joined/saved communities need a dedicated keyset membership feed RPC rather than current bounded client-side ID retrieval.
