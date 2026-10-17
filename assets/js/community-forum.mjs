@@ -194,7 +194,17 @@ async function loadFeed(reset=false){
   if(state.mode==="personal"&&!state.activeCommunity){
    // A stable page anchor prevents newly published topics from shifting
    // later pages while the reader is browsing.
-   if(reset||!state.personalFeedAnchor)state.personalFeedAnchor=new Date().toISOString();
+   if(reset||!state.personalFeedAnchor){
+     const clock=await supabase.rpc("community_feed_snapshot_clock");
+     if(clock.error||!clock.data)throw Error("Unable to start the feed. Please retry.");
+     if(version!==state.feedVersion)return;
+     state.personalFeedAnchor=clock.data;
+   }else if(Date.now()-Date.parse(state.personalFeedAnchor)>3.5*60*60*1000){
+     // A fresh snapshot is safer than mixing scores from different time windows.
+     state.feedBusy=false;
+     void loadFeed(true);
+     return;
+   }
    const cursor=state.feedCursor;
    const {data,error}=await supabase.rpc("community_personal_feed_v2",{
      p_limit:PAGE_SIZE,
@@ -265,8 +275,10 @@ async function loadFeed(reset=false){
    notify(error.message||"Could not load community topics.",true);
   }
  }finally{
-  state.feedBusy=false;
-  if(version===state.feedVersion)$("forumLoadMore").hidden=!state.feedHasMore;
+  if(version===state.feedVersion){
+   state.feedBusy=false;
+   $("forumLoadMore").hidden=!state.feedHasMore;
+  }
  }
 }
 async function loadPersonalThreadState(ids){
