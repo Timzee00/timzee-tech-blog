@@ -22,7 +22,7 @@ The v2 ranking function, server clock, browser cursor integration, and moderatio
 - `community_feed_snapshot_clock()` returns the database UTC minute and is requested **once when the feed resets**.
 - `community_personal_feed_v2(p_limit, p_after_score, p_after_created, p_after_id, p_as_of)` orders by rounded weight, creation timestamp, and UUID.
 - The client reuses the same `p_as_of` and the last returned row's score/time/ID as the next cursor.
-- Client helpers validate that cursor fields are sensible, filter duplicate IDs across pages, and restart the feed after 210 minutes.
+- Client helpers validate cursor fields and remove duplicate IDs across pages. The 210-minute session expiry uses monotonic elapsed time (`performance.now()`), so an Android phone with an incorrect system clock will not immediately invalidate the feed.
 - **Limit:** votes, membership and reply totals can change while browsing, which can change scores despite a frozen timestamp. Full cross-page snapshot consistency at larger scale requires materializing a short-lived ranked candidate session or an event-sourced score snapshot; this version primarily stabilizes *new content* arrival and reduces offset-related drift.
 
 ## Moderation behavior
