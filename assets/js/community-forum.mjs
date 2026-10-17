@@ -270,6 +270,59 @@ function mediaHtml(url,type){
   return "<div class='forum-attachment'><video src='"+safeUrl+"' preload='none' controls playsinline aria-label='Community video attachment'></video></div>";
  return "<div class='forum-attachment'><img src='"+safeUrl+"' loading='lazy' decoding='async' alt='Attached image'></div>";
 }
+function showMarkdownPreview(field,preview){
+ const input=$(field),output=$(preview);
+ if(!input||!output)return;
+ output.hidden=!output.hidden;
+ if(!output.hidden)output.innerHTML=renderCommunityMarkdown(input.value);
+}
+function updateAllVisiblePreviews(){
+ for(const [field,preview] of [["forumReplyText","forumReplyPreview"],["forumThreadBodyInput","forumThreadPreview"]]){
+  if(!$(preview).hidden)$(preview).innerHTML=renderCommunityMarkdown($(field).value);
+ }
+}
+async function loadInterests(){
+ state.interests.clear();
+ if(!state.user)return;
+ const {data,error}=await supabase.from("community_user_interests").select("topic")
+  .eq("user_id",state.user.id).limit(30);
+ if(error){console.warn("Could not load interests",error.message);return;}
+ for(const item of data||[])state.interests.add(item.topic);
+}
+function showInterestEditor(){
+ if(!mustLogin())return;
+ $("forumInterestOptions").innerHTML=categories.filter(x=>x!=="All").map(topic=>
+  "<label><input type='checkbox' name='interest' value='"+escape(topic)+"' "+
+  (state.interests.has(topic)?"checked":"")+">"+escape(topic)+"</label>").join("");
+ $("forumInterestDialog").showModal();
+}
+async function submitInterests(event){
+ event.preventDefault();
+ if(!mustLogin())return;
+ const selected=[...new FormData(event.currentTarget).getAll("interest")];
+ const incoming=new Set(selected),removed=[...state.interests].filter(x=>!incoming.has(x));
+ const added=selected.filter(x=>!state.interests.has(x));
+ const results=await Promise.all([
+  removed.length?supabase.from("community_user_interests").delete()
+   .eq("user_id",state.user.id).in("topic",removed):Promise.resolve({error:null}),
+  added.length?supabase.from("community_user_interests").insert(
+   added.map(topic=>({user_id:state.user.id,topic}))):Promise.resolve({error:null})
+ ]);
+ const failure=results.find(r=>r.error);
+ if(failure){notify(failure.error.message,true);await loadInterests();return;}
+ state.interests=incoming;$("forumInterestDialog").close();
+ notify("Your My Tech interests were updated.");
+ if(state.mode==="personal")await loadFeed(true);
+}
+async function hideRecommendation(threadId){
+ if(!mustLogin())return;
+ const {error}=await supabase.from("community_feed_feedback").upsert({
+   user_id:state.user.id,thread_id:threadId,feedback:"not_interested"
+ },{onConflict:"user_id,thread_id"});
+ if(error){notify(error.message,true);return;}
+ state.feed=state.feed.filter(t=>t.id!==threadId);
+ renderFeed();notify("This topic will no longer be recommended.");
+}
 function mediaFile(input){
  const file=input?.files?.[0];return file?.size?file:null;
 }
@@ -457,7 +510,10 @@ async function openThread(id,{push=true}={}){
  const {data,error}=await supabase.from("community_threads")
   .select("id,community_id,author_id,author_name,title,body,kind,status,is_locked,is_pinned,is_legacy_room,created_at,reply_count,score,media_url,media_type")
   .eq("id",id).maybeSingle();
- if(error||!data||data.status!=="published"){notify("This topic is unavailable.",true);return;}
+ if(error||!data||!(data.status==="published"||
+   (state.user&&data.author_id===state.user.id)||isCommunityStaff(data.community_id))){
+   notify("This topic is unavailable.",true);return;
+ }
  const board=findCommunity(data.community_id);
  state.activeThread=data;state.view="thread";
  if(!state.activeCommunity||state.activeCommunity.id!==data.community_id){
@@ -475,8 +531,19 @@ async function openThread(id,{push=true}={}){
   escape(boardName)+"</button> / "+escape(data.kind)+"</p><h1>"+escape(data.title)+
   "</h1><p class='forum-thread-detail-meta'>By "+escape(data.author_name||"Member")+
   " · "+escape(preferredDate(data.created_at))+(data.is_locked?" · Locked":"")+"</p>";
- $("forumThreadBody").textContent=data.body||"";
+ $("forumThreadBody").innerHTML=renderCommunityMarkdown(data.body||"");
  if(data.media_url)$("forumThreadBody").insertAdjacentHTML("beforeend",mediaHtml(data.media_url,data.media_type));
+ const attachments=await supabase.from("community_thread_media")
+  .select("media_url,media_type,position").eq("thread_id",data.id)
+  .order("position",{ascending:true}).limit(6);
+ if(state.activeThread?.id!==data.id)return;
+ const extras=attachments.data||[];
+ if(extras.length){
+  const gallery=document.createElement("div");gallery.className="forum-gallery";
+  gallery.innerHTML=extras.map(media=>mediaHtml(media.media_url,media.media_type)).join("");
+  $("forumThreadBody").append(gallery);
+ }
+ void renderCommunityPoll(data.id);
  $("forumThreadActions").innerHTML=
   "<button type='button' data-vote='1' data-id='"+id+"'>▲</button>"+
   "<strong data-score='"+id+"'>"+Number(data.score||0)+"</strong>"+
@@ -487,7 +554,9 @@ async function openThread(id,{push=true}={}){
   (staff?"<select id='forumModerateAction' aria-label='Moderate this topic'><option value=''>Moderate…</option>"+
     ["pin","unpin","lock","unlock","remove"].map(v=>"<option value='"+v+"'>"+v+"</option>").join("")+
    "</select>":"");
- $("forumReplyForm").hidden=Boolean(data.is_locked);
+ $("forumReplyForm").hidden=Boolean(data.is_locked||data.status!=="published");
+ if(data.status==="pending")notify("This topic is awaiting a moderator's review.");
+ if(data.status==="removed")notify("This topic was removed from the public community.");
  state.replyVersion++;
  state.loadingReplies=false;
  state.replies=[];state.replyCursor=null;state.repliesHasMore=false;state.replyTo=null;
@@ -551,7 +620,7 @@ function renderReplies(){
     "' class='forum-reply-reference'>↳ Reply to "+escape(parent?.author_name||"an earlier message")+"</button>":"";
   return "<article class='forum-reply' id='reply-"+escape(r.id)+"'>"+
    "<span class='forum-reply-number'>#"+(i+1)+"</span><div class='forum-reply-main'>"+
-   header+quote+"<p class='forum-reply-body'>"+escape(r.body||"")+"</p>"+
+   header+quote+"<div class='forum-reply-body forum-markdown'>"+renderCommunityMarkdown(r.body||"")+"</div>"+
    mediaHtml(r.media_url,r.media_type)+
    "<div class='forum-reply-actions'><button type='button' data-reply-to='"+escape(r.id)+"'>Reply</button>"+
    "<button type='button' data-copy-reply='"+escape(r.id)+"'>Copy link</button>"+
@@ -807,6 +876,8 @@ function bindEvents(){
   if(data.copyThread){await shareThread(data.copyThread);return;}
   if(data.reportThread){openForumReport("thread",data.reportThread);return;}
   if(data.reportReply){openForumReport("reply",data.reportReply);return;}
+  if(data.notInterested){await hideRecommendation(data.notInterested);return;}
+  if(data.forumPollVote){await castCommunityPollVote(Number(data.forumPollVote));return;}
   if(data.reviewReport){await reviewForumReport(data.reviewReport,data.resolution);return;}
   if(data.banAuthor){await banForumMember(data.banAuthor);return;}
   if(data.replyTo){startReply(data.replyTo);return;}
