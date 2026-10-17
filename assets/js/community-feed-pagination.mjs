@@ -2,7 +2,7 @@
 // Kept separate so cursor and duplicate behavior can be regression-tested.
 const HEX_UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
 export function communityRankCursor(row){
- if(!row||!HEX_UUID.test(String(row.id||""))||!Number.isFinite(Number(row.recommendation_score))
+ if(!row||!HEX_UUID.test(String(row.id||""))||row.recommendation_score===null||row.recommendation_score===undefined||row.recommendation_score===""||!Number.isFinite(Number(row.recommendation_score))
     ||!Number.isFinite(Date.parse(row.created_at||"")))return null;
  return {
    p_after_score:Number(row.recommendation_score),
