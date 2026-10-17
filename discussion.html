@@ -129,6 +129,7 @@
     <form id="forumThreadForm" class="forum-form">
       <div class="forum-modal-head"><h2 id="forumThreadDialogTitle">Start a topic</h2><button type="button" data-close-forum-dialog aria-label="Close">×</button></div>
       <label>Community<select id="forumThreadCommunity" name="community_id" required></select></label>
+      <label>Optional topic flair<input name="flair" maxlength="28" placeholder="e.g. Help Needed, Tutorial, Showcase"></label>
       <label>Post type<select name="kind"><option value="discussion">Discussion</option><option value="question">Question</option><option value="guide">Guide / tutorial</option><option value="news">Tech news</option><option value="showcase">Project showcase</option></select></label>
       <label>Title<input name="title" maxlength="180" minlength="5" required placeholder="Write a clear, specific title"></label>
       <label>Details<textarea id="forumThreadBodyInput" name="body" maxlength="12000" rows="7" placeholder="Give enough background for meaningful replies."></textarea></label>
