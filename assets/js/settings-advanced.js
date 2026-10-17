@@ -39,7 +39,7 @@ export function validatePreferenceImport(payload){
  function filter(base,input,output,prefix=""){
    if(!input||typeof input!=="object"||Array.isArray(input))return;
    for(const [key,defaultValue] of Object.entries(base)){
-     if(!Object.prototype.hasOwnProperty.call(input,key))continue;
+     if(key==="privacy"||!Object.prototype.hasOwnProperty.call(input,key))continue;
      const value=input[key],path=prefix?prefix+"."+key:key;
      if(typeof defaultValue==="object"&&defaultValue!==null&&!Array.isArray(defaultValue)){
        const nested={};filter(defaultValue,value,nested,path);
@@ -68,7 +68,7 @@ export function mountAdvancedSettings(){
  '<label class="toggle-row"><span><strong>Online presence</strong><small>Show when you are online on supported conversation screens.</small></span><input type="checkbox" data-chat-privacy="show_online"></label></div>');
  section("notifications",'<div class="settings-subheading"><h3>Additional in-app updates</h3></div>'+
  '<div class="settings-stack"><label class="toggle-row"><span><strong>Announcements</strong><small>Optional non-security platform announcements in supported interfaces.</small></span><input type="checkbox" data-path="notifications.announcements"></label>'+
- '<label class="toggle-row"><span><strong>Marketplace activity</strong><small>Listing and marketplace updates on supported interfaces.</small></span><input type="checkbox" data-path="notifications.marketplace"></label></div>');
+ '</div>');
  section("chat",'<div class="settings-subheading"><h3>Conversation sound</h3></div>'+
  '<label class="toggle-row"><span><strong>Chat sound effects</strong><small>Allow message sounds in chat screens that support this preference.</small></span><input type="checkbox" data-path="chat.sounds"></label>');
  const interests=document.createElement("section");interests.id="interests";interests.className="settings-card card";
@@ -102,7 +102,7 @@ export function mountAdvancedSettings(){
  const hero=document.querySelector(".settings-hero p");
  if(hero)hero.textContent="Choose how your account works. Saved preferences sync to your account where supported; browser storage is used for immediate display.";
 }
-export async function initializeAdvancedSettings({user,preferences,onImport,onStatus}){
+export async function initializeAdvancedSettings({user,preferences,getPreferences,onImport,onStatus}){
  if(!user?.id)return;
  const uid=user.id,notify=(message,error=false)=>onStatus?.(message,error?"error":"success");
  const interestHost=el("interestOptions"),selected=new Set(),busy=new Set();
@@ -193,7 +193,7 @@ export async function initializeAdvancedSettings({user,preferences,onImport,onSt
    downloadJson("timzee-settings-"+new Date().toISOString().slice(0,10)+".json",{
     format:"timzee-settings-snapshot-v1",exported_at:new Date().toISOString(),
     scope:"Preferences and selected account settings, not a complete account data export.",
-    max_rows_per_collection:500,preferences:mergePreferences(preferences),...dataset
+    max_rows_per_collection:500,preferences:mergePreferences(getPreferences?.()||preferences),...dataset
    });
    note("dataControlsStatus","Settings snapshot downloaded. Store it privately.");
   }catch(error){note("dataControlsStatus",error.message||"Couldn't export snapshot.",true);}
