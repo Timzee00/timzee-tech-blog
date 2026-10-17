@@ -734,27 +734,43 @@ async function createThread(event){
  const communityId=String(values.get("community_id")||"");
  if(!validId(communityId)){$("forumThreadFormError").textContent="Choose a community.";return;}
  setButtonBusy(button,true);$("forumThreadFormError").textContent="";
- let attachment=null;
+ let uploaded=[],created=null;
  try{
-  attachment=await uploadForumFile(mediaFile(form.querySelector("[name=media]")),"community-threads");
+  const files=[...(form.querySelector("[name=media]")?.files||[])];
+  uploaded=await uploadForumGallery(files);
+  const first=uploaded[0];
   const {data,error}=await supabase.from("community_threads").insert({
     community_id:communityId,author_id:state.user.id,author_name:memberName(),
-    media_url:attachment.url,media_type:attachment.type,
+    media_url:first?.url||null,media_type:first?.type||null,
     title:String(values.get("title")||"").trim(),
     body:String(values.get("body")||"").trim(),
     kind:String(values.get("kind")||"discussion")
-  }).select("id").single();
+  }).select("id,status").single();
   if(error)throw error;
+  created=data;
+  if(uploaded.length>1){
+   const {error:galleryError}=await supabase.from("community_thread_media").insert(
+    uploaded.slice(1).map((item,index)=>({
+      thread_id:data.id,position:index+1,media_url:item.url,
+      media_type:item.type,added_by:state.user.id
+    }))
+   );
+   if(galleryError)notify("The topic posted but some gallery attachments could not be saved.",true);
+  }
+  const pollMessage=await attachPollToThread(created,values);
   $("forumThreadDialog").close();form.reset();
-  attachment=null;
-  await openThread(data.id);
-  notify("Topic published.");
+  $("forumPollOptions").innerHTML="<input name='poll_option' maxlength='120' placeholder='Option 1'><input name='poll_option' maxlength='120' placeholder='Option 2'>";
+  if(data.status==="published")await openThread(data.id);
+  else enterFeed({mode:"personal"});
+  notify(data.status==="pending"
+    ?"Your topic is awaiting moderator approval. Other members cannot see it yet."
+    :pollMessage||"Topic published.");
  }catch(e){
-  await discardRejectedUpload(attachment);
+  if(!created)await Promise.all(uploaded.map(discardRejectedUpload));
   $("forumThreadFormError").textContent=e.message||"Unable to publish.";
+ }finally{setButtonBusy(button,false);}
 }
- finally{setButtonBusy(button,false);}
-}
+
 async function submitReply(event){
  event.preventDefault();
  if(!mustLogin()||!state.activeThread)return;
@@ -980,6 +996,24 @@ function bindEvents(){
  $("createThreadButton").addEventListener("click",()=>showDialog("forumThreadDialog"));
  $("createCommunityButton").addEventListener("click",()=>showDialog("forumCommunityDialog"));
  $("forumCommunityForm").addEventListener("submit",createCommunity);
+ $("forumInterestForm").addEventListener("submit",submitInterests);
+ $("forumInterestButton").addEventListener("click",showInterestEditor);
+ $("forumAddPollOption").addEventListener("click",()=>{
+  const container=$("forumPollOptions");
+  if(container.querySelectorAll("input").length>=6)return;
+  const field=document.createElement("input");field.name="poll_option";
+  field.maxLength=120;field.placeholder="Option "+(container.querySelectorAll("input").length+1);
+  container.append(field);
+ });
+ document.querySelectorAll("[data-format-toolbar]").forEach(toolbar=>{
+  const field=$(toolbar.dataset.formatToolbar);
+  toolbar.addEventListener("click",event=>{
+    const btn=event.target.closest("button");if(!btn)return;
+    if(btn.dataset.format)insertCommunityFormatting(field,btn.dataset.format);
+    if(btn.dataset.togglePreview)showMarkdownPreview(toolbar.dataset.formatToolbar,btn.dataset.togglePreview);
+  });
+  field?.addEventListener("input",updateAllVisiblePreviews);
+ });
  $("forumReportForm").addEventListener("submit",submitForumReport);
  $("forumThreadForm").addEventListener("submit",createThread);
  $("forumReplyForm").addEventListener("submit",submitReply);
@@ -992,7 +1026,7 @@ function bindEvents(){
  $("forumCommunityDetails").addEventListener("click",e=>{
   if(e.target.id==="forumSaveCommunityRules")void savePostingPolicy();
  });
- for(const dialog of [$("forumThreadDialog"),$("forumCommunityDialog"),$("forumReportDialog"),$("forumModerationDialog")]){
+ for(const dialog of [$("forumThreadDialog"),$("forumCommunityDialog"),$("forumReportDialog"),$("forumModerationDialog"),$("forumInterestDialog"]) {
   dialog.addEventListener("click",event=>{
    if(event.target===dialog)dialog.close();
   });
@@ -1012,7 +1046,7 @@ async function boot(){
    }
  }catch(error){console.warn("Forum account unavailable",error);}
  authPanel();
- await loadMemberships();
+ await Promise.all([loadMemberships(),loadInterests()]);
  try{await loadCommunities(true);}catch(error){notify("Cannot load community directory right now.",true);}
  await initializeFromUrl();
 }
