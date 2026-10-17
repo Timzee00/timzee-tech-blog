@@ -27,13 +27,13 @@ test("cursor page merging is idempotent, does not mutate previous data and prese
  assert.equal(previous.length,2);
  assert.deepEqual(appendUniqueCommunityRows([],incoming).map(row=>row.id),[ID2,ID3]);
 });
-test("expired or corrupted feed snapshots are rejected, valid anchors persist",async()=>{
+test("monotonic snapshot duration survives incorrect device wall-clock settings",async()=>{
  const {isCommunitySnapshotStale}=await helpers;
- const now=Date.parse("2026-10-17T11:00:00.000Z");
- assert.equal(isCommunitySnapshotStale("2026-10-17T10:00:00.000Z",now),false);
- assert.equal(isCommunitySnapshotStale("2026-10-17T06:00:00.000Z",now),true);
- assert.equal(isCommunitySnapshotStale("not a timestamp",now),true);
- assert.equal(isCommunitySnapshotStale("2026-10-17T11:03:00.000Z",now),true);
+ const start=230000,now=start+60*60*1000;
+ assert.equal(isCommunitySnapshotStale(start,now),false);
+ assert.equal(isCommunitySnapshotStale(start,start+4*60*60*1000),true);
+ assert.equal(isCommunitySnapshotStale(start,start-1),true);
+ assert.equal(isCommunitySnapshotStale(Number.NaN,now),true);
 });
 test("new feed uses mixed bounded candidate sources with privacy and negative feedback",()=>{
  const migration=read("supabase/migrations/20261017030000_community_personal_feed_v2.sql");
