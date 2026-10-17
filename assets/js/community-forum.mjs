@@ -123,7 +123,9 @@ function setUrl(){
  const url=new URL(location.href);
  url.searchParams.delete("community");url.searchParams.delete("thread");
  if(state.activeThread)url.searchParams.set("thread",state.activeThread.id);
- else if(state.activeCommunity)url.searchParams.set("community",state.activeCommunity.slug||state.activeCommunity.id);
+ else if(state.activeCommunity)url.searchParams.set("community",
+  state.activeCommunity.visibility==="private"?state.activeCommunity.id:
+  (state.activeCommunity.slug||state.activeCommunity.id));
  history.pushState({forum:true},"",url.pathname+url.search);
 }
 function renderNav(){
@@ -134,6 +136,7 @@ function renderNav(){
 }
 function enterFeed({mode="home",community=null,push=true,sort=null}={}){
  state.activeThread=null;state.activeCommunity=community;state.mode=mode;state.view=community?"community":"home";
+ $("forumMembershipNotice").hidden=true;
  state.feed=[];state.feedCursor=null;state.feedHasMore=false;state.search="";
  $("forumThreadSearch").value="";
  if(sort)state.sort=sort;
@@ -534,7 +537,16 @@ async function openCommunitySlug(slug,{push=false}={}){
  const {data,error}=await supabase.from("discussion_topics")
   .select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,visibility,rules,icon_emoji,created_at")
   .eq(field,slug).maybeSingle();
- if(error||!data){notify("Community not found.",true);return;}
+ if(error||!data){
+   if(validId(slug)){
+    notify("This may be an unlisted private community. Only approved members can see its details.",true);
+    const host=$("forumMembershipNotice");host.hidden=false;
+    host.innerHTML="<div><strong>Private community</strong><p>Request access with this invitation link. Moderators must approve new members.</p>"+
+     "<button type='button' data-private-invite='"+escape(slug)+"'>Request membership</button></div>";
+   }else notify("Community not found.",true);
+   return;
+ }
+ $("forumMembershipNotice").hidden=true;
  state.communities.push(data);
  await openCommunity(data.id,{push});
 }
@@ -549,8 +561,8 @@ async function toggleJoin(){
    const {error}=await supabase.from("community_members").delete().eq("community_id",c.id).eq("user_id",state.user.id);
    if(error)throw error;state.joined.delete(c.id);state.memberRoles.delete(c.id);c.member_count=Math.max(0,Number(c.member_count)-1);
   }else if(c.visibility!=="public"){
-   const {error}=await supabase.from("community_join_requests").insert({
-     community_id:c.id,user_id:state.user.id,status:"pending"
+   const {error}=await supabase.rpc("community_request_join",{
+     p_community:c.id,p_note:""
    });
    if(error)throw error;
    button.textContent="Request pending";button.disabled=true;
@@ -1044,6 +1056,16 @@ function bindEvents(){
   const data=element.dataset;
   if(data.openCommunity){event.preventDefault();await openCommunity(data.openCommunity);return;}
   if(data.openThread){await openThread(data.openThread);return;}
+  if(data.privateInvite){
+   if(!mustLogin())return;
+   const {error}=await supabase.rpc("community_request_join",{
+      p_community:data.privateInvite,p_note:""
+   });
+   if(error){notify(error.message||"Could not request membership.",true);return;}
+   $("forumMembershipNotice").textContent="Membership request sent. A moderator must approve you.";
+   notify("Request sent.");
+   return;
+  }
   if(data.forumNav){state.activeCommunity=null;enterFeed({mode:data.forumNav});return;}
   if(data.category){state.selectedCategory=data.category;renderCategories();try{await loadCommunities(true);}catch(e){notify(e.message,true);}return;}
   if(data.forumSort){
