@@ -245,3 +245,6 @@
 .forum-invite-copy{padding:8px 11px;border:1px solid var(--color-border-strong,#b1bec6);border-radius:8px;background:var(--color-surface,#fff);color:var(--color-primary,#087f73);font-size:.74rem;font-weight:800}
 .forum-reply-score{align-self:center;min-width:20px;text-align:center;font-variant-numeric:tabular-nums;font-size:.74rem;font-weight:850;color:var(--color-text,#1e2c35)}
 .forum-reply-actions [data-vote-reply][aria-pressed=true]{color:var(--color-primary,#087f73);background:var(--color-surface-muted,#eaf5f2);border-radius:6px}
+
+.forum-feed-controls[hidden]{display:none!important}
+.forum-ranking-reason{display:inline-flex;margin:2px 0 7px;font-size:.7rem;font-weight:750;color:var(--color-primary,#087f73);background:var(--color-surface-muted,#edf5f3);padding:5px 8px;border-radius:7px}
