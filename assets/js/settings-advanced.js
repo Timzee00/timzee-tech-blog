@@ -69,8 +69,7 @@ export function mountAdvancedSettings(){
  section("notifications",'<div class="settings-subheading"><h3>Additional in-app updates</h3></div>'+
  '<div class="settings-stack"><label class="toggle-row"><span><strong>Announcements</strong><small>Optional non-security platform announcements in supported interfaces.</small></span><input type="checkbox" data-path="notifications.announcements"></label>'+
  '</div>');
- section("chat",'<div class="settings-subheading"><h3>Conversation sound</h3></div>'+
- '<label class="toggle-row"><span><strong>Chat sound effects</strong><small>Allow message sounds in chat screens that support this preference.</small></span><input type="checkbox" data-path="chat.sounds"></label>');
+
  const interests=document.createElement("section");interests.id="interests";interests.className="settings-card card";
  interests.innerHTML='<div class="settings-card-head"><div><span class="settings-kicker">Your technology</span><h2>Tech interests</h2></div><a class="btn ghost sm" href="discussion.html?mytech=1">My Tech feed</a></div>'+
  '<p class="settings-intro">Select topics for your personalized community recommendations. These interests are private to your account.</p>'+
