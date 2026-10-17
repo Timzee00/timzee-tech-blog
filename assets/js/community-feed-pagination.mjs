@@ -19,8 +19,9 @@ export function appendUniqueCommunityRows(previous,incoming){
  }
  return result;
 }
-export function isCommunitySnapshotStale(iso,nowMs=Date.now(),maxAgeMs=210*60*1000){
- const time=Date.parse(iso||"");
- return !Number.isFinite(time)||!Number.isFinite(nowMs)
-   ||nowMs<time-60000||nowMs-time>maxAgeMs;
+// Both values are elapsed, monotonic milliseconds (performance.now()), not
+// wall-clock dates. Phones with incorrect time must still browse normally.
+export function isCommunitySnapshotStale(startMs,nowMs,maxAgeMs=210*60*1000){
+ return !Number.isFinite(startMs)||!Number.isFinite(nowMs)
+   ||startMs<0||nowMs<startMs||nowMs-startMs>maxAgeMs;
 }
