@@ -715,11 +715,12 @@ async function createCommunity(event){
   const {data,error}=await supabase.from("discussion_topics").insert({
     id,title,description,category:String(values.get("category")||"Technology"),
     posting_policy:String(values.get("posting_policy")||"everyone"),
+    visibility:String(values.get("visibility")||"public"),
     author_id:state.user.id,author_name:memberName(),
     created_at:new Date().toISOString(),updated_at:new Date().toISOString()
   }).select("id,slug,title,description,category,author_id,author_name,member_count,posting_policy,community_state,visibility,rules,icon_emoji,created_at").single();
   if(error)throw error;
-  state.communities.unshift(data);state.joined.add(id);state.memberRoles.set(id,"owner");
+  state.communities.unshift({...data,visibility:String(values.get("visibility")||"public")});state.joined.add(id);state.memberRoles.set(id,"owner");
   $("forumCommunityDialog").close();form.reset();
   renderCommunityList();await openCommunity(id);
   notify("Your community is ready! Start its first topic.");
@@ -837,9 +838,56 @@ async function openModerationWorkspace(){
  const board=state.activeCommunity;
  if(!board||!isCommunityStaff(board.id))return;
  $("forumModerationDialog").showModal();
+ $("forumAutomaticQueue").textContent="Loading automatic review queue…";
+ $("forumJoinQueue").textContent="Loading membership requests…";
  $("forumReportsQueue").textContent="Loading reports…";
  $("forumModeratorMembers").textContent="Loading community members…";
- await Promise.all([loadModerationReports(board.id),loadModeratorMembers(board.id)]);
+ await Promise.all([loadModerationReports(board.id),loadModeratorMembers(board.id),loadAutomodQueue(board.id),loadJoinQueue(board.id)]);
+}
+async function loadAutomodQueue(boardId){
+ const host=$("forumAutomaticQueue");
+ const {data,error}=await supabase.rpc("community_pending_content",{
+  p_community:boardId,p_limit:30
+ });
+ if(error){host.textContent=error.message;return;}
+ host.innerHTML=(data||[]).map(item=>
+  "<article class='forum-mod-item'><strong>"+escape(item.type)+" · "+
+   escape(item.reason||"Needs review")+"</strong><p>"+escape(item.text)+"</p>"+
+   "<div><button type='button' data-auto-review='"+escape(item.id)+"' data-auto-type='"+escape(item.type)+"' data-auto-action='approve'>Approve</button>"+
+   "<button type='button' data-auto-review='"+escape(item.id)+"' data-auto-type='"+escape(item.type)+"' data-auto-action='remove'>Remove</button></div></article>"
+ ).join("")||"<p class='forum-muted'>No suspicious content needs review.</p>";
+}
+async function loadJoinQueue(boardId){
+ const host=$("forumJoinQueue");
+ const {data,error}=await supabase.from("community_join_requests")
+  .select("user_id,note,created_at").eq("community_id",boardId)
+  .eq("status","pending").order("created_at",{ascending:true}).limit(30);
+ if(error){host.textContent=error.message;return;}
+ host.innerHTML=(data||[]).map(item=>
+  "<article class='forum-mod-item'><strong>Membership request</strong>"+
+   "<small>"+escape(item.user_id)+" · "+escape(preferredDate(item.created_at))+"</small>"+
+   (item.note?"<p>"+escape(item.note)+"</p>":"")+
+   "<div><button type='button' data-join-review='"+escape(item.user_id)+"' data-join-approve='true'>Approve</button>"+
+   "<button type='button' data-join-review='"+escape(item.user_id)+"' data-join-approve='false'>Decline</button></div></article>"
+ ).join("")||"<p class='forum-muted'>No membership requests pending.</p>";
+}
+async function reviewAutoContent(id,type,action){
+ const board=state.activeCommunity;if(!board||!isCommunityStaff(board.id))return;
+ const {error}=await supabase.rpc("community_review_content",{
+  p_id:id,p_type:type,p_action:action
+ });
+ if(error){notify(error.message,true);return;}
+ await loadAutomodQueue(board.id);
+ notify(action==="approve"?"Content approved.":"Content removed.");
+}
+async function reviewCommunityJoin(id,approve){
+ const board=state.activeCommunity;if(!board||!isCommunityStaff(board.id))return;
+ const {error}=await supabase.rpc("community_review_join",{
+   p_community:board.id,p_member:id,p_approve:approve
+ });
+ if(error){notify(error.message,true);return;}
+ await Promise.all([loadJoinQueue(board.id),loadModeratorMembers(board.id)]);
+ notify(approve?"Member approved.":"Membership request declined.");
 }
 async function loadModerationReports(boardId){
  const {data,error}=await supabase.from("community_reports")
@@ -954,6 +1002,8 @@ function bindEvents(){
   if(data.notInterested){await hideRecommendation(data.notInterested);return;}
   if(data.forumPollVote){await castCommunityPollVote(Number(data.forumPollVote));return;}
   if(data.reviewReport){await reviewForumReport(data.reviewReport,data.resolution);return;}
+  if(data.autoReview){await reviewAutoContent(data.autoReview,data.autoType,data.autoAction);return;}
+  if(data.joinReview){await reviewCommunityJoin(data.joinReview,data.joinApprove==="true");return;}
   if(data.banAuthor){await banForumMember(data.banAuthor);return;}
   if(data.replyTo){startReply(data.replyTo);return;}
   if(data.cancelReply!==undefined){state.replyTo=null;$("forumReplyTarget").hidden=true;return;}
