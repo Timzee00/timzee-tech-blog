@@ -1048,6 +1048,7 @@ async function initializeFromUrl(){
    else enterFeed({mode:"home",push:false});
  }
  else if(community)await openCommunitySlug(community,{push:false});
+ else if(params.get("mytech")==="1")enterFeed({mode:"personal",push:false});
  else enterFeed({mode:"home",push:false});
 }
 function bindEvents(){
@@ -1178,5 +1179,6 @@ async function boot(){
  await Promise.all([loadMemberships(),loadInterests()]);
  try{await loadCommunities(true);}catch(error){notify("Cannot load community directory right now.",true);}
  await initializeFromUrl();
+ if(new URLSearchParams(location.search).get("interests")==="1"&&state.user)showInterestEditor();
 }
 boot().catch(error=>{reportAppError(error,"Community forum failed to start");notify("Could not load communities. Refresh to try again.",true);});
