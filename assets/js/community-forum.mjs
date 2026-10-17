@@ -263,12 +263,48 @@ async function loadPersonalThreadState(ids){
  for(const item of votes.data||[])state.votes.set(item.thread_id,item.value);
  for(const item of saved.data||[])state.saved.add(item.thread_id);
 }
-function mediaHtml(url,type){
- if(!url||!isSafeUrl(url))return "";
+function mediaHtml(url,type,kind="thread",itemId="",position=0){
+ if(!url)return "";
+ if(String(url).startsWith("forum-private-media/")){
+  return "<div class='forum-attachment forum-private-attachment' data-private-kind='"+escape(kind)+
+   "' data-private-id='"+escape(itemId)+"' data-private-position='"+Number(position)+
+   "' data-media-type='"+escape(type||"image")+"'><span>🔒 Loading member-only media…</span></div>";
+ }
+ if(!isSafeUrl(url))return "";
  const safeUrl=escape(url);
  if(type==="video"||/\.(mp4|webm)(\?|$)/i.test(url))
   return "<div class='forum-attachment'><video src='"+safeUrl+"' preload='none' controls playsinline aria-label='Community video attachment'></video></div>";
  return "<div class='forum-attachment'><img src='"+safeUrl+"' loading='lazy' decoding='async' alt='Attached image'></div>";
+}
+async function hydratePrivateForumMedia(root){
+ const nodes=[...root.querySelectorAll("[data-private-kind][data-private-id]")];
+ if(!nodes.length)return;
+ const {data}=await supabase.auth.getSession();
+ const token=data?.session?.access_token;
+ for(const node of nodes){
+  if(!node.isConnected||!token)continue;
+  const kind=node.dataset.privateKind,item_id=node.dataset.privateId;
+  const position=Number(node.dataset.privatePosition||0);
+  try{
+   const response=await fetch("/.netlify/functions/forum-media-sign",{
+    method:"POST",cache:"no-store",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+    body:JSON.stringify({kind,item_id,position}),
+    signal:AbortSignal.timeout(14000)
+   });
+   const payload=await response.json().catch(()=>({}));
+   if(!response.ok||!payload.signedUrl||!isSafeUrl(payload.signedUrl))
+    throw Error(payload.error||"Private attachment unavailable.");
+   if(!node.isConnected)continue;
+   const element=document.createElement(node.dataset.mediaType==="video"?"video":"img");
+   element.src=payload.signedUrl;
+   if(element.tagName==="VIDEO"){element.controls=true;element.preload="none";element.playsInline=true;}
+   else{element.loading="lazy";element.decoding="async";element.alt="Private community attachment";}
+   node.replaceChildren(element);
+  }catch(error){
+   node.textContent="🔒 "+(error.message||"Unable to load private media");
+  }
+ }
 }
 function showMarkdownPreview(field,preview){
  const input=$(field),output=$(preview);
@@ -368,14 +404,14 @@ async function attachPollToThread(thread,values){
  if(error)return "Your topic was posted, but the poll could not be created: "+error.message;
  return null;
 }
-async function uploadForumGallery(files){
+async function uploadForumGallery(files,communityId){
  if(!files.length)return [];
  if(files.length>6)throw Error("You can attach at most six photos.");
  if(files.length>1&&files.some(file=>!file.type.startsWith("image/")))
   throw Error("Use up to six photos or one video, not a mixture.");
  const uploaded=[];
  try{
-  for(const file of files)uploaded.push(await uploadForumFile(file,"community-threads"));
+  for(const file of files)uploaded.push(await uploadForumFile(file,"community-threads",communityId));
   return uploaded;
  }catch(error){
   await Promise.all(uploaded.map(discardRejectedUpload));
@@ -385,11 +421,27 @@ async function uploadForumGallery(files){
 function mediaFile(input){
  const file=input?.files?.[0];return file?.size?file:null;
 }
-async function uploadForumFile(file,folder){
+async function uploadForumFile(file,folder,communityId){
  if(!file)return {url:null,type:null};
  if(file.size>12*1024*1024||file.size<1)throw Error("Attachment must be under 12 MB.");
  if(!["image/jpeg","image/png","image/webp","image/gif","video/mp4","video/webm"].includes(file.type))
   throw Error("Use JPEG, PNG, WebP, GIF, MP4 or WebM.");
+ const board=findCommunity(communityId)||state.activeCommunity;
+ if(!board||board.id!==communityId)throw Error("Select a community before attaching media.");
+ const isPrivate=board.visibility!=="public";
+ const extension=String(file.name||"").split(".").pop().toLowerCase();
+ if(!["jpg","jpeg","png","gif","webp","mp4","webm"].includes(extension))
+  throw Error("This attachment file extension is unsupported.");
+ if(isPrivate){
+  const path=state.user.id+"/"+(folder==="community-replies"?"replies":"threads")+
+    "/"+crypto.randomUUID()+"."+extension;
+  const {error}=await supabase.storage.from("forum-private-media").upload(path,file,{
+   upsert:false,contentType:file.type,cacheControl:"180"
+  });
+  if(error)throw Error(error.message||"Private media upload failed.");
+  return {url:"forum-private-media/"+path,type:file.type.startsWith("video")?"video":"image",
+   path,bucket:"forum-private-media"};
+ }
  const {uploadMedia}=await import("./media.js");
  const url=await uploadMedia(file,folder+"/"+state.user.id);
  if(!url)throw Error("Unable to upload attachment.");
@@ -402,14 +454,17 @@ async function uploadForumFile(file,folder){
     path=decodeURIComponent(parsed.pathname.slice("/storage/v1/object/public/media/".length));
   }
  }catch{ /* Upload succeeded; backend will still reference the returned URL. */ }
- return {url,type:file.type.startsWith("video")?"video":"image",path};
+ return {url,type:file.type.startsWith("video")?"video":"image",path,bucket:"media"};
 }
 async function discardRejectedUpload(attachment){
  if(!attachment?.path||!state.user)return;
- const allowed=["community-threads/","community-replies/"].some(prefix=>
-  attachment.path.startsWith(prefix+state.user.id+"/"));
+ const privateMedia=attachment.bucket==="forum-private-media";
+ const allowed=privateMedia?
+  attachment.path.startsWith(state.user.id+"/threads/")||attachment.path.startsWith(state.user.id+"/replies/"):
+  ["community-threads/","community-replies/"].some(prefix=>
+   attachment.path.startsWith(prefix+state.user.id+"/"));
  if(!allowed)return;
- const {error}=await supabase.storage.from("media").remove([attachment.path]);
+ const {error}=await supabase.storage.from(privateMedia?"forum-private-media":"media").remove([attachment.path]);
  if(error)console.warn("Could not reclaim failed community upload:",error.message);
 }
 function threadCard(thread,{pinned=false}={}){
@@ -591,7 +646,7 @@ async function openThread(id,{push=true}={}){
   "</h1><p class='forum-thread-detail-meta'>By "+escape(data.author_name||"Member")+
   " · "+escape(preferredDate(data.created_at))+(data.is_locked?" · Locked":"")+"</p>";
  $("forumThreadBody").innerHTML=renderCommunityMarkdown(data.body||"");
- if(data.media_url)$("forumThreadBody").insertAdjacentHTML("beforeend",mediaHtml(data.media_url,data.media_type));
+ if(data.media_url)$("forumThreadBody").insertAdjacentHTML("beforeend",mediaHtml(data.media_url,data.media_type,"thread",data.id));
  const attachments=await supabase.from("community_thread_media")
   .select("media_url,media_type,position").eq("thread_id",data.id)
   .order("position",{ascending:true}).limit(6);
@@ -599,9 +654,10 @@ async function openThread(id,{push=true}={}){
  const extras=attachments.data||[];
  if(extras.length){
   const gallery=document.createElement("div");gallery.className="forum-gallery";
-  gallery.innerHTML=extras.map(media=>mediaHtml(media.media_url,media.media_type)).join("");
+  gallery.innerHTML=extras.map(media=>mediaHtml(media.media_url,media.media_type,"gallery",data.id,media.position)).join("");
   $("forumThreadBody").append(gallery);
  }
+ void hydratePrivateForumMedia($("forumThreadBody"));
  void renderCommunityPoll(data.id);
  $("forumThreadActions").innerHTML=
   "<button type='button' data-vote='1' data-id='"+id+"'>▲</button>"+
@@ -680,7 +736,7 @@ function renderReplies(){
   return "<article class='forum-reply' id='reply-"+escape(r.id)+"'>"+
    "<span class='forum-reply-number'>#"+(i+1)+"</span><div class='forum-reply-main'>"+
    header+quote+"<div class='forum-reply-body forum-markdown'>"+renderCommunityMarkdown(r.body||"")+"</div>"+
-   mediaHtml(r.media_url,r.media_type)+
+   mediaHtml(r.media_url,r.media_type,"reply",r.id)+
    "<div class='forum-reply-actions'><button type='button' data-reply-to='"+escape(r.id)+"'>Reply</button>"+
    "<button type='button' data-copy-reply='"+escape(r.id)+"'>Copy link</button>"+
    "<button type='button' data-report-reply='"+escape(r.id)+"'>Report</button>"+
@@ -689,6 +745,7 @@ function renderReplies(){
    "</div></div></article>";
  }).join("")||"<div class='forum-empty'><strong>No replies yet</strong><p>Start a helpful discussion.</p></div>";
  $("forumMoreReplies").hidden=!state.repliesHasMore;
+ void hydratePrivateForumMedia($("forumReplies"));
 }
 function startReply(id){
  if(!mustLogin())return;
@@ -738,7 +795,7 @@ async function createThread(event){
  let uploaded=[],created=null;
  try{
   const files=[...(form.querySelector("[name=media]")?.files||[])];
-  uploaded=await uploadForumGallery(files);
+  uploaded=await uploadForumGallery(files,communityId);
   const first=uploaded[0];
   const {data,error}=await supabase.from("community_threads").insert({
     community_id:communityId,author_id:state.user.id,author_name:memberName(),
@@ -781,7 +838,7 @@ async function submitReply(event){
  const button=event.currentTarget.querySelector("[type=submit]");setButtonBusy(button,true);
  let attachment=null;
  try{
-  attachment=await uploadForumFile(selectedMedia,"community-replies");
+  attachment=await uploadForumFile(selectedMedia,"community-replies",state.activeThread.community_id);
   const {error}=await supabase.from("discussion_messages").insert({
     id:crypto.randomUUID(),thread_id:state.activeThread.id,topic_id:state.activeThread.community_id,
     author_id:state.user.id,author_name:memberName(),body,reply_to:state.replyTo,
