@@ -51,6 +51,7 @@ test("viewport containment loads after design-system overrides", () => {
  assert.ok(styles.indexOf('viewport-guard.css')>styles.indexOf('design-system.css'));
  assert.ok(styles.indexOf('viewport-guard.css')>styles.indexOf('mobile-acceptance-fixes.css'));
  assert.match(admin,/viewport-guard\.css/);
+ assert.ok(admin.indexOf("viewport-guard.css")>admin.indexOf("design-system.css"));
  assert.match(guard,/overflow-x: clip/);
  assert.match(guard,/overflow-x: auto/);
  assert.doesNotMatch(responsive,/html,\s*body\s*\{[^}]*overflow-x:\s*visible/s);
