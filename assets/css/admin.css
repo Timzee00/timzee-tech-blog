@@ -1,10 +1,10 @@
-@import url("viewport-guard.css");
 @import url("variables.css");
 @import url("avatars.css");
 @import url("animations.css");
 @import url("utilities.css");
 @import url("forms.css");
 @import url("design-system.css");
+@import url("viewport-guard.css");
 
 /* Staff tokens map to the shared light and dark palette. */
 .admin-shell,
