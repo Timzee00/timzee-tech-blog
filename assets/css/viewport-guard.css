@@ -88,3 +88,14 @@ dialog:where([open]):not(.fullscreen-dialog) {
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* Any future rich-text/code content inside cards must remain readable through
+   an internal scroller rather than disappearing beyond the phone edge. */
+:where(.card, .settings-card, .forum-panel, .admin-card, .post-article, .reader-content)
+:where(pre, .code-block, .highlight) {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
