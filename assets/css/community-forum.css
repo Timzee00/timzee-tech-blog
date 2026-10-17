@@ -240,3 +240,8 @@
 .forum-private-attachment{display:grid;place-items:center;min-height:130px;padding:10px;background:color-mix(in srgb,var(--color-primary,#087f73) 6%,var(--color-surface-muted,#f0f3f6))}
 .forum-private-attachment>span{font-size:.77rem;color:var(--color-text-muted,#63737b)}
 @media(max-width:550px){.forum-interest-options{grid-template-columns:1fr}.forum-gallery{gap:5px}.forum-poll-option{padding:10px}}
+
+.forum-topic-flair{display:inline-block;padding:4px 7px;border:1px solid var(--color-border,#d9e5e5);border-radius:6px;background:var(--color-surface-muted,#eef3f5);font-size:.69rem;font-weight:750}
+.forum-invite-copy{padding:8px 11px;border:1px solid var(--color-border-strong,#b1bec6);border-radius:8px;background:var(--color-surface,#fff);color:var(--color-primary,#087f73);font-size:.74rem;font-weight:800}
+.forum-reply-score{align-self:center;min-width:20px;text-align:center;font-variant-numeric:tabular-nums;font-size:.74rem;font-weight:850;color:var(--color-text,#1e2c35)}
+.forum-reply-actions [data-vote-reply][aria-pressed=true]{color:var(--color-primary,#087f73);background:var(--color-surface-muted,#eaf5f2);border-radius:6px}
