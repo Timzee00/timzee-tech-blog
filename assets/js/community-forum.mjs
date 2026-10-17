@@ -323,6 +323,65 @@ async function hideRecommendation(threadId){
  state.feed=state.feed.filter(t=>t.id!==threadId);
  renderFeed();notify("This topic will no longer be recommended.");
 }
+async function renderCommunityPoll(threadId){
+ const host=$("forumPollContainer");host.hidden=true;host.replaceChildren();
+ const {data,error}=await supabase.rpc("community_poll_summary",{p_thread:threadId});
+ if(state.activeThread?.id!==threadId||error||!data?.id)return;
+ const closed=Boolean(data.closed_at)||(data.ends_at&&Date.parse(data.ends_at)<=Date.now());
+ const total=Math.max(0,Number(data.total_votes||0));
+ const canVote=Boolean(state.user)&&!closed;
+ host.hidden=false;
+ host.innerHTML="<div class='forum-poll-header'><strong>Poll · "+escape(data.question)+"</strong>"+
+  "<small>"+(closed?"Voting closed":data.ends_at?"Ends "+escape(new Date(data.ends_at).toLocaleString()):"No closing time")+"</small></div>"+
+  "<div class='forum-poll-options'>"+(data.options||[]).map(opt=>{
+    const n=Number(opt.number),count=Number(opt.votes||0),pct=total?Math.round(count*100/total):0;
+    const chosen=Number(data.my_vote)===n;
+    return "<button type='button' data-forum-poll-vote='"+n+"' "+(!canVote?"disabled":"")+
+     " aria-pressed='"+chosen+"' class='forum-poll-option "+(chosen?"selected":"")+"'>"+
+     "<span>"+escape(opt.label)+"</span>"+
+     (data.results_visible?"<strong>"+pct+"% · "+count+"</strong>":"<strong>"+(canVote?"Vote":"Sign in")+"</strong>")+
+     (data.results_visible?"<i style='width:"+pct+"%' aria-hidden='true'></i>":"")+"</button>";
+  }).join("")+"</div><p>"+total+" votes · One selection per member; you can change your vote until closing.</p>";
+}
+async function castCommunityPollVote(option){
+ if(!mustLogin()||!state.activeThread)return;
+ const poll=await supabase.rpc("community_poll_summary",{p_thread:state.activeThread.id});
+ if(poll.error||!poll.data?.id)return;
+ const {error}=await supabase.rpc("community_vote_poll",{
+  p_poll:poll.data.id,p_option:option
+ });
+ if(error){notify(error.message||"Unable to cast vote.",true);return;}
+ await renderCommunityPoll(state.activeThread.id);
+ notify("Vote recorded.");
+}
+async function attachPollToThread(thread,values){
+ const question=String(values.get("poll_question")||"").trim();
+ if(!question)return null;
+ const options=values.getAll("poll_option").map(x=>String(x||"").trim()).filter(Boolean);
+ if(options.length<2||options.length>6)throw Error("Polls need 2–6 nonempty options.");
+ if(thread.status!=="published")return "Poll setup will be available after moderation approval.";
+ const hours=Number(values.get("poll_duration")||0);
+ const endsAt=hours?new Date(Date.now()+hours*3600000).toISOString():null;
+ const {error}=await supabase.rpc("community_create_poll",{
+  p_thread:thread.id,p_question:question,p_options:options,p_ends_at:endsAt
+ });
+ if(error)return "Your topic was posted, but the poll could not be created: "+error.message;
+ return null;
+}
+async function uploadForumGallery(files){
+ if(!files.length)return [];
+ if(files.length>6)throw Error("You can attach at most six photos.");
+ if(files.length>1&&files.some(file=>!file.type.startsWith("image/")))
+  throw Error("Use up to six photos or one video, not a mixture.");
+ const uploaded=[];
+ try{
+  for(const file of files)uploaded.push(await uploadForumFile(file,"community-threads"));
+  return uploaded;
+ }catch(error){
+  await Promise.all(uploaded.map(discardRejectedUpload));
+  throw error;
+ }
+}
 function mediaFile(input){
  const file=input?.files?.[0];return file?.size?file:null;
 }
