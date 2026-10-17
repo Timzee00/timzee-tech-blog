@@ -99,3 +99,16 @@ dialog:where([open]):not(.fullscreen-dialog) {
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Unwrapped wide tables still need an explicit scroll surface. Tables already
+   inside .table-wrap keep that wrapper's native overflow behavior. */
+@media (max-width: 768px) {
+  :where(.admin-card, .settings-card, .forum-panel, .page-shell, .post-layout) > table {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
