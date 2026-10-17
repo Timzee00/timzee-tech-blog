@@ -11,7 +11,7 @@ const categories=["All","AI & ML","Programming","Gadgets","Cybersecurity","Tech 
 const PAGE_SIZE=20;
 const state={
  user:null,platformStaff:false,reportTarget:null,interests:new Set(),communities:[],communityPage:0,hasMoreCommunities:false,
- selectedCategory:"All",communitySearch:"",activeCommunity:null,activeThread:null,
+ selectedCategory:"All",communitySearch:"",activeCommunity:null,activeThread:null,personalFeedAnchor:null,
  view:"home",mode:"home",sort:"active",feed:[],feedCursor:null,feedHasMore:false,feedBusy:false,feedVersion:0,search:"",
  joined:new Set(),memberRoles:new Map(),saved:new Set(),votes:new Map(),replyVotes:new Map(),replyVoteBusy:new Set(),
  pinned:[],replies:[],replyCursor:null,repliesHasMore:false,replyTo:null,loadingReplies:false,replyVersion:0,voteBusy:new Set()
@@ -137,7 +137,7 @@ function renderNav(){
 function enterFeed({mode="home",community=null,push=true,sort=null}={}){
  state.activeThread=null;state.activeCommunity=community;state.mode=mode;state.view=community?"community":"home";
  $("forumMembershipNotice").hidden=true;
- state.feed=[];state.feedCursor=null;state.feedHasMore=false;state.search="";
+ state.feed=[];state.feedCursor=null;state.feedHasMore=false;state.search="";state.personalFeedAnchor=null;
  $("forumThreadSearch").value="";
  if(sort)state.sort=sort;
  $("forumFeedView").hidden=false;$("forumThreadView").hidden=true;
@@ -192,14 +192,24 @@ async function loadFeed(reset=false){
    state.feed=[];renderFeed();return;
   }
   if(state.mode==="personal"&&!state.activeCommunity){
-   const {data,error}=await supabase.rpc("community_personal_feed",{
-     p_limit:PAGE_SIZE,p_offset:reset?0:state.feed.length
+   // A stable page anchor prevents newly published topics from shifting
+   // later pages while the reader is browsing.
+   if(reset||!state.personalFeedAnchor)state.personalFeedAnchor=new Date().toISOString();
+   const cursor=state.feedCursor;
+   const {data,error}=await supabase.rpc("community_personal_feed_v2",{
+     p_limit:PAGE_SIZE,
+     p_after_score:cursor?.recommendation_score??null,
+     p_after_created:cursor?.created_at??null,
+     p_after_id:cursor?.id??null,
+     p_as_of:state.personalFeedAnchor
    });
    if(error)throw error;
    if(version!==state.feedVersion)return;
    const page=data||[];
-   state.feedHasMore=page.length===PAGE_SIZE&&state.feed.length<200;
-   state.feed.push(...page.filter(row=>!state.feed.some(old=>old.id===row.id)));
+   state.feedHasMore=page.length===PAGE_SIZE&&state.feed.length+page.length<200;
+   if(page.length)state.feedCursor=page.at(-1);
+   const seen=new Set(state.feed.map(row=>row.id));
+   state.feed.push(...page.filter(row=>!seen.has(row.id)));
    await loadPersonalThreadState(page.map(row=>row.id));
    if(version===state.feedVersion)renderFeed();
    return;
@@ -491,6 +501,7 @@ function threadCard(thread,{pinned=false}={}){
   (thread.flair?"<span class='forum-topic-flair'>"+escape(thread.flair)+"</span>":"")+
   "<span>· "+escape(preferredDate(thread.created_at))+"</span></div>"+
   "<button class='forum-thread-title' data-open-thread='"+escape(thread.id)+"' type='button'>"+escape(thread.title)+"</button>"+
+  (state.mode==="personal"&&thread.ranking_reason?"<span class='forum-ranking-reason'>"+escape(thread.ranking_reason)+"</span>":"")+
   (intro?"<p>"+escape(intro)+"</p>":"")+
   (thread.ranking_reason&&state.mode==="personal"?"<small class='forum-ranking-reason'>"+
    escape(thread.ranking_reason)+"</small>":"")+
