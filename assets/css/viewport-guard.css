@@ -1,0 +1,90 @@
+/* Site-wide viewport integrity (must load AFTER design-system and page layers).
+   Long content gets an explicit local scroller instead of expanding document width.
+   Never use a global :where(*) { overflow:hidden } rule: that would hide controls. */
+:root, html, body {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+@supports not (overflow: clip) {
+  html, body { overflow-x: hidden; }
+}
+main, .page-shell, .container, .site-header, .site-header .wrap, .footer {
+  min-width: 0;
+  max-width: 100%;
+}
+main, .page-shell { overflow-x: clip; }
+:where(.content-grid, .hero-grid, .feature-grid, .post-layout, .profile-grid,
+  .settings-layout, .forum-layout, .discussion-shell, .marketplace-grid,
+  .chat-shell, .chat-layout, .admin-panel, .admin-panel-split,
+  .settings-grid, .story-grid) > * { min-width: 0; }
+:where(.post-content, .reader-content, .message-body, .comment-body,
+  .forum-thread-main, .forum-reply-body, .settings-content,
+  .settings-card, .setting-row, .toggle-row, .admin-card) {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+:where(img, video, canvas, iframe, svg, object, embed) {
+  max-width: 100%;
+}
+/* Text/code and genuine tabular datasets scroll within their own boxes. */
+:where(.post-content, .reader-content, .markdown-content, .forum-topic-body, .forum-reply-body) :where(pre, .highlight, .code-block),
+:where(.table-wrap, .table-responsive, .table-scroll, .admin-table-wrap) {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+:where(.post-content, .reader-content, .markdown-content) :where(code, pre) {
+  overflow-wrap: normal;
+}
+:where(.post-content, .reader-content, .markdown-content) table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  -webkit-overflow-scrolling: touch;
+}
+:where(.post-content, .reader-content, .markdown-content) table :where(th,td) {
+  overflow-wrap: normal;
+}
+:where(.settings-content, .settings-card, .forum-panel, .forum-dialog, .admin-card) :where(input,textarea,select) {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+dialog:where([open]):not(.fullscreen-dialog) {
+  box-sizing: border-box;
+  max-width: calc(100% - 16px);
+  max-height: calc(100dvh - 16px);
+}
+@media (max-width: 700px) {
+  :where(.settings-card-head, .forum-content-header, .post-actions, .form-actions, .modal-actions) {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+  :where(.settings-content, .settings-sidebar, .forum-center, .forum-sidebar) { min-width: 0; }
+  :where(.settings-card, .forum-panel) :where(.setting-row, .toggle-row) > :first-child {
+    min-width: 0; flex: 1 1 160px;
+  }
+  :where(.settings-card, .forum-panel) :where(.setting-row, .toggle-row) > :last-child:not(input) {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  :where(.form-grid, .settings-grid, .forum-form) { min-width: 0; }
+  :where(.form-grid, .settings-grid, .forum-form) :where(input, select, textarea) {
+    min-width: 0;
+  }
+  .site-menu {
+    box-sizing: border-box;
+    max-width: 100%;
+    max-height: 100dvh;
+    overflow-x: clip;
+    overflow-y: auto;
+  }
+  :where(.nav-pill, .settings-nav, .forum-category-filters, .forum-community-list) {
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
