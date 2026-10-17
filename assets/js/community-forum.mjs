@@ -13,7 +13,7 @@ const state={
  user:null,platformStaff:false,reportTarget:null,interests:new Set(),communities:[],communityPage:0,hasMoreCommunities:false,
  selectedCategory:"All",communitySearch:"",activeCommunity:null,activeThread:null,
  view:"home",mode:"home",sort:"active",feed:[],feedCursor:null,feedHasMore:false,feedBusy:false,feedVersion:0,search:"",
- joined:new Set(),memberRoles:new Map(),saved:new Set(),votes:new Map(),
+ joined:new Set(),memberRoles:new Map(),saved:new Set(),votes:new Map(),replyVotes:new Map(),replyVoteBusy:new Set(),
  pinned:[],replies:[],replyCursor:null,repliesHasMore:false,replyTo:null,loadingReplies:false,replyVersion:0,voteBusy:new Set()
 };
 function notify(message,warning=false){
@@ -726,6 +726,15 @@ async function loadReplies(reset=false){
   if(page.length)state.replyCursor=page.at(-1);
   const seen=new Set(state.replies.map(r=>r.id));
   state.replies.push(...page.filter(r=>!seen.has(r.id)));
+  const ids=page.map(item=>item.id);
+  if(ids.length){
+   const {data:voteTotals,error:voteError}=await supabase.rpc("forum_reply_vote_summary",{
+     p_messages:ids
+   });
+   if(!voteError)for(const vote of voteTotals||[])state.replyVotes.set(vote.message_id,{
+      score:Number(vote.score||0),mine:Number(vote.my_vote||0)
+   });
+  }
   renderReplies();
  }catch(e){
    if(version===state.replyVersion)notify(e.message||"Couldn't load replies.",true);
@@ -751,7 +760,13 @@ function renderReplies(){
    "<span class='forum-reply-number'>#"+(i+1)+"</span><div class='forum-reply-main'>"+
    header+quote+"<div class='forum-reply-body forum-markdown'>"+renderCommunityMarkdown(r.body||"")+"</div>"+
    mediaHtml(r.media_url,r.media_type,"reply",r.id)+
-   "<div class='forum-reply-actions'><button type='button' data-reply-to='"+escape(r.id)+"'>Reply</button>"+
+   "<div class='forum-reply-actions'>"+
+   "<button type='button' data-vote-reply='"+escape(r.id)+"' data-reply-vote-value='1' "+
+      "aria-pressed='"+(state.replyVotes.get(r.id)?.mine===1)+"'>▲</button>"+
+   "<span class='forum-reply-score'>"+Number(state.replyVotes.get(r.id)?.score||0)+"</span>"+
+   "<button type='button' data-vote-reply='"+escape(r.id)+"' data-reply-vote-value='-1' "+
+      "aria-pressed='"+(state.replyVotes.get(r.id)?.mine===-1)+"'>▼</button>"+
+   "<button type='button' data-reply-to='"+escape(r.id)+"'>Reply</button>"+
    "<button type='button' data-copy-reply='"+escape(r.id)+"'>Copy link</button>"+
    "<button type='button' data-report-reply='"+escape(r.id)+"'>Report</button>"+
    (isCommunityStaff(state.activeThread?.community_id)&&r.author_id&&r.author_id!==state.user?.id
@@ -843,6 +858,22 @@ async function createThread(event){
  }finally{setButtonBusy(button,false);}
 }
 
+async function voteCommunityReply(id,value){
+ if(!mustLogin()||state.replyVoteBusy.has(id))return;
+ state.replyVoteBusy.add(id);
+ try{
+  const {error}=await supabase.rpc("forum_cast_reply_vote",{
+   p_message:id,p_value:value
+  });
+  if(error)throw error;
+  const totals=await supabase.rpc("forum_reply_vote_summary",{p_messages:[id]});
+  if(totals.error)throw totals.error;
+  const result=(totals.data||[])[0];
+  if(result)state.replyVotes.set(id,{score:Number(result.score||0),mine:Number(result.my_vote||0)});
+  renderReplies();
+ }catch(error){notify(error.message||"Unable to vote on this reply.",true);}
+ finally{state.replyVoteBusy.delete(id);}
+}
 async function submitReply(event){
  event.preventDefault();
  if(!mustLogin()||!state.activeThread)return;
@@ -1086,6 +1117,7 @@ function bindEvents(){
    await loadFeed(true);return;
   }
   if(data.vote){await voteThread(data.id,Number(data.vote));return;}
+  if(data.voteReply){await voteCommunityReply(data.voteReply,Number(data.replyVoteValue));return;}
   if(data.saveThread){await toggleSave(data.saveThread);return;}
   if(data.copyThread){await shareThread(data.copyThread);return;}
   if(data.reportThread){openForumReport("thread",data.reportThread);return;}
