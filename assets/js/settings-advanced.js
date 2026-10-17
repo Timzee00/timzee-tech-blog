@@ -76,6 +76,18 @@ export function mountAdvancedSettings(){
  '<div class="settings-interest-toolbar"><span id="interestCount" aria-live="polite">Loading interests…</span><button type="button" class="btn ghost sm" id="clearInterestsBtn">Clear interests</button></div>'+
  '<div id="interestOptions" class="settings-interest-grid"></div><p id="interestStatus" class="settings-section-status" role="status" aria-live="polite"></p>';
  parent.insertBefore(interests,el("feed"));newNav("interests","Tech interests");
+ const reset=document.createElement("section");reset.id="preference-reset";reset.className="settings-card card";
+ reset.innerHTML='<div class="settings-card-head"><div><span class="settings-kicker">Maintenance</span><h2>Restore settings by category</h2></div></div>'+
+ '<p class="settings-intro">Restore just one category to its defaults without changing the rest of your account. Each change is synced to your account.</p>'+
+ '<div id="settingsResetCategories" class="settings-grid two"></div>'+
+ '<p id="settingsResetStatus" class="settings-section-status" role="status" aria-live="polite"></p>';
+ parent.insertBefore(reset,cookies);newNav("preference-reset","Restore defaults");
+ const resetHost=el("settingsResetCategories");
+ for(const [key,label] of Object.entries({appearance:"Appearance",notifications:"Notifications",feed:"Feed & discovery",chat:"Chat",groups:"Groups",marketplace:"Marketplace",discussion:"Communities",novels:"Reading",videos:"Videos",ai:"AI assistant"})){
+  const button=document.createElement("button");button.type="button";button.className="btn ghost sm";
+  button.dataset.resetSection=key;button.textContent="Reset "+label;
+  resetHost.append(button);
+ }
  const data=document.createElement("section");data.id="data-controls";data.className="settings-card card";
  data.innerHTML='<div class="settings-card-head"><div><span class="settings-kicker">Control your data</span><h2>Data & preferences</h2></div></div>'+
  '<p class="settings-intro">Export settings, restore preferences, and reset feed feedback. This is not a complete legal data portability export.</p>'+
@@ -117,6 +129,19 @@ export function mountAdvancedSettings(){
 export async function initializeAdvancedSettings({user,preferences,getPreferences,onImport,onStatus}){
  if(!user?.id)return;
  const uid=user.id,notify=(message,error=false)=>onStatus?.(message,error?"error":"success");
+ el("settingsResetCategories")?.addEventListener("click",async event=>{
+  const button=event.target.closest("[data-reset-section]");if(!button)return;
+  const key=button.dataset.resetSection;
+  if(!Object.prototype.hasOwnProperty.call(DEFAULT_USER_PREFERENCES,key))return;
+  if(!await confirmChange("Restore default "+key+" settings? Your other categories will stay unchanged."))return;
+  button.disabled=true;
+  try{
+   onImport({[key]:structuredClone(DEFAULT_USER_PREFERENCES[key])});
+   note("settingsResetStatus","Default "+key+" preferences applied. Saving to your account…");
+  }catch(error){note("settingsResetStatus",error.message||"Reset failed.",true);}
+  finally{button.disabled=false;}
+ });
+
  const interestHost=el("interestOptions"),selected=new Set(),busy=new Set();
  let results;
  try{
