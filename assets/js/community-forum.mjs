@@ -212,6 +212,9 @@ async function loadFeed(reset=false){
      return;
    }
    const cursor=communityRankCursor(state.feedCursor);
+   if(!reset&&state.feed.length&&!cursor){
+     throw new Error("Feed cursor unavailable. Refresh the recommendations to continue.");
+   }
    const {data,error}=await supabase.rpc("community_personal_feed_v2",{
      p_limit:PAGE_SIZE,
      p_after_score:cursor?.p_after_score??null,
