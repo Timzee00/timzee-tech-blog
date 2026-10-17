@@ -1076,7 +1076,7 @@ function bindEvents(){
  $("forumCommunityDetails").addEventListener("click",e=>{
   if(e.target.id==="forumSaveCommunityRules")void savePostingPolicy();
  });
- for(const dialog of [$("forumThreadDialog"),$("forumCommunityDialog"),$("forumReportDialog"),$("forumModerationDialog"),$("forumInterestDialog"]) {
+ for(const dialog of [$("forumThreadDialog"),$("forumCommunityDialog"),$("forumReportDialog"),$("forumModerationDialog"),$("forumInterestDialog")]) {
   dialog.addEventListener("click",event=>{
    if(event.target===dialog)dialog.close();
   });
