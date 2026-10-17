@@ -61,3 +61,22 @@ test("database validates preference payload size and object type", () => {
  assert.match(sql,/jsonb_typeof\(preferences\) = 'object'/);
  assert.match(sql,/octet_length\(preferences::text\) <= 65536/);
 });
+
+test("clearing preference cache never signs a member out or overwrites server settings", () => {
+ const removed=[];
+ const fakeStorage={removeItem:key=>removed.push(key)};
+ const factory=new Function("localStorage", userCode+"\nreturn {clearLocalPreferences};");
+ const result=factory(fakeStorage).clearLocalPreferences("demo-user");
+ assert.equal(result,true);
+ assert.deepEqual(removed,["timzee_user_preferences_v3:demo-user","timzee-ui-appearance"]);
+ const page=read("assets/js/settings-page.js");
+ assert.match(page,/clearLocalPreferences\(state\.user\.id\)/);
+ assert.doesNotMatch(page,/clearLocalDataBtn"[\s\S]*?writeLocalPreferences\(state\.user\.id,mergePreferences\(\)\)/);
+});
+
+test("database execution grants are restricted to callable RPC functions", () => {
+ const sql=read("supabase/migrations/20261017036000_internal_rpc_privilege_guard.sql");
+ assert.match(sql,/REVOKE EXECUTE ON FUNCTION/);
+ assert.match(sql,/p\.prorettype='pg_catalog\.trigger'::regtype/);
+ assert.match(sql,/forum_automod_reason/);
+});
