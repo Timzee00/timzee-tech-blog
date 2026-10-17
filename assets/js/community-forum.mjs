@@ -1,4 +1,5 @@
 import {supabase,getCurrentUser,getDisplayName,signOut} from "./supabase.js";
+import {loadUserPreferences} from "./user-preferences.js";
 import {escapeHTML,timeAgo,reportAppError,isSafeUrl} from "./utils.js";
 import {setupMentionInput} from "./mentions.js";
 import {renderCommunityMarkdown,insertCommunityFormatting} from "./community-markdown.mjs";
@@ -11,7 +12,7 @@ const validId=value=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(Strin
 const categories=["All","AI & ML","Programming","Gadgets","Cybersecurity","Tech Jobs","Gaming","Startups","Learning","Technology","Project Showcase","Sports","Entertainment","World Affairs","General"];
 const PAGE_SIZE=20;
 const state={
- user:null,platformStaff:false,reportTarget:null,interests:new Set(),communities:[],communityPage:0,hasMoreCommunities:false,
+ user:null,platformStaff:false,recommendationsEnabled:true,reportTarget:null,interests:new Set(),communities:[],communityPage:0,hasMoreCommunities:false,
  selectedCategory:"All",communitySearch:"",activeCommunity:null,activeThread:null,personalFeedAnchor:null,personalFeedStartedAt:null,
  view:"home",mode:"home",sort:"active",feed:[],feedCursor:null,feedHasMore:false,feedBusy:false,feedVersion:0,search:"",
  joined:new Set(),memberRoles:new Map(),saved:new Set(),votes:new Map(),replyVotes:new Map(),replyVoteBusy:new Set(),
@@ -136,6 +137,10 @@ function renderNav(){
  renderCommunityList();
 }
 function enterFeed({mode="home",community=null,push=true,sort=null}={}){
+ if(mode==="personal"&&state.recommendationsEnabled===false){
+  mode=state.user?"joined":"home";
+  notify("Personal recommendations are disabled in settings. Showing your followed communities instead.");
+ }
  state.activeThread=null;state.activeCommunity=community;state.mode=mode;state.view=community?"community":"home";
  $("forumMembershipNotice").hidden=true;
  state.feed=[];state.feedCursor=null;state.feedHasMore=false;state.search="";state.personalFeedAnchor=null;state.personalFeedStartedAt=null;
@@ -1269,6 +1274,12 @@ async function boot(){
  renderCategories();bindEvents();
  try{
    state.user=await getCurrentUser();
+   try{
+     const preference=await loadUserPreferences(state.user);
+     const sort=preference?.discussion?.defaultSort;
+     if(["active","new","top","unanswered"].includes(sort))state.sort=sort;
+     state.recommendationsEnabled=preference?.feed?.showRecommendations!==false;
+   }catch(error){console.warn("Community preferences unavailable",error);}
    if(state.user){
      const role=String(state.user.app_metadata?.role||"").toLowerCase();
      const {data}=await supabase.from("profiles").select("role").eq("id",state.user.id).maybeSingle();
