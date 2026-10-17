@@ -1,0 +1,26 @@
+// Pure pagination helpers for database-ranked Timzee community feeds.
+// Kept separate so cursor and duplicate behavior can be regression-tested.
+const HEX_UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
+export function communityRankCursor(row){
+ if(!row||!HEX_UUID.test(String(row.id||""))||!Number.isFinite(Number(row.recommendation_score))
+    ||!Number.isFinite(Date.parse(row.created_at||"")))return null;
+ return {
+   p_after_score:Number(row.recommendation_score),
+   p_after_created:row.created_at,
+   p_after_id:row.id
+ };
+}
+export function appendUniqueCommunityRows(previous,incoming){
+ const result=[...(Array.isArray(previous)?previous:[])];
+ const ids=new Set(result.map(row=>row?.id).filter(Boolean));
+ for(const row of Array.isArray(incoming)?incoming:[]){
+   if(!row||!HEX_UUID.test(String(row.id||""))||ids.has(row.id))continue;
+   ids.add(row.id);result.push(row);
+ }
+ return result;
+}
+export function isCommunitySnapshotStale(iso,nowMs=Date.now(),maxAgeMs=210*60*1000){
+ const time=Date.parse(iso||"");
+ return !Number.isFinite(time)||!Number.isFinite(nowMs)
+   ||nowMs<time-60000||nowMs-time>maxAgeMs;
+}
