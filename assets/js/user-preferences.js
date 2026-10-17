@@ -3,7 +3,10 @@ import { supabase, getCurrentUser } from "./supabase.js";
 export const DEFAULT_USER_PREFERENCES = {
   appearance: {
     reduceMotion: false,
-    highContrast: false
+    highContrast: false,
+    theme: "system",
+    fontScale: "100",
+    contentDensity: "comfortable"
   },
   notifications: {
     messages: true,
@@ -36,7 +39,7 @@ export const DEFAULT_USER_PREFERENCES = {
     showLocation: true
   },
   discussion: {
-    defaultSort: "trending",
+    defaultSort: "active",
     showLiveUpdates: true
   },
   novels: {
