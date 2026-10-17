@@ -2,6 +2,7 @@ import {supabase,getCurrentUser,getDisplayName,signOut} from "./supabase.js";
 import {escapeHTML,timeAgo,reportAppError,isSafeUrl} from "./utils.js";
 import {setupMentionInput} from "./mentions.js";
 import {renderCommunityMarkdown,insertCommunityFormatting} from "./community-markdown.mjs";
+import {communityRankCursor,appendUniqueCommunityRows,isCommunitySnapshotStale} from "./community-feed-pagination.mjs";
 import "./nav.js";
 
 const $=id=>document.getElementById(id);
@@ -199,18 +200,18 @@ async function loadFeed(reset=false){
      if(clock.error||!clock.data)throw Error("Unable to start the feed. Please retry.");
      if(version!==state.feedVersion)return;
      state.personalFeedAnchor=clock.data;
-   }else if(Date.now()-Date.parse(state.personalFeedAnchor)>3.5*60*60*1000){
+   }else if(isCommunitySnapshotStale(state.personalFeedAnchor)){
      // A fresh snapshot is safer than mixing scores from different time windows.
      state.feedBusy=false;
      void loadFeed(true);
      return;
    }
-   const cursor=state.feedCursor;
+   const cursor=communityRankCursor(state.feedCursor);
    const {data,error}=await supabase.rpc("community_personal_feed_v2",{
      p_limit:PAGE_SIZE,
-     p_after_score:cursor?.recommendation_score??null,
-     p_after_created:cursor?.created_at??null,
-     p_after_id:cursor?.id??null,
+     p_after_score:cursor?.p_after_score??null,
+     p_after_created:cursor?.p_after_created??null,
+     p_after_id:cursor?.p_after_id??null,
      p_as_of:state.personalFeedAnchor
    });
    if(error)throw error;
@@ -218,8 +219,7 @@ async function loadFeed(reset=false){
    const page=data||[];
    state.feedHasMore=page.length===PAGE_SIZE&&state.feed.length+page.length<200;
    if(page.length)state.feedCursor=page.at(-1);
-   const seen=new Set(state.feed.map(row=>row.id));
-   state.feed.push(...page.filter(row=>!seen.has(row.id)));
+   state.feed=appendUniqueCommunityRows(state.feed,page);
    await loadPersonalThreadState(page.map(row=>row.id));
    if(version===state.feedVersion)renderFeed();
    return;
