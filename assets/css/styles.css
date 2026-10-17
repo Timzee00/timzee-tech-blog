@@ -22,6 +22,7 @@
 @import url("responsive.css");
 @import url("design-system.css");
 @import url("mobile-acceptance-fixes.css");
+@import url("viewport-guard.css");
 
 html[data-reader-font="small"] .reader-content{font-size:.95rem;}
 html[data-reader-font="medium"] .reader-content{font-size:1.05rem;}
