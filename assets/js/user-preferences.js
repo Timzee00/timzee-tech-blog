@@ -58,13 +58,39 @@ export const DEFAULT_USER_PREFERENCES = {
 };
 
 function storageKey(userId) { return `timzee_user_preferences_v3:${userId || "guest"}`; }
-function deepMerge(base, override) {
-  const output = Array.isArray(base) ? [...base] : { ...base };
-  if (!override || typeof override !== "object") return output;
-  Object.entries(override).forEach(([key, value]) => {
-    if (value && typeof value === "object" && !Array.isArray(value) && output[key] && typeof output[key] === "object") output[key] = deepMerge(output[key], value);
-    else if (key in output) output[key] = value;
-  });
+/* Persist only the supported shape: storage and database JSON are untrusted
+   inputs, and should not be able to replace booleans with objects or overwrite
+   inherited Object properties such as __proto__ and constructor. */
+const PREFERENCE_ENUMS = {
+  "appearance.theme": ["system", "light", "dark"],
+  "appearance.fontScale": ["90", "100", "110", "125"],
+  "appearance.contentDensity": ["comfortable", "compact"],
+  "feed.defaultFeed": ["for-you", "following"],
+  "discussion.defaultSort": ["active", "new", "top", "unanswered"],
+  "novels.fontSize": ["small", "medium", "large", "xlarge"],
+  "novels.readerWidth": ["compact", "comfortable", "wide"]
+};
+function deepMerge(base, override, parentPath = "") {
+  const output = { ...base };
+  if (!override || typeof override !== "object" || Array.isArray(override)) return output;
+  for (const [key, value] of Object.entries(override)) {
+    if (!Object.prototype.hasOwnProperty.call(base, key)) continue;
+    const expected = base[key];
+    const path = parentPath ? parentPath + "." + key : key;
+    if (expected && typeof expected === "object" && !Array.isArray(expected)) {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        output[key] = deepMerge(expected, value, path);
+      }
+      continue;
+    }
+    if (typeof value !== typeof expected || value === null) continue;
+    if (typeof value === "number" && !Number.isFinite(value)) continue;
+    if (typeof value === "string" && (value.length > 80 ||
+      (PREFERENCE_ENUMS[path] && !PREFERENCE_ENUMS[path].includes(value)))) continue;
+    if (typeof value === "string" || typeof value === "boolean" || typeof value === "number") {
+      output[key] = value;
+    }
+  }
   return output;
 }
 export function mergePreferences(value) { return deepMerge(DEFAULT_USER_PREFERENCES, value || {}); }
@@ -95,6 +121,6 @@ export async function saveUserPreferences(userId, partial) {
 }
 export function getPreference(path, fallback = undefined, userId = "guest") {
   const parts = String(path || "").split(".").filter(Boolean); let current = readLocalPreferences(userId);
-  for (const part of parts) { if (current == null || typeof current !== "object" || !(part in current)) return fallback; current = current[part]; }
+  for (const part of parts) { if (current == null || typeof current !== "object" || !Object.prototype.hasOwnProperty.call(current, part)) return fallback; current = current[part]; }
   return typeof current === "undefined" ? fallback : current;
 }
