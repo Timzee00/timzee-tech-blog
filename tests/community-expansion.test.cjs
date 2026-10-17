@@ -87,3 +87,20 @@ test("verification documents are private and cannot be self-approved",()=>{
  assert.match(html,/supabase\.storage\.from\("verification-proofs"\)\.upload/);
  assert.doesNotMatch(html,/readAsDataURL\(doc\)/);
 });
+
+test("per-reply voting hides member identities and counts only permitted content",()=>{
+ const sql=file("supabase/migrations/20261017032000_forum_private_comment_votes.sql");
+ const ui=file("assets/js/community-forum.mjs");
+ assert.match(sql,/DROP POLICY IF EXISTS "Anyone can read vote scores"/);
+ assert.match(sql,/forum_reply_vote_summary/);
+ assert.match(sql,/forum_cast_reply_vote/);
+ assert.match(sql,/community_can_read/);
+ assert.match(ui,/data-vote-reply/);
+ assert.match(ui,/voteCommunityReply/);
+});
+test("custom flairs cannot spoof official site and company status",()=>{
+ const sql=file("supabase/migrations/20261017034000_forum_flair_impersonation.sql");
+ const html=file("discussion.html");
+ assert.match(sql,/community_flair_no_impersonation/);
+ assert.match(html,/name="flair"/);
+});
