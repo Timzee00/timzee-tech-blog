@@ -12,7 +12,7 @@ const categories=["All","AI & ML","Programming","Gadgets","Cybersecurity","Tech 
 const PAGE_SIZE=20;
 const state={
  user:null,platformStaff:false,reportTarget:null,interests:new Set(),communities:[],communityPage:0,hasMoreCommunities:false,
- selectedCategory:"All",communitySearch:"",activeCommunity:null,activeThread:null,personalFeedAnchor:null,
+ selectedCategory:"All",communitySearch:"",activeCommunity:null,activeThread:null,personalFeedAnchor:null,personalFeedStartedAt:null,
  view:"home",mode:"home",sort:"active",feed:[],feedCursor:null,feedHasMore:false,feedBusy:false,feedVersion:0,search:"",
  joined:new Set(),memberRoles:new Map(),saved:new Set(),votes:new Map(),replyVotes:new Map(),replyVoteBusy:new Set(),
  pinned:[],replies:[],replyCursor:null,repliesHasMore:false,replyTo:null,loadingReplies:false,replyVersion:0,voteBusy:new Set()
@@ -138,7 +138,7 @@ function renderNav(){
 function enterFeed({mode="home",community=null,push=true,sort=null}={}){
  state.activeThread=null;state.activeCommunity=community;state.mode=mode;state.view=community?"community":"home";
  $("forumMembershipNotice").hidden=true;
- state.feed=[];state.feedCursor=null;state.feedHasMore=false;state.search="";state.personalFeedAnchor=null;
+ state.feed=[];state.feedCursor=null;state.feedHasMore=false;state.search="";state.personalFeedAnchor=null;state.personalFeedStartedAt=null;
  $("forumThreadSearch").value="";
  if(sort)state.sort=sort;
  $("forumFeedView").hidden=false;$("forumThreadView").hidden=true;
@@ -200,7 +200,8 @@ async function loadFeed(reset=false){
      if(clock.error||!clock.data)throw Error("Unable to start the feed. Please retry.");
      if(version!==state.feedVersion)return;
      state.personalFeedAnchor=clock.data;
-   }else if(isCommunitySnapshotStale(state.personalFeedAnchor)){
+     state.personalFeedStartedAt=performance.now();
+   }else if(isCommunitySnapshotStale(state.personalFeedStartedAt,performance.now())){
      // A fresh snapshot is safer than mixing scores from different time windows.
      state.feedBusy=false;
      void loadFeed(true);
