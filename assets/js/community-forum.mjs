@@ -946,7 +946,29 @@ async function openModerationWorkspace(){
  $("forumJoinQueue").textContent="Loading membership requests…";
  $("forumReportsQueue").textContent="Loading reports…";
  $("forumModeratorMembers").textContent="Loading community members…";
- await Promise.all([loadModerationReports(board.id),loadModeratorMembers(board.id),loadAutomodQueue(board.id),loadJoinQueue(board.id)]);
+ await Promise.all([loadModerationReports(board.id),loadModeratorMembers(board.id),loadAutomodQueue(board.id),loadJoinQueue(board.id),loadAutoSignals(board.id)]);
+}
+async function loadAutoSignals(boardId){
+ const host=$("forumAutoSignals");
+ host.textContent="Checking automated signals…";
+ const {data,error}=await supabase.from("community_auto_moderation")
+ .select("id,target_type,target_id,signals,risk_score,created_at")
+ .eq("community_id",boardId).eq("state","pending")
+ .order("created_at",{ascending:false}).limit(40);
+ if(error){host.textContent=error.message;return;}
+ host.innerHTML=(data||[]).map(item=>
+ "<article class='forum-mod-item'><strong>"+escape(item.target_type)+" · risk "+Number(item.risk_score)+"/100</strong>"+
+ "<p>"+escape((item.signals||[]).join(", "))+"</p>"+
+ "<div><button type='button' data-signal-id='"+item.id+"' data-signal-resolution='reviewed'>Reviewed</button>"+
+ "<button type='button' data-signal-id='"+item.id+"' data-signal-resolution='dismissed'>False positive</button></div></article>"
+ ).join("")||"<p class='forum-muted'>No additional spam signals.</p>";
+}
+async function reviewAutoSignal(id,resolution){
+ if(!state.activeCommunity||!isCommunityStaff(state.activeCommunity.id))return;
+ const {error}=await supabase.rpc("community_review_auto_flag",{p_id:Number(id),p_resolution:resolution});
+ if(error){notify(error.message,true);return;}
+ await loadAutoSignals(state.activeCommunity.id);
+ notify("Signal marked "+resolution+".");
 }
 async function loadAutomodQueue(boardId){
  const host=$("forumAutomaticQueue");
@@ -1127,6 +1149,7 @@ function bindEvents(){
   if(data.notInterested){await hideRecommendation(data.notInterested);return;}
   if(data.forumPollVote){await castCommunityPollVote(Number(data.forumPollVote));return;}
   if(data.reviewReport){await reviewForumReport(data.reviewReport,data.resolution);return;}
+  if(data.signalId){await reviewAutoSignal(data.signalId,data.signalResolution);return;}
   if(data.autoReview){await reviewAutoContent(data.autoReview,data.autoType,data.autoAction);return;}
   if(data.joinReview){await reviewCommunityJoin(data.joinReview,data.joinApprove==="true");return;}
   if(data.banAuthor){await banForumMember(data.banAuthor);return;}
