@@ -98,6 +98,19 @@ export function mountAdvancedSettings(){
   const title=sort.closest("label")?.querySelector("span");
   if(title)title.textContent="Default topic order";
  }
+ // Arrange the navigation in the same order as the actual settings sections.
+ // Keep it readable when the number of preference categories grows.
+ for(const [id,after] of [["appearance","account"],["security","appearance"],["email","notifications"]]){
+   const section=el(id),anchor=el(after);
+   if(section&&anchor)anchor.after(section);
+ }
+ const nav=el("settingsNav");
+ if(nav){
+   const lookup=new Map([...nav.querySelectorAll('a[href^="#"]')].map(link=>[link.getAttribute("href").slice(1),link]));
+   const ordered=[...parent.querySelectorAll(":scope > section[id]")]
+      .map(section=>lookup.get(section.id)).filter(Boolean);
+   nav.replaceChildren(...ordered);
+ }
  const hero=document.querySelector(".settings-hero p");
  if(hero)hero.textContent="Choose how your account works. Saved preferences sync to your account where supported; browser storage is used for immediate display.";
 }
