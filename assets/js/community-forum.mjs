@@ -207,7 +207,7 @@ async function loadFeed(reset=false){
   const selected=state.activeCommunity;
   if(reset&&selected){
    const {data:pinned}=await supabase.from("community_threads")
-    .select("id,community_id,author_id,author_name,title,body,kind,status,is_pinned,is_locked,is_legacy_room,reply_count,score,media_url,media_type,created_at,last_activity_at")
+    .select("id,community_id,author_id,author_name,title,body,kind,flair,status,is_pinned,is_locked,is_legacy_room,reply_count,score,media_url,media_type,created_at,last_activity_at")
     .eq("community_id",selected.id).eq("status","published").eq("is_pinned",true)
     .order("created_at",{ascending:false}).limit(4);
    if(version!==state.feedVersion)return;
@@ -222,7 +222,7 @@ async function loadFeed(reset=false){
    if(!savedIds.length){state.feed=[];renderFeed();return;}
   }
   let query=supabase.from("community_threads")
-    .select("id,community_id,author_id,author_name,title,body,kind,status,is_pinned,is_locked,is_legacy_room,reply_count,score,media_url,media_type,created_at,last_activity_at")
+    .select("id,community_id,author_id,author_name,title,body,kind,flair,status,is_pinned,is_locked,is_legacy_room,reply_count,score,media_url,media_type,created_at,last_activity_at")
     .eq("status","published");
   if(selected)query=query.eq("community_id",selected.id).eq("is_pinned",false);
   else if(state.mode==="joined")query=query.in("community_id",[...state.joined].slice(0,200));
@@ -488,6 +488,7 @@ function threadCard(thread,{pinned=false}={}){
   (thread.is_locked?"<span>🔒 Locked</span>":"")+
   (community?"<button type='button' data-open-community='"+escape(community.id)+"'>"+
    escape(community.title)+"</button>":"")+
+  (thread.flair?"<span class='forum-topic-flair'>"+escape(thread.flair)+"</span>":"")+
   "<span>· "+escape(preferredDate(thread.created_at))+"</span></div>"+
   "<button class='forum-thread-title' data-open-thread='"+escape(thread.id)+"' type='button'>"+escape(thread.title)+"</button>"+
   (intro?"<p>"+escape(intro)+"</p>":"")+
@@ -636,7 +637,7 @@ async function shareThread(id){
 async function openThread(id,{push=true}={}){
  if(!validId(id))return;
  const {data,error}=await supabase.from("community_threads")
-  .select("id,community_id,author_id,author_name,title,body,kind,status,is_locked,is_pinned,is_legacy_room,created_at,reply_count,score,media_url,media_type")
+  .select("id,community_id,author_id,author_name,title,body,kind,flair,status,is_locked,is_pinned,is_legacy_room,created_at,reply_count,score,media_url,media_type")
   .eq("id",id).maybeSingle();
  if(error||!data||!(data.status==="published"||
    (state.user&&data.author_id===state.user.id)||isCommunityStaff(data.community_id))){
@@ -658,7 +659,7 @@ async function openThread(id,{push=true}={}){
   "<button type='button' data-open-community='"+escape(data.community_id)+"'>"+
   escape(boardName)+"</button> / "+escape(data.kind)+"</p><h1>"+escape(data.title)+
   "</h1><p class='forum-thread-detail-meta'>By "+escape(data.author_name||"Member")+
-  " · "+escape(preferredDate(data.created_at))+(data.is_locked?" · Locked":"")+"</p>";
+  " · "+escape(preferredDate(data.created_at))+(data.flair?" · "+escape(data.flair):"")+(data.is_locked?" · Locked":"")+"</p>";
  $("forumThreadBody").innerHTML=renderCommunityMarkdown(data.body||"");
  if(data.media_url)$("forumThreadBody").insertAdjacentHTML("beforeend",mediaHtml(data.media_url,data.media_type,"thread",data.id));
  const attachments=await supabase.from("community_thread_media")
@@ -831,7 +832,8 @@ async function createThread(event){
     media_url:first?.url||null,media_type:first?.type||null,
     title:String(values.get("title")||"").trim(),
     body:String(values.get("body")||"").trim(),
-    kind:String(values.get("kind")||"discussion")
+    kind:String(values.get("kind")||"discussion"),
+    flair:String(values.get("flair")||"").trim()||null
   }).select("id,status").single();
   if(error)throw error;
   created=data;
