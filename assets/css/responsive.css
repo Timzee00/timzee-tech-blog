@@ -4,10 +4,12 @@
    deliberately stretch.
    ========================================================================== */
 
+/* Keep the document inside the device viewport. Scrollable tables, menus and
+   galleries are handled by their own containers rather than widening the page. */
 html,
 body {
   max-width: 100%;
-  overflow-x: visible;
+  overflow-x: clip;
 }
 
 img,
@@ -46,7 +48,11 @@ iframe {
 
 @media (max-width: 900px) {
   main,
-  .page-shell { overflow-x: visible; }
+  .page-shell {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
+  }
 }
 
 @media (max-width: 768px) {
@@ -60,7 +66,17 @@ iframe {
     row-gap: var(--space-3);
   }
   .nav-pill { order: 3; width: 100%; overflow-x: auto; }
-  table { display: block; overflow-x: auto; white-space: nowrap; }
+  /* Wide tables scroll locally; no need to make the whole document scroll. */
+  :where(.table-wrap,.table-responsive,.table-scroll,.admin-table-wrap) {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  table:not(.calendar-grid) {
+    max-width: 100%;
+  }
 }
 
 @media (max-width: 520px) {
