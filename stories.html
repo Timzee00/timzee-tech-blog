@@ -13,6 +13,7 @@
     <meta property="og:title" content="Stories - Timzee Tech Hub">
     <meta property="og:description" content="Share a public or friends-only story that disappears after 24 hours.">
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/content-polls.css">
     <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
@@ -56,9 +57,17 @@
           <span class="story-create-action-icon" aria-hidden="true">+</span>
           <span class="story-create-action-copy">
             <strong>Create story</strong>
-            <small>Photo or video · visible for 24 hours</small>
+            <small>24 hours · up to 72 hours for verified creators</small>
           </span>
         </button>
+        <button type="button" id="savedStoryToggle" class="btn ghost sm" hidden aria-pressed="false">☆ Saved statuses</button>
+        <section id="verifiedStoryInsights" class="verified-story-insights" hidden>
+          <div class="verified-insights-heading"><div><strong>Verified Creator Insights</strong>
+            <small>Private performance overview · last 30 days</small></div>
+            <button type="button" id="refreshStoryInsights">Refresh</button></div>
+          <div id="verifiedStoryInsightsStats" class="verified-story-metrics" aria-live="polite">Loading insights…</div>
+          <p>View totals include only viewers who allow read receipts.</p>
+        </section>
         <div class="stories-rail" id="storiesRail">
           <button type="button" class="story-avatar story-avatar-add" id="addStoryBtn" aria-label="Add your story">
             <div class="story-ring story-ring-add">
@@ -90,6 +99,12 @@
       </div>
       <div class="story-viewer-media" id="storyViewerMedia"></div>
       <div class="story-viewer-caption" id="viewerCaption"></div>
+      <div class="story-music-controls" id="storyMusicControls" hidden>
+        <button type="button" id="storyMusicToggle" aria-label="Play soundtrack">▶ Music</button>
+        <span id="storyMusicLabel"></span>
+        <audio id="storyMusicAudio" preload="none" loop></audio>
+      </div>
+      <div class="story-viewer-social" id="storyViewerSocial"></div>
       <button class="story-tap-zone story-tap-prev" id="storyPrevZone" type="button" aria-label="Previous story"></button>
       <button class="story-tap-zone story-tap-next" id="storyNextZone" type="button" aria-label="Next story"></button>
     </div>
@@ -107,7 +122,33 @@
           <div class="story-file-preview" id="storyFilePreview"></div>
         </label>
         <input type="file" id="storyFile" accept="image/*,video/*" hidden required>
-        <textarea id="storyCaption" placeholder="Add a caption (optional)" rows="2" maxlength="200" class="resize-none"></textarea>
+        <button type="button" id="storyEditPhoto" class="btn ghost" hidden>Edit photo: crop, rotate, text, draw</button>
+        <textarea id="storyCaption" placeholder="Add a caption · @mention a member" rows="2" maxlength="200" class="resize-none"></textarea>
+        <fieldset class="story-music-composer">
+          <legend>Optional soundtrack</legend>
+          <label for="storyMusicFile">Upload music you own or are licensed to use
+            <input id="storyMusicFile" type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/ogg,audio/webm,.mp3,.m4a,.ogg,.webm">
+          </label>
+          <label for="storyMusicTitle">Soundtrack title
+            <input id="storyMusicTitle" type="text" maxlength="90" placeholder="Track title">
+          </label>
+          <label class="story-music-rights">
+            <input id="storyMusicRights" type="checkbox">
+            I own this audio or have permission to use it in a public post.
+          </label>
+          <small>MP3, M4A, OGG or WebM; 10 MB maximum. Music plays alongside your status; it is not embedded in downloaded video files. No copyrighted catalogue is provided without licensing.</small>
+          <audio id="storyMusicPreview" controls hidden preload="metadata"></audio>
+        </fieldset>
+        <div class="story-composer-extras">
+          <label for="storyDuration">Status duration<select id="storyDuration">
+            <option value="24">24 hours (standard)</option>
+            <option value="48" data-verified-only disabled hidden>48 hours (verified)</option>
+            <option value="72" data-verified-only disabled hidden>72 hours (verified)</option>
+          </select></label>
+          <label><input type="checkbox" id="storyAllowReshare" checked> Allow others to reshare</label>
+          <label><input type="checkbox" id="storyAllowComments" checked> Allow public comments</label>
+          <p id="storyCreatorEntitlements" class="story-creator-note"></p>
+        </div>
         <div class="story-visibility-toggle">
           <label>
             <input type="radio" name="storyVisibility" value="public" checked>
@@ -139,20 +180,49 @@
       import { getCurrentUser, getDisplayName } from "./assets/js/supabase.js";
       import { fetchStoriesFeed, fetchUserStories, createStory, deleteStory } from "./assets/js/stories.js";
       import { escapeHTML, isSafeUrl, timeAgo } from "./assets/js/utils.js";
+      import {setupMentionInput} from "./assets/js/mentions.js";
+      import {showStoryInteractions} from "./assets/js/story-interactions.mjs";
+      import {editStatusPhoto} from "./assets/js/story-media-editor.mjs";
+      import {supabase} from "./assets/js/supabase.js";
       import "./assets/js/nav.js";
 
       const DEFAULT_AVATAR = "/assets/img/avatar-placeholder.svg";
 
       const state = {
         user: null,
-        groups: [], // [{ userId, profile, stories: [] }]
+        groups: [], allGroups: [], savedOnly:false, // [{ userId, profile, stories: [] }]
         activeGroupIndex: -1,
         activeStoryIndex: 0,
-        timerId: null
+        timerId: null,
+        storyRemaining:0,storyDuration:0,storyStartedAt:0,storyHeld:false,storyActiveVideo:null,storyPlaybackVersion:0,
+        verified:false,
+        storyMusicWasPlaying:false
       };
 
       async function init() {
         state.user = await getCurrentUser();
+        if(state.user){
+          const toggle=document.getElementById("savedStoryToggle");toggle.hidden=false;
+          toggle.addEventListener('click',async()=>{
+            state.savedOnly=!state.savedOnly;
+            toggle.textContent=state.savedOnly?'★ Saved statuses · Show all':'☆ Saved statuses';
+            toggle.setAttribute('aria-pressed',String(state.savedOnly));
+            await applySavedFilter();
+          });
+        }
+        if(state.user){
+          const {data}=await supabase.from('profiles').select('is_verified').eq('id',state.user.id).maybeSingle();
+          state.verified=data?.is_verified===true;
+          if(state.verified){
+            document.getElementById("verifiedStoryInsights").hidden=false;
+            document.getElementById("refreshStoryInsights").addEventListener("click",()=>void loadCreatorInsights());
+            void loadCreatorInsights();
+          }
+          document.querySelectorAll('#storyDuration [data-verified-only]')
+           .forEach(option=>{option.hidden=!state.verified;option.disabled=!state.verified;});
+          document.getElementById("storyCreatorEntitlements").textContent=state.verified
+            ?"Verified creator: choose 24, 48 or 72 hours.":"Standard statuses last 24 hours.";
+        }
         const loginNotice = document.getElementById("storiesLoginNotice");
         const addBtn = document.getElementById("addStoryBtn");
         const createAction = document.getElementById("createStatusAction");
@@ -171,7 +241,8 @@
         }
 
         try {
-          state.groups = await fetchStoriesFeed();
+          state.allGroups = await fetchStoriesFeed();
+          state.groups=state.allGroups;
         } catch (error) {
           state.groups = [];
           const empty = document.getElementById("storiesEmpty");
@@ -193,6 +264,37 @@
         setupViewerControls();
       }
 
+      async function loadCreatorInsights(){
+        if(!state.verified)return;
+        const host=document.getElementById("verifiedStoryInsightsStats");
+        host.textContent="Refreshing…";
+        const {data,error}=await supabase.rpc('verified_story_insights',{p_days:30});
+        if(error){host.textContent="Insights unavailable: "+error.message;return;}
+        host.replaceChildren();
+        for(const [label,value] of [
+          ["Statuses",data.total_stories||0],["Likes",data.likes||0],
+          ["Visible views",data.visible_views||0],["Comments",data.public_comments||0],
+          ["Reshares",data.reshares||0]
+        ]){
+          const box=document.createElement("div"),strong=document.createElement("strong"),small=document.createElement("span");
+          strong.textContent=Number(value).toLocaleString();
+          small.textContent=label;box.append(strong,small);host.append(box);
+        }
+      }
+      async function applySavedFilter(){
+        if(!state.savedOnly||!state.user){
+          state.groups=state.allGroups;
+          renderRail();return;
+        }
+        const {data,error}=await supabase.from('story_saves')
+          .select('story_id').eq('user_id',state.user.id).order('created_at',{ascending:false}).limit(300);
+        if(error){window.appUI?.toast?.(error.message);return;}
+        const ids=new Set((data||[]).map(row=>row.story_id));
+        state.groups=state.allGroups.map(group=>({
+          ...group,stories:group.stories.filter(story=>ids.has(story.id))
+        })).filter(group=>group.stories.length);
+        renderRail();
+      }
       function renderRail() {
         const rail = document.getElementById("storiesRail");
         const empty = document.getElementById("storiesEmpty");
@@ -210,7 +312,7 @@
           el.className = "story-avatar";
           el.setAttribute("aria-label", `View ${name}'s stories`);
           const ring = document.createElement("span");
-          ring.className = "story-ring";
+          ring.className = "story-ring"+(profile?.is_verified?" story-verified-ring":"");
           const image = document.createElement("img");
           image.src = isSafeUrl(profile?.avatar_url) ? profile.avatar_url : DEFAULT_AVATAR;
           image.alt = "";
@@ -219,6 +321,13 @@
           label.className = "story-avatar-label";
           label.textContent = name;
           el.append(ring, label);
+          if(profile?.is_verified){
+            const badge=document.createElement("span");
+            badge.className="story-verified-badge";
+            badge.textContent="✓";
+            badge.setAttribute("aria-label","Verified creator");
+            badge.title="Verified creator";el.append(badge);
+          }
           el.addEventListener("click", () => openViewer(index));
           // Append ahead of the empty-state notice rather than repeatedly
           // after the add tile: the order must match state.groups indices.
@@ -233,6 +342,7 @@
       let composerOpener = null;
       let composerBodyOverflow = "";
       let storyPreviewObjectUrl = null;
+      let editedStoryFile = null;
       function revokeStoryPreview() {
         if (storyPreviewObjectUrl) {
           URL.revokeObjectURL(storyPreviewObjectUrl);
@@ -287,13 +397,56 @@
       }
 
       function clearTimer() {
-        if (state.timerId) {
-          clearTimeout(state.timerId);
-          state.timerId = null;
+        if (state.timerId) clearTimeout(state.timerId);
+        if (state.mediaWatchdog) clearTimeout(state.mediaWatchdog);
+        state.timerId=null;state.mediaWatchdog=null;
+        state.storyActiveVideo=null;
+        state.storyDuration=0;state.storyRemaining=0;state.storyStartedAt=0;
+        state.storyHeld=false;
+        const music=document.getElementById("storyMusicAudio");
+        if(music){music.pause();music.removeAttribute("src");music.load();}
+        state.storyMusicWasPlaying=false;
+        state.storyPlaybackVersion++;
+      }
+      function activeStoryFill(){
+        return document.querySelectorAll("#storyProgressRow .story-progress-fill")[state.activeStoryIndex];
+      }
+      function pauseStory(){
+        if(document.getElementById("storyViewer").hidden)return;
+        state.storyHeld=true;
+        state.storyActiveVideo?.pause();
+        const soundtrack=document.getElementById("storyMusicAudio");
+        state.storyMusicWasPlaying=Boolean(soundtrack&&!soundtrack.paused);
+        soundtrack?.pause();
+        if(state.timerId){
+          clearTimeout(state.timerId);state.timerId=null;
+          state.storyRemaining=Math.max(0,state.storyRemaining-(performance.now()-state.storyStartedAt));
         }
-        if (state.mediaWatchdog) {
-          clearTimeout(state.mediaWatchdog);
-          state.mediaWatchdog = null;
+        const fill=activeStoryFill();
+        if(fill && !state.storyActiveVideo){
+          const progress=state.storyDuration?
+            Math.min(100,Math.max(0,((state.storyDuration-state.storyRemaining)/state.storyDuration)*100)):0;
+          fill.style.transition="none";fill.style.width=progress+"%";
+        }
+      }
+      function resumeStory(){
+        if(!state.storyHeld)return;
+        state.storyHeld=false;
+        const soundtrack=document.getElementById("storyMusicAudio");
+        if(state.storyMusicWasPlaying&&soundtrack?.src)
+          void soundtrack.play().catch(()=>{});
+        state.storyMusicWasPlaying=false;
+        if(state.storyActiveVideo){
+          void state.storyActiveVideo.play().catch(()=>{});return;
+        }
+        if(state.storyRemaining>0)startProgress(state.storyRemaining,true);
+      }
+      function preloadUpcomingStory(){
+        const group=state.groups[state.activeGroupIndex];
+        const next=group?.stories?.[state.activeStoryIndex+1];
+        if(!next||!isSafeUrl(next.media_url))return;
+        if(next.media_type==='image'){
+          const preload=new Image();preload.decoding='async';preload.src=next.media_url;
         }
       }
 
@@ -305,8 +458,22 @@
           .join("");
       }
 
-      function renderActiveStory() {
+      async function signPrivateStoryAsset(storyId,asset){
+        const {data,error}=await supabase.auth.getSession();
+        if(error||!data?.session?.access_token)throw Error("Sign in to view this private status.");
+        const response=await fetch("/.netlify/functions/story-private-media",{
+          method:"POST",cache:"no-store",
+          headers:{"Content-Type":"application/json","Authorization":"Bearer "+data.session.access_token},
+          body:JSON.stringify({story_id:storyId,asset}),
+          signal:AbortSignal.timeout(16000)
+        });
+        const body=await response.json().catch(()=>({}));
+        if(!response.ok||!body.signedUrl)throw Error(body.error||"Private status unavailable.");
+        return body.signedUrl;
+      }
+      async function renderActiveStory() {
         clearTimer();
+        const version=state.storyPlaybackVersion;
         const group = state.groups[state.activeGroupIndex];
         if (!group) return closeViewer();
         const story = group.stories[state.activeStoryIndex];
@@ -316,9 +483,18 @@
         document.getElementById("viewerAvatar").src = isSafeUrl(profile?.avatar_url)
           ? profile.avatar_url
           : DEFAULT_AVATAR;
-        document.getElementById("viewerName").textContent = profile?.display_name || "Member";
+        document.getElementById("viewerName").textContent = (profile?.display_name || "Member")+
+          (profile?.is_verified?" ✓ Verified":"");
         document.getElementById("viewerTime").textContent = timeAgo(story.created_at);
         document.getElementById("viewerCaption").textContent = story.caption || "";
+        const musicControls=document.getElementById("storyMusicControls");
+        const soundtrack=document.getElementById("storyMusicAudio");
+        const musicToggle=document.getElementById("storyMusicToggle");
+        musicControls.hidden=true;
+        const social=document.getElementById("storyViewerSocial");
+        if(social)void showStoryInteractions(story,state.user,social,{
+          onReshare:async()=>{state.allGroups=await fetchStoriesFeed();await applySavedFilter();}
+        });
 
         const isOwn = state.user && story.user_id === state.user.id;
         const deleteBtn = document.getElementById("viewerDeleteBtn");
@@ -327,21 +503,47 @@
 
         const media = document.getElementById("storyViewerMedia");
         media.innerHTML = "";
-        const url = isSafeUrl(story.media_url) ? story.media_url : "";
+        let url=isSafeUrl(story.media_url)?story.media_url:"";
+        let musicUrl=isSafeUrl(story.music_url)?story.music_url:"";
         const mediaError = message => {
-          clearTimer();
-          if (!document.getElementById("storyViewer").hidden) {
-            media.replaceChildren();
-            const notice = document.createElement("p");
-            notice.className = "story-media-error";
-            notice.setAttribute("role", "status");
-            notice.textContent = message;
-            media.appendChild(notice);
-            startProgress(4500);
-          }
+          if(version!==state.storyPlaybackVersion||document.getElementById("storyViewer").hidden)return;
+          if(state.mediaWatchdog){clearTimeout(state.mediaWatchdog);state.mediaWatchdog=null;}
+          media.replaceChildren();
+          const notice=document.createElement("p");
+          notice.className="story-media-error";notice.setAttribute("role","status");
+          notice.textContent=message;media.appendChild(notice);
+          const retry=document.createElement("button");
+          retry.type="button";retry.className="btn ghost";
+          retry.textContent="Retry loading status";
+          retry.addEventListener("click",()=>renderActiveStory());
+          media.appendChild(retry);
         };
+        if(String(story.media_url||"").startsWith("story-private-media/")){
+          const loading=document.createElement("p");
+          loading.className="story-loading-private";
+          loading.setAttribute("role","status");
+          loading.textContent="Securely loading friends-only status…";
+          media.appendChild(loading);
+          try{
+            url=await signPrivateStoryAsset(story.id,"media");
+          }catch(error){mediaError(error.message||"Unable to load this private status.");return;}
+          if(version!==state.storyPlaybackVersion||document.getElementById("storyViewer").hidden)return;
+          media.replaceChildren();
+        }
+        if(String(story.music_url||"").startsWith("story-private-media/")){
+          try{musicUrl=await signPrivateStoryAsset(story.id,"music");}
+          catch(error){musicUrl="";console.warn("Private soundtrack unavailable:",error.message);}
+          if(version!==state.storyPlaybackVersion||document.getElementById("storyViewer").hidden)return;
+        }
+        if(musicUrl){
+          musicControls.hidden=false;
+          soundtrack.src=musicUrl;soundtrack.preload="metadata";
+          document.getElementById("storyMusicLabel").textContent=story.music_title||"Soundtrack";
+          musicToggle.textContent="▶ Play music";
+          musicToggle.setAttribute("aria-pressed","false");
+        }
         if (!url) {
-          mediaError("This story's media is unavailable. Moving to the next story.");
+          mediaError("This story's media is unavailable.");
         } else if (story.media_type === "video") {
           const video = document.createElement("video");
           video.src = url;
@@ -349,37 +551,58 @@
           video.muted = true; // Browsers block autoplay with sound.
           video.playsInline = true;
           video.controls = true; // Let the user unmute, pause or resume.
-          video.preload = "metadata";
+          video.preload = "auto";
+          state.storyActiveVideo=video;
           const fail = () => { if (media.contains(video)) mediaError("This video cannot be played. Moving to the next story."); };
           video.addEventListener("error", fail, { once: true });
-          video.addEventListener("loadedmetadata", () => {
-            if (!media.contains(video)) return;
-            const length = video.duration * 1000;
-            const duration = Number.isFinite(length) && length > 0
-              ? Math.min(Math.max(length, 2000), 30000)
-              : 5000;
-            // Match the progress bar to real playback rather than a stalled
-            // autoplay attempt. A manual play starts it too.
-            video.addEventListener("playing", () => startProgress(duration), { once: true });
-            if (video.readyState >= 1) {
-              clearTimeout(state.mediaWatchdog);
-              state.mediaWatchdog = null;
+          // A video only finishes when playback actually reaches its end:
+          // buffering and paused playback never consume the status duration.
+          video.addEventListener("timeupdate",()=>{
+            if(version!==state.storyPlaybackVersion)return;
+            const fill=activeStoryFill();
+            if(fill&&Number.isFinite(video.duration)&&video.duration>0){
+              fill.style.transition="none";
+              fill.style.width=Math.min(100,100*video.currentTime/video.duration)+"%";
             }
-          }, { once: true });
-          video.addEventListener("ended", () => advance(1));
+          });
+          video.addEventListener("playing",()=>{
+            if(version!==state.storyPlaybackVersion)return;
+            if(state.mediaWatchdog){clearTimeout(state.mediaWatchdog);state.mediaWatchdog=null;}
+            if(state.storyHeld)video.pause();
+          });
+          video.addEventListener("ended",()=>{
+            if(version===state.storyPlaybackVersion&&!state.storyHeld)advance(1);
+          });
           media.appendChild(video);
-          state.mediaWatchdog = setTimeout(() => {
-            if (media.contains(video) && video.readyState < 1) fail();
-          }, 12000);
-          void video.play().catch(() => {
-            // Native controls provide a manual Play action when autoplay fails.
+          state.mediaWatchdog=setTimeout(()=>{
+            if(version===state.storyPlaybackVersion&&media.contains(video)&&video.readyState<1)
+              fail();
+          },45000);
+          if(!state.storyHeld)void video.play().catch(()=>{
+            // Allow the browser's native play control if autoplay is restricted.
           });
         } else {
           const img = document.createElement("img");
-          img.src = url;
           img.alt = story.caption || "Story photo";
+          img.decoding="async";
+          img.addEventListener("load",()=>{
+            if(version===state.storyPlaybackVersion&&media.contains(img)){
+              if(state.mediaWatchdog){clearTimeout(state.mediaWatchdog);state.mediaWatchdog=null;}
+              startProgress(6000);
+              preloadUpcomingStory();
+            }
+          },{once:true});
+          img.addEventListener("error",()=>mediaError("Could not load this photo."),{once:true});
           media.appendChild(img);
-          startProgress(5000);
+          state.mediaWatchdog=setTimeout(()=>{
+            if(version===state.storyPlaybackVersion&&!img.complete)
+              mediaError("This image is taking longer than expected.");
+          },45000);
+          img.src=url;
+          if(img.complete&&img.naturalWidth>0){
+            if(state.mediaWatchdog){clearTimeout(state.mediaWatchdog);state.mediaWatchdog=null;}
+            startProgress(6000);
+          }
         }
 
         // Update progress bar fill states (completed / active / upcoming)
@@ -391,17 +614,24 @@
         });
       }
 
-      function startProgress(durationMs) {
-        if (state.timerId) clearTimeout(state.timerId);
-        const tracks = document.querySelectorAll("#storyProgressRow .story-progress-track");
-        const fill = tracks[state.activeStoryIndex]?.querySelector(".story-progress-fill");
-        if (fill) {
-          requestAnimationFrame(() => {
-            fill.style.transition = `width ${durationMs}ms linear`;
-            fill.style.width = "100%";
+      function startProgress(durationMs,resuming=false){
+        if(state.timerId)clearTimeout(state.timerId);
+        if(!resuming)state.storyDuration=durationMs;
+        state.storyRemaining=durationMs;
+        if(state.storyHeld)return;
+        state.storyStartedAt=performance.now();
+        const fill=activeStoryFill();
+        if(fill){
+          const startPct=state.storyDuration?
+            100*(state.storyDuration-durationMs)/state.storyDuration:0;
+          fill.style.transition="none";fill.style.width=startPct+"%";
+          requestAnimationFrame(()=>{
+            if(state.storyHeld)return;
+            fill.style.transition=`width ${durationMs}ms linear`;
+            fill.style.width="100%";
           });
         }
-        state.timerId = setTimeout(() => advance(1), durationMs);
+        state.timerId=setTimeout(()=>{state.timerId=null;advance(1);},durationMs);
       }
 
       function advance(direction) {
@@ -451,8 +681,65 @@
       }
 
       function setupViewerControls() {
-        document.getElementById("storyPrevZone").addEventListener("click", () => advance(-1));
-        document.getElementById("storyNextZone").addEventListener("click", () => advance(1));
+        const soundtrack=document.getElementById("storyMusicAudio");
+        const toggle=document.getElementById("storyMusicToggle");
+        toggle?.addEventListener("click",async()=>{
+          if(!soundtrack?.src)return;
+          if(!soundtrack.paused){soundtrack.pause();return;}
+          try{await soundtrack.play();}catch{
+            window.appUI?.toast?.("Music playback was blocked. Tap Play again.");
+          }
+        });
+        soundtrack?.addEventListener("play",()=>{
+          toggle.textContent="❚❚ Pause music";toggle.setAttribute("aria-pressed","true");
+        });
+        soundtrack?.addEventListener("pause",()=>{
+          toggle.textContent="▶ Play music";toggle.setAttribute("aria-pressed","false");
+        });
+        const socialControls=document.getElementById("storyViewerSocial");
+        // Press-and-hold pauses anywhere on the content, including navigation sides.
+        // Brief taps on either side still navigate. A held side never skips.
+        for(const [id,direction] of [["storyPrevZone",-1],["storyNextZone",1]]){
+          const zone=document.getElementById(id);
+          let pressedAt=0,wasHeld=false;
+          zone.addEventListener("pointerdown",e=>{
+            if(e.button!==0)return;
+            pressedAt=performance.now();wasHeld=false;
+            zone.setPointerCapture?.(e.pointerId);
+            pauseStory();
+          });
+          zone.addEventListener("pointerup",e=>{
+            if(!pressedAt)return;
+            const elapsed=performance.now()-pressedAt;
+            pressedAt=0;wasHeld=elapsed>=260;
+            resumeStory();
+            if(!wasHeld)advance(direction);
+          });
+          zone.addEventListener("pointercancel",()=>{pressedAt=0;wasHeld=true;resumeStory();});
+          zone.addEventListener("click",e=>{
+            // Pointer taps were already handled above; keyboard clicks are not.
+            if(e.detail===0)advance(direction);
+            e.preventDefault();
+          });
+        }
+        const mediaSurface=document.getElementById("storyViewerMedia");
+        mediaSurface?.addEventListener("pointerdown",e=>{
+          if(e.target.closest("button,video[controls]"))return;
+          pauseStory();
+        });
+        mediaSurface?.addEventListener("pointerup",resumeStory);
+        mediaSurface?.addEventListener("pointercancel",resumeStory);
+        socialControls?.addEventListener("pointerdown",pauseStory,{passive:true});
+        socialControls?.addEventListener("focusin",pauseStory);
+        socialControls?.addEventListener("focusout",()=>{
+          setTimeout(()=>{
+            if(!socialControls.contains(document.activeElement))resumeStory();
+          },100);
+        });
+        socialControls?.addEventListener("pointerup",()=>{
+          if(!socialControls.contains(document.activeElement))resumeStory();
+        });
+        socialControls?.addEventListener("pointercancel",resumeStory);
         document.getElementById("viewerCloseBtn").addEventListener("click", closeViewer);
         document.addEventListener("keydown", (event) => {
           const composer = document.getElementById("storyComposer");
@@ -491,8 +778,16 @@
         composer.hidden = true;
         composer.setAttribute("aria-hidden", "true");
         document.getElementById("storyForm").reset();
+        const soundtrackPreview=document.getElementById("storyMusicPreview");
+        if(soundtrackPreview){
+          soundtrackPreview.pause();
+          if(soundtrackPreview.src)URL.revokeObjectURL(soundtrackPreview.src);
+          soundtrackPreview.removeAttribute("src");soundtrackPreview.hidden=true;
+        }
         document.getElementById("storyFilePreview").innerHTML = "";
         revokeStoryPreview();
+        editedStoryFile=null;
+        document.getElementById("storyEditPhoto").hidden=true;
         document.getElementById("storyFilePreviewLabel").textContent = "Choose a photo or video";
         document.body.style.overflow = composerBodyOverflow;
         restoreStoryFocus(composerOpener);
@@ -504,10 +799,24 @@
         document.getElementById("composerBackdrop").addEventListener("click", closeComposer);
 
         const fileInput = document.getElementById("storyFile");
+        document.getElementById("storyMusicFile").addEventListener("change",event=>{
+          const chosen=event.target.files?.[0];
+          const preview=document.getElementById("storyMusicPreview");
+          preview.pause();
+          if(preview.src)URL.revokeObjectURL(preview.src);
+          preview.removeAttribute("src");preview.hidden=!chosen;
+          if(chosen){
+            preview.src=URL.createObjectURL(chosen);
+            const title=document.getElementById("storyMusicTitle");
+            if(!title.value.trim())title.value=chosen.name.replace(/\.[^.]+$/,"").slice(0,90);
+          }
+        });
         fileInput.addEventListener("change", () => {
           const file = fileInput.files?.[0];
           const preview = document.getElementById("storyFilePreview");
           const label = document.getElementById("storyFilePreviewLabel");
+          editedStoryFile=null;
+          document.getElementById("storyEditPhoto").hidden=!file?.type?.startsWith("image/");
           preview.innerHTML = "";
           revokeStoryPreview();
           if (!file) {
@@ -531,12 +840,33 @@
           }
         });
 
+        document.getElementById("storyEditPhoto").addEventListener("click",async()=>{
+          const original=editedStoryFile||fileInput.files?.[0];
+          if(!original?.type.startsWith("image/"))return;
+          const button=document.getElementById("storyEditPhoto");
+          button.disabled=true;
+          try{
+            const edited=await editStatusPhoto(original,{verified:state.verified});
+            if(!edited)return;
+            editedStoryFile=edited;
+            revokeStoryPreview();
+            const url=URL.createObjectURL(edited);
+            storyPreviewObjectUrl=url;
+            const preview=document.getElementById("storyFilePreview");
+            preview.replaceChildren();
+            const img=document.createElement("img");img.src=url;img.alt="Edited status preview";preview.appendChild(img);
+            document.getElementById("storyFilePreviewLabel").textContent="Edited photo ready";
+          }catch(error){
+            window.appUI?.toast?.(error.message||"Photo editing unavailable on this device.");
+          }finally{button.disabled=false;}
+        });
+        setupMentionInput(document.getElementById("storyCaption"));
         document.getElementById("storyForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           if (!state.user) return;
           const submitBtn = document.getElementById("storySubmitBtn");
           const status = document.getElementById("storyComposerStatus");
-          const file = fileInput.files?.[0];
+          const file = editedStoryFile || fileInput.files?.[0];
           const caption = document.getElementById("storyCaption").value.trim();
           const visibility = document.querySelector('input[name="storyVisibility"]:checked')?.value || "public";
 
@@ -548,7 +878,16 @@
 
           submitBtn.disabled = true;
           submitBtn.textContent = "Posting...";
-          const result = await createStory({ userId: state.user.id, file, caption, visibility });
+          const durationHours=state.verified?Number(document.getElementById("storyDuration").value):24;
+          const musicFile=document.getElementById("storyMusicFile").files?.[0]||null;
+          const result = await createStory({
+            userId:state.user.id,file,caption,visibility,durationHours,
+            allowReshare:document.getElementById("storyAllowReshare").checked,
+            allowPublicComments:document.getElementById("storyAllowComments").checked,
+            musicFile,
+            musicTitle:document.getElementById("storyMusicTitle").value.trim(),
+            musicRightsConfirmed:document.getElementById("storyMusicRights").checked
+          });
           submitBtn.disabled = false;
           submitBtn.textContent = "Post Story";
 
@@ -560,8 +899,8 @@
 
           closeComposer();
           try {
-            state.groups = await fetchStoriesFeed();
-            renderRail();
+            state.allGroups = await fetchStoriesFeed();
+            await applySavedFilter();
           } catch (error) {
             console.warn("Story posted, but refreshing stories failed:", error);
             window.appUI?.toast?.("Your story was posted, but the feed could not refresh. Reload to see it.", {

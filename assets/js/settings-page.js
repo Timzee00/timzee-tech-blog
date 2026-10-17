@@ -1,6 +1,7 @@
 import { supabase, getCurrentUser } from "./supabase.js";
-import { loadUserPreferences, saveUserPreferences, mergePreferences, writeLocalPreferences } from "./user-preferences.js";
+import { loadUserPreferences, saveUserPreferences, mergePreferences, writeLocalPreferences, clearLocalPreferences } from "./user-preferences.js";
 import { reportAppError } from "./utils.js";
+import { mountAdvancedSettings, initializeAdvancedSettings } from "./settings-advanced.js";
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $("settingsStatus");
@@ -115,13 +116,18 @@ async function saveAll() {
     if (dirty) { clearTimeout(state.timer); void saveAll(); }
   }
 }
-function scheduleSave(){dirty=true;clearTimeout(state.timer);setStatus("Changes pending…");state.timer=window.setTimeout(()=>void saveAll(),500);}
+function scheduleSave(){
+ dirty=true;clearTimeout(state.timer);setStatus("Changes pending…");
+ if(state.user?.id&&state.preferences)writeLocalPreferences(state.user.id,state.preferences);
+ state.timer=window.setTimeout(()=>void saveAll(),500);
+}
 
 function wireRecommendationReset(){
-  const feedSection=$("feed");if(!feedSection||$("clearRecommendationFeedbackBtn"))return;
+  const feedSection=$("feed");if(!feedSection||$("manageRecommendationFeedbackBtn"))return;
   const help=feedSection.querySelector(".settings-help");if(!help)return;
-  const row=document.createElement("div");row.className="settings-inline-actions";row.innerHTML=`<button class="btn ghost sm" id="clearRecommendationFeedbackBtn" type="button">Clear recommendation feedback</button>`;help.appendChild(row);
-  $("clearRecommendationFeedbackBtn")?.addEventListener("click",async()=>{try{const result=await supabase.from("user_content_feedback").delete().eq("user_id",state.user.id);if(result.error)throw result.error;setStatus("Recommendation feedback cleared.","success");}catch(error){setStatus(error?.message||"Could not clear recommendation feedback.","error");reportAppError(error,"Recommendation feedback reset failed");}});
+  const row=document.createElement("div");row.className="settings-inline-actions";
+  row.innerHTML='<a class="btn ghost sm" id="manageRecommendationFeedbackBtn" href="#data-controls">Manage recommendation feedback</a>';
+  help.appendChild(row);
 }
 
 function wireControls(){
@@ -133,13 +139,14 @@ function wireControls(){
   }));
   document.querySelectorAll("[data-profile-setting]").forEach(input=>input.addEventListener("change",scheduleSave));
   wireRecommendationReset();
-  $("clearLocalDataBtn")?.addEventListener("click",()=>{writeLocalPreferences(state.user.id,mergePreferences());setStatus("Local preferences cleared. Server preferences remain saved.","success");});
+  $("clearLocalDataBtn")?.addEventListener("click",()=>{const cleared=clearLocalPreferences(state.user.id);setStatus(cleared?"This device’s preference cache was cleared. Your saved account settings remain unchanged; reload to sync them again.":"Unable to clear this device’s preference cache.",cleared?"success":"error");});
   const nav=$("settingsNav"),links=[...(nav?.querySelectorAll("a")||[])],sections=links.map(link=>document.querySelector(link.getAttribute("href"))).filter(Boolean);
   if(links.length&&"IntersectionObserver"in window){const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{const link=nav.querySelector(`a[href="#${entry.target.id}"]`);if(link&&entry.isIntersecting){links.forEach(item=>item.classList.remove("active"));link.classList.add("active");}}),{rootMargin:"-20% 0px -65% 0px",threshold:0});sections.forEach(section=>observer.observe(section));}
 }
 
 async function boot() {
   mountExtraSettings();
+  mountAdvancedSettings();
   $("cookieSettingsBtn")?.addEventListener("click", async () => {
     try {
       await import("./privacy-consent.js");
@@ -166,6 +173,27 @@ async function boot() {
     setStatus("Email preferences unavailable. Other settings can still be edited.","error");
     reportAppError(error,"Email preference loading failed");
   }
-  wireControls(); if(state.emailPreferences)setStatus("Settings loaded", "success");
+  wireControls();
+  if(state.emailPreferences)setStatus("Settings loaded", "success");
+  try{
+    await initializeAdvancedSettings({
+      user:state.user,
+      preferences:state.preferences,
+      getPreferences:()=>state.preferences,
+      onStatus:(message,tone)=>setStatus(message,tone),
+      onImport:changes=>{
+        for(const [section,updates] of Object.entries(changes)){
+          if(updates&&typeof updates==="object"&&!Array.isArray(updates)){
+            state.preferences[section]={...state.preferences[section],...updates};
+          }
+        }
+        state.preferences=mergePreferences(state.preferences);
+        applyControls();scheduleSave();
+      }
+    });
+  }catch(error){
+    console.warn("Advanced preferences unavailable:",error);
+    setStatus("Some advanced settings could not load. Your standard settings remain available.","error");
+  }
 }
 boot().catch(error=>{setStatus(error?.message||"Could not load settings.","error");reportAppError(error,"Settings page load failed");});

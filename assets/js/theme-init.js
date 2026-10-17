@@ -23,6 +23,17 @@
   function applyAppearance(options) {
     document.documentElement.dataset.reduceMotion = options?.reduceMotion === true ? "true" : "false";
     document.documentElement.dataset.highContrast = options?.highContrast === true ? "true" : "false";
+    const scale = ["90","100","110","125"].includes(String(options?.fontScale)) ? String(options.fontScale) : "100";
+    document.documentElement.dataset.fontScale = scale;
+    document.documentElement.style.fontSize = scale + "%";
+    document.documentElement.dataset.contentDensity = options?.contentDensity === "compact" ? "compact" : "comfortable";
+    if (["light","dark","system"].includes(options?.theme)) {
+      try {
+        if (options.theme === "system") localStorage.removeItem(KEY);
+        else localStorage.setItem(KEY, options.theme);
+      } catch { /* Browser storage is optional. */ }
+      applyTheme(options.theme === "system" ? (system.matches ? "dark" : "light") : options.theme);
+    }
   }
   try { applyAppearance(JSON.parse(localStorage.getItem(APPEARANCE_KEY) || "{}")); }
   catch { applyAppearance({}); }

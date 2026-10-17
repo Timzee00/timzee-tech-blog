@@ -565,6 +565,13 @@
         <h3>Comments</h3>
         <button type="button" class="comment-drawer-close" id="commentDrawerClose" aria-label="Close comments">&times;</button>
       </div>
+      <div class="video-comment-creator-controls" id="videoCommentCreatorControls" hidden>
+        <label><input id="videoCommentsEnabled" type="checkbox" checked> Allow comments</label>
+        <label><input id="videoDownloadsEnabled" type="checkbox" checked> Show download button</label>
+        <button type="button" id="videoCreatePoll">Create poll</button>
+      </div>
+      <div id="videoCommentPoll" class="video-comment-poll"></div>
+      <div id="videoCommentsDisabledNotice" class="comment-empty" hidden>Comments are turned off for this video.</div>
       <div class="comment-drawer-list" id="commentDrawerList" aria-live="polite"></div>
       <button type="button" id="commentLoadMoreBtn" class="comment-load-more" hidden>Load more comments</button>
       <form novalidate class="comment-drawer-form" id="commentDrawerForm">
@@ -573,6 +580,16 @@
       </form>
     </div>
 
+    <style>
+      .video-comment-creator-controls{display:flex;flex-wrap:wrap;gap:8px;padding:10px;color:#fff;background:#1e2c37}
+      .video-comment-creator-controls[hidden],.comment-drawer-form[hidden],#videoCommentsDisabledNotice[hidden]{display:none!important}
+      .video-comment-creator-controls label{display:flex;align-items:center;gap:5px;font:600 .75rem system-ui}
+      .video-comment-creator-controls button{border:1px solid #659da1;border-radius:8px;padding:8px;background:#123740;color:white;font:600 .76rem system-ui}
+      .video-comment-poll{padding:8px;max-height:min(34dvh,310px);overflow:auto}
+      .video-comment-poll:empty{display:none}
+      .reel-chip[hidden]{display:none!important}
+    </style>
+    <link rel="stylesheet" href="assets/css/content-polls.css">
     <script type="module">
       import {
         fetchVideos,
@@ -591,6 +608,7 @@
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
       import {renderSocialText} from "./assets/js/social-rich-text.mjs";
+      import {mountPoll,openPollComposer} from "./assets/js/content-polls.mjs";
       import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
 
       const root = document.getElementById("reelRoot");
@@ -718,7 +736,7 @@
                   <div class="reel-chip-icon">↗</div>
                   <span class="reel-chip-count">Share</span>
                 </button>
-                <button type="button" aria-label="Save video" class="reel-chip" data-action="download" data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(video.video_url || '')}" data-title="${escapeHTML(video.title || 'video')}">
+                <button type="button" aria-label="Save video" class="reel-chip" data-action="download" ${video.allow_download===false?"hidden":""} data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(video.video_url || '')}" data-title="${escapeHTML(video.title || 'video')}">
                   <div class="reel-chip-icon">⬇</div>
                   <span class="reel-chip-count">Save</span>
                 </button>
@@ -1158,6 +1176,32 @@
       const drawerForm = document.getElementById("commentDrawerForm");
       const drawerInput = document.getElementById("commentDrawerInput");
       setupMentionInput(drawerInput);
+      document.getElementById('videoCreatePoll').addEventListener('click',()=>{
+        const video=state.videos.find(v=>v.id===state.commentsOpenFor);
+        if(video&&state.user?.id===video.user_id)void openPollComposer('video',video.id,
+          ()=>mountPoll(document.getElementById('videoCommentPoll'),'video',video.id));
+      });
+      for(const [control,column] of [['videoCommentsEnabled','allow_comments'],['videoDownloadsEnabled','allow_download']]){
+        document.getElementById(control).addEventListener('change',async event=>{
+          const video=state.videos.find(v=>v.id===state.commentsOpenFor);
+          if(!video||video.user_id!==state.user?.id)return;
+          const checkbox=event.target;checkbox.disabled=true;
+          const {error}=await supabase.from('videos').update({[column]:checkbox.checked})
+            .eq('id',video.id).eq('user_id',state.user.id);
+          if(error){checkbox.checked=!checkbox.checked;window.appUI?.toast?.(error.message);}
+          else{
+            video[column]=checkbox.checked;
+            if(column==='allow_comments'){
+              drawerForm.hidden=!checkbox.checked;
+              document.getElementById('videoCommentsDisabledNotice').hidden=checkbox.checked;
+            }else{
+              const target=document.querySelector(`[data-action="download"][data-id="${video.id}"]`);
+              if(target)target.hidden=!checkbox.checked;
+            }
+          }
+          checkbox.disabled=false;
+        });
+      }
       let replyingTo = null;
 
       function renderCommentTree(comments, parentId = null, depth = 0) {
@@ -1287,6 +1331,18 @@
 
       async function openComments(videoId) {
         state.commentsOpenFor = videoId;
+        const video=state.videos.find(v=>v.id===videoId);
+        const isOwner=Boolean(state.user&&video?.user_id===state.user.id);
+        const controls=document.getElementById('videoCommentCreatorControls');
+        controls.hidden=!isOwner;
+        document.getElementById("videoCommentsEnabled").checked=video?.allow_comments!==false;
+        document.getElementById("videoDownloadsEnabled").checked=video?.allow_download!==false;
+        const allowed=video?.allow_comments!==false;
+        drawerForm.hidden=!allowed;
+        document.getElementById("videoCommentsDisabledNotice").hidden=allowed;
+        const pollHost=document.getElementById("videoCommentPoll");
+        pollHost.replaceChildren();
+        if(state.user)void mountPoll(pollHost,'video',videoId);
         commentGeneration++;
         const generation = commentGeneration;
         commentRows = [];
@@ -1322,6 +1378,8 @@
 
       drawerForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        const selected=state.videos.find(v=>v.id===state.commentsOpenFor);
+        if(selected?.allow_comments===false){window.appUI?.toast?.("The creator disabled comments on this video.");return;}
         const body = drawerInput.value.trim();
         if (!body || !state.commentsOpenFor) return;
         if (!state.user) {

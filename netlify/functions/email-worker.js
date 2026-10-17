@@ -165,4 +165,4 @@ exports.handler=async()=>{
   console.log("Email worker completed",results);
   return {statusCode:200,body:JSON.stringify(results)};
 };
-exports.config={schedule:"* * * *"};
+// Schedule is managed centrally by netlify.toml every 15 minutes.

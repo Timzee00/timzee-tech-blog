@@ -4,6 +4,7 @@
 @import url("utilities.css");
 @import url("forms.css");
 @import url("design-system.css");
+@import url("viewport-guard.css");
 
 /* Staff tokens map to the shared light and dark palette. */
 .admin-shell,
@@ -933,4 +934,23 @@ select:focus-visible {
     width: 100%;
     margin-top: 6px;
   }
+}
+
+/* Request actions stay visible and legible on narrow devices. */
+.admin-member-lookup{display:grid;gap:6px;max-height:240px;overflow:auto}
+.admin-member-lookup:empty{display:none}
+.admin-member-lookup button{display:grid;gap:3px;width:100%;padding:12px;text-align:left;border:1px solid var(--admin-border-strong);background:var(--admin-bg-2);color:var(--admin-text);border-radius:10px;font:inherit;cursor:pointer}
+.admin-member-lookup button:hover,.admin-member-lookup button:focus-visible{border-color:var(--admin-accent)}
+.admin-member-lookup small{color:var(--admin-text-muted);overflow-wrap:anywhere}
+@media(max-width:700px){
+.admin-panel .admin-review-table{display:block;min-width:0!important;width:100%}
+.admin-review-table thead{display:none}
+.admin-review-table tbody{display:grid;gap:12px}
+.admin-review-table tbody tr{display:block;border:1px solid var(--admin-border-strong);border-radius:12px;padding:12px;background:var(--admin-bg-2)}
+.admin-review-table tbody td{display:grid;grid-template-columns:minmax(70px,1fr) minmax(0,2fr);gap:10px;min-width:0!important;border:0!important;padding:7px 0;overflow-wrap:anywhere!important}
+.admin-review-table tbody td::before{content:attr(data-label);font-size:.75rem;font-weight:700;color:var(--admin-text-muted)}
+.admin-review-table tbody td:last-child{display:block}
+.admin-review-table tbody td:last-child::before{display:block;margin-bottom:7px}
+.admin-review-table .inline-actions{display:flex;flex-wrap:wrap;gap:8px}
+.admin-review-table button{white-space:normal!important;min-height:42px}
 }

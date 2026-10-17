@@ -3434,3 +3434,14 @@ body::after {
    file previously had three separate, conflicting attempts at it stacked
    on top of each other (visible in git history / the refactor report),
    which is what produced the inconsistent overlay panel in production. */
+
+/* Mobile comment replies remain above the composer, never beside the text box. */
+#commentForm,#messageForm{display:flex;flex-direction:column;align-items:stretch;min-width:0;max-width:100%;box-sizing:border-box}
+#commentForm > *,#messageForm > *{min-width:0;max-width:100%;box-sizing:border-box}
+#commentForm .reply-preview,#messageForm .reply-preview{order:-1;width:100%;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 10px;overflow-wrap:anywhere;margin-bottom:0;padding:10px 12px;box-sizing:border-box}
+#commentForm .reply-preview.hidden,#messageForm .reply-preview.hidden{display:none!important}
+#commentForm .reply-preview > span,#messageForm .reply-preview > span{min-width:0;overflow-wrap:anywhere}
+#commentForm .reply-preview > span:nth-child(2){grid-row:2;grid-column:1}
+#commentForm .reply-preview > button,#messageForm .reply-preview > button{grid-row:1 / span 2;grid-column:2;align-self:center;padding:9px;min-height:40px}
+#commentForm textarea,#messageForm textarea{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+@media(max-width:540px){#commentForm,#messageForm{gap:9px}#commentForm .reply-preview,#messageForm .reply-preview{font-size:.78rem}}

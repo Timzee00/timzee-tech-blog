@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#087f73">
+<meta name="description" content="Your personal tech world: five useful stories, saved reading, and communities that match your interests.">
+<title>My Tech · Timzee Tech Hub</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="assets/css/community-forum.css">
+<link rel="stylesheet" href="assets/css/my-tech.css">
+<script defer src="assets/js/theme-init.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header class="site-header"><div class="container wrap">
+<a href="index.html" class="brand"><span class="logo">Timzee <span>Tech</span> Hub</span><span class="tagline">Your personal tech world.</span></a>
+<nav class="nav-pill" aria-label="Main navigation"><a href="index.html">Home</a><a href="my-tech.html" aria-current="page">My Tech</a><a href="discussion.html">Communities</a><a href="videos.html">Videos</a></nav>
+<div class="header-actions"><a class="icon-btn" href="stories.html" aria-label="Statuses">◉</a><a class="icon-btn" href="chat.html" aria-label="Chat">✉</a><div class="auth-actions" id="authActions"></div></div>
+</div></header>
+<main class="container my-tech-shell" id="main-content">
+<section class="my-tech-hero">
+<div><p class="forum-eyebrow">YOUR PERSONAL TECH WORLD</p><h1>My Tech</h1>
+<p>A useful briefing, the conversations you follow, and the articles worth keeping. No endless-scroll pressure.</p></div>
+<div class="my-tech-actions"><a class="forum-button primary" href="discussion.html?mytech=1">For You feed</a>
+<a class="forum-button secondary" href="newsletter.html">Email digest</a></div>
+</section>
+<div id="myTechNotice" role="status" aria-live="polite"></div>
+<div class="my-tech-grid">
+<section class="forum-panel my-tech-brief" aria-labelledby="dailyBriefHeading">
+<div class="my-tech-section-head"><div><span class="forum-eyebrow">5 STORIES THAT MATTER</span>
+<h2 id="dailyBriefHeading">Your Tech Brief</h2><p id="myTechBriefDate"></p></div>
+<button id="myTechRefresh" type="button" class="forum-button secondary">Refresh</button></div>
+<p class="my-tech-explainer">Headlines and short extracts from real published Timzee articles. Older stories show their original dates; this is not a generated or verified breaking-news report.</p>
+<div id="myTechBriefStories" class="my-tech-stories" aria-live="polite"><p class="forum-muted">Loading published articles…</p></div>
+</section>
+<aside class="my-tech-side">
+<section class="forum-panel" aria-labelledby="myTechLibraryHeading">
+<div class="my-tech-section-head"><h2 id="myTechLibraryHeading">Your saved library</h2><a href="profile.html">Profile ↗</a></div>
+<div id="myTechLibrary" aria-live="polite"><p class="forum-muted">Loading bookmarks…</p></div>
+</section>
+<section class="forum-panel" aria-labelledby="myTechCommunityHeading"><h2 id="myTechCommunityHeading">Discover your communities</h2>
+<p>Choose technology interests, ask questions, follow useful discussions, and return when something changes.</p>
+<a class="forum-button secondary" href="discussion.html?mytech=1">Open personalized discussions</a>
+</section>
+<section class="forum-panel" aria-labelledby="myTechControlHeading"><h2 id="myTechControlHeading">Your choices matter</h2>
+<p>My Tech prioritizes explicit interests and followed communities. You can change your preferences or mark individual recommendations as not interesting.</p>
+<a class="forum-button secondary" href="discussion.html?interests=1">Change interests</a>
+</section>
+</aside>
+</div>
+</main>
+<footer class="footer"><div class="container"><div class="footer-links"><a href="index.html">Home</a><a href="support.html">Support</a><a href="newsletter.html">Newsletter</a></div></div></footer>
+<script type="module" src="assets/js/my-tech.mjs"></script>
+</body></html>
