@@ -95,6 +95,16 @@ function deepMerge(base, override, parentPath = "") {
 }
 export function mergePreferences(value) { return deepMerge(DEFAULT_USER_PREFERENCES, value || {}); }
 export function readLocalPreferences(userId = "guest") { try { return mergePreferences(JSON.parse(localStorage.getItem(storageKey(userId)) || "{}")); } catch (_) { return mergePreferences(); } }
+/* Remove only cosmetic/preference cache, never authentication/session data. */
+export function clearLocalPreferences(userId = "guest") {
+  try {
+    localStorage.removeItem(storageKey(userId));
+    localStorage.removeItem("timzee-ui-appearance");
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 export function writeLocalPreferences(userId, preferences) {
   const merged = mergePreferences(preferences);
   try {
