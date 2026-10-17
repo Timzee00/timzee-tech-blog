@@ -6,7 +6,7 @@
     "node": ">=22 <23"
   },
   "scripts": {
-    "check": "node scripts/validate-production-config.mjs && node scripts/check-syntax.mjs && node --test tests/production-media-smoke.test.cjs tests/community-forums.test.cjs",
+    "check": "node scripts/validate-production-config.mjs && node scripts/check-syntax.mjs && node --test tests/production-media-smoke.test.cjs tests/community-forums.test.cjs tests/community-expansion.test.cjs",
     "build": "npm run check && node scripts/build-site.mjs",
     "test": "node --test tests/*.test.cjs",
     "test:browser": "npm run build && playwright test"
