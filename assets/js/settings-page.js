@@ -1,5 +1,5 @@
 import { supabase, getCurrentUser } from "./supabase.js";
-import { loadUserPreferences, saveUserPreferences, mergePreferences, writeLocalPreferences } from "./user-preferences.js";
+import { loadUserPreferences, saveUserPreferences, mergePreferences, writeLocalPreferences, clearLocalPreferences } from "./user-preferences.js";
 import { reportAppError } from "./utils.js";
 import { mountAdvancedSettings, initializeAdvancedSettings } from "./settings-advanced.js";
 
@@ -139,7 +139,7 @@ function wireControls(){
   }));
   document.querySelectorAll("[data-profile-setting]").forEach(input=>input.addEventListener("change",scheduleSave));
   wireRecommendationReset();
-  $("clearLocalDataBtn")?.addEventListener("click",()=>{writeLocalPreferences(state.user.id,mergePreferences());setStatus("Local preferences cleared. Server preferences remain saved.","success");});
+  $("clearLocalDataBtn")?.addEventListener("click",()=>{const cleared=clearLocalPreferences(state.user.id);setStatus(cleared?"This device’s preference cache was cleared. Your saved account settings remain unchanged; reload to sync them again.":"Unable to clear this device’s preference cache.",cleared?"success":"error");});
   const nav=$("settingsNav"),links=[...(nav?.querySelectorAll("a")||[])],sections=links.map(link=>document.querySelector(link.getAttribute("href"))).filter(Boolean);
   if(links.length&&"IntersectionObserver"in window){const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{const link=nav.querySelector(`a[href="#${entry.target.id}"]`);if(link&&entry.isIntersecting){links.forEach(item=>item.classList.remove("active"));link.classList.add("active");}}),{rootMargin:"-20% 0px -65% 0px",threshold:0});sections.forEach(section=>observer.observe(section));}
 }
