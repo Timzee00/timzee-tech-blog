@@ -1,6 +1,7 @@
 import { supabase, getCurrentUser } from "./supabase.js";
 import { loadUserPreferences, saveUserPreferences, mergePreferences, writeLocalPreferences } from "./user-preferences.js";
 import { reportAppError } from "./utils.js";
+import { mountAdvancedSettings, initializeAdvancedSettings } from "./settings-advanced.js";
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $("settingsStatus");
@@ -115,7 +116,11 @@ async function saveAll() {
     if (dirty) { clearTimeout(state.timer); void saveAll(); }
   }
 }
-function scheduleSave(){dirty=true;clearTimeout(state.timer);setStatus("Changes pending…");state.timer=window.setTimeout(()=>void saveAll(),500);}
+function scheduleSave(){
+ dirty=true;clearTimeout(state.timer);setStatus("Changes pending…");
+ if(state.user?.id&&state.preferences)writeLocalPreferences(state.user.id,state.preferences);
+ state.timer=window.setTimeout(()=>void saveAll(),500);
+}
 
 function wireRecommendationReset(){
   const feedSection=$("feed");if(!feedSection||$("clearRecommendationFeedbackBtn"))return;
@@ -140,6 +145,7 @@ function wireControls(){
 
 async function boot() {
   mountExtraSettings();
+  mountAdvancedSettings();
   $("cookieSettingsBtn")?.addEventListener("click", async () => {
     try {
       await import("./privacy-consent.js");
@@ -166,6 +172,26 @@ async function boot() {
     setStatus("Email preferences unavailable. Other settings can still be edited.","error");
     reportAppError(error,"Email preference loading failed");
   }
-  wireControls(); if(state.emailPreferences)setStatus("Settings loaded", "success");
+  wireControls();
+  if(state.emailPreferences)setStatus("Settings loaded", "success");
+  try{
+    await initializeAdvancedSettings({
+      user:state.user,
+      preferences:state.preferences,
+      onStatus:(message,tone)=>setStatus(message,tone),
+      onImport:changes=>{
+        for(const [section,updates] of Object.entries(changes)){
+          if(updates&&typeof updates==="object"&&!Array.isArray(updates)){
+            state.preferences[section]={...state.preferences[section],...updates};
+          }
+        }
+        state.preferences=mergePreferences(state.preferences);
+        applyControls();scheduleSave();
+      }
+    });
+  }catch(error){
+    console.warn("Advanced preferences unavailable:",error);
+    setStatus("Some advanced settings could not load. Your standard settings remain available.","error");
+  }
 }
 boot().catch(error=>{setStatus(error?.message||"Could not load settings.","error");reportAppError(error,"Settings page load failed");});
