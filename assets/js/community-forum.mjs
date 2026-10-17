@@ -149,7 +149,11 @@ function enterFeed({mode="home",community=null,push=true,sort=null}={}){
  $("forumFeedSubtitle").textContent=community?community.description||"Explore community threads.":
   mode==="joined"?"New conversations in communities you've joined.":
   mode==="saved"?"The useful topics you saved for later.":mode==="personal"?"Ranked by your chosen interests, communities, freshness, and conversation quality.":"Ask questions, exchange ideas and share practical tech knowledge.";
- $("forumJoinButton").hidden=!community||!state.user;
+ const showingPersonal=mode==="personal"&&!community;
+ $("forumPersonalInterests").hidden=!showingPersonal;
+ const sortAndSearch=document.querySelector(".forum-feed-controls");
+ if(sortAndSearch)sortAndSearch.hidden=showingPersonal;
+  $("forumJoinButton").hidden=!community||!state.user;
  $("forumModerationButton").hidden=!community||!isCommunityStaff(community.id);
  if(community){
   $("forumJoinButton").textContent=state.joined.has(community.id)?"Joined ✓":community.visibility==="public"?"Join community":"Request to join";
@@ -1206,6 +1210,7 @@ function bindEvents(){
  $("forumLoadMore").addEventListener("click",()=>void loadFeed(false));
  $("forumMoreReplies").addEventListener("click",()=>void loadReplies(false));
  $("forumJoinButton").addEventListener("click",toggleJoin);
+ $("forumPersonalInterests").addEventListener("click",()=>showInterestEditor());
  $("forumModerationButton").addEventListener("click",()=>void openModerationWorkspace());
  $("forumModerationDialog").addEventListener("change",e=>{
    const select=e.target.closest("[data-set-role]");
