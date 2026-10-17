@@ -123,10 +123,11 @@ function scheduleSave(){
 }
 
 function wireRecommendationReset(){
-  const feedSection=$("feed");if(!feedSection||$("clearRecommendationFeedbackBtn"))return;
+  const feedSection=$("feed");if(!feedSection||$("manageRecommendationFeedbackBtn"))return;
   const help=feedSection.querySelector(".settings-help");if(!help)return;
-  const row=document.createElement("div");row.className="settings-inline-actions";row.innerHTML=`<button class="btn ghost sm" id="clearRecommendationFeedbackBtn" type="button">Clear recommendation feedback</button>`;help.appendChild(row);
-  $("clearRecommendationFeedbackBtn")?.addEventListener("click",async()=>{try{const result=await supabase.from("user_content_feedback").delete().eq("user_id",state.user.id);if(result.error)throw result.error;setStatus("Recommendation feedback cleared.","success");}catch(error){setStatus(error?.message||"Could not clear recommendation feedback.","error");reportAppError(error,"Recommendation feedback reset failed");}});
+  const row=document.createElement("div");row.className="settings-inline-actions";
+  row.innerHTML='<a class="btn ghost sm" id="manageRecommendationFeedbackBtn" href="#data-controls">Manage recommendation feedback</a>';
+  help.appendChild(row);
 }
 
 function wireControls(){
@@ -178,6 +179,7 @@ async function boot() {
     await initializeAdvancedSettings({
       user:state.user,
       preferences:state.preferences,
+      getPreferences:()=>state.preferences,
       onStatus:(message,tone)=>setStatus(message,tone),
       onImport:changes=>{
         for(const [section,updates] of Object.entries(changes)){
