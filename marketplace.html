@@ -170,6 +170,7 @@
       import { uploadMedia } from "./assets/js/media.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import { formatMarketplacePrice } from "./assets/js/marketplace-currency.mjs";
+      import {verifiedName,verifiedAvatar,loadVerifiedIdentityMap} from "./assets/js/verified-identity.mjs";
 
       const MAX_PHOTOS = 8;
       const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -279,6 +280,7 @@
         }
       }
 
+      let sellerIdentityMap=new Map();
       let listVersion = 0;
       let loading = false;
       async function loadListings() {
@@ -296,6 +298,13 @@
           });
           if (version !== listVersion || query !== document.getElementById("marketplaceSearch").value.trim()) return;
           state.listings = offset === 0 ? rows : [...state.listings, ...rows];
+          try{
+            sellerIdentityMap=await loadVerifiedIdentityMap(supabase,state.listings.map(item=>item.user_id).filter(Boolean));
+          }catch(error){
+            console.warn("Seller identity decorations unavailable",error.message);
+            sellerIdentityMap=new Map();
+          }
+          if(version!==listVersion)return;
           renderListings();
           more.style.display = rows.length === state.limit ? "inline-flex" : "none";
         } catch (error) {
@@ -335,9 +344,8 @@
                 <span>${escapeHTML(item.location || 'Online')}</span>
               </div>
               <div class="listing-seller">
-                <a class="seller-avatar" href="profile.html?id=${encodeURIComponent(item.user_id || '')}" aria-label="View seller profile">${escapeHTML(safeSellerLabel(item.seller_name).slice(0,1).toUpperCase())}</a>
-                <span class="market-seller-name">${escapeHTML(safeSellerLabel(item.seller_name))}</span>
-                ${item.seller_verified ? '<span class="badge-chip verified market-verified-badge" title="Verified Seller">Verified Seller</span>' : ''}
+                <a class="tz-market-seller-avatar" href="profile.html?id=${encodeURIComponent(item.user_id || '')}" aria-label="View seller profile">${verifiedAvatar(sellerIdentityMap.get(item.user_id)?.avatar_url,sellerIdentityMap.get(item.user_id),{size:"sm",alt:""})}</a>
+                <span class="market-seller-name">${verifiedName(safeSellerLabel(item.seller_name),sellerIdentityMap.get(item.user_id),{compact:true})}</span>
               </div>
               <div class="listing-card-actions">
                 <a class="btn ghost sm" href="listing.html?id=${encodeURIComponent(item.id)}">View details</a>
