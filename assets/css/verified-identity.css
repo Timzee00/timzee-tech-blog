@@ -283,3 +283,10 @@ html[data-reduce-motion="true"] .tz-avatar-verified.tz-frame::after{animation:no
 .listing-seller{min-width:0;max-width:100%;flex-wrap:wrap}
 .listing-seller>.market-seller-name{min-width:0;max-width:100%;overflow-wrap:anywhere}
 @media(max-width:360px){.tz-video-card-author{gap:5px}.tz-video-card-author>.tz-avatar-verified{inline-size:30px;block-size:30px}}
+
+
+.seller-info #sellerAvatar:has(.tz-avatar-verified){display:inline-flex;align-items:center;justify-content:center;background:transparent;border:0;overflow:visible;padding:0;flex-shrink:0}
+.seller-info #sellerAvatar .tz-avatar-verified{inline-size:60px;block-size:60px;max-inline-size:100%}
+.seller-info #sellerName .tz-identity-name{max-width:100%;overflow-wrap:anywhere}
+.seller-info #sellerVerifiedBadge{display:block;max-width:300px;font-size:.72rem;line-height:1.5;color:var(--color-text-muted,#637681);overflow-wrap:anywhere}
+@media(max-width:360px){.seller-info #sellerAvatar .tz-avatar-verified{inline-size:50px;block-size:50px}}
