@@ -60,3 +60,23 @@ export function verifiedAvatar(url,profile,{size="md",alt="Profile picture"}={})
     ' tz-avatar-verified--'+sizeClass+'"><img src="'+safeText(safeUrl)+
     '" alt="'+safeText(alt)+'" loading="lazy" decoding="async"></span>';
 }
+
+/** Bounded, batched public identity lookup. No N+1 requests per comment.
+ *  Only public_profiles is queried: private IDs and verification documents
+ *  never enter the client. Cache entries expire after 60 seconds so revoked
+ *  badges do not remain visible for an entire long browsing session. */
+export async function loadVerifiedIdentityMap(supabase,ids,cache=new Map()){
+  const unique=[...new Set((ids||[]).filter(v=>/^[a-f0-9-]{36}$/i.test(String(v))))].slice(0,160);
+  const now=Date.now();
+  const missing=unique.filter(id=>!cache.has(id)||cache.get(id).expiresAt<now);
+  for(let start=0;start<missing.length;start+=80){
+    const batch=missing.slice(start,start+80);
+    const {data,error}=await supabase.from("public_profiles")
+      .select("id,display_name,avatar_url,is_verified,verification_tier,frame_style")
+      .in("id",batch);
+    if(error)throw error;
+    const found=new Map((data||[]).map(profile=>[profile.id,profile]));
+    for(const id of batch)cache.set(id,{profile:found.get(id)||null,expiresAt:now+60000});
+  }
+  return new Map(unique.map(id=>[id,cache.get(id)?.profile||null]));
+}
