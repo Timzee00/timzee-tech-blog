@@ -5,6 +5,7 @@
 @import url("forms.css");
 @import url("design-system.css");
 @import url("viewport-guard.css");
+@import url("verified-identity.css");
 
 /* Staff tokens map to the shared light and dark palette. */
 .admin-shell,
@@ -954,3 +955,21 @@ select:focus-visible {
 .admin-review-table .inline-actions{display:flex;flex-wrap:wrap;gap:8px}
 .admin-review-table button{white-space:normal!important;min-height:42px}
 }
+
+.verification-review-top{display:flex;align-items:start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.verification-review-top>div{min-width:0;flex:1 1 270px}
+.verification-review-top h2{margin:0 0 7px}
+.verification-review-list{display:grid;gap:14px;min-width:0}
+.verification-review-item{display:grid;gap:12px;min-width:0;padding:clamp(12px,2vw,22px);border:1px solid var(--admin-border-strong);border-radius:14px;background:var(--admin-bg-2)}
+.verification-review-heading{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:start}
+.verification-review-heading h3{margin:0 0 4px;overflow-wrap:anywhere}
+.verification-review-heading p{font-size:.77rem;overflow-wrap:anywhere;margin:0}
+.verification-review-meta{font-size:.77rem;color:var(--admin-text-muted);margin:0}
+.verification-review-flags{padding:9px 11px;border-radius:8px;border:1px solid var(--admin-border-strong);color:var(--admin-text);font-size:.8rem;overflow-wrap:anywhere;margin:0}
+.verification-review-statement{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;font-size:.83rem;max-height:180px;overflow-y:auto}
+.verification-review-item>label{display:grid;gap:6px;font-size:.8rem;font-weight:700}
+.verification-review-item :where(select,textarea){width:100%;min-width:0;max-width:100%;box-sizing:border-box;font:inherit;background:var(--admin-bg-1);border:1px solid var(--admin-border-strong);border-radius:9px;padding:11px;color:var(--admin-text)}
+.verification-review-actions,.verification-proof-list{display:flex;gap:9px;flex-wrap:wrap;align-items:center;min-width:0}
+.verification-proof-list a{overflow-wrap:anywhere;font-size:.8rem}
+#verificationReviewStatus[data-tone=error]{color:var(--color-danger,#c33)}
+@media(max-width:550px){.verification-review-actions>.btn{width:100%}.verification-review-heading{flex-direction:column}}
