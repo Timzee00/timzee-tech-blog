@@ -473,7 +473,9 @@ function renderVerification(){
       if(!FRAME_STYLES.includes(result.data?.frame_style))throw Error("The server did not confirm this frame.");
       state.profile.frame_style=result.data.frame_style;
       selected=result.data.frame_style;
-      renderProfile();displayPreview();
+      // Keep the existing gallery and its live region mounted: rebuilding the
+      // verification section here would detach status and event listeners.
+      displayPreview();
       status.textContent="Frame applied! Your decoration will appear across supported social surfaces.";
     }catch(error){
       status.textContent=extractErrorMessage(error,"Couldn't apply this frame. Your saved frame is unchanged.");
