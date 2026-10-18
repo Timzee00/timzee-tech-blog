@@ -298,13 +298,12 @@
           });
           if (version !== listVersion || query !== document.getElementById("marketplaceSearch").value.trim()) return;
           state.listings = offset === 0 ? rows : [...state.listings, ...rows];
+          let identities=new Map();
           try{
-            sellerIdentityMap=await loadVerifiedIdentityMap(supabase,state.listings.map(item=>item.user_id).filter(Boolean));
-          }catch(error){
-            console.warn("Seller identity decorations unavailable",error.message);
-            sellerIdentityMap=new Map();
-          }
+            identities=await loadVerifiedIdentityMap(supabase,state.listings.map(item=>item.user_id).filter(Boolean));
+          }catch(error){console.warn("Seller identity decorations unavailable",error.message);}
           if(version!==listVersion)return;
+          sellerIdentityMap=identities;
           renderListings();
           more.style.display = rows.length === state.limit ? "inline-flex" : "none";
         } catch (error) {
