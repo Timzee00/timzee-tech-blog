@@ -33,6 +33,16 @@ exports.handler = async () => {
   }
 
   console.log("Production automation tick completed:", { automation: data });
+  // Identity renewals and privacy retention are server-owned and idempotent.
+  // A paused host delays reminders, but expired badges also disappear instantly
+  // in the frontend when their server-issued expiry timestamp passes.
+  const verification=await supabase.rpc("process_verification_maintenance");
+  if(verification.error){
+    console.error("Verification expiry/profile-visit cleanup failed:",verification.error);
+    throw verification.error;
+  }
+  console.log("Verification lifecycle maintenance completed:",verification.data);
+
   // Expensive shared ranking snapshots are opt-in until the database function
   // and consumption path have passed isolated staging tests.
   try {
