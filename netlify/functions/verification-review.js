@@ -21,7 +21,7 @@ exports.handler=async event=>{
     const index=Number(event.queryStringParameters?.proofIndex);
     if(id){
       if(!uuid.test(id)||!Number.isInteger(index)||index<0||index>4)return json(400,{error:"Invalid evidence request."});
-      const {data,error}=await db.from("verification_applications")
+      const {data,error,count}=await db.from("verification_applications")
         .select("id,documents").eq("id",id).maybeSingle();
       if(error||!data)return json(404,{error:"Verification application unavailable."});
       const file=Array.isArray(data.documents)?data.documents[index]:null;
@@ -43,7 +43,7 @@ exports.handler=async event=>{
       documents:(Array.isArray(row.documents)?row.documents:[])
         .map((file,index)=>({index,type:String(file?.type||"unknown").slice(0,55)}))
     }));
-    return json(200,{applications:sanitized,page,hasMore:(start+sanitized.length)<(data?.count||0)});
+    return json(200,{applications:sanitized,page,hasMore:(start+sanitized.length)<(count||0)});
   }
   const parsed=parseJsonObject(event);
   if(parsed.error)return json(parsed.statusCode,{error:parsed.error});
