@@ -14,7 +14,8 @@ export const DEFAULT_USER_PREFERENCES = {
     follows: true,
     mentions: true,
     announcements: true,
-    marketplace: true
+    marketplace: true,
+    profileViews: true
   },
   feed: {
     defaultFeed: "for-you",
@@ -24,7 +25,9 @@ export const DEFAULT_USER_PREFERENCES = {
   privacy: {
     allowMessages: true,
     allowRequests: true,
-    showEmail: false
+    showEmail: false,
+    recordProfileVisits: true,
+    shareProfileVisits: false
   },
   chat: {
     notifications: true,
