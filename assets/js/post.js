@@ -1,5 +1,4 @@
 import {
-import {verifiedName,verifiedAvatar,verifiedCommentClass} from "./verified-identity.mjs";
   fetchCategories,
   fetchPosts,
   fetchComments,
@@ -20,6 +19,7 @@ import {verifiedName,verifiedAvatar,verifiedCommentClass} from "./verified-ident
   incrementPostViews,
   createContentReport,
 } from "./data.js";
+import {verifiedName,verifiedAvatar,verifiedCommentClass} from "./verified-identity.mjs";
 import { setupMentionInput, extractMentions, getMentionedUserIds } from "./mentions.js";
 import { uploadMedia } from "./media.js";
 import { fetchSettings } from "./settings.js";
