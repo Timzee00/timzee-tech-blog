@@ -23,7 +23,7 @@ import {
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import { safeNotificationPath } from "./notification-links.mjs";
-import {verifiedName,verifiedAvatar,verifiedLevel,verifiedLabel,verifiedFrameClasses,verifiedFrameStyle} from "./verified-identity.mjs";
+import {verifiedName,verifiedAvatar,verifiedLevel,verifiedLabel,verifiedFrameClasses,verifiedFrameStyle,FRAME_OPTIONS,FRAME_STYLES} from "./verified-identity.mjs";
 import "./nav.js";
 import { submitModerationReport } from "./moderation-reports.mjs";
 
@@ -370,11 +370,12 @@ function renderProfile() {
     if(tier){
       hero.dataset.verificationLevel=tier;
       hero.classList.add("tz-frame","tz-frame--"+tier);
-    }else delete hero.dataset.verificationLevel;
+      hero.dataset.frameStyle=verifiedFrameStyle(state.profile);
+    }else {delete hero.dataset.verificationLevel;delete hero.dataset.frameStyle;}
   }
   if(frame){
     frame.classList.remove("tz-frame","tz-frame--silver","tz-frame--gold","tz-frame--platinum",
-      "tz-frame--business","tz-frame--signature","tz-frame--library","tz-frame--aurora");
+      "tz-frame--business",...FRAME_STYLES.map(style=>"tz-frame--"+style));
     if(tier)frame.classList.add(...verifiedFrameClasses(state.profile).split(" "));
   }
   if (name) {
@@ -411,33 +412,75 @@ function renderVerification(){
     platinum:["Original Platinum badge and premium frames","Professional creator experience","Existing verified publishing and community tools"],
     business:["Official Organization badge and branded profile frame","Organization identity shown across supported surfaces","Official account protection and content publishing"]
   };
+  const current=verifiedFrameStyle(state.profile);
+  const gallery=isSelf
+    ? '<section class="tz-frame-selector" aria-label="Portrait frame collection">'+
+      '<h4>My frame collection</h4>'+
+      '<p class="tz-frame-preview-note">Choose a decoration to preview it on your full profile. Save to show it on comments, chats and communities.</p>'+
+      '<div class="tz-frame-gallery" id="profileFrameGallery" role="group" aria-label="Choose a collectible frame">'+
+      FRAME_OPTIONS.map(option=>{
+        const preview={...state.profile,frame_style:option.id};
+        return '<button type="button" class="tz-frame-choice" data-frame-choice="'+option.id+
+          '" aria-label="Preview '+option.title+' frame" aria-pressed="'+String(option.id===current)+'">'+
+          verifiedAvatar(state.profile?.avatar_url,preview,{size:"lg",alt:""})+
+          '<strong>'+option.title+'</strong><small>'+option.description+'</small></button>';
+      }).join("")+'</div>'+
+      '<div class="tz-frame-actions"><button type="button" class="btn sm" id="saveProfileFrame">Apply selected frame</button>'+
+      '<button type="button" class="btn ghost sm" id="cancelProfileFrame">Restore saved frame</button></div>'+
+      '<p class="status" id="profileFrameStatus" role="status" aria-live="polite"></p></section>'
+    : '';
   target.innerHTML='<div class="verification-tier">'+verifiedName(label,state.profile)+
-    '</div><ul class="perk-list">'+benefits[tier].map(x=>'<li>'+escapeHTML(x)+'</li>').join("")+'</ul>'+
-    (isSelf?'<div class="tz-frame-selector"><label for="profileFrameStyle">Choose your '+escapeHTML(tier)+' portrait frame</label>'+
-     '<select id="profileFrameStyle"><option value="signature">Signature · Classic metal</option>'+
-     '<option value="library">Library · Ornamental collection</option><option value="aurora">Aurora · Refined glow</option></select>'+
-     '<small>Frame styles are based on your approved verification level. This choice follows your avatar across the site.</small>'+
-     '<button type="button" class="btn ghost sm" id="saveProfileFrame">Save portrait frame</button>'+
-     '<p class="status" id="profileFrameStatus" role="status" aria-live="polite"></p></div>':'');
+    '</div><ul class="perk-list">'+benefits[tier].map(x=>'<li>'+escapeHTML(x)+'</li>').join("")+'</ul>'+gallery;
   if(!isSelf)return;
-  const select=document.getElementById("profileFrameStyle");
-  select.value=verifiedFrameStyle(state.profile);
+  let selected=current;
+  const displayPreview=()=>{
+    const preview={...state.profile,frame_style:selected};
+    const hero=document.querySelector(".profile-page .profile-hero");
+    const avatar=document.querySelector(".profile-page .profile-avatar-wrap");
+    if(hero)hero.dataset.frameStyle=selected;
+    if(avatar){
+      avatar.classList.remove(...FRAME_STYLES.map(x=>"tz-frame--"+x));
+      avatar.classList.add(...verifiedFrameClasses(preview).split(" ").filter(Boolean));
+    }
+    target.querySelectorAll("[data-frame-choice]").forEach(btn=>{
+      btn.setAttribute("aria-pressed",String(btn.dataset.frameChoice===selected));
+    });
+    const save=document.getElementById("saveProfileFrame");
+    if(save)save.disabled=selected===verifiedFrameStyle(state.profile);
+  };
+  target.querySelector("#profileFrameGallery")?.addEventListener("click",event=>{
+    const button=event.target.closest("[data-frame-choice]");
+    if(!button||!FRAME_STYLES.includes(button.dataset.frameChoice))return;
+    selected=button.dataset.frameChoice;
+    displayPreview();
+    document.getElementById("profileFrameStatus").textContent=
+      FRAME_OPTIONS.find(option=>option.id===selected)?.title+" preview — not saved yet.";
+  });
+  document.getElementById("cancelProfileFrame")?.addEventListener("click",()=>{
+    selected=verifiedFrameStyle(state.profile);displayPreview();
+    document.getElementById("profileFrameStatus").textContent="Restored your saved frame.";
+  });
   document.getElementById("saveProfileFrame")?.addEventListener("click",async event=>{
     const button=event.currentTarget;
-    if(!state.user||!["signature","library","aurora"].includes(select.value))return;
+    if(!state.user||!FRAME_STYLES.includes(selected)||selected===verifiedFrameStyle(state.profile))return;
     const status=document.getElementById("profileFrameStatus");
     button.disabled=true;
-    status.textContent="Saving frame…";
+    status.textContent="Applying frame securely…";
     try{
-      const result=await supabase.from("profiles").update({frame_style:select.value})
+      const result=await supabase.from("profiles").update({frame_style:selected})
         .eq("id",state.user.id).select("frame_style").single();
       if(result.error)throw result.error;
+      if(!FRAME_STYLES.includes(result.data?.frame_style))throw Error("The server did not confirm this frame.");
       state.profile.frame_style=result.data.frame_style;
-      renderProfile();
-      status.textContent="Your "+select.options[select.selectedIndex].text+" frame has been saved.";
-    }catch(error){status.textContent=extractErrorMessage(error,"Couldn't save this frame.");}
-    finally{button.disabled=false;}
+      selected=result.data.frame_style;
+      renderProfile();displayPreview();
+      status.textContent="Frame applied! Your decoration will appear across supported social surfaces.";
+    }catch(error){
+      status.textContent=extractErrorMessage(error,"Couldn't apply this frame. Your saved frame is unchanged.");
+      displayPreview();
+    }finally{button.disabled=selected===verifiedFrameStyle(state.profile);}
   });
+  displayPreview();
 }
 
 function setupProfileTabs() {
