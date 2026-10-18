@@ -148,6 +148,7 @@
       import { createContentReport } from "./assets/js/data.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import { formatMarketplacePrice as formatCurrency } from "./assets/js/marketplace-currency.mjs";
+      import {verifiedName,verifiedAvatar,verifiedLevel} from "./assets/js/verified-identity.mjs";
 
       const state = {
         user: null,
@@ -197,7 +198,7 @@
           const sellerResult = data.user_id
             ? await supabase
                 .from("public_profiles")
-                .select("id,display_name,avatar_url,is_verified,allow_messages,marketplace_whatsapp")
+                .select("id,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style,allow_messages,marketplace_whatsapp")
                 .eq("id", data.user_id)
                 .maybeSingle()
             : { data: null };
@@ -229,15 +230,16 @@
         document.getElementById("viewCount").textContent = listing.view_count || 0;
 
         const sellerName = (String(seller?.display_name || listing.seller_name || "Seller").replace(/<[^>]*>/g,"").replace(/[<>]/g,"").trim().slice(0,80)) || "Seller";
-        document.getElementById("sellerName").textContent = sellerName;
+        document.getElementById("sellerName").innerHTML = verifiedName(sellerName,seller,{compact:true});
         const sellerAvatarEl = document.getElementById("sellerAvatar");
         if (sellerAvatarEl) {
           sellerAvatarEl.href = `profile.html?id=${encodeURIComponent(listing.user_id || "")}`;
-          sellerAvatarEl.textContent = sellerName.trim().slice(0, 1).toUpperCase() || "S";
+          sellerAvatarEl.innerHTML = verifiedAvatar(seller?.avatar_url,seller,{size:"lg",alt:""});
           sellerAvatarEl.setAttribute("aria-label", `View ${sellerName}'s profile`);
         }
 
-        document.getElementById("sellerVerifiedBadge").textContent = seller?.is_verified ? "Verified Seller" : "";
+        document.getElementById("sellerVerifiedBadge").textContent = verifiedLevel(seller)
+          ? "Identity verified — this badge does not guarantee a transaction." : "";
 
         const statusEl = document.getElementById("status");
         if (listing.is_available) {
