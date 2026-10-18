@@ -1275,7 +1275,7 @@ async function fetchUsers({ search = "", page = 1, perPage = state.userPerPage }
   }
 }
 
-async function updateUserAction(userId, action, tier) {
+async function updateUserAction(userId, action, tier, reason = "") {
   try {
     const session = await getSession();
     const token = session?.access_token;
@@ -1286,7 +1286,7 @@ async function updateUserAction(userId, action, tier) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ userId, action, verificationTier: tier })
+      body: JSON.stringify({ userId, action, verificationTier: tier, reason })
     });
     const result = await parseJsonSafe(response);
     if (!response.ok) {
@@ -1364,7 +1364,15 @@ function renderUsersTable(users) {
       if(action==="verification_inbox"){document.querySelector('.admin-nav button[data-tab="verification"]')?.click();return;}
       if (action === "suspend" && !await window.appUI.confirm("Suspend this account?")) return;
       if (action === "activate" && !await window.appUI.confirm("Reactivate this account?")) return;
-      const result = await updateUserAction(userId, action);
+      let reason="";
+      if(action==="unverify"){
+        reason=await window.appUI.prompt("Explain why this verified identity is being revoked (minimum 25 characters).",{
+          title:"Revoke verification",label:"Review reason",inputType:"text"
+        });
+        if(reason===null)return;
+        if(String(reason).trim().length<25){window.appUI.toast("Provide a detailed audit reason (25+ characters).");return;}
+      }
+      const result = await updateUserAction(userId, action, null, reason);
       if (result.error) {
         window.appUI.toast(result.error);
         return;
