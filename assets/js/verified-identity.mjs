@@ -15,6 +15,11 @@ const safeText=value=>String(value??"").replace(/[&<>"']/g,c=>({
 /** Never turn an arbitrary tier value into a badge without is_verified=true. */
 export function verifiedLevel(profile){
   if(profile?.is_verified!==true)return null;
+  // Expired privileges cannot linger just because a background job is paused.
+  if(profile?.verification_expires_at){
+    const expiry=Date.parse(profile.verification_expires_at);
+    if(!Number.isFinite(expiry)||expiry<=Date.now())return null;
+  }
   const raw=String(profile.verification_tier||"standard").trim().toLowerCase();
   const normalized=LEGACY_LEVELS[raw]||raw;
   return Object.prototype.hasOwnProperty.call(LABELS,normalized)?normalized:null;
@@ -72,7 +77,7 @@ export async function loadVerifiedIdentityMap(supabase,ids,cache=new Map()){
   for(let start=0;start<missing.length;start+=80){
     const batch=missing.slice(start,start+80);
     const {data,error}=await supabase.from("public_profiles")
-      .select("id,display_name,avatar_url,is_verified,verification_tier,frame_style")
+      .select("id,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style")
       .in("id",batch);
     if(error)throw error;
     const found=new Map((data||[]).map(profile=>[profile.id,profile]));
