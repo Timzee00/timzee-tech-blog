@@ -253,13 +253,12 @@
           if (version !== listVersion || query !== document.getElementById("videoSearch").value.trim()) return;
           state.videos = offset === 0 ? rows : [...state.videos, ...rows];
           // Batch once for the visible creator list, never once per video.
+          let identities=new Map();
           try{
-            videoCreatorProfiles=await loadVerifiedIdentityMap(supabase,state.videos.map(v=>v.user_id).filter(Boolean));
-          }catch(error){
-            console.warn("Video creator decorations unavailable",error.message);
-            videoCreatorProfiles=new Map();
-          }
+            identities=await loadVerifiedIdentityMap(supabase,state.videos.map(v=>v.user_id).filter(Boolean));
+          }catch(error){console.warn("Video creator decorations unavailable",error.message);}
           if(version!==listVersion)return;
+          videoCreatorProfiles=identities;
           renderVideos();
           more.style.display = rows.length === state.limit ? "inline-flex" : "none";
         } catch (error) {
