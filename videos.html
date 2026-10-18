@@ -192,6 +192,7 @@
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
+      import {verifiedName,verifiedAvatar,loadVerifiedIdentityMap} from "./assets/js/verified-identity.mjs";
 
       let state = {
         user: null,
@@ -228,6 +229,7 @@
       }
 
       // Load videos
+      let videoCreatorProfiles=new Map();
       let listVersion = 0;
       let loading = false;
       async function loadVideos() {
@@ -250,6 +252,14 @@
               });
           if (version !== listVersion || query !== document.getElementById("videoSearch").value.trim()) return;
           state.videos = offset === 0 ? rows : [...state.videos, ...rows];
+          // Batch once for the visible creator list, never once per video.
+          try{
+            videoCreatorProfiles=await loadVerifiedIdentityMap(supabase,state.videos.map(v=>v.user_id).filter(Boolean));
+          }catch(error){
+            console.warn("Video creator decorations unavailable",error.message);
+            videoCreatorProfiles=new Map();
+          }
+          if(version!==listVersion)return;
           renderVideos();
           more.style.display = rows.length === state.limit ? "inline-flex" : "none";
         } catch (error) {
@@ -280,6 +290,10 @@
             </div>
             <div class="video-info">
               <div class="video-title">${escapeHTML(v.title || '')}</div>
+              ${v.user_id ? `<div class="tz-video-card-author">
+                ${verifiedAvatar(videoCreatorProfiles.get(v.user_id)?.avatar_url,videoCreatorProfiles.get(v.user_id),{size:"sm",alt:""})}
+                ${verifiedName(v.author_name||videoCreatorProfiles.get(v.user_id)?.display_name||"Member",videoCreatorProfiles.get(v.user_id),{compact:true})}
+              </div>` : ""}
               <div class="video-meta">
                 <span>👁 ${escapeHTML(String(v.view_count || 0))}</span>
                 <span>❤ ${escapeHTML(String(v.like_count || 0))}</span>
