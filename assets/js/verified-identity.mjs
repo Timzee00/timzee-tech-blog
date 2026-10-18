@@ -5,9 +5,19 @@ const LABELS=Object.freeze({
   silver:"Silver Verified",gold:"Gold Verified",
   platinum:"Platinum Verified",business:"Official Organization"
 });
-export const FRAME_STYLES=Object.freeze(["signature","library","aurora"]);
+/* Display metadata is centralized so profile selectors, galleries, comments
+   and future mobile clients all use the same server-approved frame names. */
+export const FRAME_OPTIONS=Object.freeze([
+  Object.freeze({id:"signature",title:"Signature",description:"A timeless metallic halo"}),
+  Object.freeze({id:"library",title:"Royal Library",description:"Fine-cut ornamental rays"}),
+  Object.freeze({id:"aurora",title:"Aurora",description:"Soft illuminated ribbons"}),
+  Object.freeze({id:"orbit",title:"Orbit",description:"Twin orbital rings and stars"}),
+  Object.freeze({id:"laurel",title:"Laurel",description:"A distinguished collector's wreath"}),
+  Object.freeze({id:"comet",title:"Comet",description:"A luminous passing streak"})
+]);
+export const FRAME_STYLES=Object.freeze(FRAME_OPTIONS.map(item=>item.id));
 const LEGACY_LEVELS=Object.freeze({standard:"silver",pro:"gold",elite:"platinum",creator:"silver"});
-const ICON_ROOT="assets/img/timzee-verified-";
+const ICON_ROOT="/assets/img/timzee-verified-";
 const safeText=value=>String(value??"").replace(/[&<>"']/g,c=>({
   "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
 })[c]);
@@ -55,12 +65,12 @@ export function verifiedCommentClass(profile){
   return level?"tz-verified-contribution tz-verified-contribution--"+level:"";
 }
 export function verifiedAvatar(url,profile,{size="md",alt="Profile picture"}={}){
-  const allowed=new Set(["sm","md","lg"]);
+  const allowed=new Set(["sm","md","lg","xl"]);
   const sizeClass=allowed.has(size)?size:"md";
   // Only URLs from public_profiles should ever reach this renderer.
   const value=String(url||"");
   const safeUrl=/^(https:\/\/|\/assets\/|assets\/)/i.test(value)&&
-    !/[<>"'\\]/.test(value)?value:"assets/img/avatar-placeholder.svg";
+    !/[<>"'\\]/.test(value)?value:"/assets/img/avatar-placeholder.svg";
   return '<span class="tz-avatar-verified '+verifiedFrameClasses(profile)+
     ' tz-avatar-verified--'+sizeClass+'"><img src="'+safeText(safeUrl)+
     '" alt="'+safeText(alt)+'" loading="lazy" decoding="async"></span>';
