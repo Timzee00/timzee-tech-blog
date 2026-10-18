@@ -4,7 +4,7 @@ import {openPollComposer,mountPoll} from "./content-polls.mjs";
 import {setupMentionInput} from "./mentions.js";
 import {renderChatText} from "./chat-rich-format.mjs";
 import {translateVerifiedText} from "./chat-translator.mjs";
-import {verifiedName,verifiedAvatar,verifiedLevel} from "./verified-identity.mjs";
+import {verifiedName,verifiedAvatar,verifiedLevel,verifiedFrameClasses} from "./verified-identity.mjs";
 import { voicePlayerHtml,setupChatVoicePlayers } from "./chat-voice-player.mjs";
 import { bindSearch } from "./search-input.js";
 import { fetchMessagePage } from "./chat-history.mjs";
@@ -224,7 +224,7 @@ function renderRequests() {
   if(incoming)incoming.innerHTML=state.requests.length?state.requests.map(r=>`<div class="chat-request-row">${verifiedAvatar(profileFor(r.requester_id)?.avatar_url||DEFAULT_AVATAR,profileFor(r.requester_id),{size:"sm"})}<div><strong>${name(r.requester_id)}</strong><small>Friend request</small></div><div class="inline-actions"><button class="btn sm" data-request="accept" data-id="${r.id}">Accept</button><button class="btn ghost sm" data-request="decline" data-id="${r.id}">Decline</button></div></div>`).join(''):`<div class="callout">No incoming requests.</div>`;
   if(outgoing)outgoing.innerHTML=state.sentRequests.length?state.sentRequests.map(r=>`<div class="chat-request-row">${verifiedAvatar(profileFor(r.addressee_id)?.avatar_url||DEFAULT_AVATAR,profileFor(r.addressee_id),{size:"sm"})}<div><strong>${name(r.addressee_id)}</strong><small>Request sent</small></div><button class="btn ghost sm" data-request="cancel" data-id="${r.id}">Cancel</button></div>`).join(''):`<div class="callout">No outgoing requests.</div>`;
 }
-function renderBlocked() { const target=$("blockedList"); if(!target)return; target.innerHTML=state.blocked.length?state.blocked.map(id=>`<div class="chat-request-row"><img src="${escapeHTML(profileFor(id)?.avatar_url||DEFAULT_AVATAR)}" alt=""><div><strong>${escapeHTML(profileFor(id)?.display_name||'Member')}</strong><small>Blocked</small></div><button class="btn ghost sm" data-unblock="${id}">Unblock</button></div>`).join(''):`<div class="callout">No blocked users.</div>`; }
+function renderBlocked() { const target=$("blockedList"); if(!target)return; target.innerHTML=state.blocked.length?state.blocked.map(id=>`<div class="chat-request-row">${verifiedAvatar(profileFor(id)?.avatar_url||DEFAULT_AVATAR,profileFor(id),{size:"sm",alt:""})}<div><strong>${escapeHTML(profileFor(id)?.display_name||'Member')}</strong><small>Blocked</small></div><button class="btn ghost sm" data-unblock="${id}">Unblock</button></div>`).join(''):`<div class="callout">No blocked users.</div>`; }
 function renderPeopleResults() {
   const target=$("peopleResults"); if(!target)return;
   const q=state.peopleTerm.trim().toLowerCase();
@@ -578,7 +578,20 @@ async function saveGroupPermissions(){
   group.settings=settings;
   window.siteToast?.("Group permissions saved.",{type:"success"});
 }
-function updateHeaderForFriend(id){const p=profileFor(id)||{};$("chatAvatar").src=p.avatar_url||DEFAULT_AVATAR;$("chatName").innerHTML=verifiedName(p.display_name||'Member',p,{compact:true})+
+/* Chat header and contact pop-out use the same server-approved frame classes
+   as the friend list. Group avatars never impersonate verified individuals. */
+function refreshChatAvatarFrames(profile){
+ const classes=verifiedFrameClasses(profile);
+ for(const [id,size,extra] of [
+   ["chatAvatarFrame","md","chat-header-avatar-frame"],
+   ["infoAvatarFrame","xl","chat-info-avatar-frame"]
+ ]){
+   const element=$(id);
+   if(element)element.className="tz-avatar-verified tz-avatar-verified--"+size+" "+extra+
+     (classes?" "+classes:"");
+ }
+}
+function updateHeaderForFriend(id){const p=profileFor(id)||{};$("chatAvatar").src=p.avatar_url||DEFAULT_AVATAR;refreshChatAvatarFrames(p);$("chatName").innerHTML=verifiedName(p.display_name||'Member',p,{compact:true})+
     (["super","admin","moderator"].includes(p.role)?" · Staff":"");$("chatProfileBtn").href=`profile.html?id=${encodeURIComponent(id)}`;$("directInfoActions").hidden=false;$("groupInfoSection").hidden=true;$("groupMembersSection").hidden=true;$("infoPanelTitle").textContent='Chat details';}
 function updateHeaderForGroup(g){
   const panel=$("groupPermissionsPanel");
@@ -590,10 +603,11 @@ function updateHeaderForGroup(g){
     $("groupAllowPolls").checked=settings.allow_polls!==false;
     $("groupSlowMode").value=String(settings.slow_mode_seconds||0);
   }
-  $("chatAvatar").src=g.avatar_url||DEFAULT_GROUP_AVATAR;$("chatName").textContent=g.name||'Group';$("directInfoActions").hidden=true;$("groupInfoSection").hidden=false;$("groupMembersSection").hidden=false;$("infoPanelTitle").textContent='Group details';}
+  $("chatAvatar").src=g.avatar_url||DEFAULT_GROUP_AVATAR;refreshChatAvatarFrames(null);$("chatName").textContent=g.name||'Group';$("directInfoActions").hidden=true;$("groupInfoSection").hidden=false;$("groupMembersSection").hidden=false;$("infoPanelTitle").textContent='Group details';}
 function refreshInfoProfile() {
   const group = activeGroup(), profile = profileFor(state.activeFriendId) || {};
   $("infoAvatar").src = group ? group.avatar_url || DEFAULT_GROUP_AVATAR : profile.avatar_url || DEFAULT_AVATAR;
+  refreshChatAvatarFrames(group?null:profile);
   $("infoName").textContent = group ? group.name || 'Group' : profile.display_name || 'Member';
   $("infoStatus").textContent = group ? group.description || 'Group conversation' : profile.username ? `@${profile.username}` : 'Private conversation';
   $("editGroupBtn").hidden = !isOwnerOfActiveGroup();
@@ -966,7 +980,7 @@ async function sendMessage() {
 }
 function openModal(id){const dialog=$(id);if(!dialog)return;dialog.showModal();document.body.classList.add('modal-open');dialog.addEventListener('close',()=>document.body.classList.remove('modal-open'),{once:true});}
 function closeModal(id){$(id)?.close();document.body.classList.remove('modal-open');}
-function renderGroupPicker(){const target=$("groupMemberPicker");if(!target)return;target.innerHTML=state.friends.map(id=>{const p=profileFor(id)||{};return `<label class="chat-picker-row"><input type="checkbox" value="${id}"><img src="${escapeHTML(p.avatar_url||DEFAULT_AVATAR)}" alt=""><span><strong>${escapeHTML(p.display_name||'Member')}</strong><small>${escapeHTML(p.username||'')}</small></span></label>`}).join('');$("groupPickerEmpty").hidden=state.friends.length!==0;}
+function renderGroupPicker(){const target=$("groupMemberPicker");if(!target)return;target.innerHTML=state.friends.map(id=>{const p=profileFor(id)||{};return `<label class="chat-picker-row"><input type="checkbox" value="${id}">${verifiedAvatar(p.avatar_url||DEFAULT_AVATAR,p,{size:"sm",alt:""})}<span><strong>${escapeHTML(p.display_name||'Member')}</strong><small>${escapeHTML(p.username||'')}</small></span></label>`}).join('');$("groupPickerEmpty").hidden=state.friends.length!==0;}
 async function createGroup(){const name=($("newGroupName").value||'').trim();const selected=[...document.querySelectorAll('#groupMemberPicker input:checked')].map(i=>i.value);if(!name)throw new Error('Enter a group name.');if(!selected.length)throw new Error('Choose at least one friend.');const id=crypto.randomUUID(),now=new Date().toISOString();const thread=await supabase.from('chat_threads').insert({id,name,is_group:true,created_by:state.user.id,created_at:now,updated_at:now,settings:{}}).select().single();if(thread.error)throw thread.error;const members=[...new Set([state.user.id,...selected])].map(user_id=>({id:crypto.randomUUID(),thread_id:id,user_id,role:user_id===state.user.id?'owner':'member',joined_at:now,tags:[]}));const result=await supabase.from('chat_members').insert(members);if(result.error){await supabase.from('chat_threads').delete().eq('id',id);throw result.error;}closeModal('friendPickerModal');await loadAllChatData();renderGroups();await selectGroup(id);}
 async function editGroup(){const group=activeGroup();if(!group||!isOwnerOfActiveGroup())return;const patch={name:($("groupNameInput").value||'').trim().slice(0,80),description:($("groupDescriptionInput").value||'').trim().slice(0,300),updated_at:new Date().toISOString()};if(!patch.name)throw new Error('Group name is required.');if($("groupAvatarInput")?.files?.[0])patch.avatar_url=await uploadMedia($("groupAvatarInput").files[0],`group-avatars/${state.user.id}`);const result=await supabase.from('chat_threads').update(patch).eq('id',group.id).eq('created_by',state.user.id);if(result.error)throw result.error;Object.assign(group,patch);updateHeaderForGroup(group);refreshInfoProfile();renderGroups();$("groupEditor").hidden=true;}
 async function editMemberTags(memberId){if(!isOwnerOfActiveGroup())return;const member=(state.groupMembers.get(state.activeGroupId)||[]).find(m=>m.id===memberId);if(!member)return;const raw=await window.appUI.prompt('Member tags for this group, separated by commas:',(member.tags||[]).join(', '));if(raw===null)return;const tags=[...new Set(raw.split(',').map(t=>t.trim()).filter(Boolean).slice(0,8))];const result=await supabase.from('chat_members').update({tags}).eq('id',memberId).eq('thread_id',state.activeGroupId);if(result.error)throw result.error;member.tags=tags;renderGroupMembers();}
