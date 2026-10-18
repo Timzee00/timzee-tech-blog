@@ -114,3 +114,24 @@ test("large discussion feeds use a bounded, valid-UUID identity cache",()=>{
  assert.match(helper,/cache\.size>320/);
  assert.match(helper,/\[a-f0-9\]\{8\}/);
 });
+
+test("video discovery and full-screen reels use trusted tier frames and batched hydration",()=>{
+ const discovery=read("videos.html"),reels=read("video.html");
+ assert.match(discovery,/loadVerifiedIdentityMap\(supabase,state\.videos\.map/);
+ assert.match(discovery,/tz-video-card-author/);
+ assert.match(reels,/uploader_profile = p \|\| null/);
+ assert.match(reels,/verifiedAvatar\(profile\?\.avatar_url,profile/);
+ assert.match(reels,/loadVerifiedIdentityMap\(supabase,page\.map/);
+ assert.match(reels,/verifiedCommentClass\(commentProfiles\.get/);
+ assert.match(reels,/commentProfiles\.clear\(\)/);
+});
+
+test("marketplace displays verified identity without implying guaranteed purchases",()=>{
+ const market=read("marketplace.html"),listing=read("listing.html");
+ assert.match(market,/loadVerifiedIdentityMap\(supabase,state\.listings\.map/);
+ assert.match(market,/verifiedName\(safeSellerLabel/);
+ assert.doesNotMatch(market,/Verified Seller<\/span>/);
+ assert.match(listing,/verifiedName\(sellerName,seller/);
+ assert.match(listing,/verifiedLevel\(seller\)/);
+ assert.match(listing,/does not guarantee a transaction/);
+});
