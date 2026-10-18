@@ -57,8 +57,9 @@ export function verificationBadge(profile,{compact=false}={}){
     '<span class="tz-sr-only">'+safeText(label)+'</span></span>';
 }
 export function verifiedName(name,profile,{compact=false}={}){
-  return '<span class="tz-identity-name">'+safeText(name||"Member")+
-    verificationBadge(profile,{compact})+'</span>';
+  const tier=verifiedLevel(profile);
+  return '<span class="tz-identity-name'+(tier?' tz-nameplate tz-nameplate--'+tier:'')+'">'+
+    safeText(name||"Member")+verificationBadge(profile,{compact})+'</span>';
 }
 export function verifiedCommentClass(profile){
   const level=verifiedLevel(profile);
