@@ -59,8 +59,8 @@
               </div>
               <ul class="perks-list">
                 <li>Silver verification badge</li>
-                <li>Custom profile background</li>
-                <li>Increased visibility in search</li>
+                <li>Three exclusive Silver portrait frames</li>
+                <li>Badge visible on profiles, replies and articles</li>
               </ul>
             </div>
 
@@ -74,9 +74,9 @@
               </div>
               <ul class="perks-list">
                 <li>Gold verification badge</li>
-                <li>Premium profile design options</li>
-                <li>Priority support</li>
-                <li>Featured in creator directory</li>
+                <li>Distinct Gold profile styling</li>
+                <li>Secure verification status history</li>
+                <li>Gold verified contributions in communities</li>
               </ul>
             </div>
 
@@ -90,9 +90,9 @@
               </div>
               <ul class="perks-list">
                 <li>Platinum verification badge</li>
-                <li>Exclusive features</li>
-                <li>24/7 priority support</li>
-                <li>Featured on homepage</li>
+                <li>Premium Platinum portrait collection</li>
+                <li>Verification renewal reminders</li>
+                <li>Prominent Platinum badge on social contributions</li>
               </ul>
             </div>
 
@@ -106,9 +106,9 @@
               </div>
               <ul class="perks-list">
                 <li>Business verification badge</li>
-                <li>Business profile page</li>
-                <li>Analytics dashboard</li>
-                <li>Custom branding options</li>
+                <li>Official organization identity badge</li>
+                <li>Profile-visit insights and content statistics</li>
+                <li>Organization-themed verified profile frame</li>
               </ul>
             </div>
           </div>
@@ -170,12 +170,13 @@
     <script type="module" src="assets/js/nav.js"></script>
     <script type="module">
       import { getCurrentUser, signOut, supabase } from "./assets/js/supabase.js";
-      import { createVerificationApplication, getUserVerificationBadge } from "./assets/js/data.js";
+      import { createVerificationApplication } from "./assets/js/data.js";
+      import {verifiedLevel,verifiedLabel,verificationBadge} from "./assets/js/verified-identity.mjs";
       import { escapeHTML } from "./assets/js/utils.js";
 
       const state = {
         user: null,
-        selectedLevel: "gold",
+        selectedLevel: "silver",
         documents: [],
         hasExistingApplication: false
       };
@@ -198,16 +199,31 @@
           window.location.reload();
         });
 
-        const badge = await getUserVerificationBadge(state.user.id);
-        if (badge?.verification_level && badge.verification_level !== "none") {
+        const result=await supabase.from("public_profiles")
+          .select("is_verified,verification_tier,verification_expires_at").eq("id",state.user.id).maybeSingle();
+        const badge=result.data;
+        if (verifiedLevel(badge)) {
           document.getElementById("verificationForm").innerHTML = `
             <div class="callout" style="background: #dbeafe; border-color: #0284c7;">
               <strong>Already Verified</strong>
-              <p>Your profile has <strong>${escapeHTML(badge.verification_level || '')}</strong> verification status.</p>
+              <p>Your account currently holds <strong>${escapeHTML(verifiedLabel(badge))}</strong> status.</p>
+              <p>Your badge and frame are shown across supported profiles and community contributions.</p>
               <a href="profile.html" class="btn" style="margin-top: 12px;">Back to Profile</a>
             </div>
           `;
           state.hasExistingApplication = true;
+        }else{
+          const pending=await supabase.from("verification_applications")
+            .select("id,verification_type,created_at").eq("user_id",state.user.id)
+            .eq("status","pending").maybeSingle();
+          if(pending.data){
+            state.hasExistingApplication=true;
+            document.getElementById("verificationForm").innerHTML=
+              '<div class="callout"><strong>Application under review</strong>'+
+              '<p>Your '+escapeHTML(pending.data.verification_type||"verification")+
+              ' application is waiting for staff review. You do not need to send another copy.</p>'+
+              '<a class="btn ghost" href="profile.html">Back to profile</a></div>';
+          }
         }
       }
 
@@ -220,7 +236,7 @@
         });
       });
 
-      const initialLevel = document.querySelector("[data-level='gold']");
+      const initialLevel = document.querySelector("[data-level='silver']");
       if (initialLevel) initialLevel.classList.add("selected");
 
       const docUpload = document.getElementById("docUpload");
