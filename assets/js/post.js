@@ -890,10 +890,13 @@ function setupCommentForm(post, comments) {
             state.comments = comments;
           }
           if (state.user) {
-            state.commentAuthors[state.user.id] = {
-              id: state.user.id,
-              username: state.profile?.username || "",
-              display_name: getDisplayName(state.user)
+            // Preserve trusted server-issued verification, not client user
+            // metadata. Otherwise the badge disappears just after commenting.
+            const ownProfile=(await fetchProfilesByIds([state.user.id]))[0]||
+              state.commentAuthors[state.user.id]||{};
+            state.commentAuthors[state.user.id]={
+              ...ownProfile,id:state.user.id,
+              display_name:ownProfile.display_name||getDisplayName(state.user)
             };
           }
           renderComments(comments);
