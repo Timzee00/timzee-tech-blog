@@ -31,6 +31,7 @@
         <button data-tab="faq">FAQ</button>
         <button data-tab="curator">🤖 Curator Bot</button>
         <button data-tab="users">Users</button>
+        <button data-tab="verification">Verification reviews</button>
         <a href="restrictions.html" class="btn ghost">Account restrictions</a>
         <button data-tab="authors">Authors</button>
         <button data-tab="themes">Themes</button>
@@ -252,6 +253,23 @@
             </thead>
             <tbody id="usersTable"></tbody>
           </table>
+        </div>
+      </section>
+
+      <section class="admin-card" data-panel="verification" style="display:none;">
+        <div class="verification-review-top">
+          <div>
+            <h2>Verification review center</h2>
+            <p class="hint">Securely review identity applications, check private evidence, and record accountable decisions. Automated risk scoring never grants identity badges.</p>
+          </div>
+          <button type="button" id="verificationRefresh" class="btn ghost sm">Refresh queue</button>
+        </div>
+        <p id="verificationReviewStatus" class="hint" role="status" aria-live="polite"></p>
+        <div id="verificationQueue" class="verification-review-list"></div>
+        <div class="admin-list-pager">
+          <button type="button" class="btn ghost sm" id="verificationPrev">Previous</button>
+          <span id="verificationPageLabel">Page 1</span>
+          <button type="button" class="btn ghost sm" id="verificationNext">Next</button>
         </div>
       </section>
 
