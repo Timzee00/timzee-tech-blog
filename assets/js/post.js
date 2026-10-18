@@ -489,7 +489,7 @@ function renderComments(comments) {
       const reportButton = `<button type="button" class="btn ghost small report-comment-btn" data-id="${comment.id}">Report</button>`;
       return `
         <div class="comment-card ${verifiedCommentClass(authorProfile)}" data-reveal id="comment-${comment.id}">
-          <div class="comment-meta"><span>${
+          <div class="comment-meta"><span class="tz-comment-author">${comment.author_id ? verifiedAvatar(authorProfile?.avatar_url,authorProfile,{size:"sm",alt:""}) : ""}${
             comment.author_id
               ? `<a href="profile.html?id=${encodeURIComponent(comment.author_id)}">${verifiedName(
                   comment.author_name || "Member",authorProfile,{compact:true}
