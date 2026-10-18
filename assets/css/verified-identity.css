@@ -57,3 +57,132 @@
 @media(prefers-reduced-motion:reduce){
  .tz-verified-badge,.tz-frame,.tz-verified-contribution{animation:none!important;transition:none!important}
 }
+
+
+/* Original Timzee Collectibles 2.0
+ * Inspired by Discord's distinction between avatar decorations and full-card
+ * profile frames; no Discord artwork, marks, or purchased assets are used. */
+.tz-avatar-verified--xl{inline-size:92px;block-size:92px}
+.tz-avatar-verified.tz-frame{
+  --tz-cosmetic-depth:clamp(2px,.36em,5px);
+  border:1px solid var(--tz-frame-a);
+  background:conic-gradient(from 35deg,var(--tz-frame-a) 0%,var(--tz-frame-c) 17%,var(--tz-frame-b) 32%,var(--tz-frame-a) 50%,var(--tz-frame-b) 73%,var(--tz-frame-a) 100%);
+}
+.tz-avatar-verified.tz-frame::after{
+  content:"";position:absolute;inset:-6px;z-index:2;pointer-events:none;
+  border-radius:50%;border:2px solid transparent;
+  background:radial-gradient(circle at 50% 0%,var(--tz-frame-a) 0 3px,transparent 4px),
+             radial-gradient(circle at 100% 50%,var(--tz-frame-a) 0 2px,transparent 3px),
+             radial-gradient(circle at 0% 50%,var(--tz-frame-a) 0 2px,transparent 3px);
+}
+.tz-avatar-verified.tz-frame--signature::after{inset:-3px;border:1px solid var(--tz-frame-b);opacity:.8}
+.tz-avatar-verified.tz-frame--library{
+  background:repeating-conic-gradient(from 8deg,var(--tz-frame-a) 0deg 8deg,var(--tz-frame-b) 9deg 13deg,var(--tz-frame-c) 14deg 18deg,var(--tz-frame-a) 19deg 27deg);
+  box-shadow:0 0 0 2px var(--tz-frame-c),0 0 0 5px color-mix(in srgb,var(--tz-frame-a) 72%,transparent),0 4px 16px var(--tz-frame-glow);
+}
+.tz-avatar-verified.tz-frame--library::after{
+  inset:-8px;border:2px dotted var(--tz-frame-b);
+  background:radial-gradient(circle at 50% 0%,var(--tz-frame-a) 0 4px,transparent 5px),
+             radial-gradient(circle at 50% 100%,var(--tz-frame-b) 0 4px,transparent 5px),
+             radial-gradient(circle at 0% 50%,var(--tz-frame-a) 0 3px,transparent 4px),
+             radial-gradient(circle at 100% 50%,var(--tz-frame-a) 0 3px,transparent 4px);
+}
+.tz-avatar-verified.tz-frame--aurora{
+  background:conic-gradient(from 20deg,var(--tz-frame-a),var(--tz-frame-b) 24%,var(--tz-frame-c) 42%,var(--tz-frame-a) 64%,var(--tz-frame-b) 83%,var(--tz-frame-a));
+}
+.tz-avatar-verified.tz-frame--aurora::after{
+  inset:-5px;border:2px solid color-mix(in srgb,var(--tz-frame-a) 84%,transparent);
+  filter:drop-shadow(0 2px 5px var(--tz-frame-glow));
+}
+.tz-avatar-verified.tz-frame--orbit{
+  background:conic-gradient(from 125deg,var(--tz-frame-c),var(--tz-frame-a) 32%,var(--tz-frame-b) 45%,var(--tz-frame-a) 70%,var(--tz-frame-c));
+  box-shadow:0 0 0 2px var(--tz-frame-b),0 0 0 5px color-mix(in srgb,var(--tz-frame-b) 18%,transparent),0 3px 15px var(--tz-frame-glow);
+}
+.tz-avatar-verified.tz-frame--orbit::before{inset:-8px;border:2px solid var(--tz-frame-a);border-radius:49%;transform:rotate(-31deg) scaleX(1.15) scaleY(.83)}
+.tz-avatar-verified.tz-frame--orbit::after{
+  inset:-6px;transform:rotate(30deg) scaleX(.85) scaleY(1.16);
+  border:2px solid var(--tz-frame-b);
+  background:radial-gradient(circle at 18% 22%,var(--tz-frame-a) 0 4px,transparent 5px);
+}
+.tz-avatar-verified.tz-frame--laurel{
+  background:repeating-conic-gradient(from 5deg,var(--tz-frame-a) 0deg 9deg,var(--tz-frame-b) 10deg 16deg,var(--tz-frame-c) 17deg 22deg);
+  box-shadow:0 0 0 2px var(--tz-frame-b),0 0 0 5px color-mix(in srgb,var(--tz-frame-a) 24%,transparent),0 7px 18px var(--tz-frame-glow);
+}
+.tz-avatar-verified.tz-frame--laurel::after{
+  inset:-7px;border:3px double var(--tz-frame-a);
+  background:repeating-conic-gradient(from 11deg,transparent 0 16deg,color-mix(in srgb,var(--tz-frame-a) 85%,transparent) 17deg 20deg,transparent 21deg 35deg);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px));
+}
+.tz-avatar-verified.tz-frame--comet{
+  background:conic-gradient(from -55deg,var(--tz-frame-c),var(--tz-frame-a) 23%,var(--tz-frame-b) 38%,var(--tz-frame-c) 47%,var(--tz-frame-a) 81%,var(--tz-frame-c));
+  box-shadow:0 0 0 2px var(--tz-frame-a),0 0 0 6px color-mix(in srgb,var(--tz-frame-a) 16%,transparent),0 0 18px var(--tz-frame-glow);
+}
+.tz-avatar-verified.tz-frame--comet::after{
+  inset:-7px;border-top:3px solid var(--tz-frame-a);border-right:2px solid var(--tz-frame-b);
+  background:radial-gradient(circle at 86% 14%,var(--tz-frame-a) 0 4px,transparent 5px);
+  transform:rotate(-20deg);
+}
+.tz-avatar-verified--sm.tz-frame::after{inset:-3px;border-width:1px}
+.tz-avatar-verified--sm.tz-frame--orbit::before{inset:-4px}
+.tz-avatar-verified--sm.tz-frame--library::after,.tz-avatar-verified--sm.tz-frame--laurel::after{inset:-4px}
+.tz-avatar-verified--sm.tz-frame--comet::after{inset:-4px}
+
+/* Profile card framing is separate from the avatar decoration, as on Discord.
+   Use border and background overlays, not positioned artwork beyond viewport. */
+.profile-page .profile-hero[data-verification-level]{
+  position:relative;isolation:isolate;
+  border:1px solid var(--tz-frame-b);outline:0;
+  --tz-profile-border:6px;
+}
+.profile-page .profile-hero[data-verification-level]::before{
+  content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+  border:var(--tz-profile-border) solid color-mix(in srgb,var(--tz-frame-a) 62%,transparent);
+  border-radius:inherit;box-shadow:inset 0 0 0 2px var(--tz-frame-c);
+}
+.profile-page .profile-hero[data-frame-style="library"]::before{
+  --tz-profile-border:10px;border-style:double;
+  border-color:var(--tz-frame-a);box-shadow:inset 0 0 0 2px var(--tz-frame-b);
+}
+.profile-page .profile-hero[data-frame-style="aurora"]::before{border-image:none;border-color:color-mix(in srgb,var(--tz-frame-a) 60%,transparent);box-shadow:inset 0 0 16px var(--tz-frame-glow)}
+.profile-page .profile-hero[data-frame-style="orbit"]::before{border-style:double;border-width:9px;border-color:var(--tz-frame-b);box-shadow:inset 0 0 0 2px var(--tz-frame-a),inset 0 0 24px var(--tz-frame-glow)}
+.profile-page .profile-hero[data-frame-style="laurel"]::before{border-width:10px;border-style:ridge;border-color:var(--tz-frame-a);box-shadow:inset 0 0 0 2px var(--tz-frame-c)}
+.profile-page .profile-hero[data-frame-style="comet"]::before{border-top-width:11px;border-right-width:5px;border-bottom-width:5px;border-left-width:11px;border-color:var(--tz-frame-a);box-shadow:inset 0 0 25px var(--tz-frame-glow)}
+.profile-page .profile-hero[data-verification-level] .profile-body h1 .tz-identity-name{
+  padding:3px 11px 5px;border:1px solid color-mix(in srgb,var(--tz-frame-b) 45%,transparent);
+  border-radius:12px;
+  background:linear-gradient(105deg,color-mix(in srgb,var(--tz-frame-a) 16%,transparent),transparent);
+  max-width:100%;font-size:inherit;
+}
+
+/* Frame showroom - real previews render with the same identity component
+   that chat, communities and article comments use. */
+.tz-frame-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,142px),1fr));gap:10px;min-width:0;max-width:100%}
+.tz-frame-choice{display:grid;justify-items:center;align-content:start;gap:8px;min-width:0;min-height:166px;text-align:center;padding:14px 8px 10px;border:2px solid var(--color-border-strong,#a8bbc1);border-radius:14px;background:var(--color-surface,#fff);color:var(--color-text,#182831);font:inherit;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease;overflow:visible}
+.tz-frame-choice:hover{border-color:var(--tz-frame-b,#8ba4b5);background:var(--color-surface-muted,#eef4f4)}
+.tz-frame-choice[aria-pressed="true"]{border-color:var(--color-primary,#097f72);box-shadow:0 0 0 2px color-mix(in srgb,var(--color-primary,#097f72) 16%,transparent)}
+.tz-frame-choice:focus-visible{outline:3px solid var(--color-secondary,#0e98ce);outline-offset:2px}
+.tz-frame-choice .tz-avatar-verified{margin:8px auto 2px}
+.tz-frame-choice strong{font-size:.87rem;overflow-wrap:anywhere}
+.tz-frame-choice small{color:var(--color-text-muted,#5d7078);font-size:.71rem;line-height:1.35;overflow-wrap:anywhere}
+.tz-frame-preview-note{display:block;margin:0;color:var(--color-text-muted,#60737d);font-size:.77rem}
+.tz-frame-selector .tz-frame-actions{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.tz-frame-selector .tz-frame-actions button{min-height:44px}
+.tz-frame-choice .tz-avatar-verified>img{position:relative;z-index:1}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  html:not([data-reduce-motion="true"]) .tz-avatar-verified.tz-frame--aurora::after,
+  html:not([data-reduce-motion="true"]) .tz-avatar-verified.tz-frame--comet::after{
+    animation:tz-cosmetic-glimmer 8s ease-in-out infinite;
+  }
+  .tz-frame-choice:hover{transform:translateY(-2px)}
+}
+@keyframes tz-cosmetic-glimmer{0%,100%{opacity:.83}50%{opacity:1}}
+@media(max-width:420px){
+ .tz-frame-gallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .tz-frame-choice{min-height:160px;padding:11px 7px}
+ .profile-page .profile-hero[data-verification-level]{--tz-profile-border:4px}
+ .profile-page .profile-hero[data-verification-level] .profile-body h1 .tz-identity-name{padding:3px 6px;max-width:100%;overflow-wrap:anywhere}
+}
+@media(prefers-reduced-motion:reduce){.tz-frame-choice,.tz-avatar-verified.tz-frame::after{animation:none!important;transition:none!important}}
+html[data-reduce-motion="true"] .tz-frame-choice,
+html[data-reduce-motion="true"] .tz-avatar-verified.tz-frame::after{animation:none!important;transition:none!important}
