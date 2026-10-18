@@ -221,3 +221,19 @@ html[data-reduce-motion="true"] .tz-avatar-verified.tz-frame::after{animation:no
 .fyp-card-body{min-width:0}
 .fyp-card-body .fyp-author-identity{max-width:100%}
 @media(max-width:380px){.fyp-author-identity{gap:6px;font-size:.76rem}}
+
+
+/* Chat list and detail avatars use the canonical framed element.
+   img IDs remain unchanged for the existing chat runtime and tests. */
+.chat-header-avatar-frame{inline-size:44px;block-size:44px;min-inline-size:44px;flex:0 0 44px;margin-inline-end:2px}
+.chat-info-avatar-frame{inline-size:92px;block-size:92px;min-inline-size:92px;justify-self:center}
+.chat-header-avatar-frame>img,.chat-info-avatar-frame>img{inline-size:100%!important;block-size:100%!important;min-inline-size:0!important;max-inline-size:100%!important;margin:0!important;object-fit:cover!important}
+.chat-info-avatar-frame.tz-frame::after{inset:-7px}
+.chat-header-avatar-frame.tz-frame::after{inset:-4px}
+.chat-picker-row>.tz-avatar-verified,.chat-request-row>.tz-avatar-verified{flex:0 0 auto}
+.chat-picker-row,.chat-request-row{min-width:0;max-width:100%}
+.chat-picker-row>span:not(.tz-avatar-verified),.chat-request-row>div{min-width:0;overflow-wrap:anywhere}
+@media(max-width:380px){
+ .chat-header-avatar-frame{inline-size:40px;block-size:40px;min-inline-size:40px;flex-basis:40px}
+ .chat-info-avatar-frame{inline-size:84px;block-size:84px;min-inline-size:84px}
+}
