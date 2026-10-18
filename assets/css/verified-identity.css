@@ -237,3 +237,21 @@ html[data-reduce-motion="true"] .tz-avatar-verified.tz-frame::after{animation:no
  .chat-header-avatar-frame{inline-size:40px;block-size:40px;min-inline-size:40px;flex-basis:40px}
  .chat-info-avatar-frame{inline-size:84px;block-size:84px;min-inline-size:84px}
 }
+
+
+/* Discord-inspired concept: a restrained, original nameplate beside the badge.
+   These are identity cues, never a ranking signal or a substitute for staff roles. */
+.tz-identity-name.tz-nameplate{
+  --tz-nameplate-rgb:125,148,165;
+  display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;
+  padding:2px 7px;border:1px solid rgba(var(--tz-nameplate-rgb),.30);
+  border-radius:8px;
+  background:linear-gradient(110deg,rgba(var(--tz-nameplate-rgb),.14),rgba(var(--tz-nameplate-rgb),.04) 70%,transparent);
+  color:inherit;font-weight:inherit;overflow-wrap:anywhere;box-decoration-break:clone;
+}
+.tz-nameplate--silver{--tz-nameplate-rgb:127,153,172!important}
+.tz-nameplate--gold{--tz-nameplate-rgb:199,152,55!important}
+.tz-nameplate--platinum{--tz-nameplate-rgb:147,130,216!important}
+.tz-nameplate--business{--tz-nameplate-rgb:55,157,130!important}
+.tz-nameplate .tz-verified-badge{flex-shrink:0}
+@media(max-width:380px){.tz-nameplate{padding:1px 4px!important}}
