@@ -210,3 +210,14 @@ html[data-reduce-motion="true"] .tz-avatar-verified.tz-frame::after{animation:no
  .forum-reply-meta .forum-author-inline .tz-avatar-verified,
  .forum-thread-footer .forum-author-inline .tz-avatar-verified{inline-size:30px;block-size:30px}
 }
+
+
+.fyp-author-identity{display:inline-flex;align-items:center;gap:9px;min-width:0;max-width:100%;overflow-wrap:anywhere;text-decoration:none;color:var(--color-text,#1a2c34);font-size:.82rem;font-weight:750;margin:7px 0}
+.fyp-author-identity:hover .tz-identity-name{text-decoration:underline}
+.fyp-author-identity:focus-visible{outline:2px solid var(--color-primary,#087f73);outline-offset:3px;border-radius:7px}
+.fyp-author-identity .tz-avatar-verified{flex:0 0 auto}
+.fyp-author-identity .tz-identity-name{min-width:0;overflow-wrap:anywhere}
+.fyp-comment-item .fyp-author-identity{margin:0 0 6px}
+.fyp-card-body{min-width:0}
+.fyp-card-body .fyp-author-identity{max-width:100%}
+@media(max-width:380px){.fyp-author-identity{gap:6px;font-size:.76rem}}
