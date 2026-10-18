@@ -364,8 +364,12 @@ function renderProfile() {
   const hero=document.querySelector(".profile-page .profile-hero");
   const frame=document.querySelector(".profile-page .profile-avatar-wrap");
   if(hero){
-    if(tier)hero.dataset.verificationLevel=tier;
-    else delete hero.dataset.verificationLevel;
+    hero.classList.remove("tz-frame","tz-frame--silver","tz-frame--gold",
+      "tz-frame--platinum","tz-frame--business");
+    if(tier){
+      hero.dataset.verificationLevel=tier;
+      hero.classList.add("tz-frame","tz-frame--"+tier);
+    }else delete hero.dataset.verificationLevel;
   }
   if(frame){
     frame.classList.remove("tz-frame","tz-frame--silver","tz-frame--gold","tz-frame--platinum",
