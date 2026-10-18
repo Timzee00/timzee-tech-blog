@@ -255,3 +255,19 @@ html[data-reduce-motion="true"] .tz-avatar-verified.tz-frame::after{animation:no
 .tz-nameplate--business{--tz-nameplate-rgb:55,157,130!important}
 .tz-nameplate .tz-verified-badge{flex-shrink:0}
 @media(max-width:380px){.tz-nameplate{padding:1px 4px!important}}
+
+
+/* Dark, full-screen reel player keeps premium creator identity legible. */
+.reel-uploader .reel-avatar-frame,
+.reel-comment-author{display:inline-flex;align-items:center;gap:8px;min-width:0;max-width:100%;color:#fff;text-decoration:none}
+.reel-uploader .reel-avatar-frame{flex:0 0 auto}
+.reel-avatar-frame .tz-avatar-verified{inline-size:36px;block-size:36px;min-inline-size:36px}
+.reel-uploader .reel-username{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.reel-uploader .tz-nameplate,.reel-comment-author .tz-nameplate{color:#fff;background-color:rgba(5,12,19,.38);border-color:rgba(255,255,255,.24)}
+.reel-comment-author{font-size:.78rem;font-weight:750;margin-bottom:4px;overflow-wrap:anywhere}
+.reel-comment-author .tz-avatar-verified{flex:0 0 auto}
+.reel-comment-author:focus-visible,.reel-avatar-frame:focus-visible{outline:2px solid #a9fbef;outline-offset:3px;border-radius:7px}
+.reel-comment-author:hover .tz-identity-name{text-decoration:underline}
+.comment-drawer-list .comment-row{min-width:0;overflow-wrap:anywhere}
+.comment-drawer-list .comment-row .tz-avatar-verified{inline-size:32px;block-size:32px}
+@media(max-width:400px){.reel-comment-author,.reel-uploader .reel-avatar-frame{gap:6px}}
