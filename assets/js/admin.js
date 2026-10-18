@@ -1,4 +1,5 @@
 import { bindStaffLogin } from "./staff-auth.js";
+import {mountVerificationReview} from "./verification-review-admin.mjs";
 import { requireRole, logout, getDisplayName, getUserRole, getSession } from "./auth.js";
 import { supabase as supabaseClient } from "./supabase.js";
 import {
@@ -1309,7 +1310,7 @@ function renderUsersTable(users) {
     `;
     return;
   }
-  const tierOptions = ["standard", "pro", "elite"];
+  const tierOptions = ["standard", "silver", "gold", "platinum", "business"];
   table.innerHTML = users
     .map((user) => {
       const displayName =
@@ -1327,7 +1328,7 @@ function renderUsersTable(users) {
           <td><span class="${statusClass}">${escapeHTML(status)}</span></td>
           <td>${escapeHTML(verifiedLabel)}</td>
           <td>
-            <select data-action="tier" data-id="${user.id}">
+            <select aria-label="Verification level for ${safeName}" disabled>
               ${tierOptions
                 .map(
                   (option) =>
@@ -1341,9 +1342,9 @@ function renderUsersTable(users) {
           <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : "—"}</td>
           <td>
             <div class="inline-actions">
-              <button class="muted" data-action="${user.is_verified ? "unverify" : "verify"}" data-id="${
+              <button class="muted" data-action="${user.is_verified ? "unverify" : "verification_inbox"}" data-id="${
                 user.id
-              }">${user.is_verified ? "Unverify" : "Verify"}</button>
+              }">${user.is_verified ? "Unverify" : "Review application"}</button>
               <button class="danger" data-action="${status === "suspended" ? "activate" : "suspend"}" data-id="${
                 user.id
               }">${status === "suspended" ? "Activate" : "Suspend"}</button>
@@ -1360,6 +1361,7 @@ function renderUsersTable(users) {
       const action = btn.dataset.action;
       const userId = btn.dataset.id;
       if (!userId || !action) return;
+      if(action==="verification_inbox"){document.querySelector(\'.admin-nav button[data-tab="verification"]\')?.click();return;}
       if (action === "suspend" && !await window.appUI.confirm("Suspend this account?")) return;
       if (action === "activate" && !await window.appUI.confirm("Reactivate this account?")) return;
       const result = await updateUserAction(userId, action);
@@ -2020,6 +2022,7 @@ async function bootDashboard() {
   if (!user) return;
   state.user = user;
   setupTabs();
+  mountVerificationReview();
   setupImageInputs();
   setupScheduleToggle();
   bindRichEditorToolbar("postToolbar", "postEditor");
