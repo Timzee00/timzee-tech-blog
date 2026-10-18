@@ -81,8 +81,15 @@ export function verifiedAvatar(url,profile,{size="md",alt="Profile picture"}={})
  *  never enter the client. Cache entries expire after 60 seconds so revoked
  *  badges do not remain visible for an entire long browsing session. */
 export async function loadVerifiedIdentityMap(supabase,ids,cache=new Map()){
-  const unique=[...new Set((ids||[]).filter(v=>/^[a-f0-9-]{36}$/i.test(String(v))))].slice(0,160);
+  const unique=[...new Set((ids||[]).filter(v=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(String(v))))].slice(0,160);
   const now=Date.now();
+  // Bound memory even if someone browses thousands of different profiles.
+  // Also purge expired entries so revocations eventually reach every view.
+  if(cache.size>480){
+    for(const [id,entry] of cache){
+      if(entry?.expiresAt<=now||cache.size>320)cache.delete(id);
+    }
+  }
   const missing=unique.filter(id=>!cache.has(id)||cache.get(id).expiresAt<now);
   for(let start=0;start<missing.length;start+=80){
     const batch=missing.slice(start,start+80);
