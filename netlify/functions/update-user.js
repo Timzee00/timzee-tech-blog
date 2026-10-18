@@ -3,7 +3,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { requireRole, roleFromUser } = require("./_lib/auth-role.js");
 
 const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(payload) });
-const allowedTiers = new Set(["standard", "pro", "elite"]);
+// Verification grants and level changes belong exclusively to the audited review endpoint.
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return jsonResponse(405, { error: "Method not allowed." });
@@ -23,11 +23,24 @@ exports.handler = async (event) => {
 
   const userId = payload.userId;
   const action = payload.action;
+  if (action === "verify" || action === "set_tier") {
+    return jsonResponse(409, {error:"Verification cannot be granted or upgraded here. Review the applicant's evidence in Verification reviews."});
+  }
   if (!userId || !action) return jsonResponse(400, { error: "Missing userId or action." });
 
   const { data: authUserData, error: authUserError } = await supabase.auth.admin.getUserById(userId);
   if (authUserError || !authUserData?.user) return jsonResponse(404, { error: "User not found." });
 
+  if(action==="unverify"){
+    const reason=String(payload.reason||"").trim();
+    if(reason.length<25||reason.length>1800)
+      return jsonResponse(400,{error:"Please enter a documented reason (25–1800 characters)."});
+    const revocation=await supabase.rpc("revoke_verified_identity",{
+      p_user:userId,p_actor:guard.user.id,p_reason:reason
+    });
+    if(revocation.error)return jsonResponse(409,{error:revocation.error.message});
+    return jsonResponse(200,{profile:revocation.data});
+  }
   const requesterRole = guard.role;
   const requesterId = guard.user?.id || null;
   const targetProfileRole = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
@@ -41,22 +54,12 @@ exports.handler = async (event) => {
   const existingProfile = profileResult.data || null;
   const now = new Date().toISOString();
   const updates = { updated_at: now };
-  const incomingTier = allowedTiers.has(payload.verificationTier) ? payload.verificationTier : null;
-  const currentTier = existingProfile?.verification_tier || "standard";
-  const tierValue = incomingTier || currentTier;
 
-  if (action === "verify") {
-    updates.is_verified = true; updates.verified_at = existingProfile?.verified_at || now; updates.verification_tier = tierValue;
-  } else if (action === "unverify") {
-    updates.is_verified = false; updates.verified_at = null; updates.verification_tier = "standard";
-  } else if (action === "suspend") {
+
+  if (action === "suspend") {
     updates.account_status = "suspended";
   } else if (action === "activate") {
     updates.account_status = "active";
-  } else if (action === "set_tier") {
-    updates.verification_tier = tierValue;
-    if (tierValue === "standard") { updates.is_verified = false; updates.verified_at = null; }
-    else { updates.is_verified = true; updates.verified_at = existingProfile?.verified_at || now; }
   } else if (action === "feature") {
     updates.is_featured = true;
   } else if (action === "unfeature") {
@@ -72,22 +75,6 @@ exports.handler = async (event) => {
   if (existingProfile) {
     const { data, error } = await supabase.from("profiles").update(updates).eq("id", userId).select().single();
     if (error) return jsonResponse(400, { error: error.message });
-
-    if (["verify", "unverify", "set_tier"].includes(action)) {
-      const notification = await supabase.rpc("emit_user_notification", {
-        p_user_id: userId,
-        p_type: "verification_status",
-        p_title: action === "unverify" ? "Verification removed" : "Verification status updated",
-        p_body: action === "verify"
-          ? "Your account has been verified."
-          : action === "unverify"
-            ? "Your verified status has been removed."
-            : `Your verification tier is now ${updates.verification_tier}.`,
-        p_link: "/profile.html",
-        p_data: { user_id: userId, action, verification_tier: updates.verification_tier || null, actor_id: guard.user.id }
-      });
-      if (notification.error) console.warn("Verification notification failed:", notification.error);
-    }
 
     return jsonResponse(200, { profile: data });
   }
