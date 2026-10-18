@@ -23,6 +23,7 @@ import {
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import { safeNotificationPath } from "./notification-links.mjs";
+import {verifiedName,verifiedLevel,verifiedLabel,verifiedFrameClasses,verifiedFrameStyle} from "./verified-identity.mjs";
 import "./nav.js";
 import { submitModerationReport } from "./moderation-reports.mjs";
 
@@ -359,12 +360,21 @@ function renderProfile() {
   if (cover) {
     cover.src = state.profile?.cover_url || "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1200&q=80";
   }
+  const tier=verifiedLevel(state.profile);
+  const hero=document.querySelector(".profile-page .profile-hero");
+  const frame=document.querySelector(".profile-page .profile-avatar-wrap");
+  if(hero){
+    if(tier)hero.dataset.verificationLevel=tier;
+    else delete hero.dataset.verificationLevel;
+  }
+  if(frame){
+    frame.classList.remove("tz-frame","tz-frame--silver","tz-frame--gold","tz-frame--platinum",
+      "tz-frame--business","tz-frame--signature","tz-frame--library","tz-frame--aurora");
+    if(tier)frame.classList.add(...verifiedFrameClasses(state.profile).split(" "));
+  }
   if (name) {
     const displayName = plainDisplayName(state.profile?.display_name || "Member");
-    const badge = state.profile?.is_verified
-      ? `<span class="verified-badge" title="Verified">✓</span>`
-      : "";
-    name.innerHTML = `${escapeHTML(displayName)}${badge}`;
+    name.innerHTML = verifiedName(displayName,state.profile);
   }
   if (headline) {
     headline.textContent = state.profile?.headline || "Tech community member";
@@ -379,48 +389,50 @@ function renderProfile() {
   }
 }
 
-function renderVerification() {
-  const target = document.getElementById("profileVerification");
-  if (!target) return;
-  const tier = state.profile?.verification_tier || "standard";
-  const verified = !!state.profile?.is_verified;
-  const perks = {
-    standard: [
-      "Standard profile visibility across the community.",
-      "Access to comments, discussions, and messaging.",
-      "Standard support response times."
-    ],
-    pro: [
-      "Verified badge on profile and author cards.",
-      "Priority placement in community directories.",
-      "Early access to new creator tools."
-    ],
-    elite: [
-      "Featured author spotlight placements.",
-      "Fast-track moderation for posts.",
-      "Dedicated creator support channel."
-    ]
-  };
-  const perkList = perks[verified ? tier : "standard"] || perks.standard;
-  if (!verified) {
-    target.innerHTML = `
-      <div class="callout">Standard account (verification is optional)</div>
-      <ul class="perk-list">
-        ${perkList.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}
-      </ul>
-    `;
+function renderVerification(){
+  const target=document.getElementById("profileVerification");
+  if(!target)return;
+  const tier=verifiedLevel(state.profile);
+  const isSelf=Boolean(state.user?.id&&state.user.id===state.viewingId);
+  if(!tier){
+    target.innerHTML='<div class="callout">No verified identity badge yet. All members can still participate in communities, chat and publish content.</div>'+
+      (isSelf?'<a class="btn ghost sm" href="verify.html">Apply for verification</a>':'');
     return;
   }
-  const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
-  const verifiedAt = state.profile?.verified_at
-    ? new Date(state.profile.verified_at).toLocaleDateString()
-    : null;
-  target.innerHTML = `
-    <div class="verification-tier">Verified ${escapeHTML(tierLabel)}${verifiedAt ? ` · since ${verifiedAt}` : ""}</div>
-    <ul class="perk-list">
-      ${perkList.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}
-    </ul>
-  `;
+  const label=verifiedLabel(state.profile);
+  const benefits={
+    silver:["Original Silver badge across supported social surfaces","Silver profile frames and extended status eligibility","Identity and impersonation reporting tools"],
+    gold:["Original Gold badge and profile themes","Creator publishing tools already available to this account","Verified status features and content insights"],
+    platinum:["Original Platinum badge and premium frames","Professional creator experience","Existing verified publishing and community tools"],
+    business:["Official Organization badge and branded profile frame","Organization identity shown across supported surfaces","Official account protection and content publishing"]
+  };
+  target.innerHTML='<div class="verification-tier">'+verifiedName(label,state.profile)+
+    '</div><ul class="perk-list">'+benefits[tier].map(x=>'<li>'+escapeHTML(x)+'</li>').join("")+'</ul>'+
+    (isSelf?'<div class="tz-frame-selector"><label for="profileFrameStyle">Choose your '+escapeHTML(tier)+' portrait frame</label>'+
+     '<select id="profileFrameStyle"><option value="signature">Signature · Classic metal</option>'+
+     '<option value="library">Library · Ornamental collection</option><option value="aurora">Aurora · Refined glow</option></select>'+
+     '<small>Frame styles are based on your approved verification level. This choice follows your avatar across the site.</small>'+
+     '<button type="button" class="btn ghost sm" id="saveProfileFrame">Save portrait frame</button>'+
+     '<p class="status" id="profileFrameStatus" role="status" aria-live="polite"></p></div>':'');
+  if(!isSelf)return;
+  const select=document.getElementById("profileFrameStyle");
+  select.value=verifiedFrameStyle(state.profile);
+  document.getElementById("saveProfileFrame")?.addEventListener("click",async event=>{
+    const button=event.currentTarget;
+    if(!state.user||!["signature","library","aurora"].includes(select.value))return;
+    const status=document.getElementById("profileFrameStatus");
+    button.disabled=true;
+    status.textContent="Saving frame…";
+    try{
+      const result=await supabase.from("profiles").update({frame_style:select.value})
+        .eq("id",state.user.id).select("frame_style").single();
+      if(result.error)throw result.error;
+      state.profile.frame_style=result.data.frame_style;
+      renderProfile();
+      status.textContent="Your "+select.options[select.selectedIndex].text+" frame has been saved.";
+    }catch(error){status.textContent=extractErrorMessage(error,"Couldn't save this frame.");}
+    finally{button.disabled=false;}
+  });
 }
 
 function setupProfileTabs() {
