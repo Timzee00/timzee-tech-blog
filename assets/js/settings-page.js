@@ -26,7 +26,17 @@ function mountExtraSettings(){
   <label class="toggle-row"><span><strong>Marketplace updates</strong><small>Updates related to your marketplace activity, when available.</small></span><input type="checkbox" data-email-notification="marketplace_alerts"></label>
   <label class="toggle-row"><span><strong>Community digest</strong><small>Occasional updates from communities you follow, when available.</small></span><input type="checkbox" data-email-notification="community_digest"></label><label class="toggle-row"><span><strong>Reminder after a long absence</strong><small>Opt in to one email after 30 days without a visit. You can turn it off anytime.</small></span><input type="checkbox" data-email-notification="inactivity_reminders"></label>
   </div>`;
-  const cookies=$("cookies");content.insertBefore(appearance,cookies);content.insertBefore(email,cookies);content.insertBefore(security,cookies);
+  const visitors=document.createElement("section");visitors.id="profile-visitor-privacy";
+  visitors.className="settings-card card";
+  visitors.innerHTML='<div class="settings-card-head"><div><span class="settings-kicker">Privacy</span><h2>Profile visits & visibility</h2></div></div>'+
+   '<p class="settings-help">Profile visits are counted once per visitor per day and deleted after 30 days. Your name remains private unless you explicitly share it.</p>'+
+   '<div class="settings-stack">'+
+   '<label class="toggle-row"><span><strong>Profile visit notifications</strong><small>Receive a grouped in-app alert at most once daily.</small></span><input type="checkbox" data-path="notifications.profileViews"></label>'+
+   '<label class="toggle-row"><span><strong>Count my visits</strong><small>When enabled, profiles you visit can count one anonymous visit per day. Disable for private browsing.</small></span><input type="checkbox" data-path="privacy.recordProfileVisits"></label>'+
+   '<label class="toggle-row"><span><strong>Show my name to profiles I visit</strong><small>Off by default. Opt in to appear in their limited seven-day visitor insights.</small></span><input type="checkbox" data-path="privacy.shareProfileVisits"></label>'+
+   '</div>';
+  const cookies=$("cookies");content.insertBefore(appearance,cookies);content.insertBefore(email,cookies);content.insertBefore(visitors,cookies);content.insertBefore(security,cookies);
+  addNav("profile-visitor-privacy","Profile visit privacy");
   $("resetPasswordBtn")?.addEventListener("click",async()=>{try{const result=await supabase.auth.resetPasswordForEmail(state.user.email,{redirectTo:`${window.location.origin}/login.html`});if(result.error)throw result.error;setStatus("Password reset email requested.","success");}catch(error){setStatus(error?.message||"Could not request password reset.","error");reportAppError(error,"Password reset failed");}});
   $("signOutSettingsBtn")?.addEventListener("click",async()=>{try{const result=await supabase.auth.signOut();if(result.error)throw result.error;window.location.href="login.html?next=settings.html";}catch(error){reportAppError(error,"Sign out failed");}});
   $("signOutAllBtn")?.addEventListener("click",async()=>{
