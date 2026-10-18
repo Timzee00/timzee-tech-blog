@@ -46,6 +46,7 @@ const state = {
   },
   bookmarks: [],
   notifications: [],
+  visitorInsights: null,
   adminRequest: null
 };
 
@@ -535,6 +536,7 @@ function renderProfileStats() {
     { label: "Followers", value: state.followersCount },
     { label: "Following", value: state.followingCount },
     { label: "Friends", value: friendValue },
+    ...(state.user?.id===state.viewingId && state.visitorInsights ? [{label:"Profile views · 7 days",value:state.visitorInsights.last_7_days||0}]:[]),
     { label: "Reputation", value: `${points} · ${level}` }
   ]
     .map(
@@ -651,7 +653,7 @@ const NOTIFICATION_CATEGORIES = {
     "discussion_reply",
     "reply"
   ],
-  activity: ["admin_promotion", "verification_status"]
+  activity: ["admin_promotion", "verification_status", "profile_view"]
 };
 
 let activeNotificationTab = "all";
@@ -1349,6 +1351,28 @@ async function boot() {
   await loadAdminRequest();
   renderProfile();
   renderProfileStats();
+  if(state.user?.id && state.viewingId===state.user.id){
+    void supabase.rpc("get_profile_visit_summary").then(({data,error})=>{
+      if(!error&&data){
+        state.visitorInsights=data;
+        renderProfileStats();
+        const target=document.getElementById("profileVisitorInsights");
+        if(target){
+          const visitors=Array.isArray(data.shared_viewers)?data.shared_viewers:[];
+          target.innerHTML='<strong>Visitor insights</strong><p>'+Number(data.today||0)+
+            ' today · '+Number(data.last_7_days||0)+' in 7 days</p>'+
+            (visitors.length?'<p>Visitors who chose to share their identity: '+
+              visitors.map(x=>escapeHTML(x.name||"Member")).join(", ")+'</p>':
+              '<p>Individual visitor names remain private unless they opt in.</p>');
+        }
+      }
+    }).catch(error=>console.warn("Visitor insights unavailable",error));
+  }else if(state.user?.id){
+    // Server deduplicates daily visits and protects visitors who opted out.
+    void supabase.rpc("record_profile_visit",{p_profile_id:state.viewingId})
+      .then(({error})=>{if(error)console.warn("Profile visit was not recorded:",error.message);})
+      .catch(error=>console.warn("Profile visit unavailable",error));
+  }
   renderProfileAbout();
   renderVerification();
   renderProfileFriends();
