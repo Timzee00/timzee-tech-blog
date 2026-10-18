@@ -3,6 +3,7 @@ import {loadUserPreferences} from "./user-preferences.js";
 import {escapeHTML,timeAgo,reportAppError,isSafeUrl} from "./utils.js";
 import {setupMentionInput} from "./mentions.js";
 import {renderCommunityMarkdown,insertCommunityFormatting} from "./community-markdown.mjs";
+import {verifiedName,verifiedCommentClass,loadVerifiedIdentityMap} from "./verified-identity.mjs";
 import {communityRankCursor,appendUniqueCommunityRows,isCommunitySnapshotStale} from "./community-feed-pagination.mjs";
 import "./nav.js";
 
@@ -13,7 +14,7 @@ const categories=["All","AI & ML","Programming","Gadgets","Cybersecurity","Tech 
 const PAGE_SIZE=20;
 let liveRepliesChannel=null;
 const state={
- user:null,platformStaff:false,recommendationsEnabled:true,liveUpdates:true,reportTarget:null,interests:new Set(),communities:[],communityPage:0,hasMoreCommunities:false,
+ user:null,verifiedIdentityCache:new Map(),verifiedIdentities:new Map(),platformStaff:false,recommendationsEnabled:true,liveUpdates:true,reportTarget:null,interests:new Set(),communities:[],communityPage:0,hasMoreCommunities:false,
  selectedCategory:"All",communitySearch:"",activeCommunity:null,activeThread:null,personalFeedAnchor:null,personalFeedStartedAt:null,
  view:"home",mode:"home",sort:"active",feed:[],feedCursor:null,feedHasMore:false,feedBusy:false,feedVersion:0,search:"",
  joined:new Set(),memberRoles:new Map(),saved:new Set(),votes:new Map(),replyVotes:new Map(),replyVoteBusy:new Set(),
@@ -267,7 +268,7 @@ async function loadFeed(reset=false){
     .eq("community_id",selected.id).eq("status","published").eq("is_pinned",true)
     .order("created_at",{ascending:false}).limit(4);
    if(version!==state.feedVersion)return;
-   state.pinned=pinned||[];renderPinned();
+   state.pinned=pinned||[];await hydrateVerifiedAuthors(state.pinned);renderPinned();
   }
   let savedIds=[];
   if(state.mode==="saved"&&!selected){
@@ -302,6 +303,7 @@ async function loadFeed(reset=false){
   if(page.length)state.feedCursor=page.at(-1);
   const seen=new Set(state.feed.map(x=>x.id));
   state.feed.push(...page.filter(x=>!seen.has(x.id)));
+  await hydrateVerifiedAuthors(page);
   await loadPersonalThreadState(page.map(x=>x.id));
   if(version!==state.feedVersion)return;
   renderFeed();
@@ -317,6 +319,15 @@ async function loadFeed(reset=false){
   }
  }
 }
+async function hydrateVerifiedAuthors(rows){
+ const ids=(rows||[]).map(row=>row?.author_id).filter(Boolean);
+ if(!ids.length)return;
+ try{
+  const found=await loadVerifiedIdentityMap(supabase,ids,state.verifiedIdentityCache);
+  for(const [id,profile] of found)state.verifiedIdentities.set(id,profile);
+ }catch(error){console.warn("Author badges temporarily unavailable:",error.message);}
+}
+function forumIdentity(id){return state.verifiedIdentities.get(id)||null;}
 async function loadPersonalThreadState(ids){
  if(!state.user||!ids.length)return;
  const [votes,saved]=await Promise.all([
@@ -535,7 +546,7 @@ function threadCard(thread,{pinned=false}={}){
  const label=thread.kind==="question"?"Question":thread.kind==="guide"?"Guide":thread.kind==="news"?"News":
   thread.kind==="showcase"?"Project":thread.kind==="announcement"?"Official":"Discussion";
  const intro=String(thread.body||"").replace(/\s+/g," ").slice(0,220);
- return "<article class='forum-thread-card' data-thread-card='"+escape(thread.id)+"'>"+
+ return "<article class='forum-thread-card "+verifiedCommentClass(forumIdentity(thread.author_id))+"' data-thread-card='"+escape(thread.id)+"'>"+
   "<div class='forum-vote-rail'>"+
   "<button type='button' data-vote='1' data-id='"+escape(thread.id)+"' class='"+(state.votes.get(thread.id)===1?"selected":"")+"' aria-label='Upvote topic' aria-pressed='"+(state.votes.get(thread.id)===1)+"'>▲</button>"+
   "<strong data-score='"+escape(thread.id)+"'>"+Number(thread.score||0)+"</strong>"+
@@ -554,7 +565,7 @@ function threadCard(thread,{pinned=false}={}){
   (thread.ranking_reason&&state.mode==="personal"?"<small class='forum-ranking-reason'>"+
    escape(thread.ranking_reason)+"</small>":"")+
   (thread.media_url?"<span class='forum-topic-media-indicator'>◈ Media attached</span>":"")+
-  "<div class='forum-thread-footer'><span>By "+escape(thread.author_name||"Member")+"</span>"+
+  "<div class='forum-thread-footer'><span>By "+verifiedName(thread.author_name||"Member",forumIdentity(thread.author_id),{compact:true})+"</span>"+
   "<button type='button' data-open-thread='"+escape(thread.id)+"'>"+
    Number(thread.reply_count||0)+" replies</button>"+
   "<button type='button' data-save-thread='"+escape(thread.id)+"' aria-pressed='"+state.saved.has(thread.id)+"'>"+
@@ -713,12 +724,13 @@ async function openThread(id,{push=true}={}){
   }
  }
  $("forumFeedView").hidden=true;$("forumThreadView").hidden=false;
+ await hydrateVerifiedAuthors([data]);
  const boardName=state.activeCommunity?.title||"Community";
  const staff=isCommunityStaff(data.community_id);
  $("forumThreadHeader").innerHTML="<p class='forum-eyebrow'>"+
   "<button type='button' data-open-community='"+escape(data.community_id)+"'>"+
   escape(boardName)+"</button> / "+escape(data.kind)+"</p><h1>"+escape(data.title)+
-  "</h1><p class='forum-thread-detail-meta'>By "+escape(data.author_name||"Member")+
+  "</h1><p class='forum-thread-detail-meta'>By "+verifiedName(data.author_name||"Member",forumIdentity(data.author_id),{compact:true})+
   " · "+escape(preferredDate(data.created_at))+(data.flair?" · "+escape(data.flair):"")+(data.is_locked?" · Locked":"")+"</p>";
  $("forumThreadBody").innerHTML=renderCommunityMarkdown(data.body||"");
  if(data.media_url)$("forumThreadBody").insertAdjacentHTML("beforeend",mediaHtml(data.media_url,data.media_type,"thread",data.id));
@@ -788,6 +800,7 @@ async function loadReplies(reset=false){
   if(page.length)state.replyCursor=page.at(-1);
   const seen=new Set(state.replies.map(r=>r.id));
   state.replies.push(...page.filter(r=>!seen.has(r.id)));
+  await hydrateVerifiedAuthors(page);
   const ids=page.map(item=>item.id);
   if(ids.length){
    const {data:voteTotals,error:voteError}=await supabase.rpc("forum_reply_vote_summary",{
@@ -813,12 +826,12 @@ function renderReplies(){
  $("forumThreadTitle").textContent="Replies ("+Number(state.activeThread?.reply_count||replies.length)+")";
  $("forumReplies").innerHTML=replies.map((r,i)=>{
   const parent=byId.get(r.reply_to);
-  const header="<div class='forum-reply-meta'><strong>"+escape(r.author_name||"Member")+
+  const header="<div class='forum-reply-meta'><strong>"+verifiedName(r.author_name||"Member",forumIdentity(r.author_id),{compact:true})+
     "</strong><span>· "+escape(preferredDate(r.created_at))+"</span>"+
     (r.pinned?"<span class='forum-topic-pinned'>Pinned</span>":"")+"</div>";
   const quote=r.reply_to?"<button type='button' data-jump-reply='"+escape(r.reply_to)+
     "' class='forum-reply-reference'>↳ Reply to "+escape(parent?.author_name||"an earlier message")+"</button>":"";
-  return "<article class='forum-reply' id='reply-"+escape(r.id)+"'>"+
+  return "<article class='forum-reply "+verifiedCommentClass(forumIdentity(r.author_id))+"' id='reply-"+escape(r.id)+"'>"+
    "<span class='forum-reply-number'>#"+(i+1)+"</span><div class='forum-reply-main'>"+
    header+quote+"<div class='forum-reply-body forum-markdown'>"+renderCommunityMarkdown(r.body||"")+"</div>"+
    mediaHtml(r.media_url,r.media_type,"reply",r.id)+
