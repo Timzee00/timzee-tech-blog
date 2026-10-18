@@ -81,3 +81,36 @@ test("cosmetics have small screen layouts and motion-safe fallbacks",()=>{
  assert.match(css,/html\[data-reduce-motion="true"\]/);
  assert.match(css,/tz-frame-gallery/);
 });
+
+test("article comment authors retrieve the same trusted tier metadata as profiles",()=>{
+ const data=read("assets/js/data.js"),post=read("assets/js/post.js");
+ const start=data.indexOf("export async function fetchProfilesByIds");
+ assert.ok(start>0);
+ const query=data.slice(start,start+650);
+ for(const field of ["is_verified","verification_tier","verification_expires_at","frame_style"]){
+   assert.ok(query.includes(field),"Missing trusted field "+field);
+ }
+ assert.match(post,/ownProfile=\(await fetchProfilesByIds\(\[state\.user\.id\]\)\)/);
+ assert.doesNotMatch(post,/comment\.image\s*\?\s*`<img src="\$\{comment\.image\}/);
+ assert.match(post,/comment\.image && isSafeUrl\(comment\.image\)/);
+});
+
+test("verified identities use modest tier-specific nameplates",()=>{
+ const gold=I.verifiedName("Creator",{...serverProfile,frame_style:"library"});
+ assert.match(gold,/tz-nameplate--gold/);
+ assert.match(gold,/tz-verified-badge--gold/);
+ const anon=I.verifiedName("Reader",{...serverProfile,is_verified:false});
+ assert.doesNotMatch(anon,/tz-nameplate/);
+ const css=read("assets/css/verified-identity.css");
+ assert.match(css,/tz-nameplate--silver/);
+ assert.match(css,/tz-nameplate--gold/);
+ assert.match(css,/tz-nameplate--platinum/);
+ assert.match(css,/tz-nameplate--business/);
+});
+
+test("large discussion feeds use a bounded, valid-UUID identity cache",()=>{
+ const helper=read("assets/js/verified-identity.mjs");
+ assert.match(helper,/cache\.size>480/);
+ assert.match(helper,/cache\.size>320/);
+ assert.match(helper,/\[a-f0-9\]\{8\}/);
+});
