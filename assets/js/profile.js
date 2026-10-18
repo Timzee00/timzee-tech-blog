@@ -23,7 +23,7 @@ import {
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import { safeNotificationPath } from "./notification-links.mjs";
-import {verifiedName,verifiedLevel,verifiedLabel,verifiedFrameClasses,verifiedFrameStyle} from "./verified-identity.mjs";
+import {verifiedName,verifiedAvatar,verifiedLevel,verifiedLabel,verifiedFrameClasses,verifiedFrameStyle} from "./verified-identity.mjs";
 import "./nav.js";
 import { submitModerationReport } from "./moderation-reports.mjs";
 
@@ -243,7 +243,7 @@ async function loadFriendSummary() {
   if (!friendIds.length) return;
   const profiles = await supabase
     .from("public_profiles")
-    .select("id, display_name, avatar_url")
+    .select("id, display_name, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style")
     .in("id", friendIds);
   state.friendSummary = profiles.data || [];
 }
@@ -314,8 +314,8 @@ function renderProfileFriends() {
     .map(
       (friend) => `
         <div class="friend-pill">
-          <img src="${friend.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="friend avatar">
-          <div class="friend-name">${escapeHTML(friend.display_name || "Member")}</div>
+          ${verifiedAvatar(friend.avatar_url,friend,{size:"sm",alt:"Friend portrait"})}
+          <div class="friend-name">${verifiedName(friend.display_name || "Member",friend,{compact:true})}</div>
         </div>
       `
     )
