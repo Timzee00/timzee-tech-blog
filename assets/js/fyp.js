@@ -1,5 +1,5 @@
 import { supabase, getCurrentUser } from "./supabase.js";
-import {verifiedName,verifiedCommentClass,loadVerifiedIdentityMap} from "./verified-identity.mjs";
+import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap} from "./verified-identity.mjs";
 import { loadUserPreferences, mergePreferences } from "./user-preferences.js";
 import { escapeHTML, clampText, stripHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
 import { diversifyFeed, feedCacheKey, cachedFeed } from "./feed-diversity.mjs";
@@ -9,6 +9,7 @@ import {renderSocialText} from "./social-rich-text.mjs";
 const state = { user: null, preferences: mergePreferences(), type: "all", mode: "for-you", loading: false };
 const feedCache = new Map();
 const suppressedContent = new Set();
+let feedIdentityMap=new Map();
 const $ = (id) => document.getElementById(id);
 
 function rememberKey(userId) { return `timzee:fyp:last:${userId}`; }
@@ -51,6 +52,12 @@ function renderRow(row) {
       '<button type="button" class="fyp-fullscreen" data-fyp-action="fullscreen" aria-label="Watch video in fullscreen">⛶ Fullscreen</button>'+
     '</div>' :
     '<a class="fyp-media" href="'+contentHref(row)+'" aria-label="Open '+escapeHTML(typeLabel(type))+'">'+image+'</a>';
+  const creator=feedIdentityMap.get(row.author_id)||null;
+  const creatorHtml=row.author_id
+    ? '<a class="fyp-author-identity" href="profile.html?id='+encodeURIComponent(row.author_id)+'">'+
+      verifiedAvatar(creator?.avatar_url,creator,{size:"sm",alt:""})+
+      verifiedName(row.author_name||"Member",creator,{compact:true})+'</a>'
+    : '';
   const reason=row.reason?'<span class="fyp-reason">'+escapeHTML(row.reason)+'</span>':"";
   const feedback=state.mode==="for-you"?
     '<button type="button" class="btn ghost sm" data-fyp-action="not-interested">Not interested</button>':"";
@@ -67,7 +74,7 @@ function renderRow(row) {
   return '<article class="fyp-card" data-content-type="'+escapeHTML(type)+'" data-content-id="'+escapeHTML(row.content_id)+'">'+
     media+'<div class="fyp-card-body"><div class="fyp-meta"><span class="chip">'+escapeHTML(typeLabel(type))+
     '</span><span>'+escapeHTML(row.category||"")+'</span><span>'+timeAgo(row.created_at)+'</span></div>'+
-    '<a href="'+contentHref(row)+'"><h2>'+escapeHTML(row.title||"Untitled")+'</h2></a>'+
+    creatorHtml+    '<a href="'+contentHref(row)+'"><h2>'+escapeHTML(row.title||"Untitled")+'</h2></a>'+
     '<p>'+renderSocialText(body)+'</p>'+social+
     '<div class="fyp-card-foot">'+reason+feedback+'</div></div></article>';
 }
@@ -156,10 +163,14 @@ async function loadInlineComments(card){
     const profile=verifiedAuthors.get(comment[authorColumn])||null;
     const article=document.createElement("article");
     article.className="fyp-comment-item "+verifiedCommentClass(profile);
-    const name=document.createElement("strong");
-    name.innerHTML=verifiedName(String(comment.author_name||"Member").replace(/<[^>]*>/g,"").slice(0,70),profile,{compact:true});
+    const authorId=comment[authorColumn];
+    const heading=document.createElement(authorId?"a":"div");
+    heading.className="fyp-author-identity";
+    if(authorId)heading.href="profile.html?id="+encodeURIComponent(authorId);
+    heading.innerHTML=verifiedAvatar(profile?.avatar_url,profile,{size:"sm",alt:""})+
+      verifiedName(String(comment.author_name||"Member").replace(/<[^>]*>/g,"").slice(0,70),profile,{compact:true});
     const body=document.createElement("p");body.innerHTML=renderSocialText(comment.body||"");
-    article.append(name,body);
+    article.append(heading,body);
     if(type==="video"){
       const social=likeIndex.get(comment.id),count=Number(social?.like_count||0);
       const like=document.createElement("button");like.type="button";like.className="btn ghost sm";
@@ -249,6 +260,11 @@ async function loadFeed({ force = false } = {}) {
     if (version !== feedVersion) return;
     rows=await enrichVideoItems(rows);
     const visible = rows.filter(row => !suppressedContent.has(row.content_type + ":" + row.content_id));
+    feedIdentityMap=new Map();
+    try {
+      feedIdentityMap=await loadVerifiedIdentityMap(supabase,visible.map(row=>row.author_id).filter(Boolean));
+    }catch(error){console.warn("Creator decoration metadata unavailable",error.message);}
+    if(version!==feedVersion)return;
     target.innerHTML = visible.length
       ? visible.map(renderRow).join("")
       : `<div class="fyp-empty card"><h2>${mode === "following" ? "Nothing from followed creators yet" : "No recommendations yet"}</h2><p>${mode === "following" ? "Follow creators or communities to see their updates here." : "Like posts, follow people and choose Not interested to improve future recommendations."}</p><a class="btn" href="index.html">Explore the community</a></div>`;
