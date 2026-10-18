@@ -1,4 +1,5 @@
 import { supabase, getCurrentUser } from "./supabase.js";
+import {verifiedName,verifiedCommentClass,loadVerifiedIdentityMap} from "./verified-identity.mjs";
 import { loadUserPreferences, mergePreferences } from "./user-preferences.js";
 import { escapeHTML, clampText, stripHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
 import { diversifyFeed, feedCacheKey, cachedFeed } from "./feed-diversity.mjs";
@@ -133,7 +134,8 @@ async function loadInlineComments(card){
   if(!panel)return;
   const table=type==="video"?"video_comments":type==="discussion"?"discussion_messages":"comments";
   const column=type==="video"?"video_id":type==="discussion"?"topic_id":"post_id";
-  const query=supabase.from(table).select("id,author_name,body,created_at")
+  const authorColumn=type==="video"?"user_id":"author_id";
+  const query=supabase.from(table).select("id,author_name,body,created_at,"+authorColumn)
     .eq(column,id).order("created_at",{ascending:false}).limit(20);
   if(type==="post")query.eq("status","approved");
   const {data,error}=await query;
@@ -141,14 +143,21 @@ async function loadInlineComments(card){
   list.replaceChildren();
   if(error){list.textContent="Comments couldn't load right now.";return;}
   if(!(data||[]).length){list.textContent="No comments yet. Start the conversation.";return;}
+  const authorIds=(data||[]).map(comment=>comment[authorColumn]).filter(Boolean);
+  let verifiedAuthors=new Map();
+  try{verifiedAuthors=await loadVerifiedIdentityMap(supabase,authorIds);}
+  catch(error){console.warn("FYP identity preview unavailable",error.message);}
   let likeIndex=new Map();
   if(type==="video"){
     const counts=await supabase.rpc("video_comment_like_counts",{p_comment_ids:data.map(c=>c.id)});
     likeIndex=new Map((counts.data||[]).map(c=>[c.comment_id,c]));
   }
   for(const comment of data){
-    const article=document.createElement("article");article.className="fyp-comment-item";
-    const name=document.createElement("strong");name.textContent=String(comment.author_name||"Member").replace(/<[^>]*>/g,"").slice(0,70);
+    const profile=verifiedAuthors.get(comment[authorColumn])||null;
+    const article=document.createElement("article");
+    article.className="fyp-comment-item "+verifiedCommentClass(profile);
+    const name=document.createElement("strong");
+    name.innerHTML=verifiedName(String(comment.author_name||"Member").replace(/<[^>]*>/g,"").slice(0,70),profile,{compact:true});
     const body=document.createElement("p");body.innerHTML=renderSocialText(comment.body||"");
     article.append(name,body);
     if(type==="video"){
