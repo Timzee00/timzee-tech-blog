@@ -260,11 +260,12 @@ async function loadFeed({ force = false } = {}) {
     if (version !== feedVersion) return;
     rows=await enrichVideoItems(rows);
     const visible = rows.filter(row => !suppressedContent.has(row.content_type + ":" + row.content_id));
-    feedIdentityMap=new Map();
+    let identities=new Map();
     try {
-      feedIdentityMap=await loadVerifiedIdentityMap(supabase,visible.map(row=>row.author_id).filter(Boolean));
+      identities=await loadVerifiedIdentityMap(supabase,visible.map(row=>row.author_id).filter(Boolean));
     }catch(error){console.warn("Creator decoration metadata unavailable",error.message);}
     if(version!==feedVersion)return;
+    feedIdentityMap=identities;
     target.innerHTML = visible.length
       ? visible.map(renderRow).join("")
       : `<div class="fyp-empty card"><h2>${mode === "following" ? "Nothing from followed creators yet" : "No recommendations yet"}</h2><p>${mode === "following" ? "Follow creators or communities to see their updates here." : "Like posts, follow people and choose Not interested to improve future recommendations."}</p><a class="btn" href="index.html">Explore the community</a></div>`;
