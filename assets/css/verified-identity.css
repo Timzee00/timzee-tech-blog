@@ -186,3 +186,27 @@
 @media(prefers-reduced-motion:reduce){.tz-frame-choice,.tz-avatar-verified.tz-frame::after{animation:none!important;transition:none!important}}
 html[data-reduce-motion="true"] .tz-frame-choice,
 html[data-reduce-motion="true"] .tz-avatar-verified.tz-frame::after{animation:none!important;transition:none!important}
+
+
+/* Identity presentation is consistent even in dense threads and chat lists.
+   Never force long names or framed avatars outside the viewport. */
+.tz-comment-author,.forum-author-inline{
+  display:inline-flex;align-items:center;gap:10px;min-width:0;
+  max-width:100%;vertical-align:middle;overflow-wrap:anywhere;
+}
+.tz-comment-author>.tz-avatar-verified,.forum-author-inline>.tz-avatar-verified{flex:0 0 auto}
+.tz-comment-author>a,.forum-author-inline>.tz-identity-name{min-width:0;overflow-wrap:anywhere}
+.forum-author-inline{color:var(--color-text,#1c2930);text-decoration:none;font-size:inherit}
+.forum-author-inline:hover .tz-identity-name{text-decoration:underline;text-decoration-thickness:1px}
+.forum-author-inline:focus-visible{outline:2px solid var(--color-primary,#087e70);outline-offset:3px;border-radius:8px}
+.forum-reply-meta .forum-author-inline{font-weight:750}
+.forum-thread-footer .forum-author-inline{gap:7px}
+.forum-thread-detail-meta .forum-author-inline{gap:7px}
+.comment-meta .tz-comment-author{max-width:100%;min-width:0}
+.comment-meta .tz-comment-author>a{color:inherit;text-decoration:none;min-width:0}
+.comment-meta .tz-comment-author>a:hover{text-decoration:underline}
+@media(max-width:420px){
+ .forum-author-inline,.tz-comment-author{gap:6px}
+ .forum-reply-meta .forum-author-inline .tz-avatar-verified,
+ .forum-thread-footer .forum-author-inline .tz-avatar-verified{inline-size:30px;block-size:30px}
+}
