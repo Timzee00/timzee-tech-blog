@@ -610,6 +610,7 @@
       import {renderSocialText} from "./assets/js/social-rich-text.mjs";
       import {mountPoll,openPollComposer} from "./assets/js/content-polls.mjs";
       import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
+      import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap} from "./assets/js/verified-identity.mjs";
 
       const root = document.getElementById("reelRoot");
       const params = new URLSearchParams(window.location.search);
@@ -678,10 +679,10 @@
       }
 
       function itemTemplate(video, index) {
-        const uploaderName = video.author_name || "Anonymous";
-        const verified = video.uploader_verified
-          ? '<span class="reel-verified">✔ Verified</span>'
-          : '';
+        const profile=video.uploader_profile||null;
+        const uploaderName = video.author_name || profile?.display_name || "Anonymous";
+        const avatarMarkup=verifiedAvatar(profile?.avatar_url,profile,{size:"sm",alt:""});
+        const uploaderMarkup=verifiedName("@"+uploaderName,profile,{compact:true});
         const staff = video.uploader_staff_pick
           ? '<span class="reel-staff">★ Staff Pick</span>'
           : '';
@@ -712,9 +713,9 @@
             <div class="reel-bottom">
               <div class="reel-meta">
                 <div class="reel-uploader">
-                  <a class="reel-avatar" href="profile.html?id=${encodeURIComponent(video.user_id || '')}" aria-label="View uploader profile">${escapeHTML(initials(uploaderName))}</a>
-                  <span class="reel-username">@${escapeHTML(uploaderName)}</span>
-                  ${verified}${staff}
+                  <a class="reel-avatar-frame" href="profile.html?id=${encodeURIComponent(video.user_id || '')}" aria-label="View uploader profile">${avatarMarkup}</a>
+                  <span class="reel-username">${uploaderMarkup}</span>
+                  ${staff}
                 </div>
                 <p class="reel-caption" id="caption-${index}">${renderSocialText(video.title || "")}${video.description ? " — " + renderSocialText(video.description) : ""}</p>
                 <button type="button" class="reel-caption-more" data-action="expand-caption" data-index="${index}" aria-expanded="false">More caption</button>
@@ -1203,6 +1204,8 @@
         });
       }
       let replyingTo = null;
+      const commentProfiles=new Map();
+      const commentIdentityCache=new Map();
 
       function renderCommentTree(comments, parentId = null, depth = 0) {
         const loadedIds = new Set(comments.map(c => c.id));
@@ -1215,8 +1218,8 @@
           .map((c) => {
             const nested = renderCommentTree(comments, c.id, depth + 1);
             return `
-              <div class="comment-row" style="margin-left:${Math.min(depth, 4) * 16}px;" data-comment-id="${c.id}">
-                <strong>${escapeHTML(c.author_name || "Anonymous")}</strong>
+              <div class="comment-row ${verifiedCommentClass(commentProfiles.get(c.user_id))}" style="margin-left:${Math.min(depth, 4) * 16}px;" data-comment-id="${c.id}">
+                <a class="reel-comment-author" href="profile.html?id=${encodeURIComponent(c.user_id||'')}">${verifiedAvatar(commentProfiles.get(c.user_id)?.avatar_url,commentProfiles.get(c.user_id),{size:"sm",alt:""})}${verifiedName(c.author_name||"Anonymous",commentProfiles.get(c.user_id),{compact:true})}</a>
                 <p>${renderSocialText(c.body || "")}</p>
                 <div class="reel-comment-actions">
                   <button class="comment-reply-btn" data-reply-id="${c.id}" data-reply-name="${escapeHTML(c.author_name || "Anonymous")}">Reply</button>
@@ -1303,6 +1306,13 @@
             limit: COMMENT_PAGE_SIZE
           });
           if (generation !== commentGeneration || state.commentsOpenFor !== videoId) return;
+          // A single bounded lookup decorates the whole comment page.
+          try{
+            const identities=await loadVerifiedIdentityMap(supabase,page.map(row=>row.user_id).filter(Boolean),commentIdentityCache);
+            if(generation!==commentGeneration||state.commentsOpenFor!==videoId)return;
+            for(const [id,profile] of identities)commentProfiles.set(id,profile);
+          }catch(error){console.warn("Video comment verification unavailable",error.message);}
+          if(generation!==commentGeneration||state.commentsOpenFor!==videoId)return;
           const counts=page.length?await supabase.rpc("video_comment_like_counts",{
             p_comment_ids:page.map(c=>c.id)
           }):{data:[],error:null};
@@ -1414,7 +1424,7 @@
         if (userIds.length) {
           const profiles = await supabase
             .from("public_profiles")
-            .select("id, is_verified, is_staff_pick")
+            .select("id, display_name, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style, is_staff_pick")
             .in("id", userIds);
           const map = {};
           (profiles.data || []).forEach((p) => {
@@ -1422,7 +1432,7 @@
           });
           videos.forEach((v) => {
             const p = map[v.user_id];
-            v.uploader_verified = !!p?.is_verified;
+            v.uploader_profile = p || null;
             v.uploader_staff_pick = !!p?.is_staff_pick;
           });
         }
