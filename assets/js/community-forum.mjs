@@ -3,7 +3,7 @@ import {loadUserPreferences} from "./user-preferences.js";
 import {escapeHTML,timeAgo,reportAppError,isSafeUrl} from "./utils.js";
 import {setupMentionInput} from "./mentions.js";
 import {renderCommunityMarkdown,insertCommunityFormatting} from "./community-markdown.mjs";
-import {verifiedName,verifiedCommentClass,loadVerifiedIdentityMap} from "./verified-identity.mjs";
+import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap} from "./verified-identity.mjs";
 import {communityRankCursor,appendUniqueCommunityRows,isCommunitySnapshotStale} from "./community-feed-pagination.mjs";
 import "./nav.js";
 
@@ -328,6 +328,15 @@ async function hydrateVerifiedAuthors(rows){
  }catch(error){console.warn("Author badges temporarily unavailable:",error.message);}
 }
 function forumIdentity(id){return state.verifiedIdentities.get(id)||null;}
+/* Render a single trusted identity across thread, detail and reply surfaces. */
+function forumAuthor(authorId,name){
+ const profile=forumIdentity(authorId);
+ const content=verifiedAvatar(profile?.avatar_url,profile,{size:"sm",alt:""})+
+   verifiedName(name||"Member",profile,{compact:true});
+ return validId(authorId)?"<a class='forum-author-inline' href='profile.html?id="+
+   encodeURIComponent(authorId)+"'>"+content+"</a>":
+   "<span class='forum-author-inline'>"+content+"</span>";
+}
 async function loadPersonalThreadState(ids){
  if(!state.user||!ids.length)return;
  const [votes,saved]=await Promise.all([
@@ -565,7 +574,7 @@ function threadCard(thread,{pinned=false}={}){
   (thread.ranking_reason&&state.mode==="personal"?"<small class='forum-ranking-reason'>"+
    escape(thread.ranking_reason)+"</small>":"")+
   (thread.media_url?"<span class='forum-topic-media-indicator'>◈ Media attached</span>":"")+
-  "<div class='forum-thread-footer'><span>By "+verifiedName(thread.author_name||"Member",forumIdentity(thread.author_id),{compact:true})+"</span>"+
+  "<div class='forum-thread-footer'><span>By</span>"+forumAuthor(thread.author_id,thread.author_name)+
   "<button type='button' data-open-thread='"+escape(thread.id)+"'>"+
    Number(thread.reply_count||0)+" replies</button>"+
   "<button type='button' data-save-thread='"+escape(thread.id)+"' aria-pressed='"+state.saved.has(thread.id)+"'>"+
@@ -730,7 +739,7 @@ async function openThread(id,{push=true}={}){
  $("forumThreadHeader").innerHTML="<p class='forum-eyebrow'>"+
   "<button type='button' data-open-community='"+escape(data.community_id)+"'>"+
   escape(boardName)+"</button> / "+escape(data.kind)+"</p><h1>"+escape(data.title)+
-  "</h1><p class='forum-thread-detail-meta'>By "+verifiedName(data.author_name||"Member",forumIdentity(data.author_id),{compact:true})+
+  "</h1><p class='forum-thread-detail-meta'>By "+forumAuthor(data.author_id,data.author_name)+
   " · "+escape(preferredDate(data.created_at))+(data.flair?" · "+escape(data.flair):"")+(data.is_locked?" · Locked":"")+"</p>";
  $("forumThreadBody").innerHTML=renderCommunityMarkdown(data.body||"");
  if(data.media_url)$("forumThreadBody").insertAdjacentHTML("beforeend",mediaHtml(data.media_url,data.media_type,"thread",data.id));
@@ -826,8 +835,8 @@ function renderReplies(){
  $("forumThreadTitle").textContent="Replies ("+Number(state.activeThread?.reply_count||replies.length)+")";
  $("forumReplies").innerHTML=replies.map((r,i)=>{
   const parent=byId.get(r.reply_to);
-  const header="<div class='forum-reply-meta'><strong>"+verifiedName(r.author_name||"Member",forumIdentity(r.author_id),{compact:true})+
-    "</strong><span>· "+escape(preferredDate(r.created_at))+"</span>"+
+  const header="<div class='forum-reply-meta'>"+forumAuthor(r.author_id,r.author_name)+
+    "<span>· "+escape(preferredDate(r.created_at))+"</span>"+
     (r.pinned?"<span class='forum-topic-pinned'>Pinned</span>":"")+"</div>";
   const quote=r.reply_to?"<button type='button' data-jump-reply='"+escape(r.reply_to)+
     "' class='forum-reply-reference'>↳ Reply to "+escape(parent?.author_name||"an earlier message")+"</button>":"";
