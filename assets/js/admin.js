@@ -1361,7 +1361,7 @@ function renderUsersTable(users) {
       const action = btn.dataset.action;
       const userId = btn.dataset.id;
       if (!userId || !action) return;
-      if(action==="verification_inbox"){document.querySelector(\'.admin-nav button[data-tab="verification"]\')?.click();return;}
+      if(action==="verification_inbox"){document.querySelector('.admin-nav button[data-tab="verification"]')?.click();return;}
       if (action === "suspend" && !await window.appUI.confirm("Suspend this account?")) return;
       if (action === "activate" && !await window.appUI.confirm("Reactivate this account?")) return;
       const result = await updateUserAction(userId, action);
