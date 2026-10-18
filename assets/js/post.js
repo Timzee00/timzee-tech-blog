@@ -499,8 +499,8 @@ function renderComments(comments) {
           ${replySnippet}
           <div>${safeBody}</div>
           ${
-            comment.image
-              ? `<img src="${comment.image}" alt="comment image" style="border-radius:12px; max-height:200px;">`
+            comment.image && isSafeUrl(comment.image)
+              ? `<img src="${escapeHTML(comment.image)}" alt="comment image" loading="lazy" style="border-radius:12px; max-height:200px;">`
               : ""
         }
         <div class="comment-actions">${replyButton || ""}${reportButton}</div>
