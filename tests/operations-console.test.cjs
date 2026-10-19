@@ -38,6 +38,12 @@ function fakeDB({counts={},jobs=[],audit=[],failCount=null,failedAudit=false}={}
               return Promise.resolve({count:counts[table]??0,error:null});
             },
             in(column,values){
+              if(table==="community_reports"){
+                assert.equal(column,"status");
+                assert.equal(Array.from(values).join(","),"pending,open");
+                if(table===failCount)return Promise.resolve({count:null,error:{message:"Unavailable"}});
+                return Promise.resolve({count:counts[table]??0,error:null});
+              }
               assert.equal(table,"system_job_status");
               return{limit:async()=>({data:jobs,error:null})};
             },
@@ -142,4 +148,12 @@ test("admin skip link and boot error fallback share one unique main id",()=>{
  assert.equal((markup.match(/id="adminApp"/g)||[]).length,1);
  assert.match(markup,/href="#adminApp"/);
  assert.doesNotMatch(markup,/<main[^>]*\bid="[^"]+"[^>]*\bid="[^"]+"/i);
+});
+
+test("community reports count pending cases, not just open cases",async()=>{
+ const db=fakeDB({counts:{community_reports:7}});
+ const {helpers}=loadModule({db});
+ const report=await helpers.overview(db,Date.parse("2026-10-19T01:00:00Z"));
+ assert.equal(report.queues.communityReports,7);
+ assert.match(report.issues.join(" "),/7 pending communityReports/);
 });
