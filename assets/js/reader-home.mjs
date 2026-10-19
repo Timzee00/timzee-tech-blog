@@ -16,7 +16,7 @@ const safeCover=value=>{
   return (/^https:\/\/[^<>"'\\\s]+$/i.test(url)||/^\/?assets\/[^<>"'\\\s]+$/i.test(url))
     ?url:null;
 };
-function card(item,{resume=false}={}){
+function card(item,{resume=false,recommendation=false}={}){
   const url=safeArticleHref(item.id);
   if(!url)return null;
   const link=node("a","tz-reader-card");
@@ -42,7 +42,7 @@ function card(item,{resume=false}={}){
     details.append(progress,node("small","tz-reader-card-progress-text",
       "Continue reading · "+value+"%"));
   }else{
-    details.append(node("small","tz-reader-card-progress-text","New from a creator you follow"));
+    details.append(node("small","tz-reader-card-progress-text",recommendation?"Matched to your interests":"New from a creator you follow"));
   }
   link.append(details);
   return link;
@@ -89,7 +89,7 @@ export async function mountReaderHome(user,{posts=[],categories=[]}={}){
       .map(item=>({id:item.id,title:item.title,author:item.author_name,cover:item.cover}));
     const countContinue=renderRail(cont,recent,{resume:true});
     const countFollowing=renderRail(following,followed,{resume:false});
-    const countInterests=renderRail(suggested,suggestedPosts,{resume:false});
+    const countInterests=renderRail(suggested,suggestedPosts,{recommendation:true});
     contSection.hidden=!countContinue;
     followingSection.hidden=!countFollowing;
     interestsSection.hidden=!countInterests;
