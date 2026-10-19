@@ -15,7 +15,8 @@ export const DEFAULT_USER_PREFERENCES = {
     mentions: true,
     announcements: true,
     marketplace: true,
-    profileViews: true
+    profileViews: true,
+    operationsDigest: true
   },
   feed: {
     defaultFeed: "for-you",
