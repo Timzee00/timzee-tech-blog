@@ -1,6 +1,7 @@
 import { bindStaffLogin } from "./staff-auth.js";
 import {mountVerificationReview} from "./verification-review-admin.mjs";
 import {mountOperationsConsole} from "./operations-console.mjs";
+import {mountOperationsTriage} from "./operations-triage.mjs";
 import { requireRole, logout, getDisplayName, getUserRole, getSession } from "./auth.js";
 import { supabase as supabaseClient } from "./supabase.js";
 import {
@@ -2033,6 +2034,7 @@ async function bootDashboard() {
   setupTabs();
   mountVerificationReview();
   mountOperationsConsole();
+  mountOperationsTriage();
   setupImageInputs();
   setupScheduleToggle();
   bindRichEditorToolbar("postToolbar", "postEditor");
