@@ -402,7 +402,7 @@ function renderVerification(){
   const isSelf=Boolean(state.user?.id&&state.user.id===state.viewingId);
   if(!tier){
     target.innerHTML='<div class="callout">No verified identity badge yet. All members can still participate in communities, chat and publish content.</div>'+
-      (isSelf?'<a class="btn ghost sm" href="verify.html">Apply for verification</a>':'');
+      (isSelf?'<a class="btn ghost sm" href="verify.html">Apply for verification</a> <a class="btn ghost sm" href="creator-studio.html">Creator Studio</a>':'');
     return;
   }
   const label=verifiedLabel(state.profile);
@@ -430,7 +430,7 @@ function renderVerification(){
       '<p class="status" id="profileFrameStatus" role="status" aria-live="polite"></p></section>'
     : '';
   target.innerHTML='<div class="verification-tier">'+verifiedName(label,state.profile)+
-    '</div><ul class="perk-list">'+benefits[tier].map(x=>'<li>'+escapeHTML(x)+'</li>').join("")+'</ul>'+gallery;
+    '</div><ul class="perk-list">'+benefits[tier].map(x=>'<li>'+escapeHTML(x)+'</li>').join("")+'</ul>'+(isSelf?'<div class="tz-frame-actions"><a class="btn ghost sm" href="creator-studio.html">Open Creator Studio</a></div>':'')+gallery;
   if(!isSelf)return;
   let selected=current;
   const displayPreview=()=>{
