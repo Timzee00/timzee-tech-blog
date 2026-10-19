@@ -989,7 +989,7 @@ async function boot() {
   setupReveal();
   // Retention is a low-priority, opt-in private enhancement: never hold the
   // public feed or first meaningful article render behind this request.
-  if(state.user?.id)void mountReaderHome(state.user);
+  if(state.user?.id)void mountReaderHome(state.user,{posts:state.posts,categories:state.categories});
 }
 
 boot().catch((error) => {
