@@ -24,6 +24,7 @@ import {
 import { setupReveal } from "./reveal.js";
 import { safeNotificationPath } from "./notification-links.mjs";
 import {verifiedName,verifiedAvatar,verifiedLevel,verifiedLabel,verifiedFrameClasses,verifiedFrameStyle,FRAME_OPTIONS,FRAME_STYLES} from "./verified-identity.mjs";
+import {mountReadingLibrary} from "./reader-library.mjs";
 import "./nav.js";
 import { submitModerationReport } from "./moderation-reports.mjs";
 
@@ -1433,6 +1434,7 @@ async function boot() {
   renderProfileFriends();
   renderActivity();
   renderBookmarks();
+  if(state.user?.id===state.viewingId)mountReadingLibrary(state.user);
   renderNotifications();
   document.getElementById("profileVideoUpload").hidden = !state.user || state.user.id !== state.viewingId;
   setupProfileTabs();
