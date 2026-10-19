@@ -38,3 +38,8 @@
   .tz-reading-position{padding:11px}
 }
 @media(prefers-reduced-motion:reduce){.tz-reader-card{transition:none!important}}
+
+/* Saved-tab reading library keeps controls within narrow phone viewports. */
+.tz-reader-library-item{display:grid;gap:7px;min-width:0;max-width:100%;border:1px solid var(--color-border,#dde6eb);border-radius:12px;padding:12px;background:var(--color-surface,#fff);overflow-wrap:anywhere}
+.tz-reader-library-title{font-size:.9rem;font-weight:750;line-height:1.4;color:var(--color-text);overflow-wrap:anywhere}
+.tz-reader-library-item .btn{justify-self:start;min-height:40px;max-width:100%;white-space:normal}
