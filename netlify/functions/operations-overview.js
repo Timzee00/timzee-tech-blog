@@ -13,7 +13,7 @@ const json=(statusCode,body)=>({
 const QUEUES=Object.freeze([
   {key:"verification",table:"verification_applications",column:"status",value:"pending"},
   {key:"reports",table:"content_reports",column:"status",value:"open"},
-  {key:"communityReports",table:"community_reports",column:"status",value:"open"},
+  {key:"communityReports",table:"community_reports",column:"status",values:["pending","open"]},
   {key:"autoModeration",table:"community_auto_moderation",column:"state",value:"pending"},
   {key:"scheduledPosts",table:"posts",column:"status",value:"scheduled"}
 ]);
@@ -46,8 +46,10 @@ async function overview(db,now=Date.now()){
   const results=await Promise.all([
     ...QUEUES.map(async item=>{
       try{
-        const {count,error}=await db.from(item.table).select("id",{count:"exact",head:true})
-          .eq(item.column,item.value);
+        const base=db.from(item.table).select("id",{count:"exact",head:true});
+        const {count,error}=item.values
+          ? await base.in(item.column,item.values)
+          : await base.eq(item.column,item.value);
         if(error)throw error;
         if(!Number.isInteger(count))throw Error("Count unavailable");
         return {key:item.key,count};
