@@ -2,6 +2,7 @@ import { supabase, getCurrentUser } from "./supabase.js";
 import { loadUserPreferences, saveUserPreferences, mergePreferences, writeLocalPreferences, clearLocalPreferences } from "./user-preferences.js";
 import { reportAppError } from "./utils.js";
 import { mountAdvancedSettings, initializeAdvancedSettings } from "./settings-advanced.js";
+import {forgetReadingEntry} from "./reader-journey.mjs";
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $("settingsStatus");
@@ -35,8 +36,34 @@ function mountExtraSettings(){
    '<label class="toggle-row"><span><strong>Count my visits</strong><small>When enabled, profiles you visit can count one anonymous visit per day. Disable for private browsing.</small></span><input type="checkbox" data-path="privacy.recordProfileVisits"></label>'+
    '<label class="toggle-row"><span><strong>Show my name to profiles I visit</strong><small>Off by default. Opt in to appear in their limited seven-day visitor insights.</small></span><input type="checkbox" data-path="privacy.shareProfileVisits"></label>'+
    '</div>';
-  const cookies=$("cookies");content.insertBefore(appearance,cookies);content.insertBefore(email,cookies);content.insertBefore(visitors,cookies);content.insertBefore(security,cookies);
+  const reading=document.createElement("section");
+  reading.id="reading-privacy";reading.className="settings-card card";
+  reading.innerHTML='<div class="settings-card-head"><div><span class="settings-kicker">Your reading space</span><h2>Reading history & continuity</h2></div></div>'+
+    '<p class="settings-help">Timzee saves an approximate article completion percentage privately to your account so you can resume across devices. It is not visible on public profiles, and is not used to inflate post view counts.</p>'+
+    '<div class="settings-stack">'+
+    '<label class="toggle-row"><span><strong>Remember my reading progress</strong><small>Stop saving new reading progress anytime. Switching this off does not erase existing history.</small></span><input type="checkbox" data-path="privacy.rememberReading"></label>'+
+    '<div class="setting-row"><div><strong>Erase my reading history</strong><small>Remove all recorded article positions from your account. Saved bookmarks remain unchanged.</small></div><button type="button" class="btn ghost sm" id="clearReadingHistoryBtn">Erase history</button></div>'+
+    '</div><p class="settings-section-status" id="readingHistoryStatus" role="status" aria-live="polite"></p>';
+  const cookies=$("cookies");content.insertBefore(appearance,cookies);content.insertBefore(email,cookies);content.insertBefore(visitors,cookies);content.insertBefore(reading,cookies);content.insertBefore(security,cookies);
   addNav("profile-visitor-privacy","Profile visit privacy");
+  addNav("reading-privacy","Reading history");
+  $("clearReadingHistoryBtn")?.addEventListener("click",async event=>{
+    if(!state.user?.id)return;
+    const approved=window.appUI?.confirm
+      ? await window.appUI.confirm("Erase your private reading history from all devices? Your bookmarks will be kept.")
+      : window.confirm("Erase your private reading history from all devices? Your bookmarks will be kept.");
+    if(!approved)return;
+    const button=event.currentTarget,notice=$("readingHistoryStatus");
+    button.disabled=true;
+    if(notice)notice.textContent="Erasing reading history…";
+    try{
+      await forgetReadingEntry(state.user.id);
+      if(notice)notice.textContent="Your reading history is cleared. Saved articles are unchanged.";
+    }catch(error){
+      if(notice)notice.textContent="Could not erase history. Please retry.";
+      reportAppError(error,"Clear reading history failed");
+    }finally{button.disabled=false;}
+  });
   $("resetPasswordBtn")?.addEventListener("click",async()=>{try{const result=await supabase.auth.resetPasswordForEmail(state.user.email,{redirectTo:`${window.location.origin}/login.html`});if(result.error)throw result.error;setStatus("Password reset email requested.","success");}catch(error){setStatus(error?.message||"Could not request password reset.","error");reportAppError(error,"Password reset failed");}});
   $("signOutSettingsBtn")?.addEventListener("click",async()=>{try{const result=await supabase.auth.signOut();if(result.error)throw result.error;window.location.href="login.html?next=settings.html";}catch(error){reportAppError(error,"Sign out failed");}});
   $("signOutAllBtn")?.addEventListener("click",async()=>{
