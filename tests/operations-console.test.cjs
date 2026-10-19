@@ -40,7 +40,7 @@ function fakeDB({counts={},jobs=[],audit=[],failCount=null,failedAudit=false}={}
               response.lte=(field,cutoff)=>{
                 assert.equal(table,"posts");
                 assert.equal(field,"publish_at");
-                assert.match(cutoff,/^\\d{4}-\\d{2}-\\d{2}T/);
+                assert.match(cutoff,/^\d{4}-\d{2}-\d{2}T/);
                 return Promise.resolve({count:counts.overduePosts??0,error:null});
               };
               return response;
