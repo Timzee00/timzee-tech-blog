@@ -7,7 +7,7 @@ const { mockSite } = require("./helpers/fixtures.cjs");
 const routes = [
   "/", "/login.html", "/settings.html", "/discussion.html", "/chat.html",
   "/stories.html", "/fyp.html", "/videos.html", "/marketplace.html",
-  "/profile.html", "/post.html", "/my-tech.html", "/ai-chat.html", "/novels.html"
+  "/profile.html", "/post.html", "/my-tech.html", "/creator-studio.html", "/ai-chat.html", "/novels.html"
 ];
 
 test("phone and small-tablet viewports contain public page controls", async ({ page }, testInfo) => {
