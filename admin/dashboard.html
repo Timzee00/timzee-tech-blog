@@ -287,6 +287,30 @@
           <h3 id="operationsQueueTitle">Pending work</h3>
           <div class="operations-grid" id="operationsQueues"></div>
         </section>
+        <section class="operations-section operations-triage" aria-labelledby="operationsTriageTitle">
+          <div class="operations-triage-toolbar">
+            <div>
+              <h3 id="operationsTriageTitle">Founder review inbox</h3>
+              <p class="operations-note">Review reported content and suspicious forum activity in one place. Decisions are manual; no automatic bans.</p>
+            </div>
+            <div class="operations-triage-controls">
+              <label for="operationsTriageKind">Queue</label>
+              <select id="operationsTriageKind" aria-label="Moderation review queue">
+                <option value="reports">Site reports</option>
+                <option value="community">Community reports</option>
+                <option value="automod">Spam signals</option>
+              </select>
+              <button type="button" class="btn ghost sm" id="operationsTriageRefresh">Refresh queue</button>
+            </div>
+          </div>
+          <p class="operations-status" id="operationsTriageStatus" role="status" aria-live="polite">Choose Operations Brain to load the review inbox.</p>
+          <div id="operationsTriageList" class="operations-triage-list" aria-label="Pending moderation reviews"></div>
+          <div class="operations-triage-pagination">
+            <button type="button" class="btn ghost sm" id="operationsTriagePrev" disabled>Previous</button>
+            <span id="operationsTriagePage" aria-live="polite">Page 1</span>
+            <button type="button" class="btn ghost sm" id="operationsTriageNext" disabled>Next</button>
+          </div>
+        </section>
         <section class="operations-section" aria-labelledby="operationsJobsTitle">
           <h3 id="operationsJobsTitle">Background job health</h3>
           <ul class="operations-list" id="operationsJobs"></ul>
