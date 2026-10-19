@@ -19,7 +19,8 @@ const QUEUES=Object.freeze([
 ]);
 const JOB_WINDOWS_MINUTES=Object.freeze({
   "automation-maintenance":90,
-  "curator-scout":180
+  "curator-scout":180,
+  "verification-maintenance":1620
 });
 const noErrors=jobs=>jobs.every(j=>j.state==="healthy");
 
