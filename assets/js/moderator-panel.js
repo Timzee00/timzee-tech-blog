@@ -26,15 +26,17 @@ async function getAuthToken() {
   return data?.session?.access_token || "";
 }
 
-async function moderateContent(action, type, id, payload = {}) {
+async function moderateContent(action, type, id) {
   const token = await getAuthToken();
+  if(!token)throw Error("Your moderator session expired. Sign in again.");
+  const requestId=crypto.randomUUID();
   const res = await fetch("/.netlify/functions/moderate-content", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ action, type, id, payload })
+    body: JSON.stringify({ action, type, id, requestId })
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Moderation failed.");
@@ -151,9 +153,9 @@ async function loadReports() {
 }
 
 async function updateReportStatus(reportId, status) {
-  const result = await supabase.from("content_reports").update({ status }).eq("id", reportId).select("id").maybeSingle();
-  if (result.error) throw new Error(result.error.message || "Report update failed.");
-  if (!result.data) throw new Error("Report was not found or has already been updated.");
+  if(!["resolved","dismissed"].includes(status))throw Error("Unsupported report decision.");
+  // Only the staff-only RPC can complete and audit a report decision.
+  return moderateContent(status==="resolved"?"resolve":"dismiss","content_reports",reportId);
 }
 
 function bindModerationActions() {
