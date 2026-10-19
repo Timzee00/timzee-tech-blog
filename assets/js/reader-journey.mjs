@@ -20,8 +20,12 @@ export async function getContinueReading(userId,limit=6){
   const now=Date.now();
   return (data||[]).filter(row=>{
     const publication=row.posts?.publish_at;
+    // PostgreSQL publish_at is UTC timestamp-without-timezone. A naked
+    // JavaScript Date parse would interpret it in the reader's local zone.
+    const raw=String(publication||"").trim().replace(" ","T");
+    const published=raw?Date.parse(/(?:Z|[+-]\\d{2}:?\\d{2})$/i.test(raw)?raw:raw+"Z"):0;
     return row.posts?.id===row.post_id&&
-      (!publication||new Date(publication).getTime()<=now)&&
+      (!raw||(Number.isFinite(published)&&published<=now))&&
       percentBound(row.progress_percent)<95;
   }).map(row=>({
     id:row.post_id,title:String(row.posts.title||"Untitled article"),
