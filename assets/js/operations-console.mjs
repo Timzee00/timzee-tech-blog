@@ -11,7 +11,8 @@ const QUEUES=[
 ];
 const JOB_LABELS={
   "automation-maintenance":"Publishing, notifications & expiry",
-  "curator-scout":"Curator source discovery"
+  "curator-scout":"Curator source discovery",
+  "verification-maintenance":"Verified identity expiry & renewals"
 };
 const $=id=>document.getElementById(id);
 const elt=(name,className="",text="")=>{
