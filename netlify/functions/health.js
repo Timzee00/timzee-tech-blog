@@ -40,7 +40,9 @@ exports.handler = async () => {
     ]);
 
     const dbOk = !dbError;
-    const automationOk = !jobError && !!job?.last_succeeded_at && new Date(job.last_succeeded_at).getTime() >= Date.now() - (15 * 60 * 1000);
+    // Free PostgreSQL cron runs hourly when Netlify scheduled functions are paused.
+    // A 90-minute window avoids false degradation while catching missed runs.
+    const automationOk = !jobError && !!job?.last_succeeded_at && new Date(job.last_succeeded_at).getTime() >= Date.now() - (90 * 60 * 1000);
     const legacyCount = legacyMedia.error ? null : Number(legacyMedia.count || 0);
     const privateChatMediaOk = legacyCount === 0;
     const status = dbOk && automationOk && privateChatMediaOk ? "ok" : "degraded";
