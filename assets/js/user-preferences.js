@@ -28,7 +28,8 @@ export const DEFAULT_USER_PREFERENCES = {
     allowRequests: true,
     showEmail: false,
     recordProfileVisits: true,
-    shareProfileVisits: false
+    shareProfileVisits: false,
+    rememberReading: true
   },
   chat: {
     notifications: true,
