@@ -83,7 +83,7 @@ function scrollPercent(element){
 export function mountArticleJourney({post,user}={}){
   const body=document.getElementById("postContent");
   if(!user?.id||!UUID.test(String(post?.id||""))||!body)return;
-  let disposed=false,configured=false,writing=false,queued=0,lastSent=0,lastAttempt=0;
+  let disposed=false,configured=false,writing=false,queued=0,lastSent=0,lastAttempt=0,failedSaves=0;
   let flushTimer=null;
   let progressUI=null,progressBar=null,progressText=null;
   const updateUI=value=>{
@@ -101,12 +101,19 @@ export function mountArticleJourney({post,user}={}){
     try{
       await recordReading(post.id,p);
       lastSent=Math.max(lastSent,p);
+      failedSaves=0;
     }catch(error){
-      // Retain the most recent progress so a later scroll may retry.
+      // Retry transient failures only a few times; don't poll offline forever.
+      failedSaves++;
       console.warn("Reading progress could not sync:",error?.message||"network");
     }finally{
       writing=false;
-      if(!disposed&&queued>=lastSent+5)flushTimer=window.setTimeout(()=>void flush(),20000);
+      if(!disposed&&queued>lastSent&&failedSaves<3&&flushTimer===null){
+        flushTimer=window.setTimeout(()=>{
+          flushTimer=null;
+          void flush();
+        },20000);
+      }
     }
   };
   const onScroll=()=>{
@@ -174,6 +181,11 @@ export function mountArticleJourney({post,user}={}){
           resume.remove();
         });
         progressUI.append(resume);
+        // Only links deliberately marked "Continue reading" auto-resume.
+        // Keep the button as an accessible fallback if media changes layout.
+        if(new URLSearchParams(window.location.search).get("resume")==="1"){
+          window.setTimeout(()=>{if(!disposed&&resume.isConnected)resume.click();},500);
+        }
       }
       body.before(progressUI);
       configured=true;
