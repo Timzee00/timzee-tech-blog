@@ -91,7 +91,12 @@ export async function loadVerifiedIdentityMap(supabase,ids,cache=new Map()){
       if(entry?.expiresAt<=now||cache.size>320)cache.delete(id);
     }
   }
-  const missing=unique.filter(id=>!cache.has(id)||cache.get(id).expiresAt<now);
+  // Treat malformed/expired entries as misses. Use <= to avoid retaining
+  // a revoked badge at the exact TTL boundary.
+  const missing=unique.filter(id=>{
+    const entry=cache.get(id);
+    return !entry||!Number.isFinite(entry.expiresAt)||entry.expiresAt<=now;
+  });
   for(let start=0;start<missing.length;start+=80){
     const batch=missing.slice(start,start+80);
     const {data,error}=await supabase.from("public_profiles")
