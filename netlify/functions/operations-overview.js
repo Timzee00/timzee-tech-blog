@@ -15,12 +15,14 @@ const QUEUES=Object.freeze([
   {key:"reports",table:"content_reports",column:"status",value:"open"},
   {key:"communityReports",table:"community_reports",column:"status",values:["pending","open"]},
   {key:"autoModeration",table:"community_auto_moderation",column:"state",value:"pending"},
-  {key:"scheduledPosts",table:"posts",column:"status",value:"scheduled"}
+  {key:"scheduledPosts",table:"posts",column:"status",value:"scheduled"},
+  {key:"overduePosts",table:"posts",column:"status",value:"scheduled",dueBefore:true}
 ]);
 const JOB_WINDOWS_MINUTES=Object.freeze({
   "automation-maintenance":90,
   "curator-scout":180,
-  "verification-maintenance":1620
+  "verification-maintenance":1620,
+  "scheduled-articles":25
 });
 const noErrors=jobs=>jobs.every(j=>j.state==="healthy");
 
@@ -47,9 +49,13 @@ async function overview(db,now=Date.now()){
     ...QUEUES.map(async item=>{
       try{
         const base=db.from(item.table).select("id",{count:"exact",head:true});
-        const {count,error}=item.values
-          ? await base.in(item.column,item.values)
-          : await base.eq(item.column,item.value);
+        const filtered=item.values
+          ? base.in(item.column,item.values)
+          : base.eq(item.column,item.value);
+        // Timestamp-without-timezone columns are stored in UTC on this site.
+        const {count,error}=item.dueBefore
+          ? await filtered.lte("publish_at",new Date(now).toISOString().slice(0,19))
+          : await filtered;
         if(error)throw error;
         if(!Number.isInteger(count))throw Error("Count unavailable");
         return {key:item.key,count};
