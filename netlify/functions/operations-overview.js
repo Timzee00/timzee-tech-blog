@@ -114,7 +114,7 @@ exports.handler=async event=>{
     .replace(/^Bearer\s+/i,"");
   if(!token)return json(401,{error:"Sign in as an administrator."});
   const url=process.env.SUPABASE_URL;
-  const key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SERVICE_ROLE_KEY;
   if(!url||!key)return json(503,{error:"Operations service is not configured."});
   const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
   const guard=await requireRole(db,token,["admin","super"],"Administrator permission required.");
