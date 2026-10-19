@@ -136,3 +136,12 @@ test("community staff decisions have database-enforced atomic audits and indexes
  assert.match(sql,/AFTER UPDATE OF status ON public\.community_reports/);
  assert.match(sql,/AFTER UPDATE OF state ON public\.community_auto_moderation/);
 });
+
+test("completed moderation reviews are protected from silent subsequent rewrites",()=>{
+ const sql=read("supabase/migrations/20261019093000_finalized_community_review_guard.sql");
+ assert.match(sql,/OLD\.status<>'pending'/);
+ assert.match(sql,/OLD\.state<>'pending'/);
+ assert.match(sql,/BEFORE UPDATE OF status ON public\.community_reports/);
+ assert.match(sql,/BEFORE UPDATE OF state ON public\.community_auto_moderation/);
+ assert.match(sql,/REVOKE ALL ON FUNCTION private\.guard_finalized_community_review/);
+});
