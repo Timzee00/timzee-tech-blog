@@ -41,6 +41,7 @@ import {
   reportAppError
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
+import {mountArticleJourney} from "./reader-journey.mjs";
 import "./nav.js";
 import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
 
@@ -1128,6 +1129,8 @@ async function boot() {
     setupCommentForm(post, state.comments);
     subscribeToComments(post.id);
     setupReveal();
+    // Progress syncing is optional, private and never blocks article rendering.
+    mountArticleJourney({post,user:state.user});
   } catch (err) {
     reportAppError(err, "Post load failed");
     const message = extractErrorMessage(err, "Something went wrong while loading this post.");
