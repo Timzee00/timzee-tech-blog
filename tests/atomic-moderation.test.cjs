@@ -25,7 +25,7 @@ function setup({role="admin",rpcData={ok:true,auditId:82,replayed:false},rpcErro
     ?{error:"Moderator permission required."}
     :{user:{id:UUID},role}}
  };
- const fn=vm.runInNewContext("(function(require,module,exports){"+code+"\n})",{console}, {timeout:1000});
+ const fn=vm.runInNewContext("(function(require,module,exports){"+code+"\n})",{console,process}, {timeout:1000});
  fn(name=>{if(!Object.hasOwn(dependencies,name))throw Error(name);return dependencies[name];},module,module.exports);
  const event=(payload,{token=true,method="POST"}={})=>({
   httpMethod:method,headers:token?{authorization:"Bearer fake-access-token"}:{},
@@ -86,4 +86,15 @@ test("moderation RPC enforces an atomic audit and restrictive grants",()=>{
  assert.match(schema,/GRANT EXECUTE ON FUNCTION public\.moderate_content_transactional/);
  assert.match(schema,/account_status='active'/);
  assert.doesNotMatch(code,/\.from\(definition\.table\)|\.from\("moderation_audit"\)/);
+});
+
+test("report decisions must use the shared audited moderation endpoint",()=>{
+ const moderator=read("assets/js/moderator-panel.js");
+ const endpoint=read("netlify/functions/moderate-content.js");
+ const reportMigration=read("supabase/migrations/20261019023000_audited_report_resolution.sql");
+ assert.match(moderator,/moderateContent\(status==="resolved"\?"resolve":"dismiss","content_reports",reportId\)/);
+ assert.doesNotMatch(moderator,/from\("content_reports"\)\.update\(/);
+ assert.match(endpoint,/content_reports:\["resolve","dismiss"\]/);
+ assert.match(reportMigration,/status='open' RETURNING id INTO v_changed/);
+ assert.doesNotMatch(reportMigration,/WHEN 'content_reports' THEN 'content_reports'[\s\S]*?IF p_action='delete' THEN/);
 });
