@@ -23,7 +23,8 @@ export async function getContinueReading(userId,limit=6){
     // PostgreSQL publish_at is UTC timestamp-without-timezone. A naked
     // JavaScript Date parse would interpret it in the reader's local zone.
     const raw=String(publication||"").trim().replace(" ","T");
-    const published=raw?Date.parse(/(?:Z|[+-]\\d{2}:?\\d{2})$/i.test(raw)?raw:raw+"Z"):0;
+    const hasOffset=raw.toUpperCase().endsWith("Z")||raw.includes("+",10)||raw.includes("-",10);
+    const published=raw?Date.parse(hasOffset?raw:raw+"Z"):0;
     return row.posts?.id===row.post_id&&
       (!raw||(Number.isFinite(published)&&published<=now))&&
       percentBound(row.progress_percent)<95;
