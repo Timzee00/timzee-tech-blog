@@ -18,7 +18,7 @@ const QUEUES=Object.freeze([
   {key:"scheduledPosts",table:"posts",column:"status",value:"scheduled"}
 ]);
 const JOB_WINDOWS_MINUTES=Object.freeze({
-  "automation-maintenance":20,
+  "automation-maintenance":90,
   "curator-scout":180
 });
 const noErrors=jobs=>jobs.every(j=>j.state==="healthy");
