@@ -102,7 +102,26 @@ function applyControls(){
   document.querySelectorAll("[data-path]").forEach(input=>{const value=getByPath(state.preferences,input.dataset.path);if(input.type==="checkbox")input.checked=Boolean(value);else if(value!=null)input.value=String(value);});
   const profileMap={allow_messages:"allow_messages",allow_requests:"allow_requests",show_email:"show_email"};Object.entries(profileMap).forEach(([key,column])=>{const input=document.querySelector(`[data-profile-setting="${key}"]`);if(input)input.checked=Boolean(state.profile?.[column]);});
 }
-async function loadProfile(){const result=await supabase.from("profiles").select("allow_messages,allow_requests,show_email,notify_messages,notify_replies,notify_follows,notify_mentions").eq("id",state.user.id).maybeSingle();if(result.error)throw result.error;state.profile=result.data||{};const map={messages:"notify_messages",replies:"notify_replies",follows:"notify_follows",mentions:"notify_mentions"};Object.entries(map).forEach(([pref,column])=>{if(typeof state.profile[column]==="boolean")state.preferences.notifications[pref]=state.profile[column];});}
+async function loadProfile(){const result=await supabase.from("profiles").select("role,allow_messages,allow_requests,show_email,notify_messages,notify_replies,notify_follows,notify_mentions").eq("id",state.user.id).maybeSingle();if(result.error)throw result.error;state.profile=result.data||{};const map={messages:"notify_messages",replies:"notify_replies",follows:"notify_follows",mentions:"notify_mentions"};Object.entries(map).forEach(([pref,column])=>{if(typeof state.profile[column]==="boolean")state.preferences.notifications[pref]=state.profile[column];});}
+function mountFounderDigestPreference(){
+  if(state.profile?.role!=="super")return;
+  const section=document.getElementById("notifications");
+  const host=section?.querySelector(".settings-stack")||section;
+  if(!host||host.querySelector('[data-path="notifications.operationsDigest"]'))return;
+  const row=document.createElement("label");
+  row.className="toggle-row";
+  const copy=document.createElement("span");
+  const title=document.createElement("strong");
+  title.textContent="Founder daily operations summary";
+  const help=document.createElement("small");
+  help.textContent="Receive one in-app review digest per UTC day only when pending work exists. You can disable this at any time.";
+  copy.append(title,help);
+  const input=document.createElement("input");
+  input.type="checkbox";
+  input.dataset.path="notifications.operationsDigest";
+  row.append(copy,input);
+  host.append(row);
+}
 let dirty = false;
 async function saveAll() {
   if (!state.user) return;
@@ -176,7 +195,7 @@ async function boot() {
     return;
   }
   state.preferences = mergePreferences(await loadUserPreferences(state.user));
-  await loadProfile(); applyControls();
+  await loadProfile(); mountFounderDigestPreference(); applyControls();
   try{await loadEmailPreferences();}
   catch(error){
     document.querySelectorAll("[data-email-notification]").forEach(input=>{input.disabled=true;});
