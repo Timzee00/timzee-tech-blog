@@ -1,7 +1,9 @@
 /* Reader hub: useful return visits instead of notification spam.
    Loads only after the public homepage has rendered. */
-import {getContinueReading,getFollowingArticles,safeArticleHref,getReadingPreference}
- from "./reader-journey.mjs";
+import {getContinueReading,getFollowingArticles,safeArticleHref} from "./reader-journey.mjs";
+import {supabase} from "./supabase.js";
+import {loadUserPreferences} from "./user-preferences.js";
+import {recommendForInterests} from "./reader-interest-ranker.mjs";
 const $=id=>document.getElementById(id);
 const node=(tag,className="",label="")=>{
   const el=document.createElement(tag);
@@ -53,37 +55,47 @@ function renderRail(host,items,options){
   }
   return host.childElementCount;
 }
-export async function mountReaderHome(user){
+export async function mountReaderHome(user,{posts=[],categories=[]}={}){
   const section=$("readerJourneySection");
   if(!section||!user?.id)return;
-  const cont=$("readerContinue"),following=$("readerFollowing");
-  const contSection=$("readerContinueSection"),followingSection=$("readerFollowingSection");
+  const cont=$("readerContinue"),following=$("readerFollowing"),suggested=$("readerInterests");
+  const contSection=$("readerContinueSection"),followingSection=$("readerFollowingSection"),
+    interestsSection=$("readerInterestsSection");
   try{
-    const [allowed,followed]=await Promise.all([
-      getReadingPreference(user).catch(()=>false),
+    const [preferences,followed]=await Promise.all([
+      loadUserPreferences(user),
       getFollowingArticles(6).catch(error=>{
         console.warn("Followed articles unavailable:",error?.message||"network");
         return [];
       })
     ]);
-    const recent=allowed?await getContinueReading(user.id,6).catch(error=>{
-      console.warn("Reading history unavailable:",error?.message||"network");
-      return [];
-    }):[];
+    const recent=preferences?.privacy?.rememberReading===false?[]:
+      await getContinueReading(user.id,6).catch(error=>{
+        console.warn("Reading history unavailable:",error?.message||"network");
+        return [];
+      });
+    const interests=preferences?.feed?.showRecommendations===false||!posts?.length?[]:
+      await supabase.from("community_user_interests")
+        .select("topic").eq("user_id",user.id).limit(14)
+        .then(({data,error})=>{
+          if(error)throw error;
+          return (data||[]).map(item=>item.topic);
+        }).catch(error=>{
+          console.warn("Reading interests unavailable:",error?.message||"network");
+          return [];
+        });
+    const usedIds=[...recent,...followed].map(item=>item.id);
+    const suggestedPosts=recommendForInterests(posts,interests,categories,usedIds,4)
+      .map(item=>({id:item.id,title:item.title,author:item.author_name,cover:item.cover}));
     const countContinue=renderRail(cont,recent,{resume:true});
     const countFollowing=renderRail(following,followed,{resume:false});
+    const countInterests=renderRail(suggested,suggestedPosts,{resume:false});
     contSection.hidden=!countContinue;
     followingSection.hidden=!countFollowing;
-    if(countContinue||countFollowing){
-      section.hidden=false;
-      const empty=$("readerJourneyEmpty");
-      if(empty)empty.hidden=true;
-    }else{
-      // Offer one practical onboarding route rather than an empty carousel.
-      const intro=$("readerJourneyEmpty");
-      if(intro)intro.hidden=false;
-      section.hidden=false;
-    }
+    interestsSection.hidden=!countInterests;
+    section.hidden=false;
+    const empty=$("readerJourneyEmpty");
+    if(empty)empty.hidden=Boolean(countContinue||countFollowing||countInterests);
     const library=$("readerBookmarksLink");
     if(library)library.href="profile.html?id="+encodeURIComponent(user.id)+"&tab=bookmarks";
   }catch(error){
