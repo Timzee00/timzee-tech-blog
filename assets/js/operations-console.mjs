@@ -7,12 +7,14 @@ const QUEUES=[
   {key:"reports",title:"User & content reports",detail:"Open account and content complaints",url:"../moderator/dashboard.html?tab=reports",action:"Review reports"},
   {key:"communityReports",title:"Community reports",detail:"Open board-specific complaints",url:"../discussion.html",action:"Open communities"},
   {key:"autoModeration",title:"Auto-moderation queue",detail:"Flagged forum submissions requiring review",url:"../discussion.html",action:"Open communities"},
-  {key:"scheduledPosts",title:"Scheduled articles",detail:"Editorial posts queued for publication",tab:"posts",action:"Manage posts"}
+  {key:"scheduledPosts",title:"Scheduled articles",detail:"Editorial posts queued for publication",tab:"posts",action:"Manage posts"},
+  {key:"overduePosts",title:"Overdue articles",detail:"Publication time passed but the post is still waiting",tab:"posts",action:"Investigate posts"}
 ];
 const JOB_LABELS={
   "automation-maintenance":"Publishing, notifications & expiry",
   "curator-scout":"Curator source discovery",
-  "verification-maintenance":"Verified identity expiry & renewals"
+  "verification-maintenance":"Verified identity expiry & renewals",
+  "scheduled-articles":"Scheduled article publishing"
 };
 const $=id=>document.getElementById(id);
 const elt=(name,className="",text="")=>{
