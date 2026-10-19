@@ -1,0 +1,50 @@
+/* Creator Studio — same design tokens as the rest of Timzee Tech Hub. */
+.creator-studio{padding-block:clamp(20px,4vw,42px) 76px;min-width:0;max-width:100%;overflow-wrap:anywhere;display:grid;gap:19px}
+.creator-studio-hero{display:flex;gap:16px;justify-content:space-between;align-items:center;flex-wrap:wrap;min-width:0;border:1px solid var(--color-border);border-radius:18px;background:linear-gradient(125deg,var(--color-surface),var(--color-surface-muted));padding:clamp(17px,4vw,30px)}
+.creator-studio-hero>div:first-child{flex:1 1 340px;min-width:0}
+.creator-studio-eyebrow{font-size:.68rem!important;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--color-primary)!important;margin:0 0 6px!important}
+.creator-studio-hero h1{font-size:clamp(1.7rem,3.4vw,2.6rem);margin:0 0 7px;line-height:1.18;overflow-wrap:anywhere}
+.creator-studio-hero p:not(.creator-studio-eyebrow){color:var(--color-text-muted);font-size:.86rem;line-height:1.65;max-width:65ch;margin:0}
+.creator-studio-hero-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-width:0}
+.creator-studio-hero-actions a{white-space:normal}
+.creator-studio-status{border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface);padding:11px 13px;margin:0;font-size:.84rem;line-height:1.5}
+.creator-studio-status[data-tone="error"]{border-color:var(--color-danger);color:var(--color-danger)}
+.creator-studio-status[data-tone="success"]{border-color:var(--color-primary)}
+.creator-studio-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:15px;min-width:0}
+.creator-studio-summary>div{min-width:0;padding:15px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface);display:grid;gap:4px}
+.creator-studio-summary span{color:var(--color-text-muted);font-size:.74rem;line-height:1.4}
+.creator-studio-summary strong{font-size:1.15rem;color:var(--color-text);overflow-wrap:anywhere}
+.creator-studio-layout{display:grid;grid-template-columns:minmax(220px,310px) minmax(0,1fr);gap:15px;align-items:start;min-width:0}
+.creator-studio-sidebar,.creator-studio-editor{min-width:0;max-width:100%;padding:clamp(15px,2.5vw,22px);border:1px solid var(--color-border);border-radius:15px;background:var(--color-surface)}
+.creator-studio-sidebar{position:sticky;top:94px;max-height:calc(100dvh - 114px);display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:10px}
+.creator-studio-sidebar-heading,.creator-studio-editor-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-width:0;flex-wrap:wrap}
+.creator-studio-sidebar-heading h2,.creator-studio-editor-top h2{font-size:1.08rem;margin:0}
+.creator-studio-help{font-size:.77rem;line-height:1.55;margin:0;color:var(--color-text-muted);overflow-wrap:anywhere}
+.creator-studio-list{display:grid;gap:7px;overflow-y:auto;overscroll-behavior-y:contain;min-width:0;max-width:100%}
+.creator-draft-item{width:100%;min-height:62px;display:grid;gap:5px;text-align:left;padding:11px 12px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface-muted);color:var(--color-text);cursor:pointer;min-width:0}
+.creator-draft-item:hover{border-color:var(--color-primary)}
+.creator-draft-item[aria-current="true"]{border:2px solid var(--color-primary)}
+.creator-draft-item strong{font-size:.83rem;overflow-wrap:anywhere;font-weight:750;line-height:1.4}
+.creator-draft-item small{font-size:.69rem;color:var(--color-text-muted);line-height:1.3}
+.creator-studio-empty{padding:24px;border:1px dashed var(--color-border-strong);background:var(--color-surface);border-radius:12px}
+.creator-studio-empty h2{font-size:1.25rem}
+.creator-studio-fields{display:grid;gap:9px;min-width:0}
+.creator-studio-fields label{font-size:.81rem;font-weight:700}
+.creator-studio-fields :where(input,select,textarea){width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.creator-studio-fields textarea{resize:vertical;min-height:225px;max-height:65dvh;line-height:1.6;overflow-x:hidden;overflow-wrap:anywhere}
+.creator-studio-character-count{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--color-text-muted);font-size:.72rem}
+.creator-studio-editor-top{margin-bottom:16px}
+.creator-studio-save-state{padding:5px 9px;border:1px solid var(--color-border);border-radius:8px;color:var(--color-text-muted);font-size:.71rem}
+.creator-studio-save-state[data-dirty="true"]{border-color:var(--color-warning)}
+.creator-studio-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:16px 0}
+.creator-studio-actions .btn{max-width:100%;white-space:normal;text-align:center}
+.creator-studio-preview{min-width:0;max-width:100%;overflow-wrap:anywhere;padding:17px;border-radius:12px;border:1px solid var(--color-border);background:var(--color-surface-muted)}
+.creator-studio-preview h3{font-size:1.16rem;margin:0 0 11px}
+.creator-studio-preview :where(pre,table){max-width:100%;display:block;overflow-x:auto}
+.creator-studio-preview :where(img,video){max-width:100%;height:auto}
+.creator-studio-preview p{font-size:.89rem;line-height:1.7}
+.creator-studio-preview a{text-decoration:underline;color:var(--color-primary)}
+.creator-studio-editor>.creator-studio-help{margin-top:15px}
+@media(max-width:880px){.creator-studio-layout{grid-template-columns:minmax(0,1fr)}.creator-studio-sidebar{position:static;max-height:none;grid-template-rows:auto auto auto}.creator-studio-list{max-height:280px}}
+@media(max-width:520px){.creator-studio-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.creator-studio-summary>div:last-child{grid-column:1/-1}.creator-studio-sidebar,.creator-studio-editor{padding:14px}.creator-studio-actions .btn{flex:1 1 125px}}
+@media(max-width:360px){.creator-studio-summary{grid-template-columns:1fr}.creator-studio-summary>div:last-child{grid-column:auto}.creator-studio-hero-actions .btn{width:100%}}
