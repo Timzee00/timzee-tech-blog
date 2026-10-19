@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#087f73">
+<meta name="description" content="Save private creator drafts, preview your ideas, and send them to Timzee communities when ready.">
+<meta name="robots" content="noindex,nofollow">
+<title>Creator Studio · Timzee Tech Hub</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="assets/css/creator-studio.css">
+<script defer src="assets/js/theme-init.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header class="site-header"><div class="container wrap">
+<a href="index.html" class="brand"><span class="logo">Timzee <span>Tech</span> Hub</span><span class="tagline">Your creator workspace.</span></a>
+<nav class="nav-pill" aria-label="Main navigation">
+<a href="index.html">Home</a><a href="my-tech.html">My Tech</a><a href="discussion.html">Communities</a>
+<a href="creator-studio.html" aria-current="page">Creator Studio</a></nav>
+<div class="header-actions"><a class="icon-btn" href="chat.html" aria-label="Messages">✉</a><div class="auth-actions" id="authActions"></div></div>
+</div></header>
+
+<main class="container creator-studio" id="main-content">
+<section class="creator-studio-hero">
+ <div>
+  <p class="creator-studio-eyebrow">TIMZEE CREATOR STUDIO</p>
+  <h1>Turn your ideas into useful content.</h1>
+  <p>Write privately, return on another device, and choose when to take a draft into the community editor. Nothing publishes without your explicit action.</p>
+ </div>
+ <div class="creator-studio-hero-actions">
+  <a href="discussion.html" class="btn">Explore communities</a>
+  <a href="my-tech.html" class="btn ghost">Back to My Tech</a>
+ </div>
+</section>
+
+<div id="creatorSignedOut" class="creator-studio-empty" hidden>
+ <h2>Your private drafts stay in your account.</h2>
+ <p>Sign in to use the free Creator Studio. Verified members receive a larger draft library.</p>
+ <a class="btn" href="login.html?redirect=creator-studio.html">Sign in to continue</a>
+</div>
+<p id="creatorWorkspaceStatus" class="creator-studio-status" role="status" aria-live="polite">Checking your account…</p>
+
+<div id="creatorWorkspace" hidden>
+ <div class="creator-studio-summary" aria-label="Your creator workspace statistics">
+  <div><span>Saved drafts</span><strong id="creatorDraftCount">—</strong></div>
+  <div><span>Account collection</span><strong id="creatorDraftTier">Checking…</strong></div>
+  <div><span>Draft allowance</span><strong id="creatorDraftLimit">—</strong></div>
+ </div>
+ <div class="creator-studio-layout">
+  <aside class="creator-studio-sidebar" aria-label="Saved drafts">
+   <div class="creator-studio-sidebar-heading">
+    <h2>Your drafts</h2><button type="button" class="btn ghost sm" id="creatorNewDraft">+ New</button>
+   </div>
+   <p class="creator-studio-help">Saved securely in your account. Only you can open or edit these drafts.</p>
+   <div class="creator-studio-list" id="creatorDraftList" role="list" aria-label="Your saved drafts"></div>
+  </aside>
+  <section class="creator-studio-editor" aria-labelledby="creatorEditorHeading">
+   <div class="creator-studio-editor-top">
+    <div><p class="creator-studio-eyebrow">PRIVATE WORKSPACE</p><h2 id="creatorEditorHeading">New draft</h2></div>
+    <span class="creator-studio-save-state" id="creatorSaveState">Not yet saved</span>
+   </div>
+   <form id="creatorDraftForm" novalidate>
+    <div class="creator-studio-fields">
+     <label for="creatorDraftKind">Content type</label>
+     <select id="creatorDraftKind" name="kind">
+      <option value="discussion">Discussion</option>
+      <option value="question">Question</option>
+      <option value="guide">Tutorial / guide</option>
+      <option value="news">Tech news</option>
+      <option value="showcase">Project showcase</option>
+      <option value="video-script">Video script</option>
+     </select>
+     <label for="creatorDraftTitle">Title</label>
+     <input id="creatorDraftTitle" name="title" maxlength="180" placeholder="Give your idea a clear title">
+     <label for="creatorDraftBody">Content</label>
+     <textarea id="creatorDraftBody" name="body" maxlength="12000" rows="14" placeholder="Start with an outline, question, tutorial, or script…" spellcheck="true"></textarea>
+     <div class="creator-studio-character-count"><span>Supports safe community Markdown</span><span id="creatorBodyCount">0 / 12,000</span></div>
+     <label for="creatorDraftCommunity">Suggested community (optional)</label>
+     <select id="creatorDraftCommunity" name="community_id">
+      <option value="">Choose when publishing</option>
+     </select>
+    </div>
+    <div class="creator-studio-actions">
+     <button type="submit" id="creatorSaveDraft" class="btn">Save draft</button>
+     <button type="button" id="creatorPreviewDraft" class="btn ghost" aria-pressed="false">Preview</button>
+     <button type="button" id="creatorUseDraft" class="btn ghost">Continue in Communities</button>
+     <button type="button" id="creatorDeleteDraft" class="btn ghost" disabled>Delete draft</button>
+    </div>
+   </form>
+   <section id="creatorDraftPreview" class="creator-studio-preview" aria-label="Draft preview" hidden>
+    <h3 id="creatorPreviewTitle">Untitled</h3><div id="creatorPreviewContent"></div>
+   </section>
+   <p class="creator-studio-help">Saving a draft does not publish it. Community posts still go through the usual rules and moderation. Video scripts are private notes and can't be directly uploaded as videos.</p>
+  </section>
+ </div>
+</div>
+</main>
+<footer class="footer"><div class="container"><div class="footer-links">
+<a href="index.html">Home</a><a href="discussion.html">Communities</a><a href="support.html">Support</a>
+</div></div></footer>
+<script type="module" src="assets/js/creator-studio.mjs"></script>
+</body>
+</html>
