@@ -17,7 +17,7 @@ const make=(tag,className="",text="")=>{
   el.textContent=text;
   return el;
 };
-const state={kind:"reports",page:1,busy:false,serial:0,controller:null,requestKeys:new Map()};
+const state={kind:"reports",page:1,busy:false,confirming:false,serial:0,controller:null,requestKeys:new Map()};
 const fmt=value=>{
   const d=new Date(value||"");
   return Number.isFinite(d.getTime())?d.toLocaleString():"Unknown time";
@@ -110,12 +110,19 @@ async function load(){
   }
 }
 async function takeAction(button){
-  if(state.busy)return;
+  if(state.busy||state.confirming)return;
   const kind=button.dataset.triageKind,action=button.dataset.triageAction,id=button.dataset.triageId;
   if(!Object.hasOwn(ACTIONS,kind)||!ACTIONS[kind].some(pair=>pair[0]===action)||
      !/^(?:[a-f0-9-]{36}|[1-9]\d*)$/i.test(String(id)))return;
+  if(kind==="automod"&&!Number.isSafeInteger(Number(id)))return;
   const label=ACTIONS[kind].find(pair=>pair[0]===action)[1].toLowerCase();
-  if(!window.confirm("Are you sure you want to "+label+"? This records your review, not an automatic content ban."))return;
+  state.confirming=true;
+  let approved=false;
+  try{
+    const prompt="Are you sure you want to "+label+"? This records your review, not an automatic content ban.";
+    approved=window.appUI?.confirm?await window.appUI.confirm(prompt):window.confirm(prompt);
+  }finally{state.confirming=false;}
+  if(!approved||state.busy)return;
   setBusy(true);
   message("Saving your review…");
   try{
