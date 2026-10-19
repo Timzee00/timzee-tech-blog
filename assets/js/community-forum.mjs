@@ -1324,6 +1324,42 @@ function bindEvents(){
  setupMentionInput($("forumReplyText"));
  setupMentionInput($("forumThreadForm").querySelector("[name=body]"));
 }
+/* Creator Studio transfers a draft ID, never private draft content in URLs.
+ * The forum re-fetches it using the signed-in user's row-level security. */
+async function openCreatorDraft(){
+ const id=new URLSearchParams(location.search).get("draft");
+ if(!id)return;
+ if(!state.user){notify("Sign in to open your private creator draft.",true);return;}
+ if(!validId(id)){notify("Invalid creator draft link.",true);return;}
+ try{
+  const {data,error}=await supabase.from("creator_drafts")
+   .select("id,title,body,kind,community_id")
+   .eq("id",id).eq("user_id",state.user.id).maybeSingle();
+  if(error)throw error;
+  if(!data){notify("This draft was not found in your account.",true);return;}
+  if(data.kind==="video-script"){
+   notify("A video script cannot be published directly as a forum topic.",true);return;
+  }
+  showDialog("forumThreadDialog");
+  const dialog=$("forumThreadDialog");
+  if(!dialog.open)return;
+  const form=$("forumThreadForm");
+  form.elements.namedItem("kind").value=data.kind||"discussion";
+  form.elements.namedItem("title").value=data.title||"";
+  form.elements.namedItem("body").value=data.body||"";
+  const community=form.elements.namedItem("community_id");
+  if(data.community_id&&[...community.options].some(option=>option.value===data.community_id)){
+   community.value=data.community_id;
+  }
+  updateAllVisiblePreviews();
+  notify("Private draft loaded. Review its community and content before publishing.");
+  const url=new URL(location.href);url.searchParams.delete("draft");
+  history.replaceState(null,"",url.pathname+url.search+url.hash);
+ }catch(error){
+  console.warn("Creator draft could not open",error);
+  notify("Your creator draft could not be loaded. It remains safely saved.",true);
+ }
+}
 async function boot(){
  renderCategories();bindEvents();
  try{
@@ -1345,6 +1381,7 @@ async function boot(){
  await Promise.all([loadMemberships(),loadInterests()]);
  try{await loadCommunities(true);}catch(error){notify("Cannot load community directory right now.",true);}
  await initializeFromUrl();
+ await openCreatorDraft();
  if(new URLSearchParams(location.search).get("interests")==="1"&&state.user)showInterestEditor();
 }
 boot().catch(error=>{reportAppError(error,"Community forum failed to start");notify("Could not load communities. Refresh to try again.",true);});
