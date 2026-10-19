@@ -34,8 +34,16 @@ function fakeDB({counts={},jobs=[],audit=[],failCount=null,failedAudit=false}={}
         select(_columns,_options){
           return {
             eq(column,value){
-              if(table===failCount)return Promise.resolve({count:null,error:{message:"Unavailable"}});
-              return Promise.resolve({count:counts[table]??0,error:null});
+              const response=table===failCount?
+                Promise.resolve({count:null,error:{message:"Unavailable"}}):
+                Promise.resolve({count:counts[table]??0,error:null});
+              response.lte=(field,cutoff)=>{
+                assert.equal(table,"posts");
+                assert.equal(field,"publish_at");
+                assert.match(cutoff,/^\\d{4}-\\d{2}-\\d{2}T/);
+                return Promise.resolve({count:counts.overduePosts??0,error:null});
+              };
+              return response;
             },
             in(column,values){
               if(table==="community_reports"){
@@ -156,4 +164,14 @@ test("community reports count pending cases, not just open cases",async()=>{
  const report=await helpers.overview(db,Date.parse("2026-10-19T01:00:00Z"));
  assert.equal(report.queues.communityReports,7);
  assert.match(report.issues.join(" "),/7 pending communityReports/);
+});
+
+test("overdue publishing is distinguished from future-dated scheduled posts",async()=>{
+ const db=fakeDB({counts:{posts:7,overduePosts:2}});
+ const {helpers}=loadModule({db});
+ const response=await helpers.overview(db,Date.parse("2026-10-19T01:00:00Z"));
+ assert.equal(response.queues.scheduledPosts,7);
+ assert.equal(response.queues.overduePosts,2);
+ assert.match(response.issues.join(" "),/2 pending overduePosts/);
+ assert.ok(response.jobs.some(x=>x.name==="scheduled-articles"));
 });
