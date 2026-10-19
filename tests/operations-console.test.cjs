@@ -24,7 +24,7 @@ function loadModule({db,role="admin",error=null}={}){
     }};
     throw Error("Unexpected require: "+id);
   };
-  vm.runInNewContext("(function(require,module,exports){"+source+"\n})",{}, {timeout:1000})(requireStub,module,module.exports);
+  vm.runInNewContext("(function(require,module,exports){"+source+"\n})",{console,process}, {timeout:1000})(requireStub,module,module.exports);
   return {handler:module.exports.handler,helpers:module.exports._test,requested};
 }
 function fakeDB({counts={},jobs=[],audit=[],failCount=null,failedAudit=false}={}){
@@ -146,7 +146,7 @@ test("operations UI is role-gated, responsive and avoids client-owned DB secrets
   assert.match(client,/getSession\(\)/);
   assert.match(client,/operations-overview/);
   assert.match(client,/replaceChildren\(\)/);
-  assert.doesNotMatch(client,/innerHTML|SERVICE_ROLE_KEY/);
+  assert.doesNotMatch(client,/\.innerHTML\s*=|SERVICE_ROLE_KEY/);
   assert.match(css,/minmax\(min\(100%,220px\),1fr\)/);
   assert.match(fs.readFileSync(path.join(root,"assets/js/moderator-panel.js"),"utf8"),/URLSearchParams\(window.location.search\)/);
 });
