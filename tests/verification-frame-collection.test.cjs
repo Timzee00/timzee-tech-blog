@@ -43,7 +43,7 @@ test("profile editor previews before saving and has an explicit restore action",
  assert.match(src,/profileFrameGallery/);
  assert.match(src,/aria-pressed/);
  assert.match(src,/cancelProfileFrame/);
- assert.match(src,/profiles"\)\.update\(\{frame_style:selected\}\)/);
+ assert.match(src,/profiles"\)\.update\(\{frame_style:submittedFrame\}\)/);
  assert.match(src,/\.eq\("id",state\.user\.id\)/);
  assert.match(src,/result\.data\?\.frame_style/);
 });
