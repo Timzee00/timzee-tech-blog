@@ -136,3 +136,10 @@ test("operations UI is role-gated, responsive and avoids client-owned DB secrets
   assert.match(css,/minmax\(min\(100%,220px\),1fr\)/);
   assert.match(fs.readFileSync(path.join(root,"assets/js/moderator-panel.js"),"utf8"),/URLSearchParams\(window.location.search\)/);
 });
+
+test("admin skip link and boot error fallback share one unique main id",()=>{
+ const markup=fs.readFileSync(path.join(root,"admin/dashboard.html"),"utf8");
+ assert.equal((markup.match(/id="adminApp"/g)||[]).length,1);
+ assert.match(markup,/href="#adminApp"/);
+ assert.doesNotMatch(markup,/<main[^>]*\bid="[^"]+"[^>]*\bid="[^"]+"/i);
+});
