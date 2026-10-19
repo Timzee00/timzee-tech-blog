@@ -1348,11 +1348,17 @@ async function openCreatorDraft(){
   form.elements.namedItem("title").value=data.title||"";
   form.elements.namedItem("body").value=data.body||"";
   const community=form.elements.namedItem("community_id");
+  const placeholder=document.createElement("option");
+  placeholder.value="";placeholder.textContent="Choose where to publish";
+  placeholder.disabled=true;
+  community.prepend(placeholder);
+  // Never silently publish a transferred draft into the first listed community.
+  community.value="";
   if(data.community_id&&[...community.options].some(option=>option.value===data.community_id)){
    community.value=data.community_id;
   }
   updateAllVisiblePreviews();
-  notify("Private draft loaded. Review its community and content before publishing.");
+  notify("Private draft loaded. Confirm its destination and review the content before publishing.");
   const url=new URL(location.href);url.searchParams.delete("draft");
   history.replaceState(null,"",url.pathname+url.search+url.hash);
  }catch(error){
