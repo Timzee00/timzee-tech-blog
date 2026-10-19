@@ -109,12 +109,12 @@ async function overview(db,now=Date.now()){
 
 exports.handler=async event=>{
   if(event.httpMethod!=="GET")return json(405,{error:"GET required."});
-  const url=process.env.SUPABASE_URL;
-  const key=process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if(!url||!key)return json(503,{error:"Operations service is not configured."});
   const token=(event.headers?.authorization||event.headers?.Authorization||"")
     .replace(/^Bearer\s+/i,"");
   if(!token)return json(401,{error:"Sign in as an administrator."});
+  const url=process.env.SUPABASE_URL;
+  const key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if(!url||!key)return json(503,{error:"Operations service is not configured."});
   const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
   const guard=await requireRole(db,token,["admin","super"],"Administrator permission required.");
   if(guard.error)return json(/token/i.test(guard.error)?401:403,{error:guard.error});
