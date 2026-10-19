@@ -120,6 +120,9 @@ test("founder review UI uses staff-only endpoint and audited decision RPCs",()=>
  assert.match(client,/community_review_report/);
  assert.match(client,/community_review_auto_flag/);
  assert.match(client,/requestId:state\.requestKeys\.get\(key\)/);
+ assert.match(client,/state\\.confirming=true/);
+ assert.match(client,/window\\.appUI\\?\\.confirm/);
+ assert.match(client,/Number\\.isSafeInteger/);
  assert.doesNotMatch(client,/\.innerHTML\s*=|\.from\("content_reports"\)\.update/);
  assert.match(admin,/mountOperationsTriage\(\)/);
  assert.match(page,/id="operationsTriageList"/);
