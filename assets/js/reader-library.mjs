@@ -7,7 +7,7 @@ export function mountReadingLibrary(user){
   const list=document.getElementById("profileReadingList");
   const status=document.getElementById("profileReadingStatus");
   if(!list||!status||!user?.id)return;
-  let busy=false;
+  let busy=false,confirming=false;
   const message=text=>{status.textContent=text;};
   const refresh=async()=>{
     if(busy)return;
@@ -61,11 +61,18 @@ export function mountReadingLibrary(user){
   };
   list.addEventListener("click",async event=>{
     const button=event.target.closest("button[data-reading-id]");
-    if(!button||busy)return;
+    if(!button||busy||confirming)return;
     const id=button.dataset.readingId;
     const prompt="Forget this article's reading position? This does not remove your bookmark.";
-    const approved=window.appUI?.confirm
-      ?await window.appUI.confirm(prompt):window.confirm(prompt);
+    let approved=false;
+    confirming=true;
+    try{
+      approved=window.appUI?.confirm
+        ?await window.appUI.confirm(prompt):window.confirm(prompt);
+    }catch(error){
+      message("Could not open confirmation. Please retry.");
+      return;
+    }finally{confirming=false;}
     if(!approved||busy)return;
     busy=true;button.disabled=true;
     message("Removing reading position…");
