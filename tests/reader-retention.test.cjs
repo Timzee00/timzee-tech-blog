@@ -100,10 +100,10 @@ test("retention surfaces are wired to existing homepage, posts, bookmarks and se
        prefs=read("assets/js/user-preferences.js"),css=read("assets/css/reader-journey.css"),
        home=read("assets/js/reader-home.mjs"),library=read("assets/js/reader-library.mjs"),
        privacy=read("privacy.html"),styles=read("assets/css/styles.css");
- for(const id of ["readerJourneySection","readerContinue","readerFollowing","readerBookmarksLink"])
+ for(const id of ["readerJourneySection","readerContinue","readerFollowing","readerInterests","readerBookmarksLink"])
    assert.match(homepage,new RegExp('id="'+id+'"'));
  assert.match(post,/mountArticleJourney\(\{post,user:state\.user\}\)/);
- assert.match(app,/mountReaderHome\(state\.user\)/);
+ assert.match(app,/mountReaderHome\(state\.user,\{posts:state\.posts,categories:state\.categories\}\)/);
  assert.match(profile,/mountReadingLibrary\(state\.user\)/);
  assert.match(profilePage,/id="profileReadingList"/);
  assert.match(settings,/data-path="privacy\.rememberReading"/);
