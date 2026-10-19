@@ -22,3 +22,16 @@ test("all collectible frame names share one canonical identity source",()=>{
  assert.match(renderer,/if\(profile\?\.is_verified!==true\)return null/);
  assert.match(css,/prefers-reduced-motion:reduce/);
 });
+
+test("saving a verified frame is single-flight and persists the submitted choice",()=>{
+ const source=read("assets/js/profile.js");
+ const frameSection=source.slice(source.indexOf("function renderVerification()"),source.indexOf("function setupProfileTabs()"));
+ assert.match(frameSection,/let frameSaving=false/);
+ assert.match(frameSection,/if\(frameSaving\|\|!button/);
+ assert.match(frameSection,/if\(frameSaving\)return;/);
+ assert.match(frameSection,/const submittedFrame=selected;/);
+ assert.match(frameSection,/update\(\{frame_style:submittedFrame\}\)/);
+ assert.match(frameSection,/result\.data\?\.frame_style!==submittedFrame/);
+ assert.match(frameSection,/frameSaving=false;\s*displayPreview\(\)/);
+ assert.match(frameSection,/btn\.disabled=frameSaving/);
+});
