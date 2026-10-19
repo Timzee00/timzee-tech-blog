@@ -91,6 +91,8 @@ async function overview(db,now=Date.now()){
   const queues=Object.fromEntries(queueResults.map(row=>[row.key,row.count]));
   const issues=[
     ...queueResults.filter(row=>row.count===null).map(row=>row.key+" metric unavailable"),
+    ...queueResults.filter(row=>row.count>0&&row.key!=="scheduledPosts")
+      .map(row=>row.count+" pending "+row.key+" item(s)"),
     ...jobs.filter(j=>j.state!=="healthy").map(j=>j.name+" "+j.state),
     ...(audit===null?["Audit activity unavailable"]:[])
   ];
