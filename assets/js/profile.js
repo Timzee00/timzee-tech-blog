@@ -433,6 +433,7 @@ function renderVerification(){
     '</div><ul class="perk-list">'+benefits[tier].map(x=>'<li>'+escapeHTML(x)+'</li>').join("")+'</ul>'+(isSelf?'<div class="tz-frame-actions"><a class="btn ghost sm" href="creator-studio.html">Open Creator Studio</a></div>':'')+gallery;
   if(!isSelf)return;
   let selected=current;
+  let frameSaving=false;
   const displayPreview=()=>{
     const preview={...state.profile,frame_style:selected};
     const hero=document.querySelector(".profile-page .profile-hero");
@@ -446,31 +447,37 @@ function renderVerification(){
       btn.setAttribute("aria-pressed",String(btn.dataset.frameChoice===selected));
     });
     const save=document.getElementById("saveProfileFrame");
-    if(save)save.disabled=selected===verifiedFrameStyle(state.profile);
+    if(save)save.disabled=frameSaving||selected===verifiedFrameStyle(state.profile);
+    const restore=document.getElementById("cancelProfileFrame");
+    if(restore)restore.disabled=frameSaving||selected===verifiedFrameStyle(state.profile);
+    target.querySelectorAll("[data-frame-choice]").forEach(btn=>{btn.disabled=frameSaving;});
   };
   target.querySelector("#profileFrameGallery")?.addEventListener("click",event=>{
     const button=event.target.closest("[data-frame-choice]");
-    if(!button||!FRAME_STYLES.includes(button.dataset.frameChoice))return;
+    if(frameSaving||!button||!FRAME_STYLES.includes(button.dataset.frameChoice))return;
     selected=button.dataset.frameChoice;
     displayPreview();
     document.getElementById("profileFrameStatus").textContent=
       FRAME_OPTIONS.find(option=>option.id===selected)?.title+" preview — not saved yet.";
   });
   document.getElementById("cancelProfileFrame")?.addEventListener("click",()=>{
+    if(frameSaving)return;
     selected=verifiedFrameStyle(state.profile);displayPreview();
     document.getElementById("profileFrameStatus").textContent="Restored your saved frame.";
   });
   document.getElementById("saveProfileFrame")?.addEventListener("click",async event=>{
     const button=event.currentTarget;
-    if(!state.user||!FRAME_STYLES.includes(selected)||selected===verifiedFrameStyle(state.profile))return;
+    if(frameSaving||!state.user||!FRAME_STYLES.includes(selected)||selected===verifiedFrameStyle(state.profile))return;
     const status=document.getElementById("profileFrameStatus");
-    button.disabled=true;
+    const submittedFrame=selected;
+    frameSaving=true;
+    displayPreview();
     status.textContent="Applying frame securely…";
     try{
-      const result=await supabase.from("profiles").update({frame_style:selected})
+      const result=await supabase.from("profiles").update({frame_style:submittedFrame})
         .eq("id",state.user.id).select("frame_style").single();
       if(result.error)throw result.error;
-      if(!FRAME_STYLES.includes(result.data?.frame_style))throw Error("The server did not confirm this frame.");
+      if(result.data?.frame_style!==submittedFrame)throw Error("The server did not confirm the selected frame.");
       state.profile.frame_style=result.data.frame_style;
       selected=result.data.frame_style;
       // Keep the existing gallery and its live region mounted: rebuilding the
@@ -480,7 +487,10 @@ function renderVerification(){
     }catch(error){
       status.textContent=extractErrorMessage(error,"Couldn't apply this frame. Your saved frame is unchanged.");
       displayPreview();
-    }finally{button.disabled=selected===verifiedFrameStyle(state.profile);}
+    }finally{
+      frameSaving=false;
+      displayPreview();
+    }
   });
   displayPreview();
 }
