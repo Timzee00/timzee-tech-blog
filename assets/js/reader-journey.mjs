@@ -101,7 +101,7 @@ export function mountArticleJourney({post,user}={}){
   const flush=async()=>{
     if(disposed||!configured||writing)return;
     const p=queued;
-    if(p<=0||p<=lastSent||(p<lastSent+5&&Date.now()-lastAttempt<20000))return;
+    if(p<=0||p<=lastSent||(p<95&&p<lastSent+5&&Date.now()-lastAttempt<20000))return;
     writing=true;lastAttempt=Date.now();
     try{
       await recordReading(post.id,p);
