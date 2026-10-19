@@ -32,6 +32,7 @@
         <button data-tab="curator">🤖 Curator Bot</button>
         <button data-tab="users">Users</button>
         <button data-tab="verification">Verification reviews</button>
+        <button type="button" data-tab="operations">Operations Brain</button>
         <a href="restrictions.html" class="btn ghost">Account restrictions</a>
         <button data-tab="authors">Authors</button>
         <button data-tab="themes">Themes</button>
@@ -271,6 +272,36 @@
           <span id="verificationPageLabel">Page 1</span>
           <button type="button" class="btn ghost sm" id="verificationNext">Next</button>
         </div>
+      </section>
+
+      <section class="admin-card operations-console" data-panel="operations" style="display:none" aria-labelledby="operationsTitle">
+        <div class="operations-intro">
+          <div>
+            <h2 id="operationsTitle">Operations Brain</h2>
+            <p>One place to see verification queues, safety reports, scheduled publishing and automation health. Counts reflect real server data and are never guessed.</p>
+          </div>
+          <button type="button" id="operationsRefresh" class="btn ghost">Refresh operations</button>
+        </div>
+        <p id="operationsStatus" class="operations-status" data-tone="neutral" role="status" aria-live="polite">Open this tab to check platform activity.</p>
+        <section class="operations-section" aria-labelledby="operationsQueueTitle">
+          <h3 id="operationsQueueTitle">Pending work</h3>
+          <div class="operations-grid" id="operationsQueues"></div>
+        </section>
+        <section class="operations-section" aria-labelledby="operationsJobsTitle">
+          <h3 id="operationsJobsTitle">Background job health</h3>
+          <ul class="operations-list" id="operationsJobs"></ul>
+        </section>
+        <div class="operations-activity-grid">
+          <section class="operations-subpanel" aria-labelledby="operationsAlertsTitle">
+            <h3 id="operationsAlertsTitle">Items to investigate</h3>
+            <ul id="operationsIssues" class="operations-alerts"><li>No data loaded yet.</li></ul>
+          </section>
+          <section class="operations-subpanel" aria-labelledby="operationsAuditTitle">
+            <h3 id="operationsAuditTitle">Recent moderation activity</h3>
+            <ul class="operations-list" id="operationsAudit"></ul>
+          </section>
+        </div>
+        <p id="operationsNote" class="operations-note">Read-only overview. Approvals and sanctions still require authorized review. No paid monitoring service or polling is used.</p>
       </section>
 
       <section class="admin-card" data-panel="authors" style="display:none;">
