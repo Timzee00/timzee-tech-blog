@@ -121,6 +121,9 @@ async function takeAction(button){
   try{
     const prompt="Are you sure you want to "+label+"? This records your review, not an automatic content ban.";
     approved=window.appUI?.confirm?await window.appUI.confirm(prompt):window.confirm(prompt);
+  }catch(error){
+    message("Review confirmation could not open. Please try again.","error");
+    return;
   }finally{state.confirming=false;}
   if(!approved||state.busy)return;
   setBusy(true);
