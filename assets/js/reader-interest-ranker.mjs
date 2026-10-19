@@ -30,7 +30,12 @@ export function recommendForInterests(posts,interests,categories=[],excluded=[],
   const ranked=[];
   for(const post of (Array.isArray(posts)?posts:[]).slice(0,60)){
     if(!post?.id||skip.has(post.id)||String(post.status||"published").toLowerCase()!=="published")continue;
-    if(post.publish_at&&Date.parse(String(post.publish_at))>Date.now())continue;
+    if(post.publish_at){
+      const raw=String(post.publish_at).trim().replace(" ","T");
+      const hasOffset=raw.toUpperCase().endsWith("Z")||raw.includes("+",10)||raw.includes("-",10);
+      const timestamp=Date.parse(hasOffset?raw:raw+"Z");
+      if(!Number.isFinite(timestamp)||timestamp>Date.now())continue;
+    }
     const tags=(Array.isArray(post.tags)?post.tags:[]).slice(0,30).map(normalize);
     const title=normalize(post.title);
     const category=categoryNames.get(post.category_id)||"";
