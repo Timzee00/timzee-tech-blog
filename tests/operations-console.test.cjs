@@ -81,9 +81,17 @@ test("operations endpoint rejects unauthenticated and unauthorized requests",asy
   assert.equal(requested.length,0);
   const method=await handler({httpMethod:"POST",headers:{}});
   assert.equal(method.statusCode,405);
-  const unauthorized=loadModule({db,role:"user"});
-  const denied=await unauthorized.handler(event);
-  assert.equal(denied.statusCode,403);
+  const oldUrl=process.env.SUPABASE_URL,oldKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.SUPABASE_URL="https://example.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY="unit-test-only-secret";
+  try{
+    const unauthorized=loadModule({db,role:"user"});
+    const denied=await unauthorized.handler(event);
+    assert.equal(denied.statusCode,403);
+  }finally{
+    if(oldUrl===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=oldUrl;
+    if(oldKey===undefined)delete process.env.SUPABASE_SERVICE_ROLE_KEY;else process.env.SUPABASE_SERVICE_ROLE_KEY=oldKey;
+  }
 });
 
 test("operations response includes only read-only aggregates and safe audit summaries",async()=>{
