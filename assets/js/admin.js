@@ -2068,8 +2068,9 @@ async function bootDashboard() {
   // The modern curator editor is initialized lazily from the Curator tab.
   await setupFaq();
   handleLogout();
-  if (new URLSearchParams(location.search).get("tab") === "curator") {
-    document.querySelector('.admin-nav button[data-tab="curator"]')?.click();
+  const requestedTab=new URLSearchParams(location.search).get("tab");
+  if (requestedTab==="curator"||requestedTab==="operations") {
+    document.querySelector('.admin-nav button[data-tab="'+requestedTab+'"]')?.click();
   }
 }
 
