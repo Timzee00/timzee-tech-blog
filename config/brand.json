@@ -1,0 +1,19 @@
+{
+  "status": "proposed_pending_clearance",
+  "name": "Timzee",
+  "previousName": "Timzee Tech Hub",
+  "tagline": "Explore. Create. Connect.",
+  "descriptor": "Community, creators and technology",
+  "legalOperator": "Timzee Corp",
+  "legalOperatorRequiresVerification": true,
+  "legacyOrigin": "https://timzee-tech-blog.netlify.app",
+  "newOrigin": null,
+  "allowPublicCutover": false,
+  "colors": {
+    "deepOcean": "#12363F",
+    "teal": "#087F73",
+    "mint": "#48DBC0",
+    "ink": "#142D35",
+    "cloud": "#F5F8F8"
+  }
+}
