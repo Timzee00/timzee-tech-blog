@@ -31,3 +31,11 @@ test("goal controls fit mobile and use accessible progress/status semantics",()=
  assert.match(home,/aria-live","polite"/);
  assert.match(home,/progress\.max=goal/);
 });
+
+test("weekly goal failures restore the latest confirmed value, not the initial setting",()=>{
+ const home=read("assets/js/reader-home.mjs");
+ assert.match(home,/let confirmedGoal=allowed\.includes\(saved\)\?saved:0/);
+ assert.match(home,/confirmedGoal=target;/);
+ assert.match(home,/select\.value=String\(confirmedGoal\)/);
+ assert.doesNotMatch(home,/catch\(error\)\{\s*select\.value=String\(saved\)/);
+});
