@@ -9,7 +9,9 @@
     "check": "node scripts/validate-production-config.mjs && node scripts/check-syntax.mjs",
     "build": "npm run check && node scripts/build-site.mjs",
     "test": "node --test tests/*.test.cjs",
-    "test:browser": "npm run build && playwright test"
+    "test:browser": "npm run build && playwright test",
+    "brand:audit": "node scripts/audit-brand-transition.mjs --summary",
+    "brand:check": "node scripts/audit-brand-transition.mjs --summary && node --test tests/brand-transition.test.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.116.0",
