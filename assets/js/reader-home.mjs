@@ -61,7 +61,10 @@ function mountWeeklyGoal(section,user,preferences){
     const option=node("option","",text);option.value=String(value);select.append(option);
   }
   const saved=Number(preferences?.feed?.weeklyReadingGoal)||0;
-  select.value=String(allowed.includes(saved)?saved:0);
+  // Track the last confirmed value, not the initial value: a failed later
+  // save must restore the most recently persisted goal.
+  let confirmedGoal=allowed.includes(saved)?saved:0;
+  select.value=String(confirmedGoal);
   label.append(select);
   header.append(label);
   wrapper.append(header);
@@ -92,9 +95,10 @@ function mountWeeklyGoal(section,user,preferences){
     saving=true;select.disabled=true;status.textContent="Saving your choice…";
     try{
       await saveUserPreferences(user.id,{feed:{weeklyReadingGoal:target}});
+      confirmedGoal=target;
       await refresh();
     }catch(error){
-      select.value=String(saved);
+      select.value=String(confirmedGoal);
       status.textContent="Could not save your goal. Try again.";
     }finally{saving=false;select.disabled=false;}
   });
