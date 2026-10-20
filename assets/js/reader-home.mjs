@@ -2,7 +2,7 @@
    Loads only after the public homepage has rendered. */
 import {getContinueReading,getFollowingArticles,safeArticleHref} from "./reader-journey.mjs";
 import {supabase} from "./supabase.js";
-import {loadUserPreferences} from "./user-preferences.js";
+import {loadUserPreferences,saveUserPreferences} from "./user-preferences.js";
 import {recommendForInterests} from "./reader-interest-ranker.mjs";
 const $=id=>document.getElementById(id);
 const node=(tag,className="",label="")=>{
@@ -46,6 +46,61 @@ function card(item,{resume=false,recommendation=false}={}){
   }
   link.append(details);
   return link;
+}
+function mountWeeklyGoal(section,user,preferences){
+  if(!section||!user?.id)return;
+  const allowed=[0,2,4,7];
+  const wrapper=node("section","tz-reader-weekly-goal");
+  wrapper.setAttribute("aria-label","Optional weekly reading goal");
+  const header=node("div","tz-reader-goal-heading");
+  header.append(node("strong","","Your weekly learning goal"));
+  const label=node("label","","Articles per week");
+  const select=node("select","");
+  select.setAttribute("aria-label","Weekly reading goal");
+  for(const [value,text] of [[0,"Off"],[2,"2 articles"],[4,"4 articles"],[7,"7 articles"]]){
+    const option=node("option","",text);option.value=String(value);select.append(option);
+  }
+  const saved=Number(preferences?.feed?.weeklyReadingGoal)||0;
+  select.value=String(allowed.includes(saved)?saved:0);
+  label.append(select);
+  header.append(label);
+  wrapper.append(header);
+  const status=node("p","tz-reader-goal-status");
+  status.setAttribute("role","status");
+  status.setAttribute("aria-live","polite");
+  const progress=node("progress","tz-reader-goal-progress");
+  progress.min=0;progress.max=1;progress.value=0;
+  wrapper.append(progress,status);
+  const refresh=async()=>{
+    const goal=Number(select.value);
+    if(!goal){progress.hidden=true;status.textContent="No goal set. Read at your own pace.";return;}
+    progress.hidden=false;
+    status.textContent="Checking completed articles this week…";
+    const {data,error}=await supabase.rpc("reader_weekly_completion_count");
+    if(error){status.textContent="Your goal is saved. Progress is temporarily unavailable.";return;}
+    const completed=Math.max(0,Math.trunc(Number(data)||0));
+    progress.max=goal;progress.value=Math.min(goal,completed);
+    progress.setAttribute("aria-label",completed+" of "+goal+" articles completed this week");
+    status.textContent=completed>=goal?"Weekly goal reached. Nice work!":
+      completed+" of "+goal+" articles completed this week";
+  };
+  let saving=false;
+  select.addEventListener("change",async()=>{
+    if(saving)return;
+    const target=Number(select.value);
+    if(!allowed.includes(target))return;
+    saving=true;select.disabled=true;status.textContent="Saving your choice…";
+    try{
+      await saveUserPreferences(user.id,{feed:{weeklyReadingGoal:target}});
+      await refresh();
+    }catch(error){
+      select.value=String(saved);
+      status.textContent="Could not save your goal. Try again.";
+    }finally{saving=false;select.disabled=false;}
+  });
+  section.prepend(wrapper);
+  if(Number(select.value)>0)void refresh();
+  else{progress.hidden=true;status.textContent="Optional, private, and free of streak pressure.";}
 }
 function renderRail(host,items,options){
   host.replaceChildren();
@@ -94,6 +149,7 @@ export async function mountReaderHome(user,{posts=[],categories=[]}={}){
     followingSection.hidden=!countFollowing;
     interestsSection.hidden=!countInterests;
     section.hidden=false;
+    mountWeeklyGoal(section,user,preferences);
     const empty=$("readerJourneyEmpty");
     if(empty)empty.hidden=Boolean(countContinue||countFollowing||countInterests);
     const library=$("readerBookmarksLink");
