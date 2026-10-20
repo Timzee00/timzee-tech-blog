@@ -21,7 +21,8 @@ export const DEFAULT_USER_PREFERENCES = {
   feed: {
     defaultFeed: "for-you",
     showRecommendations: true,
-    rememberFilters: true
+    rememberFilters: true,
+    weeklyReadingGoal: 0
   },
   privacy: {
     allowMessages: true,
@@ -90,6 +91,7 @@ function deepMerge(base, override, parentPath = "") {
     }
     if (typeof value !== typeof expected || value === null) continue;
     if (typeof value === "number" && !Number.isFinite(value)) continue;
+    if (path === "feed.weeklyReadingGoal" && ![0,2,4,7].includes(value)) continue;
     if (typeof value === "string" && (value.length > 80 ||
       (PREFERENCE_ENUMS[path] && !PREFERENCE_ENUMS[path].includes(value)))) continue;
     if (typeof value === "string" || typeof value === "boolean" || typeof value === "number") {
