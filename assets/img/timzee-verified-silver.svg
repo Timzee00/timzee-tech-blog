@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Timzee Silver verified">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4f8fc"/><stop offset=".42" stop-color="#566978"/><stop offset="1" stop-color="#314653"/>
+    </linearGradient>
+    <linearGradient id="centre" x1=".1" y1="0" x2=".9" y2="1">
+      <stop offset="0" stop-color="#566978"/><stop offset="1" stop-color="#314653"/>
+    </linearGradient>
+  </defs>
+  <path d="M32 3 40 8 49 8 54 16 61 22 59 32 61 42 54 48 49 56 40 56 32 61 24 56 15 56 10 48 3 42 5 32 3 22 10 16 15 8 24 8Z" fill="url(#metal)" stroke="#314653" stroke-width="1.6"/>
+  <path d="M32 12c11 0 20 9 20 20S43 52 32 52 12 43 12 32s9-20 20-20Z" fill="url(#centre)" stroke="#f4f8fc" stroke-width="1.6"/>
+  <path d="m20 32 8 8 16-17" fill="none" stroke="#f4f8fc" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m20 32 8 8 16-17" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

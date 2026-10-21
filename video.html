@@ -565,6 +565,13 @@
         <h3>Comments</h3>
         <button type="button" class="comment-drawer-close" id="commentDrawerClose" aria-label="Close comments">&times;</button>
       </div>
+      <div class="video-comment-creator-controls" id="videoCommentCreatorControls" hidden>
+        <label><input id="videoCommentsEnabled" type="checkbox" checked> Allow comments</label>
+        <label><input id="videoDownloadsEnabled" type="checkbox" checked> Show download button</label>
+        <button type="button" id="videoCreatePoll">Create poll</button>
+      </div>
+      <div id="videoCommentPoll" class="video-comment-poll"></div>
+      <div id="videoCommentsDisabledNotice" class="comment-empty" hidden>Comments are turned off for this video.</div>
       <div class="comment-drawer-list" id="commentDrawerList" aria-live="polite"></div>
       <button type="button" id="commentLoadMoreBtn" class="comment-load-more" hidden>Load more comments</button>
       <form novalidate class="comment-drawer-form" id="commentDrawerForm">
@@ -573,6 +580,16 @@
       </form>
     </div>
 
+    <style>
+      .video-comment-creator-controls{display:flex;flex-wrap:wrap;gap:8px;padding:10px;color:#fff;background:#1e2c37}
+      .video-comment-creator-controls[hidden],.comment-drawer-form[hidden],#videoCommentsDisabledNotice[hidden]{display:none!important}
+      .video-comment-creator-controls label{display:flex;align-items:center;gap:5px;font:600 .75rem system-ui}
+      .video-comment-creator-controls button{border:1px solid #659da1;border-radius:8px;padding:8px;background:#123740;color:white;font:600 .76rem system-ui}
+      .video-comment-poll{padding:8px;max-height:min(34dvh,310px);overflow:auto}
+      .video-comment-poll:empty{display:none}
+      .reel-chip[hidden]{display:none!important}
+    </style>
+    <link rel="stylesheet" href="assets/css/content-polls.css">
     <script type="module">
       import {
         fetchVideos,
@@ -591,7 +608,9 @@
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
       import {renderSocialText} from "./assets/js/social-rich-text.mjs";
+      import {mountPoll,openPollComposer} from "./assets/js/content-polls.mjs";
       import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
+      import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap} from "./assets/js/verified-identity.mjs";
 
       const root = document.getElementById("reelRoot");
       const params = new URLSearchParams(window.location.search);
@@ -660,10 +679,10 @@
       }
 
       function itemTemplate(video, index) {
-        const uploaderName = video.author_name || "Anonymous";
-        const verified = video.uploader_verified
-          ? '<span class="reel-verified">✔ Verified</span>'
-          : '';
+        const profile=video.uploader_profile||null;
+        const uploaderName = video.author_name || profile?.display_name || "Anonymous";
+        const avatarMarkup=verifiedAvatar(profile?.avatar_url,profile,{size:"sm",alt:""});
+        const uploaderMarkup=verifiedName("@"+uploaderName,profile,{compact:true});
         const staff = video.uploader_staff_pick
           ? '<span class="reel-staff">★ Staff Pick</span>'
           : '';
@@ -694,9 +713,9 @@
             <div class="reel-bottom">
               <div class="reel-meta">
                 <div class="reel-uploader">
-                  <a class="reel-avatar" href="profile.html?id=${encodeURIComponent(video.user_id || '')}" aria-label="View uploader profile">${escapeHTML(initials(uploaderName))}</a>
-                  <span class="reel-username">@${escapeHTML(uploaderName)}</span>
-                  ${verified}${staff}
+                  <a class="reel-avatar-frame" href="profile.html?id=${encodeURIComponent(video.user_id || '')}" aria-label="View uploader profile">${avatarMarkup}</a>
+                  <span class="reel-username">${uploaderMarkup}</span>
+                  ${staff}
                 </div>
                 <p class="reel-caption" id="caption-${index}">${renderSocialText(video.title || "")}${video.description ? " — " + renderSocialText(video.description) : ""}</p>
                 <button type="button" class="reel-caption-more" data-action="expand-caption" data-index="${index}" aria-expanded="false">More caption</button>
@@ -718,7 +737,7 @@
                   <div class="reel-chip-icon">↗</div>
                   <span class="reel-chip-count">Share</span>
                 </button>
-                <button type="button" aria-label="Save video" class="reel-chip" data-action="download" data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(video.video_url || '')}" data-title="${escapeHTML(video.title || 'video')}">
+                <button type="button" aria-label="Save video" class="reel-chip" data-action="download" ${video.allow_download===false?"hidden":""} data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(video.video_url || '')}" data-title="${escapeHTML(video.title || 'video')}">
                   <div class="reel-chip-icon">⬇</div>
                   <span class="reel-chip-count">Save</span>
                 </button>
@@ -1158,7 +1177,35 @@
       const drawerForm = document.getElementById("commentDrawerForm");
       const drawerInput = document.getElementById("commentDrawerInput");
       setupMentionInput(drawerInput);
+      document.getElementById('videoCreatePoll').addEventListener('click',()=>{
+        const video=state.videos.find(v=>v.id===state.commentsOpenFor);
+        if(video&&state.user?.id===video.user_id)void openPollComposer('video',video.id,
+          ()=>mountPoll(document.getElementById('videoCommentPoll'),'video',video.id));
+      });
+      for(const [control,column] of [['videoCommentsEnabled','allow_comments'],['videoDownloadsEnabled','allow_download']]){
+        document.getElementById(control).addEventListener('change',async event=>{
+          const video=state.videos.find(v=>v.id===state.commentsOpenFor);
+          if(!video||video.user_id!==state.user?.id)return;
+          const checkbox=event.target;checkbox.disabled=true;
+          const {error}=await supabase.from('videos').update({[column]:checkbox.checked})
+            .eq('id',video.id).eq('user_id',state.user.id);
+          if(error){checkbox.checked=!checkbox.checked;window.appUI?.toast?.(error.message);}
+          else{
+            video[column]=checkbox.checked;
+            if(column==='allow_comments'){
+              drawerForm.hidden=!checkbox.checked;
+              document.getElementById('videoCommentsDisabledNotice').hidden=checkbox.checked;
+            }else{
+              const target=document.querySelector(`[data-action="download"][data-id="${video.id}"]`);
+              if(target)target.hidden=!checkbox.checked;
+            }
+          }
+          checkbox.disabled=false;
+        });
+      }
       let replyingTo = null;
+      const commentProfiles=new Map();
+      const commentIdentityCache=new Map();
 
       function renderCommentTree(comments, parentId = null, depth = 0) {
         const loadedIds = new Set(comments.map(c => c.id));
@@ -1171,8 +1218,8 @@
           .map((c) => {
             const nested = renderCommentTree(comments, c.id, depth + 1);
             return `
-              <div class="comment-row" style="margin-left:${Math.min(depth, 4) * 16}px;" data-comment-id="${c.id}">
-                <strong>${escapeHTML(c.author_name || "Anonymous")}</strong>
+              <div class="comment-row ${verifiedCommentClass(commentProfiles.get(c.user_id))}" style="margin-left:${Math.min(depth, 4) * 16}px;" data-comment-id="${c.id}">
+                <a class="reel-comment-author" href="profile.html?id=${encodeURIComponent(c.user_id||'')}">${verifiedAvatar(commentProfiles.get(c.user_id)?.avatar_url,commentProfiles.get(c.user_id),{size:"sm",alt:""})}${verifiedName(c.author_name||"Anonymous",commentProfiles.get(c.user_id),{compact:true})}</a>
                 <p>${renderSocialText(c.body || "")}</p>
                 <div class="reel-comment-actions">
                   <button class="comment-reply-btn" data-reply-id="${c.id}" data-reply-name="${escapeHTML(c.author_name || "Anonymous")}">Reply</button>
@@ -1259,6 +1306,13 @@
             limit: COMMENT_PAGE_SIZE
           });
           if (generation !== commentGeneration || state.commentsOpenFor !== videoId) return;
+          // A single bounded lookup decorates the whole comment page.
+          try{
+            const identities=await loadVerifiedIdentityMap(supabase,page.map(row=>row.user_id).filter(Boolean),commentIdentityCache);
+            if(generation!==commentGeneration||state.commentsOpenFor!==videoId)return;
+            for(const [id,profile] of identities)commentProfiles.set(id,profile);
+          }catch(error){console.warn("Video comment verification unavailable",error.message);}
+          if(generation!==commentGeneration||state.commentsOpenFor!==videoId)return;
           const counts=page.length?await supabase.rpc("video_comment_like_counts",{
             p_comment_ids:page.map(c=>c.id)
           }):{data:[],error:null};
@@ -1287,9 +1341,23 @@
 
       async function openComments(videoId) {
         state.commentsOpenFor = videoId;
+        const video=state.videos.find(v=>v.id===videoId);
+        const isOwner=Boolean(state.user&&video?.user_id===state.user.id);
+        const controls=document.getElementById('videoCommentCreatorControls');
+        controls.hidden=!isOwner;
+        document.getElementById("videoCommentsEnabled").checked=video?.allow_comments!==false;
+        document.getElementById("videoDownloadsEnabled").checked=video?.allow_download!==false;
+        const allowed=video?.allow_comments!==false;
+        drawerForm.hidden=!allowed;
+        document.getElementById("videoCommentsDisabledNotice").hidden=allowed;
+        const pollHost=document.getElementById("videoCommentPoll");
+        pollHost.replaceChildren();
+        if(state.user)void mountPoll(pollHost,'video',videoId);
         commentGeneration++;
         const generation = commentGeneration;
         commentRows = [];
+        commentProfiles.clear();
+        commentIdentityCache.clear();
         commentOffset = 0;
         commentLoading = false;
         replyingTo = null;
@@ -1322,6 +1390,8 @@
 
       drawerForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        const selected=state.videos.find(v=>v.id===state.commentsOpenFor);
+        if(selected?.allow_comments===false){window.appUI?.toast?.("The creator disabled comments on this video.");return;}
         const body = drawerInput.value.trim();
         if (!body || !state.commentsOpenFor) return;
         if (!state.user) {
@@ -1356,7 +1426,7 @@
         if (userIds.length) {
           const profiles = await supabase
             .from("public_profiles")
-            .select("id, is_verified, is_staff_pick")
+            .select("id, display_name, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style, is_staff_pick")
             .in("id", userIds);
           const map = {};
           (profiles.data || []).forEach((p) => {
@@ -1364,7 +1434,7 @@
           });
           videos.forEach((v) => {
             const p = map[v.user_id];
-            v.uploader_verified = !!p?.is_verified;
+            v.uploader_profile = p || null;
             v.uploader_staff_pick = !!p?.is_staff_pick;
           });
         }

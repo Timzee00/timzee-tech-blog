@@ -59,8 +59,8 @@
               </div>
               <ul class="perks-list">
                 <li>Silver verification badge</li>
-                <li>Custom profile background</li>
-                <li>Increased visibility in search</li>
+                <li>Three exclusive Silver portrait frames</li>
+                <li>Badge visible on profiles, replies and articles</li>
               </ul>
             </div>
 
@@ -74,9 +74,9 @@
               </div>
               <ul class="perks-list">
                 <li>Gold verification badge</li>
-                <li>Premium profile design options</li>
-                <li>Priority support</li>
-                <li>Featured in creator directory</li>
+                <li>Distinct Gold profile styling</li>
+                <li>Secure verification status history</li>
+                <li>Gold verified contributions in communities</li>
               </ul>
             </div>
 
@@ -90,9 +90,9 @@
               </div>
               <ul class="perks-list">
                 <li>Platinum verification badge</li>
-                <li>Exclusive features</li>
-                <li>24/7 priority support</li>
-                <li>Featured on homepage</li>
+                <li>Premium Platinum portrait collection</li>
+                <li>Verification renewal reminders</li>
+                <li>Prominent Platinum badge on social contributions</li>
               </ul>
             </div>
 
@@ -106,9 +106,9 @@
               </div>
               <ul class="perks-list">
                 <li>Business verification badge</li>
-                <li>Business profile page</li>
-                <li>Analytics dashboard</li>
-                <li>Custom branding options</li>
+                <li>Official organization identity badge</li>
+                <li>Profile-visit insights and content statistics</li>
+                <li>Organization-themed verified profile frame</li>
               </ul>
             </div>
           </div>
@@ -117,6 +117,17 @@
         <form novalidate id="verificationForm">
           <div id="statusBox" class="status-box" role="status" aria-live="polite"></div>
 
+          <div class="form-section" id="verificationBusinessSection" hidden>
+            <h3>Official organization identity</h3>
+            <p>Official status requires proof that you are authorized to represent the organization. It cannot be purchased.</p>
+            <label for="companyName">Organization name</label>
+            <input type="text" id="companyName" maxlength="120" placeholder="Legal or widely recognized brand name">
+            <label for="companyWebsite">Official website</label>
+            <input type="url" id="companyWebsite" maxlength="250" placeholder="https://example.com">
+            <label for="companyRole">Your role / authorization</label>
+            <input type="text" id="companyRole" maxlength="100" placeholder="e.g. Communications lead or authorized manager">
+            <small>We may require proof of domain ownership and representative authorization before approval.</small>
+          </div>
           <div class="form-section">
             <h3>Why should you be verified?</h3>
             <textarea id="reason" placeholder="Tell us about your contributions to the community..." style="min-height: 100px;" class="resize-none"></textarea>
@@ -151,20 +162,21 @@
 
         <div class="callout" style="margin-top: 40px;">
           <strong>Review Process</strong>
-          <p>Applications are reviewed within 3-5 business days. You'll receive an email notification about the decision. Approval is based on community activity, authenticity, and contribution to the platform.</p>
+          <p>Applications are reviewed by staff. Review time depends on volume and the evidence supplied; notifications depend on your email preferences. Approval is based on community activity, authenticity, and contribution to the platform.</p>
         </div>
       </div>
     </main>
 
     <script type="module" src="assets/js/nav.js"></script>
     <script type="module">
-      import { getCurrentUser, signOut } from "./assets/js/supabase.js";
-      import { createVerificationApplication, getUserVerificationBadge } from "./assets/js/data.js";
+      import { getCurrentUser, signOut, supabase } from "./assets/js/supabase.js";
+      import { createVerificationApplication } from "./assets/js/data.js";
+      import {verifiedLevel,verifiedLabel,verificationBadge} from "./assets/js/verified-identity.mjs";
       import { escapeHTML } from "./assets/js/utils.js";
 
       const state = {
         user: null,
-        selectedLevel: "gold",
+        selectedLevel: "silver",
         documents: [],
         hasExistingApplication: false
       };
@@ -187,16 +199,31 @@
           window.location.reload();
         });
 
-        const badge = await getUserVerificationBadge(state.user.id);
-        if (badge?.verification_level && badge.verification_level !== "none") {
+        const result=await supabase.from("public_profiles")
+          .select("is_verified,verification_tier,verification_expires_at").eq("id",state.user.id).maybeSingle();
+        const badge=result.data;
+        if (verifiedLevel(badge)) {
           document.getElementById("verificationForm").innerHTML = `
             <div class="callout" style="background: #dbeafe; border-color: #0284c7;">
               <strong>Already Verified</strong>
-              <p>Your profile has <strong>${escapeHTML(badge.verification_level || '')}</strong> verification status.</p>
+              <p>Your account currently holds <strong>${escapeHTML(verifiedLabel(badge))}</strong> status.</p>
+              <p>Your badge and frame are shown across supported profiles and community contributions.</p>
               <a href="profile.html" class="btn" style="margin-top: 12px;">Back to Profile</a>
             </div>
           `;
           state.hasExistingApplication = true;
+        }else{
+          const pending=await supabase.from("verification_applications")
+            .select("id,verification_type,created_at").eq("user_id",state.user.id)
+            .eq("status","pending").maybeSingle();
+          if(pending.data){
+            state.hasExistingApplication=true;
+            document.getElementById("verificationForm").innerHTML=
+              '<div class="callout"><strong>Application under review</strong>'+
+              '<p>Your '+escapeHTML(pending.data.verification_type||"verification")+
+              ' application is waiting for staff review. You do not need to send another copy.</p>'+
+              '<a class="btn ghost" href="profile.html">Back to profile</a></div>';
+          }
         }
       }
 
@@ -205,10 +232,11 @@
           document.querySelectorAll(".level-card").forEach((item) => item.classList.remove("selected"));
           card.classList.add("selected");
           state.selectedLevel = card.dataset.level;
+          document.getElementById("verificationBusinessSection").hidden=state.selectedLevel!=="business";
         });
       });
 
-      const initialLevel = document.querySelector("[data-level='gold']");
+      const initialLevel = document.querySelector("[data-level='silver']");
       if (initialLevel) initialLevel.classList.add("selected");
 
       const docUpload = document.getElementById("docUpload");
@@ -269,6 +297,7 @@
           }
           const key = fileKey(file);
           if (existing.has(key)) continue;
+          if(state.documents.length>=5){skipped++;continue;}
           state.documents.push(file);
           existing.add(key);
         }
@@ -304,8 +333,21 @@
           return;
         }
 
-        const reason = document.getElementById("reason").value.trim();
-        if (reason.length < 20) {
+        let reason = document.getElementById("reason").value.trim();
+        if(state.selectedLevel==="business"){
+          const name=document.getElementById("companyName").value.trim();
+          const site=document.getElementById("companyWebsite").value.trim();
+          const role=document.getElementById("companyRole").value.trim();
+          let parsed=null;
+          try{parsed=new URL(site);}catch{}
+          if(!name||!role||!parsed||parsed.protocol!=="https:"||!parsed.hostname.includes(".")){
+            setStatus("Official company applications need a company name, HTTPS website, and your representative role.",true);
+            return;
+          }
+          reason="Organization: "+name+"\nOfficial website: "+parsed.href+
+            "\nApplicant role: "+role+"\nReason: "+reason;
+        }
+        if (reason.length < 20 || reason.length>2500) {
           setStatus("Please provide at least 20 characters.", true);
           return;
         }
@@ -317,41 +359,37 @@
         status.textContent = "Submitting...";
         status.style.display = "block";
 
+        const uploaded=[];
         try {
-          const documentsData = [];
-          for (const doc of state.documents) {
-            const base64 = await new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result);
-              reader.onerror = () => reject(new Error(`Unable to read ${doc.name}.`));
-              reader.readAsDataURL(doc);
+          const documentsData=[];
+          for(const file of state.documents){
+            const extension=file.type==="application/pdf"?"pdf":
+              file.type==="image/png"?"png":"jpg";
+            const path=state.user.id+"/"+crypto.randomUUID()+"."+extension;
+            const {error}=await supabase.storage.from("verification-proofs").upload(path,file,{
+              upsert:false,contentType:file.type,cacheControl:"120"
             });
-            documentsData.push({
-              name: doc.name,
-              type: doc.type,
-              data: base64
-            });
+            if(error)throw new Error("Could not securely upload "+file.name+".");
+            uploaded.push(path);
+            documentsData.push({name:file.name.slice(0,120),type:file.type,path});
           }
-
-          const result = await createVerificationApplication({
-            userId: state.user.id,
-            verificationLevel: state.selectedLevel,
-            reason,
-            documents: documentsData
+          const result=await createVerificationApplication({
+            userId:state.user.id,
+            userEmail:state.user.email||"",
+            userName:state.user.user_metadata?.full_name||"",
+            verificationType:state.selectedLevel,
+            message:reason,
+            documents:documentsData
           });
-
-          if (result?.error) {
-            status.classList.add("error");
-            status.textContent = `Error: ${result.error.message}`;
-          } else {
-            status.classList.add("success");
-            status.textContent = "Application submitted. We'll review it within 3-5 business days.";
-            document.getElementById("verificationForm").style.display = "none";
-          }
+          if(result?.error)throw new Error(result.error.message||"Verification submission unavailable.");
+          status.classList.add("success");
+          status.textContent="Application received. We will review the evidence and notify you when there is a decision.";
+          document.getElementById("verificationForm").style.display="none";
+          return;
         } catch (error) {
-          console.error("Verification submission error:", error);
+          if(uploaded.length)await supabase.storage.from("verification-proofs").remove(uploaded);
           status.classList.add("error");
-          status.textContent = "Unable to submit the application right now.";
+          status.textContent = error?.message||"Unable to submit the application right now.";
         } finally {
           btn.disabled = false;
         }

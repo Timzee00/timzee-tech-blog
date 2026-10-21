@@ -93,7 +93,7 @@
           <div class="chat-conversation" id="chatConversation" hidden>
             <header class="chat-conversation-header">
               <button class="chat-mobile-back" id="chatBackBtn" type="button" aria-label="Back to chats"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-              <img id="chatAvatar" class="chat-header-avatar" alt="" src="/assets/img/avatar-placeholder.svg">
+              <span id="chatAvatarFrame" class="tz-avatar-verified tz-avatar-verified--md chat-header-avatar-frame"><img id="chatAvatar" class="chat-header-avatar" alt="" src="/assets/img/avatar-placeholder.svg"></span>
               <div class="chat-header-copy">
                 <div class="chat-header-name" id="chatName">Conversation</div>
                 <div class="chat-header-status-row"><span class="chat-live-dot" id="chatLiveDot"></span><span id="chatStatusText">Connecting…</span></div>
@@ -102,25 +102,53 @@
                 <button class="chat-icon-btn" id="chatInfoToggle" type="button" aria-label="Chat details" title="Chat details"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 10.5v5M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
                 <button class="chat-icon-btn" id="chatMenuToggle" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Conversation menu" title="Conversation menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg></button>
                 <div class="chat-header-menu" id="chatHeaderMenu" hidden>
+                  <button type="button" data-chat-menu="details">Conversation details</button>
+                  <button type="button" data-chat-menu="media">Shared media</button>
                   <button type="button" data-chat-menu="search">Search in chat</button>
                   <button type="button" data-chat-menu="mute">Mute notifications</button>
                   <button type="button" data-chat-menu="pin">Pin chat</button>
                   <button type="button" data-chat-menu="settings">Chat settings</button>
+                  <button type="button" data-chat-menu="starred">Starred messages</button>
+                  <button type="button" data-chat-menu="poll" hidden>New group poll</button>
                   <button type="button" data-chat-menu="report">Report</button>
                 </div>
               </div>
             </header>
 
+            <div class="chat-pinned-bar" id="chatPinnedBar" hidden aria-label="Pinned messages"></div>
             <button class="btn ghost" id="loadOlderMessages" type="button" hidden>Load older messages</button>
             <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
 
 
             <form novalidate id="chatForm" class="chat-composer">
-              <div class="chat-attachment-preview" id="chatMediaPreview"></div>
+              <section class="chat-edit-panel" id="chatEditPanel" aria-labelledby="chatEditTitle" hidden>
+                <div class="chat-edit-panel-top"><strong id="chatEditTitle">Edit message</strong><span class="chat-edit-remaining" id="chatEditRemaining">Available for 15 minutes after sending</span></div>
+                <label for="chatEditBody" class="sr-only">Edit message text or media caption</label>
+                <textarea id="chatEditBody" rows="2" maxlength="10000" placeholder="Edit your message…" aria-describedby="chatEditStatus"></textarea>
+                <div class="chat-edit-panel-bottom">
+                  <span id="chatEditStatus" role="status" aria-live="polite">Only the text or caption changes. Attachments stay as sent.</span>
+                  <div class="chat-edit-actions">
+                    <button type="button" class="chat-edit-cancel" id="chatEditCancel">Cancel</button>
+                    <button type="button" class="chat-edit-save" id="chatEditSave">Save edit</button>
+                  </div>
+                </div>
+              </section>
+              <div class="chat-reply-preview" id="chatReplyPreview" hidden aria-label="Replying to message">
+                <div class="chat-reply-marker" aria-hidden="true"></div>
+                <div class="chat-reply-copy"><strong id="chatReplyAuthor">Reply to message</strong><span id="chatReplyExcerpt"></span></div>
+                <button type="button" id="chatReplyCancel" class="chat-reply-cancel" aria-label="Cancel reply" title="Cancel reply">×</button>
+              </div>
+              <div class="chat-attachment-preview" id="chatMediaPreview" aria-live="polite"></div>
+              <div class="chat-attach-menu" id="chatAttachMenu" role="menu" aria-label="Choose attachment type" hidden>
+                <button type="button" role="menuitem" data-attach-kind="photo"><span aria-hidden="true">🖼️</span><span>Photo or video</span></button>
+                <button type="button" role="menuitem" data-attach-kind="camera"><span aria-hidden="true">📷</span><span>Camera</span></button>
+                <button type="button" role="menuitem" data-attach-kind="audio"><span aria-hidden="true">🎵</span><span>Audio</span></button>
+                <button type="button" role="menuitem" data-attach-kind="document"><span aria-hidden="true">📄</span><span>Document or file</span></button>
+              </div>
               <div class="chat-composer-row">
-                <label class="chat-composer-btn" for="chatMedia" title="Attach file" aria-label="Attach file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 6.7-6.7a3.2 3.2 0 0 1 4.5 4.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></label>
+                <button class="chat-composer-btn" id="chatAttachToggle" type="button" title="Choose attachment" aria-label="Choose attachment" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 6.7-6.7a3.2 3.2 0 0 1 4.5 4.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 <input type="file" id="chatMedia" accept="*/*" hidden>
-                <textarea id="chatBody" rows="1" placeholder="Write a message…" autocomplete="off" class="resize-none"></textarea>
+                <textarea id="chatBody" rows="1" placeholder="Write a message… @mention someone" autocomplete="off" class="resize-none"></textarea>
                 <button class="chat-composer-btn" id="recordVoiceBtn" type="button" title="Record voice" aria-label="Record voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="3" width="7" height="12" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 11.5a7 7 0 0 0 14 0M12 18.5v3M8.5 21.5h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
                 <button class="chat-send-btn" type="submit" title="Send message" aria-label="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5 20 12 4 19.5l3-7.5-3-7.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
               </div>
@@ -136,7 +164,7 @@
           </div>
           <div class="chat-info-body">
             <div class="chat-info-profile">
-              <img id="infoAvatar" class="chat-info-avatar" alt="" src="/assets/img/avatar-placeholder.svg">
+              <span id="infoAvatarFrame" class="tz-avatar-verified tz-avatar-verified--xl chat-info-avatar-frame"><img id="infoAvatar" class="chat-info-avatar" alt="" src="/assets/img/avatar-placeholder.svg"></span>
               <div id="infoName" class="chat-info-name">—</div>
               <div id="infoStatus" class="chat-info-status">—</div>
             </div>
@@ -150,6 +178,20 @@
                 <input id="groupNameInput" class="input" type="text" maxlength="80" placeholder="Group name">
                 <textarea id="groupDescriptionInput" class="resize-none input" rows="3" maxlength="300" placeholder="Group description"></textarea>
                 <div class="inline-actions"><button class="btn" id="saveGroupBtn" type="button">Save group</button><button class="btn ghost" id="cancelGroupBtn" type="button">Cancel</button></div>
+              </div>
+              <div class="chat-group-permissions" id="groupPermissionsPanel" hidden>
+                <h4>Group permissions</h4>
+                <label><input type="checkbox" id="groupAdminsOnly"> Admins only can send messages</label>
+                <label><input type="checkbox" id="groupAllowMedia" checked> Allow media messages</label>
+                <label><input type="checkbox" id="groupAllowPolls" checked> Allow group polls</label>
+                <label>Slow mode<select id="groupSlowMode">
+                  <option value="0">Off</option><option value="15">15 seconds</option>
+                  <option value="30">30 seconds</option><option value="60">1 minute</option>
+                  <option value="300">5 minutes</option><option value="600">10 minutes</option>
+                  <option value="3600">1 hour</option>
+                </select></label>
+                <p class="chat-group-permissions-hint">Admins and moderators bypass slow mode. Restrictions are checked by the database.</p>
+                <button type="button" class="btn" id="saveGroupPermissions">Save group permissions</button>
               </div>
             </section>
             <section class="chat-info-section" id="groupMembersSection" hidden>
@@ -176,6 +218,21 @@
           </div>
         </dialog>
 
+        <dialog class="chat-modal-overlay" id="chatForwardModal" aria-labelledby="chatForwardTitle">
+          <div class="chat-modal compact">
+            <div class="chat-modal-head"><h2 id="chatForwardTitle">Forward message</h2>
+              <button class="chat-icon-btn" data-close-modal="chatForwardModal" type="button" aria-label="Close">×</button></div>
+            <p>Choose where to forward this text. Private media is not copied to another conversation.</p>
+            <div class="chat-pick-list" id="chatForwardList"></div>
+          </div>
+        </dialog>
+        <dialog class="chat-modal-overlay" id="chatStarredModal" aria-labelledby="chatStarredTitle">
+          <div class="chat-modal compact">
+            <div class="chat-modal-head"><h2 id="chatStarredTitle">Starred messages</h2>
+              <button class="chat-icon-btn" data-close-modal="chatStarredModal" type="button" aria-label="Close">×</button></div>
+            <div class="chat-pick-list" id="chatStarredList"></div>
+          </div>
+        </dialog>
         <dialog class="chat-modal-overlay" id="chatSettingsModal" aria-labelledby="chatSettingsTitle">
           <div class="chat-modal compact" aria-labelledby="chatSettingsTitle">
             <div class="chat-modal-head"><div><span class="chat-page-kicker">Preferences</span><h2 id="chatSettingsTitle">Chat settings</h2></div><button class="chat-icon-btn" data-close-modal="chatSettingsModal" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
@@ -184,6 +241,39 @@
               <label class="chat-setting-row"><span><strong>Message notifications</strong><small>Keep new-message alerts visible.</small></span><input type="checkbox" data-chat-setting="notifications"></label>
               <label class="chat-setting-row"><span><strong>Enter to send</strong><small>Use Enter to send and Shift+Enter for a new line.</small></span><input type="checkbox" data-chat-setting="enterToSend"></label>
               <label class="chat-setting-row"><span><strong>Compact messages</strong><small>Reduce bubble spacing for busy conversations.</small></span><input type="checkbox" data-chat-setting="compact"></label>
+              <div class="chat-appearance-options">
+                <label>Message text size<select id="chatTextSize">
+                  <option value="0.875">Small</option>
+                  <option value="1">Normal</option>
+                  <option value="1.125">Large</option>
+                  <option value="1.25">Extra large</option>
+                </select></label>
+                <label>Conversation backdrop<select id="chatWallpaper">
+                  <option value="default">Default</option>
+                  <option value="linen">Soft linen</option>
+                  <option value="dark">Midnight</option>
+                  <option value="forest">Forest</option>
+                  <option value="oxblood">Oxblood</option>
+                  <option value="aurora" data-chat-premium>Verified · Aurora</option>
+                  <option value="platinum" data-chat-premium>Verified · Platinum</option>
+                </select></label>
+                <p class="chat-appearance-hint">These settings sync with your account. Aurora and Platinum are reserved for verified members.</p>
+              </div>
+              <label class="chat-setting-row"><span><strong>Read receipts</strong><small>Share when you have opened a chat; switch this off for privacy.</small></span><input type="checkbox" id="chatReadReceipts" checked></label>
+              <label class="chat-setting-row"><span><strong>Show when active in chat</strong><small>Only people you have chatted with or accepted as friends can see recent chat activity.</small></span><input type="checkbox" id="chatShowOnline" checked></label>
+              <div id="chatVerifiedTranslation" class="chat-verified-translation" hidden>
+                <h3>Verified creator · Message translation</h3>
+                <p>When enabled, incoming message text is sent to our external AI translation provider. This is optional and may incur delay or provider limits. Do not enable it for sensitive conversations without consent.</p>
+                <label class="chat-setting-row"><span><strong>Automatically translate incoming messages</strong><small>Off by default. Messages sent to the provider only when enabled.</small></span><input id="chatAutoTranslate" type="checkbox" data-chat-setting="autoTranslate"></label>
+                <label>Translate to
+                  <select id="chatTranslateLanguage">
+                    <option value="en">English</option><option value="fr">French</option><option value="es">Spanish</option>
+                    <option value="pt">Portuguese</option><option value="ar">Arabic</option>
+                    <option value="sw">Swahili</option><option value="ha">Hausa</option><option value="yo">Yoruba</option><option value="ig">Igbo</option>
+                    <option value="de">German</option><option value="zh">Chinese</option><option value="ja">Japanese</option>
+                  </select>
+                </label>
+              </div>
             </div>
           </div>
         </dialog>

@@ -8,7 +8,7 @@
       <script defer src="../assets/js/theme-init.js"></script>
   </head>
   <body class="admin-shell">
-    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <a class="skip-link" href="#adminApp">Skip to main content</a>
     <div class="topbar">
       <div class="container" style="display:flex; align-items:center; justify-content:space-between;">
         <div class="brand">
@@ -22,7 +22,7 @@
       </div>
     </div>
 
-    <main id="main-content" class="container admin-panel" id="adminApp">
+    <main id="adminApp" class="container admin-panel">
       <nav class="admin-nav">
         <button class="active" data-tab="compose">Compose</button>
         <button data-tab="posts">Manage Posts</button>
@@ -31,6 +31,8 @@
         <button data-tab="faq">FAQ</button>
         <button data-tab="curator">🤖 Curator Bot</button>
         <button data-tab="users">Users</button>
+        <button data-tab="verification">Verification reviews</button>
+        <button type="button" data-tab="operations">Operations Brain</button>
         <a href="restrictions.html" class="btn ghost">Account restrictions</a>
         <button data-tab="authors">Authors</button>
         <button data-tab="themes">Themes</button>
@@ -255,6 +257,77 @@
         </div>
       </section>
 
+      <section class="admin-card" data-panel="verification" style="display:none;">
+        <div class="verification-review-top">
+          <div>
+            <h2>Verification review center</h2>
+            <p class="hint">Securely review identity applications, check private evidence, and record accountable decisions. Automated risk scoring never grants identity badges.</p>
+          </div>
+          <button type="button" id="verificationRefresh" class="btn ghost sm">Refresh queue</button>
+        </div>
+        <p id="verificationReviewStatus" class="hint" role="status" aria-live="polite"></p>
+        <div id="verificationQueue" class="verification-review-list"></div>
+        <div class="admin-list-pager">
+          <button type="button" class="btn ghost sm" id="verificationPrev">Previous</button>
+          <span id="verificationPageLabel">Page 1</span>
+          <button type="button" class="btn ghost sm" id="verificationNext">Next</button>
+        </div>
+      </section>
+
+      <section class="admin-card operations-console" data-panel="operations" style="display:none" aria-labelledby="operationsTitle">
+        <div class="operations-intro">
+          <div>
+            <h2 id="operationsTitle">Operations Brain</h2>
+            <p>One place to see verification queues, safety reports, scheduled publishing and automation health. Counts reflect real server data and are never guessed.</p>
+          </div>
+          <button type="button" id="operationsRefresh" class="btn ghost">Refresh operations</button>
+        </div>
+        <p id="operationsStatus" class="operations-status" data-tone="neutral" role="status" aria-live="polite">Open this tab to check platform activity.</p>
+        <section class="operations-section" aria-labelledby="operationsQueueTitle">
+          <h3 id="operationsQueueTitle">Pending work</h3>
+          <div class="operations-grid" id="operationsQueues"></div>
+        </section>
+        <section class="operations-section operations-triage" aria-labelledby="operationsTriageTitle">
+          <div class="operations-triage-toolbar">
+            <div>
+              <h3 id="operationsTriageTitle">Founder review inbox</h3>
+              <p class="operations-note">Review reported content and suspicious forum activity in one place. Decisions are manual; no automatic bans.</p>
+            </div>
+            <div class="operations-triage-controls">
+              <label for="operationsTriageKind">Queue</label>
+              <select id="operationsTriageKind" aria-label="Moderation review queue">
+                <option value="reports">Site reports</option>
+                <option value="community">Community reports</option>
+                <option value="automod">Spam signals</option>
+              </select>
+              <button type="button" class="btn ghost sm" id="operationsTriageRefresh">Refresh queue</button>
+            </div>
+          </div>
+          <p class="operations-status" id="operationsTriageStatus" role="status" aria-live="polite">Choose Operations Brain to load the review inbox.</p>
+          <div id="operationsTriageList" class="operations-triage-list" aria-label="Pending moderation reviews"></div>
+          <div class="operations-triage-pagination">
+            <button type="button" class="btn ghost sm" id="operationsTriagePrev" disabled>Previous</button>
+            <span id="operationsTriagePage" aria-live="polite">Page 1</span>
+            <button type="button" class="btn ghost sm" id="operationsTriageNext" disabled>Next</button>
+          </div>
+        </section>
+        <section class="operations-section" aria-labelledby="operationsJobsTitle">
+          <h3 id="operationsJobsTitle">Background job health</h3>
+          <ul class="operations-list" id="operationsJobs"></ul>
+        </section>
+        <div class="operations-activity-grid">
+          <section class="operations-subpanel" aria-labelledby="operationsAlertsTitle">
+            <h3 id="operationsAlertsTitle">Items to investigate</h3>
+            <ul id="operationsIssues" class="operations-alerts"><li>No data loaded yet.</li></ul>
+          </section>
+          <section class="operations-subpanel" aria-labelledby="operationsAuditTitle">
+            <h3 id="operationsAuditTitle">Recent moderation activity</h3>
+            <ul class="operations-list" id="operationsAudit"></ul>
+          </section>
+        </div>
+        <p id="operationsNote" class="operations-note">Read-only overview. Approvals and sanctions still require authorized review. No paid monitoring service or polling is used.</p>
+      </section>
+
       <section class="admin-card" data-panel="authors" style="display:none;">
         <h2>Content Authors</h2>
         <p class="hint">Manage authors and their posting access. Promote users to author and toggle their active status.</p>
@@ -428,9 +501,9 @@
           </table>
         </div>
 
-        <h3 style="margin-top:20px;">Admin Requests</h3>
+        <h3 style="margin-top:20px;">Admin Requests</h3><p class="hint">Approve or reject applications here; approving an application does not automatically give the applicant elevated permissions. Grant staff access separately in Users.</p>
         <div class="table-wrap">
-          <table class="admin-table">
+          <table class="admin-table admin-review-table">
             <thead>
               <tr>
                 <th>User</th>
@@ -438,13 +511,14 @@
                 <th>Message</th>
                 <th>Date</th>
                 <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="adminRequestTable"></tbody>
           </table>
         </div>
 
-        <h3 style="margin-top:20px;">Content Requests</h3>
+        <h3 style="margin-top:20px;">Content Requests</h3><p class="hint">View each reader request and mark completed after handling it.</p>
         <div class="table-wrap">
           <table class="admin-table">
             <thead>

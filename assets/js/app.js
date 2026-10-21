@@ -33,6 +33,7 @@ import {
   reportAppError
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
+import {mountReaderHome} from "./reader-home.mjs";
 import "./nav.js";
 
 const POSTS_PAGE_SIZE = 24;
@@ -986,6 +987,9 @@ async function boot() {
   setupSearch();
   setupPostActionButtons();
   setupReveal();
+  // Retention is a low-priority, opt-in private enhancement: never hold the
+  // public feed or first meaningful article render behind this request.
+  if(state.user?.id)void mountReaderHome(state.user,{posts:state.posts,categories:state.categories});
 }
 
 boot().catch((error) => {

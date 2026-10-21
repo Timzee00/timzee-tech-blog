@@ -138,6 +138,12 @@
               <option value="other">Other</option>
             </select>
             <input type="text" id="videoTags" placeholder="Tags (comma separated)" style="margin-top: 8px;">
+            <fieldset class="video-creator-controls" style="margin:12px 0;padding:12px;border:1px solid var(--color-border);border-radius:12px">
+              <legend>Video creator controls</legend>
+              <label style="display:flex;gap:8px;margin:8px 0"><input id="videoAllowComments" type="checkbox" checked> Enable commenting</label>
+              <label style="display:flex;gap:8px;margin:8px 0"><input id="videoAllowDownload" type="checkbox" checked> Show download button</label>
+              <small>Disabling downloads removes the built-in download action, but cannot stop screen recording or copying publicly accessible files.</small>
+            </fieldset>
             <label for="videoThumbnail" style="display:block; margin-top: 12px; font-size: 13px; color: var(--muted, #5b6573);">
               Thumbnail (optional — we'll use a video frame if you skip this)
             </label>
@@ -186,6 +192,7 @@
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
+      import {verifiedName,verifiedAvatar,loadVerifiedIdentityMap} from "./assets/js/verified-identity.mjs";
 
       let state = {
         user: null,
@@ -222,6 +229,7 @@
       }
 
       // Load videos
+      let videoCreatorProfiles=new Map();
       let listVersion = 0;
       let loading = false;
       async function loadVideos() {
@@ -244,6 +252,13 @@
               });
           if (version !== listVersion || query !== document.getElementById("videoSearch").value.trim()) return;
           state.videos = offset === 0 ? rows : [...state.videos, ...rows];
+          // Batch once for the visible creator list, never once per video.
+          let identities=new Map();
+          try{
+            identities=await loadVerifiedIdentityMap(supabase,state.videos.map(v=>v.user_id).filter(Boolean));
+          }catch(error){console.warn("Video creator decorations unavailable",error.message);}
+          if(version!==listVersion)return;
+          videoCreatorProfiles=identities;
           renderVideos();
           more.style.display = rows.length === state.limit ? "inline-flex" : "none";
         } catch (error) {
@@ -274,6 +289,10 @@
             </div>
             <div class="video-info">
               <div class="video-title">${escapeHTML(v.title || '')}</div>
+              ${v.user_id ? `<div class="tz-video-card-author">
+                ${verifiedAvatar(videoCreatorProfiles.get(v.user_id)?.avatar_url,videoCreatorProfiles.get(v.user_id),{size:"sm",alt:""})}
+                ${verifiedName(v.author_name||videoCreatorProfiles.get(v.user_id)?.display_name||"Member",videoCreatorProfiles.get(v.user_id),{compact:true})}
+              </div>` : ""}
               <div class="video-meta">
                 <span>👁 ${escapeHTML(String(v.view_count || 0))}</span>
                 <span>❤ ${escapeHTML(String(v.like_count || 0))}</span>
@@ -882,7 +901,9 @@
               description: document.getElementById("videoDescription").value,
               category: document.getElementById("videoCategory").value,
               tags: [...new Set(document.getElementById("videoTags").value.split(/[\s,]+/).map(t => t.trim().replace(/^#/,"").toLowerCase()).filter(t=>/^[a-z0-9_]{1,32}$/.test(t)))],
-              duration: state.selectedVideoDuration || 0
+              duration: state.selectedVideoDuration || 0,
+              allow_comments: document.getElementById("videoAllowComments").checked,
+              allow_download: document.getElementById("videoAllowDownload").checked
             }
           );
 

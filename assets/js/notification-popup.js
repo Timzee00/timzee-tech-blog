@@ -1,9 +1,11 @@
 import { supabase } from "./supabase.js";
+import { loadUserPreferences } from "./user-preferences.js";
 
 const BANNER_KEY = "timzee_last_dismissed_announcement";
 let announcementChannel = null;
 let announcementRequest = 0;
 let displayedAnnouncementId = null;
+let showAnnouncementBanners = true;
 
 function getAnnouncementBody(announcement) {
   return String(announcement?.body ?? announcement?.message ?? "").trim();
@@ -83,6 +85,10 @@ function renderAnnouncementBanner(announcement) {
 
 async function refreshAnnouncementBanner({ announceNew = false } = {}) {
   const request = ++announcementRequest;
+  if(!showAnnouncementBanners){
+    renderAnnouncementBanner(null);
+    return;
+  }
   try {
     const { data, error } = await getAnnouncements();
     if (request !== announcementRequest) return; // Ignore older realtime responses.
@@ -168,6 +174,20 @@ function installStyles() {
 
 export async function initSiteNotifications() {
   installStyles();
+  // Preference is hydrated from the same server-backed settings store.
+  // Critical account emails are not managed by this optional banner filter.
+  try{
+    const preferences=await loadUserPreferences();
+    showAnnouncementBanners=preferences.notifications?.announcements!==false;
+  }catch(error){
+    console.warn("Announcement preferences unavailable",error);
+  }
+  window.addEventListener("timzee:preferences",event=>{
+    const enabled=event.detail?.notifications?.announcements!==false;
+    if(enabled===showAnnouncementBanners)return;
+    showAnnouncementBanners=enabled;
+    void refreshAnnouncementBanner();
+  });
   await refreshAnnouncementBanner();
   setupRealtimeAnnouncements();
 }

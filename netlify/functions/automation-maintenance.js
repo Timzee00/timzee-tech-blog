@@ -33,6 +33,26 @@ exports.handler = async () => {
   }
 
   console.log("Production automation tick completed:", { automation: data });
+  // Identity renewals and privacy retention are server-owned and idempotent.
+  // A paused host delays reminders, but expired badges also disappear instantly
+  // in the frontend when their server-issued expiry timestamp passes.
+  const verification=await supabase.rpc("process_verification_maintenance");
+  if(verification.error){
+    console.error("Verification expiry/profile-visit cleanup failed:",verification.error);
+    throw verification.error;
+  }
+  console.log("Verification lifecycle maintenance completed:",verification.data);
+
+  // One quiet in-app digest per UTC day, only for super admins who opt in
+  // and only when action is actually required. The database guarantees
+  // idempotency, even if two scheduled workers overlap or retry.
+  const digest=await supabase.rpc("process_founder_operations_digest");
+  if(digest.error){
+    console.error("Founder operations digest failed:",digest.error.code||"unknown");
+    throw digest.error;
+  }
+  if(digest.data?.notified)console.log("Founder operations review notifications:",digest.data.notified);
+
   // Expensive shared ranking snapshots are opt-in until the database function
   // and consumption path have passed isolated staging tests.
   try {

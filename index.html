@@ -53,6 +53,7 @@
           <div class="nav-more">
             <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
             <div class="nav-more-menu">
+              <a href="my-tech.html">My Tech · Personalized</a>
               <a href="announcements.html">Announcements</a>
               <a href="ads.html">Advertise</a>
               <a href="newsletter.html">Newsletter</a>
@@ -102,6 +103,37 @@
           </div>
         </div>
         <div class="people-rail" id="suggestedPeopleRail"></div>
+      </section>
+
+      <section class="container tz-reader-home" id="readerJourneySection" aria-labelledby="readerJourneyTitle" hidden>
+        <div class="tz-reader-home-heading">
+          <div>
+            <span class="eyebrow">Your space · Only you</span>
+            <h2 class="section-title" id="readerJourneyTitle">Pick up where you left off</h2>
+            <p class="tagline">Your reading journey and the latest articles from creators you follow, together.</p>
+          </div>
+          <a class="btn ghost sm" id="readerBookmarksLink" href="profile.html?tab=bookmarks">Your saved articles</a>
+        </div>
+        <div class="tz-reader-home-columns">
+          <section id="readerContinueSection" class="tz-reader-home-section" aria-labelledby="readerContinueTitle" hidden>
+            <h3 id="readerContinueTitle">Continue reading</h3>
+            <div id="readerContinue" class="tz-reader-card-grid"></div>
+          </section>
+          <section id="readerFollowingSection" class="tz-reader-home-section" aria-labelledby="readerFollowingTitle" hidden>
+            <h3 id="readerFollowingTitle">From creators you follow</h3>
+            <div id="readerFollowing" class="tz-reader-card-grid"></div>
+          </section>
+          <section id="readerInterestsSection" class="tz-reader-home-section" aria-labelledby="readerInterestsTitle" hidden>
+            <h3 id="readerInterestsTitle">Picked for your interests</h3>
+            <div id="readerInterests" class="tz-reader-card-grid"></div>
+            <a class="tz-reader-interest-manage" href="settings.html#interests">Refine your interests →</a>
+          </section>
+        </div>
+        <div class="tz-reader-home-empty" id="readerJourneyEmpty" hidden>
+          <p>Make Timzee your learning home. Follow a creator from any article, save what matters and return whenever you're ready.</p>
+          <div><a class="btn ghost sm" href="#latest">Discover articles</a>
+          <a class="btn ghost sm" href="settings.html#interests">Choose your interests</a></div>
+        </div>
       </section>
 
       <section class="container" id="latest">

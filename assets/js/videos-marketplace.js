@@ -123,6 +123,8 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
       tags: videoData.tags || [],
       category: videoData.category || "general",
       is_public: videoData.is_public !== false,
+      allow_comments: videoData.allow_comments !== false,
+      allow_download: videoData.allow_download !== false,
       created_at: new Date().toISOString()
     };
 

@@ -3,7 +3,10 @@ import { supabase, getCurrentUser } from "./supabase.js";
 export const DEFAULT_USER_PREFERENCES = {
   appearance: {
     reduceMotion: false,
-    highContrast: false
+    highContrast: false,
+    theme: "system",
+    fontScale: "100",
+    contentDensity: "comfortable"
   },
   notifications: {
     messages: true,
@@ -11,17 +14,23 @@ export const DEFAULT_USER_PREFERENCES = {
     follows: true,
     mentions: true,
     announcements: true,
-    marketplace: true
+    marketplace: true,
+    profileViews: true,
+    operationsDigest: true
   },
   feed: {
     defaultFeed: "for-you",
     showRecommendations: true,
-    rememberFilters: true
+    rememberFilters: true,
+    weeklyReadingGoal: 0
   },
   privacy: {
     allowMessages: true,
     allowRequests: true,
-    showEmail: false
+    showEmail: false,
+    recordProfileVisits: true,
+    shareProfileVisits: false,
+    rememberReading: true
   },
   chat: {
     notifications: true,
@@ -36,7 +45,7 @@ export const DEFAULT_USER_PREFERENCES = {
     showLocation: true
   },
   discussion: {
-    defaultSort: "trending",
+    defaultSort: "active",
     showLiveUpdates: true
   },
   novels: {
@@ -55,17 +64,54 @@ export const DEFAULT_USER_PREFERENCES = {
 };
 
 function storageKey(userId) { return `timzee_user_preferences_v3:${userId || "guest"}`; }
-function deepMerge(base, override) {
-  const output = Array.isArray(base) ? [...base] : { ...base };
-  if (!override || typeof override !== "object") return output;
-  Object.entries(override).forEach(([key, value]) => {
-    if (value && typeof value === "object" && !Array.isArray(value) && output[key] && typeof output[key] === "object") output[key] = deepMerge(output[key], value);
-    else if (key in output) output[key] = value;
-  });
+/* Persist only the supported shape: storage and database JSON are untrusted
+   inputs, and should not be able to replace booleans with objects or overwrite
+   inherited Object properties such as __proto__ and constructor. */
+const PREFERENCE_ENUMS = {
+  "appearance.theme": ["system", "light", "dark"],
+  "appearance.fontScale": ["90", "100", "110", "125"],
+  "appearance.contentDensity": ["comfortable", "compact"],
+  "feed.defaultFeed": ["for-you", "following"],
+  "discussion.defaultSort": ["active", "new", "top", "unanswered"],
+  "novels.fontSize": ["small", "medium", "large", "xlarge"],
+  "novels.readerWidth": ["compact", "comfortable", "wide"]
+};
+function deepMerge(base, override, parentPath = "") {
+  const output = { ...base };
+  if (!override || typeof override !== "object" || Array.isArray(override)) return output;
+  for (const [key, value] of Object.entries(override)) {
+    if (!Object.prototype.hasOwnProperty.call(base, key)) continue;
+    const expected = base[key];
+    const path = parentPath ? parentPath + "." + key : key;
+    if (expected && typeof expected === "object" && !Array.isArray(expected)) {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        output[key] = deepMerge(expected, value, path);
+      }
+      continue;
+    }
+    if (typeof value !== typeof expected || value === null) continue;
+    if (typeof value === "number" && !Number.isFinite(value)) continue;
+    if (path === "feed.weeklyReadingGoal" && ![0,2,4,7].includes(value)) continue;
+    if (typeof value === "string" && (value.length > 80 ||
+      (PREFERENCE_ENUMS[path] && !PREFERENCE_ENUMS[path].includes(value)))) continue;
+    if (typeof value === "string" || typeof value === "boolean" || typeof value === "number") {
+      output[key] = value;
+    }
+  }
   return output;
 }
 export function mergePreferences(value) { return deepMerge(DEFAULT_USER_PREFERENCES, value || {}); }
 export function readLocalPreferences(userId = "guest") { try { return mergePreferences(JSON.parse(localStorage.getItem(storageKey(userId)) || "{}")); } catch (_) { return mergePreferences(); } }
+/* Remove only cosmetic/preference cache, never authentication/session data. */
+export function clearLocalPreferences(userId = "guest") {
+  try {
+    localStorage.removeItem(storageKey(userId));
+    localStorage.removeItem("timzee-ui-appearance");
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 export function writeLocalPreferences(userId, preferences) {
   const merged = mergePreferences(preferences);
   try {
@@ -92,6 +138,6 @@ export async function saveUserPreferences(userId, partial) {
 }
 export function getPreference(path, fallback = undefined, userId = "guest") {
   const parts = String(path || "").split(".").filter(Boolean); let current = readLocalPreferences(userId);
-  for (const part of parts) { if (current == null || typeof current !== "object" || !(part in current)) return fallback; current = current[part]; }
+  for (const part of parts) { if (current == null || typeof current !== "object" || !Object.prototype.hasOwnProperty.call(current, part)) return fallback; current = current[part]; }
   return typeof current === "undefined" ? fallback : current;
 }

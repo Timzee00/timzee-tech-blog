@@ -2,7 +2,7 @@ let channel = null;
 let activeToasts = [];
 let stylesReady = false;
 let currentUserId = null;
-let notificationPreferences = { messages: true, replies: true, follows: true, mentions: true, announcements: true, marketplace: true };
+let notificationPreferences = { messages: true, replies: true, follows: true, mentions: true, announcements: true, marketplace: true, profileViews: true };
 
 function injectStyles() {
   if (stylesReady || document.getElementById("timzee-notification-styles")) return;
@@ -51,6 +51,7 @@ function notificationCategory(notification) {
   if (type.includes("follow") || type.includes("friend")) return "follows";
   if (type.includes("mention")) return "mentions";
   if (type.includes("announcement")) return "announcements";
+  if (type === "profile_view") return "profileViews";
   if (type.includes("market") || type.includes("inquir") || type.includes("listing")) return "marketplace";
   return "replies";
 }
@@ -73,7 +74,7 @@ function showNotificationToast(notification, userId, supabase) {
 }
 
 async function loadNotificationPreferences(supabase, userId) {
-  notificationPreferences = { messages: true, replies: true, follows: true, mentions: true, announcements: true, marketplace: true };
+  notificationPreferences = { messages: true, replies: true, follows: true, mentions: true, announcements: true, marketplace: true, profileViews: true };
   try {
     const profile = await supabase.from("profiles").select("notify_messages,notify_replies,notify_follows,notify_mentions").eq("id", userId).maybeSingle();
     if (profile.data) notificationPreferences = { ...notificationPreferences, messages: profile.data.notify_messages !== false, replies: profile.data.notify_replies !== false, follows: profile.data.notify_follows !== false, mentions: profile.data.notify_mentions !== false };

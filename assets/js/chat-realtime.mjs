@@ -2,7 +2,7 @@
    authority; no public broadcast or presence channel exposes member identity. */
 export function createChatRealtime(client, {
   onStatus = () => {}, onMessage = () => {}, onConnected = () => {},
-  onError = () => {}, canConnect = () => true,
+  onError = () => {}, onReactionsChanged = () => {}, canConnect = () => true,
   setTimer = setTimeout, clearTimer = clearTimeout,
   randomId = () => crypto.randomUUID(), random = Math.random
 } = {}) {
@@ -37,6 +37,14 @@ export function createChatRealtime(client, {
       if (!owns() || payload.new?.thread_id !== currentThread) return;
       Promise.resolve().then(() => { if (owns()) return onMessage(event, payload.new, currentThread); }).catch(onError);
     });
+    for(const event of ['INSERT','UPDATE','DELETE']){
+      current.on('postgres_changes',{
+        event,schema:'public',table:'chat_message_reactions',filter:`thread_id=eq.${currentThread}`
+      },payload=>{
+        if(!owns())return;
+        Promise.resolve().then(()=>onReactionsChanged(currentThread,payload)).catch(onError);
+      });
+    }
     onStatus('connecting');
     connectTimer = setTimer(failed, 10000);
     current.subscribe(status => {

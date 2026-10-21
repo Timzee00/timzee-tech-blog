@@ -23,6 +23,8 @@ import {
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import { safeNotificationPath } from "./notification-links.mjs";
+import {verifiedName,verifiedAvatar,verifiedLevel,verifiedLabel,verifiedFrameClasses,verifiedFrameStyle,FRAME_OPTIONS,FRAME_STYLES} from "./verified-identity.mjs";
+import {mountReadingLibrary} from "./reader-library.mjs";
 import "./nav.js";
 import { submitModerationReport } from "./moderation-reports.mjs";
 
@@ -45,6 +47,7 @@ const state = {
   },
   bookmarks: [],
   notifications: [],
+  visitorInsights: null,
   adminRequest: null
 };
 
@@ -241,7 +244,7 @@ async function loadFriendSummary() {
   if (!friendIds.length) return;
   const profiles = await supabase
     .from("public_profiles")
-    .select("id, display_name, avatar_url")
+    .select("id, display_name, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style")
     .in("id", friendIds);
   state.friendSummary = profiles.data || [];
 }
@@ -312,8 +315,8 @@ function renderProfileFriends() {
     .map(
       (friend) => `
         <div class="friend-pill">
-          <img src="${friend.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"}" alt="friend avatar">
-          <div class="friend-name">${escapeHTML(friend.display_name || "Member")}</div>
+          ${verifiedAvatar(friend.avatar_url,friend,{size:"sm",alt:"Friend portrait"})}
+          <div class="friend-name">${verifiedName(friend.display_name || "Member",friend,{compact:true})}</div>
         </div>
       `
     )
@@ -359,12 +362,26 @@ function renderProfile() {
   if (cover) {
     cover.src = state.profile?.cover_url || "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1200&q=80";
   }
+  const tier=verifiedLevel(state.profile);
+  const hero=document.querySelector(".profile-page .profile-hero");
+  const frame=document.querySelector(".profile-page .profile-avatar-wrap");
+  if(hero){
+    hero.classList.remove("tz-frame","tz-frame--silver","tz-frame--gold",
+      "tz-frame--platinum","tz-frame--business");
+    if(tier){
+      hero.dataset.verificationLevel=tier;
+      hero.classList.add("tz-frame","tz-frame--"+tier);
+      hero.dataset.frameStyle=verifiedFrameStyle(state.profile);
+    }else {delete hero.dataset.verificationLevel;delete hero.dataset.frameStyle;}
+  }
+  if(frame){
+    frame.classList.remove("tz-frame","tz-frame--silver","tz-frame--gold","tz-frame--platinum",
+      "tz-frame--business",...FRAME_STYLES.map(style=>"tz-frame--"+style));
+    if(tier)frame.classList.add(...verifiedFrameClasses(state.profile).split(" "));
+  }
   if (name) {
     const displayName = plainDisplayName(state.profile?.display_name || "Member");
-    const badge = state.profile?.is_verified
-      ? `<span class="verified-badge" title="Verified">✓</span>`
-      : "";
-    name.innerHTML = `${escapeHTML(displayName)}${badge}`;
+    name.innerHTML = verifiedName(displayName,state.profile);
   }
   if (headline) {
     headline.textContent = state.profile?.headline || "Tech community member";
@@ -379,48 +396,104 @@ function renderProfile() {
   }
 }
 
-function renderVerification() {
-  const target = document.getElementById("profileVerification");
-  if (!target) return;
-  const tier = state.profile?.verification_tier || "standard";
-  const verified = !!state.profile?.is_verified;
-  const perks = {
-    standard: [
-      "Standard profile visibility across the community.",
-      "Access to comments, discussions, and messaging.",
-      "Standard support response times."
-    ],
-    pro: [
-      "Verified badge on profile and author cards.",
-      "Priority placement in community directories.",
-      "Early access to new creator tools."
-    ],
-    elite: [
-      "Featured author spotlight placements.",
-      "Fast-track moderation for posts.",
-      "Dedicated creator support channel."
-    ]
-  };
-  const perkList = perks[verified ? tier : "standard"] || perks.standard;
-  if (!verified) {
-    target.innerHTML = `
-      <div class="callout">Standard account (verification is optional)</div>
-      <ul class="perk-list">
-        ${perkList.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}
-      </ul>
-    `;
+function renderVerification(){
+  const target=document.getElementById("profileVerification");
+  if(!target)return;
+  const tier=verifiedLevel(state.profile);
+  const isSelf=Boolean(state.user?.id&&state.user.id===state.viewingId);
+  if(!tier){
+    target.innerHTML='<div class="callout">No verified identity badge yet. All members can still participate in communities, chat and publish content.</div>'+
+      (isSelf?'<a class="btn ghost sm" href="verify.html">Apply for verification</a> <a class="btn ghost sm" href="creator-studio.html">Creator Studio</a>':'');
     return;
   }
-  const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
-  const verifiedAt = state.profile?.verified_at
-    ? new Date(state.profile.verified_at).toLocaleDateString()
-    : null;
-  target.innerHTML = `
-    <div class="verification-tier">Verified ${escapeHTML(tierLabel)}${verifiedAt ? ` · since ${verifiedAt}` : ""}</div>
-    <ul class="perk-list">
-      ${perkList.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}
-    </ul>
-  `;
+  const label=verifiedLabel(state.profile);
+  const benefits={
+    silver:["Original Silver badge across supported social surfaces","Silver profile frames and extended status eligibility","Identity and impersonation reporting tools"],
+    gold:["Original Gold badge and profile themes","Creator publishing tools already available to this account","Verified status features and content insights"],
+    platinum:["Original Platinum badge and premium frames","Professional creator experience","Existing verified publishing and community tools"],
+    business:["Official Organization badge and branded profile frame","Organization identity shown across supported surfaces","Official account protection and content publishing"]
+  };
+  const current=verifiedFrameStyle(state.profile);
+  const gallery=isSelf
+    ? '<section class="tz-frame-selector" aria-label="Portrait frame collection">'+
+      '<h4>My frame collection</h4>'+
+      '<p class="tz-frame-preview-note">Choose a decoration to preview it on your full profile. Save to show it on comments, chats and communities.</p>'+
+      '<div class="tz-frame-gallery" id="profileFrameGallery" role="group" aria-label="Choose a collectible frame">'+
+      FRAME_OPTIONS.map(option=>{
+        const preview={...state.profile,frame_style:option.id};
+        return '<button type="button" class="tz-frame-choice" data-frame-choice="'+option.id+
+          '" aria-label="Preview '+option.title+' frame" aria-pressed="'+String(option.id===current)+'">'+
+          verifiedAvatar(state.profile?.avatar_url,preview,{size:"lg",alt:""})+
+          '<strong>'+option.title+'</strong><small>'+option.description+'</small></button>';
+      }).join("")+'</div>'+
+      '<div class="tz-frame-actions"><button type="button" class="btn sm" id="saveProfileFrame">Apply selected frame</button>'+
+      '<button type="button" class="btn ghost sm" id="cancelProfileFrame">Restore saved frame</button></div>'+
+      '<p class="status" id="profileFrameStatus" role="status" aria-live="polite"></p></section>'
+    : '';
+  target.innerHTML='<div class="verification-tier">'+verifiedName(label,state.profile)+
+    '</div><ul class="perk-list">'+benefits[tier].map(x=>'<li>'+escapeHTML(x)+'</li>').join("")+'</ul>'+(isSelf?'<div class="tz-frame-actions"><a class="btn ghost sm" href="creator-studio.html">Open Creator Studio</a></div>':'')+gallery;
+  if(!isSelf)return;
+  let selected=current;
+  let frameSaving=false;
+  const displayPreview=()=>{
+    const preview={...state.profile,frame_style:selected};
+    const hero=document.querySelector(".profile-page .profile-hero");
+    const avatar=document.querySelector(".profile-page .profile-avatar-wrap");
+    if(hero)hero.dataset.frameStyle=selected;
+    if(avatar){
+      avatar.classList.remove(...FRAME_STYLES.map(x=>"tz-frame--"+x));
+      avatar.classList.add(...verifiedFrameClasses(preview).split(" ").filter(Boolean));
+    }
+    target.querySelectorAll("[data-frame-choice]").forEach(btn=>{
+      btn.setAttribute("aria-pressed",String(btn.dataset.frameChoice===selected));
+    });
+    const save=document.getElementById("saveProfileFrame");
+    if(save)save.disabled=frameSaving||selected===verifiedFrameStyle(state.profile);
+    const restore=document.getElementById("cancelProfileFrame");
+    if(restore)restore.disabled=frameSaving||selected===verifiedFrameStyle(state.profile);
+    target.querySelectorAll("[data-frame-choice]").forEach(btn=>{btn.disabled=frameSaving;});
+  };
+  target.querySelector("#profileFrameGallery")?.addEventListener("click",event=>{
+    const button=event.target.closest("[data-frame-choice]");
+    if(frameSaving||!button||!FRAME_STYLES.includes(button.dataset.frameChoice))return;
+    selected=button.dataset.frameChoice;
+    displayPreview();
+    document.getElementById("profileFrameStatus").textContent=
+      FRAME_OPTIONS.find(option=>option.id===selected)?.title+" preview — not saved yet.";
+  });
+  document.getElementById("cancelProfileFrame")?.addEventListener("click",()=>{
+    if(frameSaving)return;
+    selected=verifiedFrameStyle(state.profile);displayPreview();
+    document.getElementById("profileFrameStatus").textContent="Restored your saved frame.";
+  });
+  document.getElementById("saveProfileFrame")?.addEventListener("click",async event=>{
+    const button=event.currentTarget;
+    if(frameSaving||!state.user||!FRAME_STYLES.includes(selected)||selected===verifiedFrameStyle(state.profile))return;
+    const status=document.getElementById("profileFrameStatus");
+    const submittedFrame=selected;
+    frameSaving=true;
+    displayPreview();
+    status.textContent="Applying frame securely…";
+    try{
+      const result=await supabase.from("profiles").update({frame_style:submittedFrame})
+        .eq("id",state.user.id).select("frame_style").single();
+      if(result.error)throw result.error;
+      if(result.data?.frame_style!==submittedFrame)throw Error("The server did not confirm the selected frame.");
+      state.profile.frame_style=result.data.frame_style;
+      selected=result.data.frame_style;
+      // Keep the existing gallery and its live region mounted: rebuilding the
+      // verification section here would detach status and event listeners.
+      displayPreview();
+      status.textContent="Frame applied! Your decoration will appear across supported social surfaces.";
+    }catch(error){
+      status.textContent=extractErrorMessage(error,"Couldn't apply this frame. Your saved frame is unchanged.");
+      displayPreview();
+    }finally{
+      frameSaving=false;
+      displayPreview();
+    }
+  });
+  displayPreview();
 }
 
 function setupProfileTabs() {
@@ -519,6 +592,7 @@ function renderProfileStats() {
     { label: "Followers", value: state.followersCount },
     { label: "Following", value: state.followingCount },
     { label: "Friends", value: friendValue },
+    ...(state.user?.id===state.viewingId && state.visitorInsights ? [{label:"Profile views · 7 days",value:state.visitorInsights.last_7_days||0}]:[]),
     { label: "Reputation", value: `${points} · ${level}` }
   ]
     .map(
@@ -635,7 +709,7 @@ const NOTIFICATION_CATEGORIES = {
     "discussion_reply",
     "reply"
   ],
-  activity: ["admin_promotion", "verification_status"]
+  activity: ["admin_promotion", "verification_status", "profile_view"]
 };
 
 let activeNotificationTab = "all";
@@ -1333,11 +1407,34 @@ async function boot() {
   await loadAdminRequest();
   renderProfile();
   renderProfileStats();
+  if(state.user?.id && state.viewingId===state.user.id){
+    void supabase.rpc("get_profile_visit_summary").then(({data,error})=>{
+      if(!error&&data){
+        state.visitorInsights=data;
+        renderProfileStats();
+        const target=document.getElementById("profileVisitorInsights");
+        if(target){
+          const visitors=Array.isArray(data.shared_viewers)?data.shared_viewers:[];
+          target.innerHTML='<strong>Visitor insights</strong><p>'+Number(data.today||0)+
+            ' today · '+Number(data.last_7_days||0)+' in 7 days</p>'+
+            (visitors.length?'<p>Visitors who chose to share their identity: '+
+              visitors.map(x=>escapeHTML(x.name||"Member")).join(", ")+'</p>':
+              '<p>Individual visitor names remain private unless they opt in.</p>');
+        }
+      }
+    }).catch(error=>console.warn("Visitor insights unavailable",error));
+  }else if(state.user?.id){
+    // Server deduplicates daily visits and protects visitors who opted out.
+    void supabase.rpc("record_profile_visit",{p_profile_id:state.viewingId})
+      .then(({error})=>{if(error)console.warn("Profile visit was not recorded:",error.message);})
+      .catch(error=>console.warn("Profile visit unavailable",error));
+  }
   renderProfileAbout();
   renderVerification();
   renderProfileFriends();
   renderActivity();
   renderBookmarks();
+  if(state.user?.id===state.viewingId)mountReadingLibrary(state.user);
   renderNotifications();
   document.getElementById("profileVideoUpload").hidden = !state.user || state.user.id !== state.viewingId;
   setupProfileTabs();

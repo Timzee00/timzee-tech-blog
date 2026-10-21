@@ -560,7 +560,7 @@ export async function fetchProfilesByIds(ids = []) {
   if (!list.length) return [];
   const result = await supabase
     .from("public_profiles")
-    .select("id, username, display_name, avatar_url")
+    .select("id, username, display_name, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style")
     .in("id", list);
   return normalizeResponse(result);
 }

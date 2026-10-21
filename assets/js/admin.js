@@ -1,4 +1,7 @@
 import { bindStaffLogin } from "./staff-auth.js";
+import {mountVerificationReview} from "./verification-review-admin.mjs";
+import {mountOperationsConsole} from "./operations-console.mjs";
+import {mountOperationsTriage} from "./operations-triage.mjs";
 import { requireRole, logout, getDisplayName, getUserRole, getSession } from "./auth.js";
 import { supabase as supabaseClient } from "./supabase.js";
 import {
@@ -12,6 +15,7 @@ import {
   fetchNewsletterSignups,
   fetchAdApplications,
   fetchAdminRequests,
+  updateAdminRequestStatus,
   fetchContentRequests,
   fetchPostMedia,
   createCategory,
@@ -1273,7 +1277,7 @@ async function fetchUsers({ search = "", page = 1, perPage = state.userPerPage }
   }
 }
 
-async function updateUserAction(userId, action, tier) {
+async function updateUserAction(userId, action, tier, reason = "") {
   try {
     const session = await getSession();
     const token = session?.access_token;
@@ -1284,7 +1288,7 @@ async function updateUserAction(userId, action, tier) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ userId, action, verificationTier: tier })
+      body: JSON.stringify({ userId, action, verificationTier: tier, reason })
     });
     const result = await parseJsonSafe(response);
     if (!response.ok) {
@@ -1308,7 +1312,7 @@ function renderUsersTable(users) {
     `;
     return;
   }
-  const tierOptions = ["standard", "pro", "elite"];
+  const tierOptions = ["standard", "silver", "gold", "platinum", "business"];
   table.innerHTML = users
     .map((user) => {
       const displayName =
@@ -1326,7 +1330,7 @@ function renderUsersTable(users) {
           <td><span class="${statusClass}">${escapeHTML(status)}</span></td>
           <td>${escapeHTML(verifiedLabel)}</td>
           <td>
-            <select data-action="tier" data-id="${user.id}">
+            <select aria-label="Verification level for ${safeName}" disabled>
               ${tierOptions
                 .map(
                   (option) =>
@@ -1340,12 +1344,13 @@ function renderUsersTable(users) {
           <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : "—"}</td>
           <td>
             <div class="inline-actions">
-              <button class="muted" data-action="${user.is_verified ? "unverify" : "verify"}" data-id="${
+              <button class="muted" data-action="${user.is_verified ? "unverify" : "verification_inbox"}" data-id="${
                 user.id
-              }">${user.is_verified ? "Unverify" : "Verify"}</button>
+              }">${user.is_verified ? "Unverify" : "Review application"}</button>
               <button class="danger" data-action="${status === "suspended" ? "activate" : "suspend"}" data-id="${
                 user.id
               }">${status === "suspended" ? "Activate" : "Suspend"}</button>
+              <a class="muted" href="restrictions.html?user=${encodeURIComponent(user.id)}" title="Review timed feature restrictions for this member">Restrict features</a>
             </div>
           </td>
         </tr>
@@ -1358,9 +1363,18 @@ function renderUsersTable(users) {
       const action = btn.dataset.action;
       const userId = btn.dataset.id;
       if (!userId || !action) return;
+      if(action==="verification_inbox"){document.querySelector('.admin-nav button[data-tab="verification"]')?.click();return;}
       if (action === "suspend" && !await window.appUI.confirm("Suspend this account?")) return;
       if (action === "activate" && !await window.appUI.confirm("Reactivate this account?")) return;
-      const result = await updateUserAction(userId, action);
+      let reason="";
+      if(action==="unverify"){
+        reason=await window.appUI.prompt("Explain why this verified identity is being revoked (minimum 25 characters).",{
+          title:"Revoke verification",label:"Review reason",inputType:"text"
+        });
+        if(reason===null)return;
+        if(String(reason).trim().length<25){window.appUI.toast("Provide a detailed audit reason (25+ characters).");return;}
+      }
+      const result = await updateUserAction(userId, action, null, reason);
       if (result.error) {
         window.appUI.toast(result.error);
         return;
@@ -1567,7 +1581,9 @@ function inspectRequest(kind,id){
     contact:state.contactRequests,
     support:state.supportRequests,
     newsletter:state.newsletterSignups,
-    ads:state.adApplications
+    ads:state.adApplications,
+    admin:state.adminRequests,
+    content:state.contentRequests
   };
   const item=(entries[kind]||[]).find(entry=>String(entry.id)===String(id));
   if(!item)return;
@@ -1578,7 +1594,7 @@ function inspectRequest(kind,id){
   const heading=document.createElement("h3");
   heading.textContent=(kind[0].toUpperCase()+kind.slice(1))+" request";
   dialog.append(heading);
-  const fields=["name","email","company","subject","issue","interest","budget","message","created_at","status"];
+  const fields=["name","user_name","email","user_email","company","subject","issue","interest","budget","query","message","created_at","status"];
   for(const key of fields){
     if(item[key]===null||item[key]===undefined||item[key]==="")continue;
     const section=document.createElement("div");section.className="admin-request-field";
@@ -1796,20 +1812,41 @@ function renderRequests() {
   const adminTable = document.getElementById("adminRequestTable");
   if (adminTable) {
     adminTable.innerHTML = state.adminRequests.length
-      ? state.adminRequests
-          .map(
-            (item) => `
-          <tr>
-            <td>${escapeHTML(item.user_name || "")}</td>
-            <td>${escapeHTML(item.user_email || "")}</td>
-            <td>${clampText(escapeHTML(item.message || ""), 60)}</td>
-            <td>${formatDate(item.created_at)}</td>
-            <td>${requestStatusCell(item.status)}</td>
-          </tr>
-        `
-          )
-          .join("")
-      : "<tr><td colspan=\"5\">No admin requests yet.</td></tr>";
+      ? state.adminRequests.map(item => `
+        <tr>
+          <td data-label="User">${escapeHTML(item.user_name || "Member")}</td>
+          <td data-label="Email">${escapeHTML(item.user_email || "")}</td>
+          <td data-label="Request">${clampText(escapeHTML(item.message || ""), 90)}</td>
+          <td data-label="Date">${formatDate(item.created_at)}</td>
+          <td data-label="Status">${requestStatusCell(item.status)}</td>
+          <td data-label="Actions"><div class="inline-actions">
+            <button class="muted" type="button" data-admin-request="view" data-id="${item.id}">View</button>
+            ${getUserRole(state.user)!=="super" ? '<span class="hint">Super Admin approval required</span>' : ["approved","rejected"].includes(item.status) ? `<button class="muted" type="button" data-admin-request="pending" data-id="${item.id}">Reopen</button>` : `
+              <button class="muted" type="button" data-admin-request="approved" data-id="${item.id}">Approve request</button>
+              <button class="danger" type="button" data-admin-request="rejected" data-id="${item.id}">Reject</button>
+            `}
+          </div></td>
+        </tr>
+      `).join("")
+      : '<tr><td colspan="6">No admin requests yet.</td></tr>';
+    adminTable.querySelectorAll("[data-admin-request]").forEach(button=>{
+      button.addEventListener("click",async()=>{
+        const action=button.dataset.adminRequest;
+        const item=state.adminRequests.find(record=>String(record.id)===button.dataset.id);
+        if(!item)return;
+        if(action==="view"){inspectRequest("admin",item.id);return;}
+        if(!await window.appUI.confirm(action==="approved"
+          ? "Approve this application for administrative review? This does NOT grant administrator permissions; grant roles separately in Users after verifying the account."
+          : action==="rejected" ? "Reject this administrator application?" : "Reopen this application?"))return;
+        button.disabled=true;
+        try{
+          const result=await updateAdminRequestStatus(item.id,action,state.user?.id);
+          if(result.error)throw result.error;
+          await refreshData();renderRequests();
+          window.appUI.toast(action==="approved" ? "Application approved. Grant access separately in Users." : "Request status updated.");
+        }catch(error){button.disabled=false;window.appUI.toast(extractErrorMessage(error,"Could not update request."));}
+      });
+    });
   }
 
   const contentTable = document.getElementById("contentRequestTable");
@@ -1995,6 +2032,9 @@ async function bootDashboard() {
   if (!user) return;
   state.user = user;
   setupTabs();
+  mountVerificationReview();
+  mountOperationsConsole();
+  mountOperationsTriage();
   setupImageInputs();
   setupScheduleToggle();
   bindRichEditorToolbar("postToolbar", "postEditor");
@@ -2028,8 +2068,9 @@ async function bootDashboard() {
   // The modern curator editor is initialized lazily from the Curator tab.
   await setupFaq();
   handleLogout();
-  if (new URLSearchParams(location.search).get("tab") === "curator") {
-    document.querySelector('.admin-nav button[data-tab="curator"]')?.click();
+  const requestedTab=new URLSearchParams(location.search).get("tab");
+  if (requestedTab==="curator"||requestedTab==="operations") {
+    document.querySelector('.admin-nav button[data-tab="'+requestedTab+'"]')?.click();
   }
 }
 

@@ -19,6 +19,7 @@ import {
   incrementPostViews,
   createContentReport,
 } from "./data.js";
+import {verifiedName,verifiedAvatar,verifiedCommentClass} from "./verified-identity.mjs";
 import { setupMentionInput, extractMentions, getMentionedUserIds } from "./mentions.js";
 import { uploadMedia } from "./media.js";
 import { fetchSettings } from "./settings.js";
@@ -40,6 +41,7 @@ import {
   reportAppError
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
+import {mountArticleJourney} from "./reader-journey.mjs";
 import "./nav.js";
 import {stripEditorialScaffolding} from "./public-editorial-content.mjs";
 
@@ -349,22 +351,18 @@ function renderAuthorMini(post) {
   const profile = state.authorProfile;
   const name = profile?.display_name || post.author_name || "Editor";
   const role = profile?.headline || "Contributor";
-  const badge = profile?.is_verified
-    ? `<span class="verified-badge small" title="Verified">✓</span>`
-    : "";
+  // Identity is derived from the protected public profile, not post metadata.
   const badgeSet = buildAuthorBadges(profile);
-  const avatar =
-    profile?.avatar_url ||
-    "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+  const avatar=verifiedAvatar(profile?.avatar_url,profile,{size:"md",alt:"Author portrait"});
   const link = profile?.id ? `profile.html?id=${encodeURIComponent(profile.id)}` : "profile.html";
   const canFollow = state.user && profile?.id && profile.id !== state.user.id;
   const followBtn = canFollow
     ? `<button class="btn ghost" id="followAuthorBtn">${state.isFollowingAuthor ? "Following" : "Follow"}</button>`
     : `<a class="btn ghost" href="${link}">View profile</a>`;
   wrap.innerHTML = `
-    <a href="${link}" aria-label="View profile"><img src="${avatar}" alt="author avatar"></a>
+    <a href="${link}" class="tz-avatar-link" aria-label="View profile">${avatar}</a>
     <div>
-      <div class="author-name">${escapeHTML(name)}${badge}</div>
+      <div class="author-name">${verifiedName(name,profile,{compact:true})}</div>
       <div class="author-role">${escapeHTML(role)}</div>
       ${badgeSet}
     </div>
@@ -378,23 +376,19 @@ function renderAuthorCard(post) {
   const profile = state.authorProfile;
   const name = profile?.display_name || post.author_name || "Editor";
   const role = profile?.headline || "Contributor";
-  const badge = profile?.is_verified
-    ? `<span class="verified-badge small" title="Verified">✓</span>`
-    : "";
+  // Shared identity renderer prevents cross-page badge mismatches.
   const badgeSet = buildAuthorBadges(profile);
   const bio =
     profile?.bio ||
     "Writes about tech, product design, and what to watch in the community this week.";
-  const avatar =
-    profile?.avatar_url ||
-    "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+  const avatar=verifiedAvatar(profile?.avatar_url,profile,{size:"lg",alt:"Author portrait"});
   const link = profile?.id ? `profile.html?id=${encodeURIComponent(profile.id)}` : "profile.html";
   const postsLabel = state.authorPostCount ? `${state.authorPostCount} posts` : "Featured author";
   card.innerHTML = `
     <div class="author-card">
-      <a href="${link}" aria-label="View profile"><img src="${avatar}" alt="author avatar"></a>
+      <a href="${link}" class="tz-avatar-link" aria-label="View profile">${avatar}</a>
       <div>
-        <div class="author-name">${escapeHTML(name)}${badge}</div>
+        <div class="author-name">${verifiedName(name,profile,{compact:true})}</div>
         <div class="author-role">${escapeHTML(role)}</div>
         ${badgeSet}
         <p>${escapeHTML(bio)}</p>
@@ -495,19 +489,19 @@ function renderComments(comments) {
         : "";
       const reportButton = `<button type="button" class="btn ghost small report-comment-btn" data-id="${comment.id}">Report</button>`;
       return `
-        <div class="comment-card" data-reveal id="comment-${comment.id}">
-          <div class="comment-meta"><span>${
+        <div class="comment-card ${verifiedCommentClass(authorProfile)}" data-reveal id="comment-${comment.id}">
+          <div class="comment-meta"><span class="tz-comment-author">${comment.author_id ? verifiedAvatar(authorProfile?.avatar_url,authorProfile,{size:"sm",alt:""}) : ""}${
             comment.author_id
-              ? `<a href="profile.html?id=${encodeURIComponent(comment.author_id)}">${escapeHTML(
-                  comment.author_name || "Member"
+              ? `<a href="profile.html?id=${encodeURIComponent(comment.author_id)}">${verifiedName(
+                  comment.author_name || "Member",authorProfile,{compact:true}
                 )}</a>`
-              : escapeHTML(comment.author_name || "Member")
+              : verifiedName(comment.author_name || "Member",null,{compact:true})
           }</span><span>${timeAgo(comment.created_at)}</span></div>
           ${replySnippet}
           <div>${safeBody}</div>
           ${
-            comment.image
-              ? `<img src="${comment.image}" alt="comment image" style="border-radius:12px; max-height:200px;">`
+            comment.image && isSafeUrl(comment.image)
+              ? `<img src="${escapeHTML(comment.image)}" alt="comment image" loading="lazy" style="border-radius:12px; max-height:200px;">`
               : ""
         }
         <div class="comment-actions">${replyButton || ""}${reportButton}</div>
@@ -897,10 +891,13 @@ function setupCommentForm(post, comments) {
             state.comments = comments;
           }
           if (state.user) {
-            state.commentAuthors[state.user.id] = {
-              id: state.user.id,
-              username: state.profile?.username || "",
-              display_name: getDisplayName(state.user)
+            // Preserve trusted server-issued verification, not client user
+            // metadata. Otherwise the badge disappears just after commenting.
+            const ownProfile=(await fetchProfilesByIds([state.user.id]))[0]||
+              state.commentAuthors[state.user.id]||{};
+            state.commentAuthors[state.user.id]={
+              ...ownProfile,id:state.user.id,
+              display_name:ownProfile.display_name||getDisplayName(state.user)
             };
           }
           renderComments(comments);
@@ -1132,6 +1129,8 @@ async function boot() {
     setupCommentForm(post, state.comments);
     subscribeToComments(post.id);
     setupReveal();
+    // Progress syncing is optional, private and never blocks article rendering.
+    mountArticleJourney({post,user:state.user});
   } catch (err) {
     reportAppError(err, "Post load failed");
     const message = extractErrorMessage(err, "Something went wrong while loading this post.");

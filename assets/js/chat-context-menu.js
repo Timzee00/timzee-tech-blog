@@ -31,9 +31,24 @@ function createMenu() {
   menu.setAttribute("aria-label", "Message actions");
   menu.innerHTML = `
     <button type="button" data-message-action="reply" role="menuitem">Reply</button>
+    <button type="button" data-message-action="edit" role="menuitem" hidden>Edit message</button>
     <button type="button" data-message-action="copy" role="menuitem">Copy message</button>
+    <button type="button" data-message-action="star" role="menuitem" hidden>Star message</button>
+    <button type="button" data-message-action="forward" role="menuitem" hidden>Forward text</button>
+    <button type="button" data-message-action="info" role="menuitem" hidden>Message info</button>
+    <button type="button" data-message-action="pin" role="menuitem" hidden>Pin message</button>
+    <button type="button" data-message-action="unsend" role="menuitem" hidden>Unsend for everyone</button>
     <button type="button" data-message-action="ask-ai" role="menuitem">Ask AI</button>
+    <button type="button" data-message-action="translate" role="menuitem" hidden>Translate message</button>
     <button type="button" data-message-action="copy-media" role="menuitem" hidden>Copy media link</button>
+    <div class="chat-menu-reactions" role="group" aria-label="React to message">
+      <button type="button" data-message-action="react" data-emoji="👍" role="menuitem" aria-label="React with thumbs up">👍</button>
+      <button type="button" data-message-action="react" data-emoji="❤️" role="menuitem" aria-label="React with heart">❤️</button>
+      <button type="button" data-message-action="react" data-emoji="😂" role="menuitem" aria-label="React with laughing face">😂</button>
+      <button type="button" data-message-action="react" data-emoji="😮" role="menuitem" aria-label="React with surprised face">😮</button>
+      <button type="button" data-message-action="react" data-emoji="😢" role="menuitem" aria-label="React with sad face">😢</button>
+      <button type="button" data-message-action="react" data-emoji="🔥" role="menuitem" aria-label="React with fire">🔥</button>
+    </div>
     <button type="button" data-message-action="report" role="menuitem">Report message</button>
   `;
   document.body.appendChild(menu);
@@ -63,7 +78,39 @@ function openMenu(messageEl, x, y) {
   const hasText = Boolean(messageText(messageEl));
   const media = isMediaMessage(messageEl);
   menu.querySelector('[data-message-action="copy"]').hidden = !hasText;
+  menu.querySelector('[data-message-action="translate"]').hidden=!hasText||document.body.dataset.chatVerified!=="true";
   menu.querySelector('[data-message-action="copy-media"]').hidden = !media;
+  const own=messageEl.dataset.messageSelf==="true";
+  const deleted=messageEl.dataset.messageDeleted==="true";
+  const messageTime=Date.parse(messageEl.dataset.messageCreated||"");
+  const canUnsend=own&&!deleted&&Number.isFinite(messageTime)
+    && Date.now()-messageTime<48*3600*1000;
+  menu.querySelector('[data-message-action="info"]').hidden = !own;
+  menu.querySelector('[data-message-action="unsend"]').hidden = !canUnsend;
+  const editItem=menu.querySelector('[data-message-action="edit"]');
+  editItem.hidden=true; // Server is the authority, never the viewer's clock.
+  editItem.textContent="Edit message";
+  if(own&&!deleted&&messageEl.dataset.messageId){
+    const selectedMessage=messageEl;
+    void supabase.rpc("can_edit_chat_message",{
+      p_message_id:messageEl.dataset.messageId
+    }).then(({data,error})=>{
+      if(!error&&data===true&&currentMessage===selectedMessage&&!menu.hidden){
+        editItem.hidden=false;
+        const rect=menu.getBoundingClientRect();
+        menu.style.top=`${Math.min(parseFloat(menu.style.top)||8,Math.max(8,innerHeight-rect.height-8))}px`;
+      }
+    }).catch(()=>{});
+  }
+  const pin=menu.querySelector('[data-message-action="pin"]');
+  pin.hidden=deleted||messageEl.dataset.canPin!=="true";
+  pin.textContent=messageEl.dataset.messagePinned==="true"?"Unpin message":"Pin message";
+  menu.querySelector('[data-message-action="reply"]').hidden=deleted;
+  const star=menu.querySelector('[data-message-action="star"]');
+  star.hidden=deleted;
+  star.textContent=messageEl.dataset.starred==="true"?"Remove star":"Star message";
+  menu.querySelector('[data-message-action="forward"]').hidden=deleted||!hasText||media;
+  menu.querySelector('.chat-menu-reactions').hidden=deleted;
   menu.hidden = false;
   menu.style.left = "0px";
   menu.style.top = "0px";
@@ -83,14 +130,10 @@ function closeMenu(restoreFocus = true) {
 }
 
 function startReply(messageEl) {
-  const input = document.getElementById("chatBody");
-  if (!input || input.disabled || !messageEl.isConnected) return;
-  const text = messageText(messageEl);
-  const author = messageAuthor(messageEl);
-  const quote = text ? `> ${author}: ${text.replace(/\n/g, "\n> ")}\n\n` : `Replying to ${author}: `;
-  input.value = `${quote}${input.value}`;
-  input.focus();
-  input.dispatchEvent(new Event("input", { bubbles: true }));
+  if (!messageEl?.dataset.messageId)return;
+  window.dispatchEvent(new CustomEvent("timzee:chat-reply-message",{
+    detail:{messageId:messageEl.dataset.messageId}
+  }));
 }
 
 async function askAI(messageEl) {
@@ -129,7 +172,48 @@ async function handleMenuAction(event) {
   const messageEl = currentMessage;
   closeMenu();
   try {
-    if (action === "reply") startReply(messageEl);
+    if(action==="edit"){
+      const {data,error}=await supabase.rpc('can_edit_chat_message',{
+        p_message_id:messageEl.dataset.messageId
+      });
+      if(error)throw error;
+      if(data===true){
+        window.dispatchEvent(new CustomEvent("timzee:chat-edit-message",{
+          detail:{messageId:messageEl.dataset.messageId}
+        }));
+      }else{
+        window.siteToast?.("The 15-minute edit window has expired.",{type:"info",title:"Edit unavailable"});
+      }
+    }else if(action==="info"){
+      window.dispatchEvent(new CustomEvent("timzee:chat-message-info",{detail:{messageId:messageEl.dataset.messageId}}));
+    }else if(action==="react"){
+      window.dispatchEvent(new CustomEvent("timzee:chat-react",{
+        detail:{messageId:messageEl.dataset.messageId,emoji:button.dataset.emoji}
+      }));
+    }else if(action==="unsend"){
+      if(!await window.appUI.confirm("Unsend this message for everyone? Recipients may already have downloaded or viewed it."))return;
+      const {error}=await supabase.rpc("unsend_chat_message",{p_message_id:messageEl.dataset.messageId});
+      if(error)throw error;
+      window.dispatchEvent(new CustomEvent("timzee:chat-refresh",{detail:{messageId:messageEl.dataset.messageId}}));
+      window.siteToast?.("Message unsent from the conversation.",{type:"success"});
+    }else if(action==="pin"){
+      const {data,error}=await supabase.rpc("toggle_chat_message_pin",{p_message_id:messageEl.dataset.messageId});
+      if(error)throw error;
+      window.dispatchEvent(new CustomEvent("timzee:chat-refresh",{detail:{messageId:messageEl.dataset.messageId}}));
+      window.siteToast?.(data?"Message pinned.":"Message unpinned.",{type:"success"});
+    }else if(action==="star"){
+      window.dispatchEvent(new CustomEvent('timzee:chat-star',{
+        detail:{messageId:messageEl.dataset.messageId}
+      }));
+    }else if(action==="forward"){
+      window.dispatchEvent(new CustomEvent('timzee:chat-forward',{
+        detail:{messageId:messageEl.dataset.messageId}
+      }));
+    }else if(action==="translate"){
+      window.dispatchEvent(new CustomEvent("timzee:chat-translate",{
+        detail:{messageId:messageEl.dataset.messageId}
+      }));
+    }else if (action === "reply") startReply(messageEl);
     else if (action === "copy") {
       const text = messageText(messageEl);
       if (!text || !navigator.clipboard?.writeText) throw new Error("Clipboard unavailable. Select the message text to copy it.");
