@@ -920,7 +920,7 @@ async function boot() {
     { items: [], nextCursor: null, hasMore: false },
     "posts"
   );
-  const adsPromise = softTimeout(fetchAds({ status: "active" }), [], "ads");
+  const adsPromise = softTimeout(fetchAds({ status: "active", limit: 8 }), [], "ads");
   const boardsPromise = softTimeout(
     supabaseForEngagement.rpc("get_popular_discussion_topics",{limit_count:5})
       .then(({data,error})=>{if(error)throw error;return data||[];}),
