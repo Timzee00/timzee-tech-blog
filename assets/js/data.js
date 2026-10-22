@@ -15,7 +15,13 @@ export async function fetchCategories() {
 }
 
 export async function fetchPosts({ status, contentType, limit = null, offset = 0 } = {}) {
-  let query = supabase.from("posts").select("*").order("created_at", { ascending: false });
+  // Public listing cards never need multi-kilobyte article bodies.
+  // Keep full records for editorial/admin screens and single-post lookups.
+  const isPublicList=String(status||"").toLowerCase()==="published";
+  const fields=isPublicList
+    ?"id,title,slug,category_id,author_id,author_name,cover,tags,created_at,updated_at,status,pinned,views,publish_at,content_type,feed_excerpt"
+    :"*";
+  let query = supabase.from("posts").select(fields).order("created_at", { ascending: false });
   let normalized = "";
   if (status) {
     normalized = String(status).toLowerCase();
@@ -34,7 +40,7 @@ export async function fetchPosts({ status, contentType, limit = null, offset = 0
   }
   // A public home feed must not download every full-length post ever written.
   // Other privileged callers retain their existing behavior until migrated.
-  if (limit !== null && limit !== undefined) {
+  if (isPublicList || (limit !== null && limit !== undefined)) {
     const pageSize = Math.max(1, Math.min(50, Math.trunc(Number(limit) || 24)));
     const start = Math.max(0, Math.trunc(Number(offset) || 0));
     query = query.range(start, start + pageSize - 1);
@@ -290,9 +296,10 @@ export async function searchPosts({ query = "", tags = [] } = {}) {
   let filterTags = Array.isArray(tags) ? tags.filter(Boolean) : [];
   let request = supabase
     .from("posts")
-    .select("*")
+    .select("id,title,slug,category_id,author_id,author_name,cover,tags,created_at,status,views,publish_at,content_type,feed_excerpt")
     .or("status.is.null,status.eq.published,status.eq.scheduled")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(30);
 
   if (searchQuery) {
     request = request.textSearch("search_vector", searchQuery, {
