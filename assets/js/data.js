@@ -14,6 +14,43 @@ export async function fetchCategories() {
   return normalizeResponse(result);
 }
 
+// Never include full HTML article bodies in cards, search results or paged feeds.
+export const POST_PREVIEW_COLUMNS =
+  "id,title,slug,category_id,author_id,author_name,cover,tags,created_at,publish_at,status,pinned,views,content_type,feed_excerpt";
+
+// Stable cursor paging: (created_at,id) breaks timestamp ties so neither
+// duplicate nor skipped articles appear when many posts share one timestamp.
+export async function fetchFeedPosts({limit=24,cursor=null,categoryId=null,contentType=null}={}){
+  const pageSize=Math.max(1,Math.min(50,Math.trunc(Number(limit)||24)));
+  let query=supabase.from("posts")
+    .select(POST_PREVIEW_COLUMNS)
+    .eq("status","published")
+    .order("created_at",{ascending:false})
+    .order("id",{ascending:false});
+  if(categoryId){
+    if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(String(categoryId)))
+      throw Error("Invalid category.");
+    query=query.eq("category_id",categoryId);
+  }
+  if(contentType)query=query.eq("content_type",contentType);
+  if(cursor){
+    const created=String(cursor.created_at||"");
+    const id=String(cursor.id||"");
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?$/.test(created)||
+       !Number.isFinite(Date.parse(created))||
+       !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))
+      throw Error("Invalid feed cursor.");
+    query=query.or("created_at.lt."+created+",and(created_at.eq."+created+",id.lt."+id+")");
+  }
+  const {data,error}=await query.limit(pageSize+1);
+  if(error)throw error;
+  const rows=Array.isArray(data)?data:[];
+  const items=rows.slice(0,pageSize);
+  const last=items.at(-1);
+  return {items,hasMore:rows.length>pageSize,
+    nextCursor:last?{created_at:last.created_at,id:last.id}:null};
+}
+
 export async function fetchPosts({ status, contentType, limit = null, offset = 0 } = {}) {
   let query = supabase.from("posts").select("*").order("created_at", { ascending: false });
   let normalized = "";
@@ -290,9 +327,11 @@ export async function searchPosts({ query = "", tags = [] } = {}) {
   let filterTags = Array.isArray(tags) ? tags.filter(Boolean) : [];
   let request = supabase
     .from("posts")
-    .select("*")
-    .or("status.is.null,status.eq.published,status.eq.scheduled")
-    .order("created_at", { ascending: false });
+    .select(POST_PREVIEW_COLUMNS)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(40);
 
   if (searchQuery) {
     request = request.textSearch("search_vector", searchQuery, {
