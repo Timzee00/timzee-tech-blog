@@ -9,8 +9,6 @@ import {
   fetchPosts,
   fetchFeedPosts,
   fetchAds,
-  fetchDiscussionTopics,
-  fetchDiscussionMessages,
   searchPosts,
   fetchTopProfiles,
   createContentRequest,
@@ -55,7 +53,6 @@ const state = {
   settings: null,
   ads: [],
   discussionTopics: [],
-  discussionMessages: [],
   activeTags: [],
   leaderboard: [],
   suggestedPeople: []
@@ -295,22 +292,13 @@ function renderPopularTopics() {
     return;
   }
 
-  const messageCounts = {};
-  state.discussionMessages.forEach((message) => {
-    messageCounts[message.topic_id] = (messageCounts[message.topic_id] || 0) + 1;
-  });
-
-  const scored = [...state.discussionTopics].sort((a, b) => {
-    const aScore = (messageCounts[a.id] || 0) * 2;
-    const bScore = (messageCounts[b.id] || 0) * 2;
-    if (aScore !== bScore) return bScore - aScore;
-    return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
-  });
-
-  const topTopics = scored.slice(0, 5);
+  // The database returns a bounded, sorted list with true reply totals.
+  // Downloading every discussion message just to count replies is O(all replies)
+  // and would collapse when the forum reaches millions of messages.
+  const topTopics = state.discussionTopics.slice(0,5);
   track.innerHTML = topTopics
     .map((topic) => {
-      const count = messageCounts[topic.id] || 0;
+      const count = Math.max(0, Number(topic.reply_count) || 0);
       const mediaUrl = topic.media_url && isSafeUrl(topic.media_url) ? escapeHTML(topic.media_url) : "";
       const media =
         topic.media_type === "video" && mediaUrl
@@ -933,8 +921,11 @@ async function boot() {
     "posts"
   );
   const adsPromise = softTimeout(fetchAds({ status: "active" }), [], "ads");
-  const boardsPromise = softTimeout(fetchDiscussionTopics(), [], "discussion topics");
-  const messagesPromise = softTimeout(fetchDiscussionMessages(), [], "discussion messages");
+  const boardsPromise = softTimeout(
+    supabaseForEngagement.rpc("get_popular_discussion_topics",{limit_count:5})
+      .then(({data,error})=>{if(error)throw error;return data||[];}),
+    [], "popular discussions"
+  );
   const leaderboardPromise = softTimeout(fetchTopProfiles(5), [], "leaderboard");
 
   // First meaningful content does not wait for sidebar widgets, identity,
@@ -976,16 +967,14 @@ async function boot() {
   }
 
   // Secondary widgets are deliberately separated from the article render.
-  const [ads, discussionTopics, discussionMessages, leaderboard, suggestedPeople] = await Promise.all([
+  const [ads, discussionTopics, leaderboard, suggestedPeople] = await Promise.all([
     adsPromise,
     boardsPromise,
-    messagesPromise,
     leaderboardPromise,
     softTimeout(fetchSuggestedPeople(state.user?.id || null, 8), [], "suggested people")
   ]);
   state.ads = ads;
   state.discussionTopics = discussionTopics;
-  state.discussionMessages = discussionMessages;
   state.leaderboard = leaderboard;
   state.suggestedPeople = suggestedPeople;
   renderTrending(state.activeCategory);
