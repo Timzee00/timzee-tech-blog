@@ -938,6 +938,9 @@ async function boot() {
   renderNav(state.categories);
   renderCategories();
   renderLists();
+  // These rankings are independent of login and sidebar data.
+  renderTrending(state.activeCategory);
+  renderPopular();
   renderTagFilters();
   setupTagFilters();
   setupSearch();
@@ -977,8 +980,6 @@ async function boot() {
   state.discussionTopics = discussionTopics;
   state.leaderboard = leaderboard;
   state.suggestedPeople = suggestedPeople;
-  renderTrending(state.activeCategory);
-  renderPopular();
   renderPopularTopics();
   renderLeaderboard();
   renderSuggestedPeople();
