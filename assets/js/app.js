@@ -224,7 +224,7 @@ function fallbackFilterPosts(posts, query = "", tags = []) {
     const matchesTags = !activeTags.length || activeTags.every((tag) => postTags.includes(tag));
     const matchesQuery =
       !search ||
-      [post.title, stripHTML(stripEditorialScaffolding(post.content || "")), post.summary, postTags.join(" ")].some((text) =>
+      [post.title, stripHTML(stripEditorialScaffolding(post.feed_excerpt || post.content || "")), post.summary, postTags.join(" ")].some((text) =>
         (text || "").toLowerCase().includes(search)
       );
     return matchesTags && matchesQuery;
@@ -244,7 +244,7 @@ function buildPostCard(post, compact = false) {
     .join("");
   const publishedAt = post.publish_at || post.created_at;
   const title = compact ? clampText(post.title || "", 60) : post.title || "";
-  const excerptText = clampText(stripHTML(stripEditorialScaffolding(post.content || "")), 140);
+  const excerptText = clampText(stripHTML(stripEditorialScaffolding(post.feed_excerpt || post.content || "")), 140);
   const excerpt = compact ? "" : `<div class="post-card-excerpt">${escapeHTML(excerptText)}</div>`;
   const pin = post.pinned ? `<span class="chip">Pinned</span>` : "";
   const authorName = post.author_name || "Timzee Tech Hub";
