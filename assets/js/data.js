@@ -20,6 +20,18 @@ export const POST_PREVIEW_COLUMNS =
 
 // Stable cursor paging: (created_at,id) breaks timestamp ties so neither
 // duplicate nor skipped articles appear when many posts share one timestamp.
+// Cursor text is validation-only input; never concatenate unchecked values
+// into a PostgREST logical filter (both timestamps and IDs are untrusted).
+function requirePageCursor(cursor){
+  const created=String(cursor?.created_at||"");
+  const id=String(cursor?.id||"");
+  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?$/.test(created)||
+     !Number.isFinite(Date.parse(created))||
+     !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))
+    throw Error("Invalid page cursor.");
+  return {created,id};
+}
+
 export async function fetchFeedPosts({limit=24,cursor=null,categoryId=null,contentType=null}={}){
   const pageSize=Math.max(1,Math.min(50,Math.trunc(Number(limit)||24)));
   let query=supabase.from("posts")
@@ -34,12 +46,7 @@ export async function fetchFeedPosts({limit=24,cursor=null,categoryId=null,conte
   }
   if(contentType)query=query.eq("content_type",contentType);
   if(cursor){
-    const created=String(cursor.created_at||"");
-    const id=String(cursor.id||"");
-    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?$/.test(created)||
-       !Number.isFinite(Date.parse(created))||
-       !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))
-      throw Error("Invalid feed cursor.");
+    const {created,id}=requirePageCursor(cursor);
     query=query.or("created_at.lt."+created+",and(created_at.eq."+created+",id.lt."+id+")");
   }
   const {data,error}=await query.limit(pageSize+1);
@@ -91,6 +98,31 @@ export async function fetchPosts({ status, contentType, limit = null, offset = 0
     });
   }
   return rows;
+}
+
+// Article comments use the same bounded keyset strategy. The server-side
+// (post_id,created_at,id) partial index avoids a deep OFFSET scan.
+export async function fetchPostCommentPage({postId,cursor=null,limit=40}={}){
+  if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(String(postId||"")))
+    throw Error("Invalid article.");
+  const pageSize=Math.max(1,Math.min(60,Math.trunc(Number(limit)||40)));
+  let query=supabase.from("comments")
+    .select("id,post_id,author_id,author_name,body,image,created_at,status,likes,mentions,reply_to,is_edited,edited_at")
+    .eq("post_id",postId)
+    .eq("status","approved")
+    .order("created_at",{ascending:true})
+    .order("id",{ascending:true});
+  if(cursor){
+    const {created,id}=requirePageCursor(cursor);
+    query=query.or("created_at.gt."+created+",and(created_at.eq."+created+",id.gt."+id+")");
+  }
+  const {data,error}=await query.limit(pageSize+1);
+  if(error)throw error;
+  const rows=Array.isArray(data)?data:[];
+  const items=rows.slice(0,pageSize);
+  const last=items.at(-1);
+  return {items,hasMore:rows.length>pageSize,
+    nextCursor:last?{created_at:last.created_at,id:last.id}:null};
 }
 
 export async function fetchPostMedia(postId) {
@@ -165,10 +197,11 @@ export async function fetchThemes() {
   return normalizeResponse(result);
 }
 
-export async function fetchAds({ status, placement } = {}) {
+export async function fetchAds({ status, placement, limit=null } = {}) {
   let query = supabase.from("ads").select("*").order("created_at", { ascending: false });
   if (status) query = query.eq("status", status);
   if (placement) query = query.eq("placement", placement);
+  if(limit!==null)query=query.limit(Math.max(1,Math.min(50,Math.trunc(Number(limit)||8))));
   const result = await query;
   return normalizeResponse(result);
 }
