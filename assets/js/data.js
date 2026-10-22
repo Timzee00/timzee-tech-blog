@@ -131,7 +131,8 @@ export async function fetchPostMedia(postId) {
     .from("post_media")
     .select("*")
     .eq("post_id", postId)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .limit(24);
   return normalizeResponse(result);
 }
 
