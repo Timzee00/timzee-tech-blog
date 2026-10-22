@@ -923,7 +923,19 @@ async function boot() {
   const adsPromise = softTimeout(fetchAds({ status: "active", limit: 8 }), [], "ads");
   const boardsPromise = softTimeout(
     supabaseForEngagement.rpc("get_popular_discussion_topics",{limit_count:5})
-      .then(({data,error})=>{if(error)throw error;return data||[];}),
+      .then(async ({data,error})=>{
+        if(error)throw error;
+        const ranked=(data||[]).slice(0,5);
+        if(!ranked.length)return [];
+        // The ranking RPC carries counts but not images. A single bounded
+        // public lookup preserves visual covers without fetching all topics.
+        const media=await supabaseForEngagement.from("discussion_topics")
+          .select("id,media_url,media_type")
+          .in("id",ranked.map(topic=>topic.id)).limit(5);
+        if(media.error)return ranked;
+        const byId=new Map((media.data||[]).map(item=>[item.id,item]));
+        return ranked.map(topic=>({...topic,...(byId.get(topic.id)||{})}));
+      }),
     [], "popular discussions"
   );
   const leaderboardPromise = softTimeout(fetchTopProfiles(5), [], "leaderboard");
