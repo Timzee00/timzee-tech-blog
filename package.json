@@ -9,7 +9,9 @@
     "check": "node scripts/validate-migration-versions.mjs && node scripts/validate-page-links.mjs && node scripts/validate-production-config.mjs && node scripts/check-syntax.mjs && node --test tests/production-media-smoke.test.cjs tests/community-forums.test.cjs tests/community-expansion.test.cjs && node --test tests/community-ranking-v2.test.cjs tests/community-feed-pagination.test.cjs tests/settings-center.test.cjs tests/site-hardening.test.cjs tests/verification-frame-collection.test.cjs tests/verified-frame-gallery.test.cjs tests/verified-identity-cache.test.cjs tests/operations-inbox.test.cjs tests/founder-operations-digest.test.cjs tests/reader-retention.test.cjs tests/weekly-learning-goal.test.cjs tests/reader-interest-ranker.test.cjs tests/operations-console.test.cjs tests/creator-studio.test.cjs && node --test tests/atomic-moderation.test.cjs tests/scheduled-publisher.test.cjs",
     "build": "npm run check && node scripts/build-site.mjs",
     "test": "node --test tests/*.test.cjs",
-    "test:browser": "npm run build && playwright test"
+    "test:browser": "npm run build && playwright test",
+    "brand:audit": "node scripts/audit-brand-transition.mjs --summary",
+    "brand:check": "node scripts/audit-brand-transition.mjs --summary && node --test tests/brand-transition.test.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.116.0",
