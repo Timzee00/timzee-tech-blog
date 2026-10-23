@@ -1,6 +1,6 @@
 # Connected workspaces and Live Spaces — implementation contract
 
-Status: architecture and release gates; **not yet implemented or deployed**.
+Status: Creator Studio, team workspaces, Spaces UI, RLS and server token handling exist on main, but **live-provider audio and full E2E remain unverified on paused hosting**.
 All features share one authenticated identity but have separate permissions and budgets.
 
 ## Identity and access
@@ -41,3 +41,9 @@ All cross-feature links must use immutable entity IDs, preserve attribution, and
 - Validate RLS with anon/authenticated and denied cross-tenant operations.
 - Test audio on Android Chrome, iOS Safari, desktop Chrome/Firefox with microphone revoked/poor network.
 - Ensure paused Netlify deployment is resumed intentionally only after passing gates.
+
+## Current safety changes
+- The browser reads a no-store, boolean-only provider configuration endpoint. Without provider configuration, room scheduling remains possible, but a user cannot start an audio-less live room.
+- Expired rooms are hidden from live discovery pending server status cleanup.
+- Cancelling a scheduled room does not require an audio-provider delete request.
+- Database `spaces_start` now records the actual start instant; credentials and end-to-end audio still require testing.

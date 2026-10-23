@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const tabs=["live","upcoming","mine","here"];
 const q=new URLSearchParams(location.search);
-const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set()};
+const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),audioConfigured:false,capabilityChecked:false};
 const el=(tag,text="",className="")=>{const item=document.createElement(tag);item.textContent=String(text);if(className)item.className=className;return item};
 const alertStatus=(message,tone="neutral")=>{const s=$("spacesStatus");s.textContent=message;s.dataset.tone=tone};
 const audioStatus=message=>$("spaceAudioStatus").textContent=message;
@@ -12,6 +12,27 @@ function validId(value){return UUID.test(String(value||""))}
 function authRequired(){if(state.user)return true;alertStatus("Sign in to host or join live audio.","error");return false}
 const button=(text,onclick)=>{const b=el("button",text,"btn ghost sm");b.type="button";b.addEventListener("click",onclick);return b};
 const dateLabel=value=>{const date=new Date(value);return Number.isFinite(date.getTime())?date.toLocaleString():"Unscheduled"};
+const roomExpired=room=>room?.status==="live"&&Number.isFinite(Date.parse(room.starts_at))&&
+ Date.now()>=Date.parse(room.starts_at)+Math.max(1,Number(room.max_duration_minutes)||30)*60000;
+async function loadAudioCapabilities(){
+ try{
+  const response=await fetch("/.netlify/functions/spaces-capabilities",{method:"GET",cache:"no-store"});
+  const data=await response.json();
+  state.audioConfigured=response.ok&&data.audioConfigured===true;
+ }catch(error){
+  console.warn("Audio provider readiness unavailable:",error);
+  state.audioConfigured=false;
+ }finally{
+  state.capabilityChecked=true;
+  const option=$("spacesTiming").querySelector('option[value="now"]');
+  if(option)option.disabled=!state.audioConfigured;
+  if(!state.audioConfigured&&$("spacesTiming").value==="now"){
+   $("spacesTiming").value="later";
+   $("spacesDateField").hidden=false;
+  }
+ }
+ return state.audioConfigured;
+}
 async function loadRooms(){
  const rows=success(await supabase.from("spaces_rooms")
   .select("id,owner_id,workspace_id,post_id,community_id,title,description,visibility,status,starts_at,capacity,max_duration_minutes,allow_requests")
@@ -20,7 +41,7 @@ async function loadRooms(){
 }
 function visibleRooms(){
  const room=state.rooms;
- if(state.tab==="live")return room.filter(r=>r.status==="live");
+ if(state.tab==="live")return room.filter(r=>r.status==="live"&&!roomExpired(r));
  if(state.tab==="upcoming")return room.filter(r=>r.status==="scheduled");
  if(state.tab==="mine")return state.user?room.filter(r=>r.owner_id===state.user.id):[];
  const here=q.get("community")||q.get("post")||q.get("workspace");
@@ -63,6 +84,9 @@ function showCreate(show){$("spacesCreate").hidden=!show;if(show){$("spacesCreat
 async function createRoom(event){
  event.preventDefault();if(!authRequired()||state.busy)return;
  const form=event.currentTarget,f=Object.fromEntries(new FormData(form).entries());
+ if(f.timing==="now"&&!state.audioConfigured){
+  alertStatus("Live audio is not configured. You can schedule a Space, but cannot go live yet.","error");return;
+ }
  const now=new Date();
  const starts=f.timing==="now"?now:new Date(f.starts_at);
  if(!Number.isFinite(starts.getTime())||starts.getTime()<now.getTime()-60000) {
@@ -83,7 +107,7 @@ async function createRoom(event){
    if(!started)throw Error("Room created but could not go live. Open it to start when eligible.");
   }
   form.reset();showCreate(false);await loadRooms();await openRoom(room.id);
-  alertStatus("Space created. Audio connection requires a configured provider.","success");
+  alertStatus(f.timing==="now"?"Space is live; join to connect your microphone.":"Space scheduled. Audio must be configured before going live.","success");
  }catch(e){alertStatus(e.message||"Could not create Space.","error")}
  finally{state.busy=false;$("spacesSubmit").disabled=false}
 }
@@ -112,7 +136,7 @@ function renderDetail(){
  const r=state.room;if(!r)return;
  $("spaceTitle").textContent=r.title;
  $("spaceDescription").textContent=r.description||"Live technology conversation";
- $("spaceLiveBadge").textContent=r.status==="live"?"● LIVE":r.status==="scheduled"?"◷ UPCOMING":"ENDED";
+ $("spaceLiveBadge").textContent=roomExpired(r)?"TIME ENDED":r.status==="live"?"● LIVE":r.status==="scheduled"?"◷ UPCOMING":"ENDED";
  $("spaceLiveBadge").classList.toggle("space-upcoming-badge",r.status!=="live");
  $("spaceMeta").textContent=dateLabel(r.starts_at)+" · "+r.visibility+" · "+r.capacity+
  " seats · "+r.max_duration_minutes+" min max";
@@ -125,8 +149,8 @@ function renderDetail(){
 function configureControls(){
  const room=state.room,host=Boolean(room&&state.user?.id===room.owner_id);
  const live=room?.status==="live",scheduled=room?.status==="scheduled";
- $("spaceJoin").hidden=state.joined||Boolean(room&&room.status!=="live");
- $("spaceStart").hidden=!host||!scheduled;
+ $("spaceJoin").hidden=state.joined||!state.audioConfigured||Boolean(room&&(room.status!=="live"||roomExpired(room)));
+ $("spaceStart").hidden=!host||!scheduled||!state.audioConfigured;
  $("spaceEnd").hidden=!host;
  $("spaceEnd").textContent=room?.status==="ended"?"Confirm audio stopped":"End room";
  $("spaceLeave").hidden=!state.joined;
@@ -278,6 +302,7 @@ async function leave(callRpc=true){
 }
 async function goLive(){
  if(!state.roomId)return;
+ if(!state.audioConfigured){alertStatus("Live audio is not configured. Schedule the room until audio is connected.","error");return;}
  try{const okay=success(await supabase.rpc("spaces_start",{p_room:state.roomId}));
   if(!okay)throw Error("Space cannot start yet or has already ended.");
   await refreshRoom();await loadRooms();alertStatus("Your Space is live.","success");
@@ -297,14 +322,15 @@ async function providerControl(action,userId=null){
 async function endRoom(){
  if(!state.roomId||!state.room||!confirm("End this room and disconnect everyone?"))return;
  try{
+  const hadAudio=state.room.status==="live";
   if(state.room.status!=="ended"){
    const okay=success(await supabase.rpc("spaces_end",{p_room:state.roomId}));
    if(!okay)throw Error("Room was already ended.");
   }
   // DeleteRoom is authorized separately and disconnects all LiveKit tracks.
-  await providerControl("end");
+  if(hadAudio)await providerControl("end");
   await leave();await refreshRoom();
-  alertStatus("Room and voice session ended.","success");
+  alertStatus(hadAudio?"Room and voice session ended.":"Scheduled room cancelled.","success");
  }catch(e){
   await refreshRoom();
   alertStatus("The room may be ended in the database, but audio shutdown was not confirmed: "+
@@ -387,9 +413,10 @@ async function react(symbol){
  }catch(error){alertStatus("Reaction unavailable on this connection.","error")}
 }
 async function init(){
+ await loadAudioCapabilities();
  state.user=await getCurrentUser().catch(()=>null);
  if(!state.user)alertStatus("You can browse public rooms. Sign in to speak or host.");
- else {alertStatus("Find a room or create one. Audio requires a configured provider.");await loadWorkspaces()}
+ else {alertStatus(state.audioConfigured?"Explore or create a Space. Microphone starts muted.":"You can schedule Spaces, but live audio is not configured yet.");await loadWorkspaces()}
  const linkedPost=q.get("post"),linkedCommunity=q.get("community");
  if(validId(linkedPost))$("spacesPostId").value=linkedPost;
  if(validId(linkedCommunity))$("spacesCommunityId").value=linkedCommunity;
