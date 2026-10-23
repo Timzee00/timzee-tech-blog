@@ -43,7 +43,10 @@ test("scheduled cleanup propagates provider failures instead of claiming success
 test("worker cannot run without server-owned database credentials",async()=>{
  const exports={};
  new Function("require","exports","process","console",worker)(
-  ()=>{throw Error("Should fail before import use")},exports,{env:{}},{log(){}}
+  name=>name==="@supabase/supabase-js"
+   ?{createClient:()=>{throw Error("Must not create a client")}}
+   :{expireSpaces:async()=>{throw Error("Must not expire rooms")}},
+  exports,{env:{}},{log(){}}
  );
  await assert.rejects(exports.handler(),/not configured/);
 });
