@@ -21,11 +21,16 @@ exports.handler=async event=>{
     const index=Number(event.queryStringParameters?.proofIndex);
     if(id){
       if(!uuid.test(id)||!Number.isInteger(index)||index<0||index>4)return json(400,{error:"Invalid evidence request."});
-      const {data,error,count}=await db.from("verification_applications")
-        .select("id,documents").eq("id",id).maybeSingle();
+      const {data,error}=await db.from("verification_applications")
+        .select("id,user_id,documents").eq("id",id).maybeSingle();
       if(error||!data)return json(404,{error:"Verification application unavailable."});
       const file=Array.isArray(data.documents)?data.documents[index]:null;
-      if(!file?.path||!file.path.match(/^[a-f0-9-]{36}\//i))
+      // Do not sign arbitrary bucket paths, including another applicant's file.
+      // Browser uploads use <owner UUID>/<generated UUID>.<approved extension>.
+      const pathParts=typeof file?.path==="string"?file.path.split("/"): [];
+      const proofName=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}\.(?:pdf|png|jpe?g)$/i;
+      if(pathParts.length!==2||!uuid.test(String(data.user_id||""))||
+         pathParts[0]!==data.user_id||!proofName.test(pathParts[1]))
         return json(404,{error:"Evidence file unavailable."});
       const signed=await db.storage.from("verification-proofs").createSignedUrl(file.path,120);
       if(signed.error||!signed.data?.signedUrl)return json(404,{error:"Cannot securely open evidence."});
@@ -33,7 +38,7 @@ exports.handler=async event=>{
     }
     const page=Math.max(1,Math.min(10,Number.parseInt(event.queryStringParameters?.page||"1",10)||1));
     const start=(page-1)*25;
-    const {data,error}=await db.from("verification_applications")
+    const {data,error,count}=await db.from("verification_applications")
       .select("id,user_id,user_email,user_name,verification_type,message,documents,status,triage_flags,triage_score,created_at", {count:"exact"})
       .eq("status","pending").order("created_at",{ascending:true}).range(start,start+24);
     if(error)return json(500,{error:"Unable to load the verification queue."});

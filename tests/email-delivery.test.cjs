@@ -218,3 +218,38 @@ test("Brevo millisecond timestamps normalize to seconds",async()=>{
   assert.equal(response.statusCode,200);
   assert.equal(calls[0].p_event_epoch,1700000000);
 });
+
+
+test("email completion write failure quarantines possibly delivered message",async()=>{
+  const calls=[];
+  const handler=loadHandler("email-worker",{rpc:async(name,args)=>{
+    calls.push([name,args]);
+    if(name==="email_delivery_statistics")return{data:{sent_last_24h:0},error:null};
+    if(name==="claim_email_jobs")return{data:[job],error:null};
+    if(name==="is_email_suppressed")return{data:false,error:null};
+    if(name==="complete_email_job")return{data:null,error:{message:"Database write unavailable"}};
+    if(name==="quarantine_email_job")return{data:true,error:null};
+    throw Error("Unexpected RPC "+name);
+  }},{env:workerEnv,fetch:async()=>({
+    ok:true,status:201,json:async()=>({messageId:"mock-provider-receipt"})
+  })});
+  const response=await handler();
+  const result=JSON.parse(response.body);
+  assert.equal(result.sent,0);
+  assert.equal(result.quarantined,1);
+  assert.equal(calls.filter(([name])=>name==="quarantine_email_job").length,1);
+});
+
+test("email finalization raises an incident when quarantine also fails",async()=>{
+  const handler=loadHandler("email-worker",{rpc:async(name)=>{
+    if(name==="email_delivery_statistics")return{data:{sent_last_24h:0},error:null};
+    if(name==="claim_email_jobs")return{data:[job],error:null};
+    if(name==="is_email_suppressed")return{data:false,error:null};
+    if(name==="complete_email_job")return{data:null,error:{message:"Connection lost"}};
+    if(name==="quarantine_email_job")return{data:false,error:{message:"Connection lost"}};
+    throw Error("Unexpected RPC "+name);
+  }},{env:workerEnv,fetch:async()=>({
+    ok:true,status:201,json:async()=>({messageId:"mock-provider-receipt"})
+  })});
+  await assert.rejects(handler(),/manual reconciliation required/);
+});

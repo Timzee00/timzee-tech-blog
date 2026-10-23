@@ -147,7 +147,7 @@ exports.handler=async()=>{
       }
     }
     let success=false,providerId=null,errorMessage=null;
-    try{providerId=await sendBrevo(job,brevoKey,senderEmail,senderName);success=true;results.sent++;}
+    try{providerId=await sendBrevo(job,brevoKey,senderEmail,senderName);success=true;}
     catch(err){
       errorMessage=String(err?.message||"Brevo delivery failed");
       if(err?.outcome!=="retryable") {
@@ -160,7 +160,20 @@ exports.handler=async()=>{
       results.failed++;console.warn("Retryable email provider failure",job.id);
     }
     const {error:finishError}=await supabase.rpc("complete_email_job",{p_id:job.id,p_success:success,p_provider_id:providerId,p_error:errorMessage});
-    if(finishError) console.error("Email completion write failed",job.id,finishError.message);
+    if(finishError){
+      // Brevo may already have accepted this message. Do not silently return
+      // success or allow a lease/retry to produce a duplicate delivery.
+      console.error("Email completion write failed",job.id,finishError.message);
+      const held=await supabase.rpc("quarantine_email_job",{
+        p_id:job.id,
+        p_reason:"Delivery outcome could not be finalized. Reconcile with provider before retry."
+      });
+      if(held.error||held.data!==true)
+        throw new Error("Email completion and quarantine both failed; manual reconciliation required");
+      results.quarantined=(results.quarantined||0)+1;
+      continue;
+    }
+    if(success)results.sent++;
   }
   console.log("Email worker completed",results);
   return {statusCode:200,body:JSON.stringify(results)};

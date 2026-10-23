@@ -29,3 +29,43 @@ test("scout status route requires GET and a bearer token", async () => {
  const anonymous = await handler({httpMethod:"GET",headers:{}});
  assert.equal(anonymous.statusCode,401);
 });
+
+
+test("stale running curator is not mistaken for successful current automation",()=>{
+  const now=Date.parse("2026-10-23T12:00:00Z");
+  const stale=summarizeScoutHealth({
+    settings:{enabled:true,scout_enabled:true,scout_last_status:"success"},
+    activeSources:15,
+    job:{last_started_at:"2026-10-15T23:52:34Z",
+      last_succeeded_at:"2026-10-15T23:52:34Z",last_result:{status:"success"}},
+    lastSourceFetchAt:"2026-10-15T23:52:34Z",now
+  });
+  assert.equal(stale.lastRunFailed,false);
+  assert.equal(stale.lastRunStale,true);
+  assert.equal(stale.operationalStatus,"stale");
+  assert.equal(stale.needsAttention,true);
+  assert.equal(stale.lastSourceFetchAt,"2026-10-15T23:52:34Z");
+  const recovered=summarizeScoutHealth({
+    settings:{enabled:true,scout_enabled:true},
+    activeSources:15,
+    job:{last_started_at:"2026-10-23T11:00:00Z",
+      last_succeeded_at:"2026-10-23T11:00:00Z",last_result:{status:"success"}},
+    now
+  });
+  assert.equal(recovered.operationalStatus,"healthy");
+  assert.equal(recovered.needsAttention,false);
+});
+
+test("disabled curator and missing runs are reported distinctly",()=>{
+  const now=Date.parse("2026-10-23T12:00:00Z");
+  const never=summarizeScoutHealth({
+    settings:{enabled:true,scout_enabled:true},activeSources:15,now
+  });
+  assert.equal(never.operationalStatus,"never_run");
+  assert.equal(never.needsAttention,true);
+  const disabled=summarizeScoutHealth({
+    settings:{enabled:false,scout_enabled:false},activeSources:15,now
+  });
+  assert.equal(disabled.operationalStatus,"disabled");
+  assert.equal(disabled.needsAttention,false);
+});

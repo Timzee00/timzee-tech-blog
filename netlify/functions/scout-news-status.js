@@ -28,22 +28,25 @@ exports.handler = async (event = {}) => {
   const guard = await requireRole(supabase, token, ["admin", "super"], "Administrator permissions required.");
   if (guard.error) return json(403, { error: guard.error });
 
-  const [settings, sources, drafts, job] = await Promise.all([
+  const [settings, sources, latestFetch, drafts, job] = await Promise.all([
     supabase.from("curator_settings")
       .select("enabled,scout_enabled,scout_last_run_at,scout_last_status").maybeSingle(),
     supabase.from("curator_sources").select("id", { head: true, count: "exact" }).eq("enabled", true),
+    supabase.from("curator_sources").select("last_fetched_at").eq("enabled",true)
+      .not("last_fetched_at","is",null).order("last_fetched_at",{ascending:false}).limit(1),
     supabase.from("curator_posts").select("id", { head: true, count: "exact" }),
     supabase.from("system_job_status")
       .select("last_started_at,last_succeeded_at,last_failed_at,run_count,last_result")
       .eq("job_name", "curator-scout").maybeSingle()
   ]);
-  if ([settings,sources,drafts,job].some(result => result.error)) {
+  if ([settings,sources,latestFetch,drafts,job].some(result => result.error)) {
     console.warn("Scout health query failed.");
     return json(503, { error: "Scout status could not be read. Check server logs and database permissions." });
   }
   return json(200, summarizeScoutHealth({
     settings: settings.data,
     activeSources: sources.count,
+    lastSourceFetchAt: latestFetch.data?.[0]?.last_fetched_at || null,
     importedArticles: drafts.count,
     job: job.data
   }));
