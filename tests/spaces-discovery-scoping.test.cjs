@@ -8,7 +8,7 @@ test("live/upcoming tabs scope queries before fetching bounded rows",()=>{
  assert.match(source,/\.gte\("starts_at",new Date\(now-60\*60000\)/);
  assert.match(source,/query=query\.eq\("status","scheduled"\)/);
  assert.match(source,/\.gte\("starts_at",new Date\(now-5\*60000\)/);
- assert.match(source,/query\.order\("starts_at",\{ascending:false\}\)\.limit\(50\)/);
+ assert.match(source,/query\.order\("starts_at",\{ascending:tab==="upcoming"\}\)\.limit\(50\)/);
 });
 test("mine and cross-feature spaces are filtered in DB and stale requests discarded",()=>{
  assert.match(source,/query=query\.eq\("owner_id",state\.user\.id\)/);

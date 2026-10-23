@@ -58,7 +58,7 @@ async function loadRooms(){
   query=query.eq(match[1],q.get(match[0]));
  }
  try{
-  const rows=success(await query.order("starts_at",{ascending:false}).limit(50))||[];
+  const rows=success(await query.order("starts_at",{ascending:tab==="upcoming"}).limit(50))||[];
   if(requestId!==state.roomsRequestId)return; // Discard stale network responses after a tab switch.
   state.rooms=rows;renderRooms();
  }catch(error){
@@ -72,7 +72,7 @@ function visibleRooms(){
  if(state.tab==="live")return room.filter(r=>r.status==="live"&&!roomExpired(r));
  if(state.tab==="upcoming")return room.filter(r=>r.status==="scheduled");
  if(state.tab==="mine")return state.user?room.filter(r=>r.owner_id===state.user.id):[];
- const here=q.get("community")||q.get("post")||q.get("workspace");
+ const here=[q.get("community"),q.get("post"),q.get("workspace")].find(validId);
  return here?room.filter(r=>[r.workspace_id,r.post_id,r.community_id].includes(here)):[];
 }
 function renderRooms(){
@@ -280,17 +280,33 @@ async function startAudio(){
  });
  livekit.on(sdk.RoomEvent.ParticipantConnected,()=>void loadPeople());
  livekit.on(sdk.RoomEvent.ParticipantDisconnected,()=>void loadPeople());
- livekit.on(sdk.RoomEvent.Disconnected,()=>audioStatus("Audio disconnected. Rejoin to speak or listen."));
- await livekit.connect(grant.server_url,grant.participant_token);
+ livekit.on(sdk.RoomEvent.Disconnected,()=>{
+  if(state.livekit!==livekit)return;
+  state.livekit=null;
+  $("spaceAudioElements").replaceChildren();
+  configureControls();
+  audioStatus("Audio disconnected. Use Reconnect to restore playback or microphone.");
+  alertStatus("Space membership retained, but audio disconnected.","error");
+ });
+ try{
+  await livekit.connect(grant.server_url,grant.participant_token);
+  await livekit.localParticipant.setMicrophoneEnabled(false);
+ }catch(error){
+  livekit.disconnect();
+  throw error;
+ }
  state.livekit=livekit;state.role=grant.role;
  $("spacePlayAudio").hidden=Boolean(livekit.canPlaybackAudio);
- await livekit.localParticipant.setMicrophoneEnabled(false);
  audioStatus("Audio connected as "+grant.role+". Microphone is off.");
  configureControls();
 }
 async function connectJoinedRoom(){
- try{await startAudio()}catch(error){
-  state.livekit=null;audioStatus(error.message||"Live audio is unavailable.");configureControls();
+ try{
+  await startAudio();return true;
+ }catch(error){
+  if(state.livekit){state.livekit.disconnect();state.livekit=null}
+  audioStatus("Could not connect audio: "+(error.message||"Unavailable")+". Use Reconnect to retry.");
+  configureControls();return false;
  }
 }
 async function join(){
@@ -300,9 +316,11 @@ async function join(){
   if(!state.role)throw Error("Room access was not granted.");
   state.joined=true;
   await refreshRoom();
-  await connectJoinedRoom();
+  const connected=await connectJoinedRoom();
   startPolling();
-  alertStatus("Room joined. Your microphone starts muted.","success");
+  alertStatus(connected?"Audio connected. Your microphone starts muted.":
+   "Room joined, but audio did not connect. Use Reconnect to try again.",
+   connected?"success":"error");
  }catch(error){alertStatus(error.message||"Unable to join.","error")}
 }
 function stopPolling(){
@@ -387,10 +405,23 @@ async function requestMic(){
  }catch(e){alertStatus(e.message||"Request failed.","error")}
 }
 async function refreshSpeaking(){
- if(!state.joined)return;
- try{await supabase.rpc("spaces_heartbeat",{p_room:state.roomId});await leave(false);
-  state.joined=true;await connectJoinedRoom();startPolling();
- }catch(e){audioStatus(e.message||"Could not refresh audio permissions.")}
+ if(!state.joined||!state.roomId)return;
+ try{
+  const heartbeat=await supabase.rpc("spaces_heartbeat",{p_room:state.roomId});
+  if(heartbeat.error||!heartbeat.data)throw Error("Room session expired. Leave and rejoin.");
+  await leave(false);
+  state.role=success(await supabase.rpc("spaces_join",{p_room:state.roomId}));
+  if(!state.role)throw Error("Room access renewal was denied.");
+  state.joined=true;
+  const connected=await connectJoinedRoom();
+  startPolling();
+  alertStatus(connected?"Audio reconnected. Your microphone starts muted.":
+   "Room access restored, but audio remains unavailable. Try Reconnect again.",
+   connected?"success":"error");
+ }catch(error){
+  audioStatus(error.message||"Could not renew audio.");
+  alertStatus(error.message||"Reconnect failed. Leave and rejoin.","error");
+ }
 }
 async function loadRequests(){
  if(!state.room||state.user?.id!==state.room.owner_id)return;
