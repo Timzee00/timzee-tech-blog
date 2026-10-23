@@ -1101,6 +1101,8 @@ async function boot() {
       return;
     }
     updateMeta(post);
+    const liveLink=document.getElementById("discussArticleLive");
+    if(liveLink&&post.id)liveLink.href="spaces.html?post="+encodeURIComponent(post.id);
     // Render the article immediately with a temporary category label, then
     // update that label without rebuilding the full HTML and its listeners.
     renderPost({categories:[]},post);
