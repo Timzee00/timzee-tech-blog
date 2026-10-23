@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const tabs=["live","upcoming","mine","here"];
 const q=new URLSearchParams(location.search);
-const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false};
+const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set()};
 const el=(tag,text="",className="")=>{const item=document.createElement(tag);item.textContent=String(text);if(className)item.className=className;return item};
 const alertStatus=(message,tone="neutral")=>{const s=$("spacesStatus");s.textContent=message;s.dataset.tone=tone};
 const audioStatus=message=>$("spaceAudioStatus").textContent=message;
@@ -127,7 +127,8 @@ function configureControls(){
  const live=room?.status==="live",scheduled=room?.status==="scheduled";
  $("spaceJoin").hidden=state.joined||Boolean(room&&room.status!=="live");
  $("spaceStart").hidden=!host||!scheduled;
- $("spaceEnd").hidden=!host||room?.status==="ended";
+ $("spaceEnd").hidden=!host;
+ $("spaceEnd").textContent=room?.status==="ended"?"Confirm audio stopped":"End room";
  $("spaceLeave").hidden=!state.joined;
  $("spaceMic").hidden=!state.joined||!state.livekit||!["host","speaker"].includes(state.role);
  $("spaceAsk").hidden=!state.joined||state.role!=="listener"||!room?.allow_requests;
@@ -155,6 +156,19 @@ async function loadPeople(){
    const row=el("div","","space-person"),avatar=el("span",(name[0]||"?").toUpperCase(),"avatar");
    avatar.setAttribute("aria-hidden","true");
    row.append(avatar,el("strong",name),el("small",p.role));
+   if(state.joined&&p.user_id!==state.user?.id){
+    const muted=state.mutedUsers.has(p.user_id);
+    row.append(button(muted?"Unmute here":"Mute for me",()=>{
+      if(state.mutedUsers.has(p.user_id))state.mutedUsers.delete(p.user_id);
+      else state.mutedUsers.add(p.user_id);
+      for(const audio of $("spaceAudioElements").querySelectorAll("audio[data-speaker-id]"))
+       if(audio.dataset.speakerId===p.user_id)audio.muted=state.mutedUsers.has(p.user_id);
+      void loadPeople();
+    }));
+    if(state.user?.id===state.room?.owner_id){
+     row.append(button("Remove",()=>void removeParticipant(p.user_id)));
+    }
+   }
    container.append(row);
   }
  };
@@ -186,9 +200,12 @@ async function startAudio(){
  if(!window.LivekitClient)throw Error("Live audio library is unavailable on this network.");
  const grant=await authenticateRoom(),sdk=window.LivekitClient;
  const livekit=new sdk.Room({audioCaptureDefaults:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
- livekit.on(sdk.RoomEvent.TrackSubscribed,(track)=>{
+ livekit.on(sdk.RoomEvent.TrackSubscribed,(track,publication,participant)=>{
   if(track.kind!==sdk.Track.Kind.Audio)return;
   const node=track.attach();node.autoplay=true;node.dataset.spaceAudio="true";
+  const userId=String(participant?.identity||"").replace(/^u_/,"");
+  node.dataset.speakerId=userId;
+  node.muted=state.mutedUsers.has(userId);
   $("spaceAudioElements").append(node);
  });
  livekit.on(sdk.RoomEvent.TrackUnsubscribed,track=>{for(const node of track.detach())node.remove()});
@@ -211,6 +228,7 @@ async function startAudio(){
  livekit.on(sdk.RoomEvent.Disconnected,()=>audioStatus("Audio disconnected. Rejoin to speak or listen."));
  await livekit.connect(grant.server_url,grant.participant_token);
  state.livekit=livekit;state.role=grant.role;
+ $("spacePlayAudio").hidden=Boolean(livekit.canPlaybackAudio);
  await livekit.localParticipant.setMicrophoneEnabled(false);
  audioStatus("Audio connected as "+grant.role+". Microphone is off.");
  configureControls();
@@ -252,7 +270,7 @@ async function leave(callRpc=true){
  stopPolling();
  if(state.livekit){await state.livekit.localParticipant.setMicrophoneEnabled(false).catch(()=>{});
   state.livekit.disconnect();state.livekit=null}
- $("spaceAudioElements").replaceChildren();
+ $("spaceAudioElements").replaceChildren();$("spacePlayAudio").hidden=true;
  if(callRpc&&state.joined&&state.roomId&&state.user)
   await supabase.rpc("spaces_leave",{p_room:state.roomId}).catch(()=>{});
  state.joined=false;state.role="listener";configureControls();
@@ -264,12 +282,47 @@ async function goLive(){
   await refreshRoom();await loadRooms();alertStatus("Your Space is live.","success");
  }catch(e){alertStatus(e.message||"Could not start.","error")}
 }
+async function providerControl(action,userId=null){
+ const session=success(await supabase.auth.getSession()).session;
+ if(!session?.access_token)throw Error("Sign in again to use host audio controls.");
+ const response=await fetch("/.netlify/functions/spaces-control",{
+  method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
+  body:JSON.stringify({roomId:state.roomId,action,userId}),cache:"no-store"
+ });
+ const result=await response.json().catch(()=>({}));
+ if(!response.ok)throw Error(result.error||"Audio provider has not confirmed this action.");
+ return result;
+}
 async function endRoom(){
- if(!state.roomId||!confirm("End this room for everyone?"))return;
- try{const okay=success(await supabase.rpc("spaces_end",{p_room:state.roomId}));
- if(!okay)throw Error("Room was already ended.");await leave();await refreshRoom();
- alertStatus("Room ended. Current audio participants should disconnect when their session is refreshed.","success");
- }catch(e){alertStatus(e.message||"Could not end room.","error")}
+ if(!state.roomId||!state.room||!confirm("End this room and disconnect everyone?"))return;
+ try{
+  if(state.room.status!=="ended"){
+   const okay=success(await supabase.rpc("spaces_end",{p_room:state.roomId}));
+   if(!okay)throw Error("Room was already ended.");
+  }
+  // DeleteRoom is authorized separately and disconnects all LiveKit tracks.
+  await providerControl("end");
+  await leave();await refreshRoom();
+  alertStatus("Room and voice session ended.","success");
+ }catch(e){
+  await refreshRoom();
+  alertStatus("The room may be ended in the database, but audio shutdown was not confirmed: "+
+   (e.message||"Unknown failure")+". Use Confirm audio stopped to retry.","error");
+ }
+}
+async function removeParticipant(userId){
+ if(!validId(userId)||state.user?.id!==state.room?.owner_id)return;
+ if(!confirm("Remove this participant from the live room?"))return;
+ try{
+  const removed=success(await supabase.rpc("spaces_remove_participant",{p_room:state.roomId,p_user:userId}));
+  if(!removed)throw Error("Participant has already left.");
+  await providerControl("remove",userId);
+  await loadPeople();
+  alertStatus("Participant removed from voice and room.","success");
+ }catch(e){
+  await loadPeople();
+  alertStatus("Participant blocked in database. Audio removal confirmation: "+e.message,"error");
+ }
 }
 async function requestMic(){
  try{success(await supabase.rpc("spaces_request_speaker",{p_room:state.roomId}));
@@ -360,6 +413,12 @@ $("spaceStart").addEventListener("click",goLive);
 $("spaceEnd").addEventListener("click",endRoom);
 $("spaceJoin").addEventListener("click",join);
 $("spaceLeave").addEventListener("click",async()=>{await leave();alertStatus("Left the room.","success")});
+$("spacePlayAudio").addEventListener("click",async()=>{
+ if(!state.livekit)return;
+ try{await state.livekit.startAudio();$("spacePlayAudio").hidden=true;
+  audioStatus("Playback enabled. Your microphone remains muted until you switch it on.")}
+ catch(e){audioStatus("Sound could not start: "+e.message)}
+});
 $("spaceAsk").addEventListener("click",requestMic);
 $("spaceReconnect").addEventListener("click",refreshSpeaking);
 $("spaceMic").addEventListener("click",async()=>{
