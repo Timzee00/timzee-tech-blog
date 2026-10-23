@@ -392,7 +392,27 @@ async function init(){
  const linkedPost=q.get("post"),linkedCommunity=q.get("community");
  if(validId(linkedPost))$("spacesPostId").value=linkedPost;
  if(validId(linkedCommunity))$("spacesCommunityId").value=linkedCommunity;
- if(q.has("post")||q.has("workspace")||q.has("community"))setTab("here");
+ const linkedProject=q.get("project");
+ if(state.user&&validId(linkedProject)){
+  const project=await supabase.from("team_studio_projects")
+   .select("title,body,workspace_id").eq("id",linkedProject).maybeSingle();
+  if(!project.error&&project.data){
+   $("spacesCreateForm").elements.title.value=project.data.title.slice(0,120);
+   $("spacesCreateForm").elements.description.value=(project.data.body||"").slice(0,700);
+   const select=$("spacesWorkspace");
+   if([...select.options].some(option=>option.value===project.data.workspace_id))
+    select.value=project.data.workspace_id;
+   showCreate(true);
+  }
+ }
+ if(state.user&&validId(linkedPost)&&!validId(linkedProject)){
+  const article=await supabase.from("posts").select("title,status").eq("id",linkedPost).maybeSingle();
+  if(!article.error&&article.data?.status==="published"){
+   $("spacesCreateForm").elements.title.value=("Discussion: "+article.data.title).slice(0,120);
+   showCreate(true);
+  }
+ }
+ if(q.has("post")||q.has("workspace")||q.has("community")||q.has("project"))setTab("here");
  await loadRooms();
  const selected=q.get("room");
  if(validId(selected)){await openRoom(selected)}

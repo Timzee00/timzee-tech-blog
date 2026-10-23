@@ -99,7 +99,9 @@ async function loadProjects(){
  [["Edit",()=>{const f=$("teamProjectForm");
  f.elements.id.value=project.id;f.elements.kind.value=project.kind;
  f.elements.title.value=project.title;f.elements.body.value=project.body;
- f.elements.status.value=project.status;f.elements.title.focus();}]]));
+ f.elements.status.value=project.status;f.elements.title.focus();}],
+ ["Plan a Space",()=>{window.location.assign("spaces.html?workspace="+encodeURIComponent(state.active.id)
+  +"&project="+encodeURIComponent(project.id));}]]));
 }
 $("createWorkspaceForm").addEventListener("submit",async event=>{
  event.preventDefault();if(!state.user)return;
