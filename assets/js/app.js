@@ -7,9 +7,8 @@ import { supabase as supabaseForEngagement, getCurrentUser, getCurrentUserWithRo
 import {
   fetchCategories,
   fetchPosts,
+  fetchFeedPosts,
   fetchAds,
-  fetchDiscussionTopics,
-  fetchDiscussionMessages,
   searchPosts,
   fetchTopProfiles,
   createContentRequest,
@@ -42,7 +41,7 @@ const state = {
   searchTerm: "",
   categories: [],
   posts: [],
-  postsOffset: 0,
+  postsCursor: null,
   hasMorePosts: false,
   loadingMorePosts: false,
   filteredPosts: null,
@@ -54,7 +53,6 @@ const state = {
   settings: null,
   ads: [],
   discussionTopics: [],
-  discussionMessages: [],
   activeTags: [],
   leaderboard: [],
   suggestedPeople: []
@@ -224,7 +222,7 @@ function fallbackFilterPosts(posts, query = "", tags = []) {
     const matchesTags = !activeTags.length || activeTags.every((tag) => postTags.includes(tag));
     const matchesQuery =
       !search ||
-      [post.title, stripHTML(stripEditorialScaffolding(post.content || "")), post.summary, postTags.join(" ")].some((text) =>
+      [post.title, stripHTML(stripEditorialScaffolding(post.feed_excerpt || post.content || "")), post.summary, postTags.join(" ")].some((text) =>
         (text || "").toLowerCase().includes(search)
       );
     return matchesTags && matchesQuery;
@@ -244,7 +242,7 @@ function buildPostCard(post, compact = false) {
     .join("");
   const publishedAt = post.publish_at || post.created_at;
   const title = compact ? clampText(post.title || "", 60) : post.title || "";
-  const excerptText = clampText(stripHTML(stripEditorialScaffolding(post.content || "")), 140);
+  const excerptText = clampText(stripHTML(stripEditorialScaffolding(post.feed_excerpt || post.content || "")), 140);
   const excerpt = compact ? "" : `<div class="post-card-excerpt">${escapeHTML(excerptText)}</div>`;
   const pin = post.pinned ? `<span class="chip">Pinned</span>` : "";
   const authorName = post.author_name || "Timzee Tech Hub";
@@ -294,22 +292,13 @@ function renderPopularTopics() {
     return;
   }
 
-  const messageCounts = {};
-  state.discussionMessages.forEach((message) => {
-    messageCounts[message.topic_id] = (messageCounts[message.topic_id] || 0) + 1;
-  });
-
-  const scored = [...state.discussionTopics].sort((a, b) => {
-    const aScore = (messageCounts[a.id] || 0) * 2;
-    const bScore = (messageCounts[b.id] || 0) * 2;
-    if (aScore !== bScore) return bScore - aScore;
-    return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
-  });
-
-  const topTopics = scored.slice(0, 5);
+  // The database returns a bounded, sorted list with true reply totals.
+  // Downloading every discussion message just to count replies is O(all replies)
+  // and would collapse when the forum reaches millions of messages.
+  const topTopics = state.discussionTopics.slice(0,5);
   track.innerHTML = topTopics
     .map((topic) => {
-      const count = messageCounts[topic.id] || 0;
+      const count = Math.max(0, Number(topic.reply_count) || 0);
       const mediaUrl = topic.media_url && isSafeUrl(topic.media_url) ? escapeHTML(topic.media_url) : "";
       const media =
         topic.media_type === "video" && mediaUrl
@@ -414,12 +403,13 @@ async function loadMoreHomePosts() {
   if (button) { button.disabled = true; button.textContent = "Loading more posts…"; }
   if (status) status.textContent = "";
   try {
-    const page = await fetchPosts({ status: "published", limit: POSTS_PAGE_SIZE, offset: state.postsOffset });
-    state.postsOffset += page.length;
-    state.hasMorePosts = page.length === POSTS_PAGE_SIZE;
+    const page = await fetchFeedPosts({ limit: POSTS_PAGE_SIZE, cursor: state.postsCursor });
+    // A stable (created_at,id) cursor avoids increasingly costly OFFSET scans.
+    state.postsCursor = page.nextCursor;
+    state.hasMorePosts = page.hasMore;
     const seen = new Set(state.posts.map(post => post.id));
     const newlyVisible = [];
-    for (const post of page) if (!seen.has(post.id)) { state.posts.push(post); seen.add(post.id); newlyVisible.push(post.id); }
+    for (const post of page.items) if (!seen.has(post.id)) { state.posts.push(post); seen.add(post.id); newlyVisible.push(post.id); }
     renderTagFilters();
     renderCategories();
     renderLists();
@@ -903,93 +893,109 @@ function renderAds(settings) {
 
 async function boot() {
   showLoadingPlaceholders();
-  // Authentication and global settings are independent; avoid serial network
-  // waits before rendering the public homepage.
-  [state.user, state.settings] = await Promise.all([getCurrentUserWithRole(), fetchSettings()]);
-  applyTheme(state.settings);
-  if (state.settings.themeId) {
-    const theme = await fetchThemeById(state.settings.themeId);
-    if (theme) applyThemeVariables(theme);
-  }
-
   const softTimeout = (promise, fallback, label, ms = 2800) => {
     let timer;
-    const timeout = new Promise((resolve) => {
+    const timeout = new Promise(resolve => {
       timer = window.setTimeout(() => {
-        console.warn(`Homepage data timed out: ${label}`);
+        console.warn("Homepage data timed out:", label);
         resolve(fallback);
       }, ms);
     });
     return Promise.race([Promise.resolve(promise), timeout])
-      .catch((error) => {
-        console.warn(`Homepage data failed: ${label}`, error);
+      .catch(error => {
+        console.warn("Homepage data failed:", label, error);
         return fallback;
       })
       .finally(() => window.clearTimeout(timer));
   };
 
-  const [
-    categories,
-    posts,
-    ads,
-    discussionTopics,
-    discussionMessages,
-    leaderboard,
-    suggestedPeople
-  ] = await Promise.all([
-    softTimeout(fetchCategories(), [], "categories"),
-    softTimeout(fetchPosts({ status: "published", limit: POSTS_PAGE_SIZE }), [], "posts"),
-    softTimeout(fetchAds({ status: "active" }), [], "ads"),
-    softTimeout(fetchDiscussionTopics(), [], "discussion topics"),
-    softTimeout(fetchDiscussionMessages(), [], "discussion messages"),
-    softTimeout(fetchTopProfiles(5), [], "leaderboard"),
-    softTimeout(fetchSuggestedPeople(state.user?.id || null, 8), [], "suggested people")
-  ]);
+  // Start independent requests together, before an authenticated session or
+  // custom theme can delay showing public content. Public cards contain
+  // short server-stored excerpts, never whole article bodies.
+  const identityPromise = getCurrentUserWithRole();
+  const settingsPromise = fetchSettings();
+  const categoriesPromise = softTimeout(fetchCategories(), [], "categories");
+  const postsPromise = softTimeout(
+    fetchFeedPosts({ limit: POSTS_PAGE_SIZE }),
+    { items: [], nextCursor: null, hasMore: false },
+    "posts"
+  );
+  const adsPromise = softTimeout(fetchAds({ status: "active", limit: 8 }), [], "ads");
+  const boardsPromise = softTimeout(
+    supabaseForEngagement.rpc("get_popular_discussion_topics",{limit_count:5})
+      .then(async ({data,error})=>{
+        if(error)throw error;
+        const ranked=(data||[]).slice(0,5);
+        if(!ranked.length)return [];
+        // The ranking RPC carries counts but not images. A single bounded
+        // public lookup preserves visual covers without fetching all topics.
+        const media=await supabaseForEngagement.from("discussion_topics")
+          .select("id,media_url,media_type")
+          .in("id",ranked.map(topic=>topic.id)).limit(5);
+        if(media.error)return ranked;
+        const byId=new Map((media.data||[]).map(item=>[item.id,item]));
+        return ranked.map(topic=>({...topic,...(byId.get(topic.id)||{})}));
+      }),
+    [], "popular discussions"
+  );
+  const leaderboardPromise = softTimeout(fetchTopProfiles(5), [], "leaderboard");
 
+  // First meaningful content does not wait for sidebar widgets, identity,
+  // advertisements or custom-theme lookups.
+  const [categories, feed] = await Promise.all([categoriesPromise, postsPromise]);
   state.categories = categories;
-  state.posts = posts;
-  state.postsOffset = posts.length;
-  state.hasMorePosts = posts.length === POSTS_PAGE_SIZE;
-  state.engagement = null;
-  state.ads = ads;
-  state.discussionTopics = discussionTopics;
-  state.discussionMessages = discussionMessages;
-  state.leaderboard = leaderboard;
-  state.suggestedPeople = suggestedPeople;
-  hydrateCounts();
-
-  renderAuthActions();
-  showAdminLinks();
+  state.posts = feed.items;
+  state.postsCursor = feed.nextCursor;
+  state.hasMorePosts = feed.hasMore;
   renderNav(state.categories);
-  renderTrending(state.activeCategory);
-  renderPopular();
-  renderPopularTopics();
   renderCategories();
   renderLists();
-  // Visible articles must not wait behind exact-count queries, especially
-  // while a deployment is using the compatibility fallback.
-  void fetchPostEngagement(supabaseForEngagement, posts.map(post => post.id), state.user?.id)
+  // These rankings are independent of login and sidebar data.
+  renderTrending(state.activeCategory);
+  renderPopular();
+  renderTagFilters();
+  setupTagFilters();
+  setupSearch();
+  setupPostActionButtons();
+  setupReveal();
+  document.getElementById("loadMorePostsBtn")?.addEventListener("click", () => void loadMoreHomePosts());
+
+  // Engagement is optional: don't gate card rendering behind count RPCs.
+  void fetchPostEngagement(supabaseForEngagement, state.posts.map(post => post.id))
     .then(engagement => {
       state.engagement = engagement;
       hydrateCounts();
       renderLists();
-    }).catch(error => {
-      console.warn("Post engagement could not be loaded:", error);
-      const status = document.getElementById("loadMorePostsStatus");
-      if (status) status.textContent = "Reaction counts are temporarily unavailable.";
-    });
-  document.getElementById("loadMorePostsBtn")?.addEventListener("click", () => void loadMoreHomePosts());
-  renderTagFilters();
-  setupTagFilters();
+    }).catch(error => console.warn("Post engagement unavailable:", error));
+
+  [state.user, state.settings] = await Promise.all([identityPromise, settingsPromise]);
+  applyTheme(state.settings);
+  if (state.settings.themeId) {
+    void fetchThemeById(state.settings.themeId)
+      .then(theme => { if (theme) applyThemeVariables(theme); })
+      .catch(error => console.warn("Theme unavailable:", error));
+  }
+  renderAuthActions();
+  showAdminLinks();
+  if(state.user?.id){
+    void mountReaderHome(state.user,{posts:state.posts,categories:state.categories});
+  }
+
+  // Secondary widgets are deliberately separated from the article render.
+  const [ads, discussionTopics, leaderboard, suggestedPeople] = await Promise.all([
+    adsPromise,
+    boardsPromise,
+    leaderboardPromise,
+    softTimeout(fetchSuggestedPeople(state.user?.id || null, 8), [], "suggested people")
+  ]);
+  state.ads = ads;
+  state.discussionTopics = discussionTopics;
+  state.leaderboard = leaderboard;
+  state.suggestedPeople = suggestedPeople;
+  renderPopularTopics();
   renderLeaderboard();
   renderSuggestedPeople();
   renderAds(state.settings);
-  setupSearch();
-  setupPostActionButtons();
-  setupReveal();
-  // Retention is a low-priority, opt-in private enhancement: never hold the
-  // public feed or first meaningful article render behind this request.
-  if(state.user?.id)void mountReaderHome(state.user,{posts:state.posts,categories:state.categories});
 }
 
 boot().catch((error) => {

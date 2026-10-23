@@ -101,6 +101,10 @@
           <section id="comments" style="margin-top: 24px;">
             <h2 class="section-title">Comments</h2>
             <div id="commentList" class="post-list"></div>
+            <div class="post-comments-pagination">
+              <button id="loadMoreArticleComments" type="button" class="btn ghost sm" hidden>Load more comments</button>
+              <p id="loadMoreArticleCommentsStatus" role="status" aria-live="polite"></p>
+            </div>
             <form novalidate id="commentForm" class="comment-form" data-reveal>
               <div class="callout" id="commentAs" style="display:none;"></div>
               <div class="reply-preview hidden" id="commentReplyPreview"></div>
