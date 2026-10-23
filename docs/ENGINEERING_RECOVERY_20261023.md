@@ -57,3 +57,8 @@ and thirty days to time-sensitive opportunities, and handles compact GDELT
 timestamps. Missing/malformed timestamps remain drafts for editorial review
 rather than being silently discarded. The \`stale_items_skipped\` metric now
 reflects actual filtered candidates in the bounded inspected batch.
+
+## Admin UX follow-up
+Curator diagnostics now display the server's actual operational status, not a generic
+"enabled" message that can conceal an overdue Scout. They also show the latest
+recorded source-fetch timestamp. This is read-only and does not start a worker.

@@ -69,3 +69,14 @@ test("disabled curator and missing runs are reported distinctly",()=>{
   assert.equal(disabled.operationalStatus,"disabled");
   assert.equal(disabled.needsAttention,false);
 });
+
+
+test("curator UI makes stale and failed Scout status explicit",()=>{
+  const fs=require("node:fs");
+  const source=fs.readFileSync("assets/js/curator-ui.js","utf8");
+  assert.match(source,/payload\.operationalStatus/);
+  assert.match(source,/stale: "Scout is overdue/);
+  assert.match(source,/never_run: "No Scout run has been recorded/);
+  assert.match(source,/status\.textContent =/);
+  assert.doesNotMatch(source,/payload\.enabled \? "Scout enabled\."/);
+});

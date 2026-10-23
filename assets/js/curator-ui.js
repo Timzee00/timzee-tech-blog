@@ -426,9 +426,23 @@ class CuratorManager {
         lastSync.textContent = `Last run: ${date} — ${payload.lastStatus}`;
       }
       if (status) {
-        status.textContent = `${payload.activeSources} enabled sources · ${payload.importedArticles} imported articles. ` +
-          (payload.lastRunFailed ? "Last run failed; check source failures in Netlify logs." :
-          payload.enabled ? "Scout enabled." : "Scout disabled in settings.");
+        const messages = {
+          healthy: "Scout scheduler recently ran.",
+          stale: "Scout is overdue. A paused Netlify deployment cannot run scheduled jobs; check hosting before using Sync Now.",
+          failed: "Last Scout run failed. Review source errors and Netlify function logs.",
+          never_run: "No Scout run has been recorded. Check publishing status and scheduled functions.",
+          no_sources: "Add at least one enabled news source before running Scout.",
+          disabled: "Scout is disabled in settings."
+        };
+        const state = payload.operationalStatus || (payload.lastRunFailed ? "failed" :
+          payload.enabled ? "unknown" : "disabled");
+        const detail = messages[state] || "Scout state could not be verified.";
+        const sourceFetch = payload.lastSourceFetchAt
+          ? " Latest source fetch: " + new Date(payload.lastSourceFetchAt).toLocaleString() + "."
+          : "";
+        status.dataset.state = state;
+        status.textContent = `${payload.activeSources} enabled sources · ${payload.importedArticles} curated items. ` +
+          detail + sourceFetch;
       }
     } catch (error) {
       if (status) status.textContent = error.message || "Could not inspect scout status.";
