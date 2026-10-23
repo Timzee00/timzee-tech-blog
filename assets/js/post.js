@@ -1,8 +1,8 @@
 import {
   fetchCategories,
   fetchPosts,
-  fetchComments,
-  fetchPostLikes,
+  fetchFeedPosts,
+  fetchPostCommentPage,
   fetchPostByIdOrSlug,
   fetchPostMedia,
   fetchAds,
@@ -19,6 +19,7 @@ import {
   incrementPostViews,
   createContentReport,
 } from "./data.js";
+import {fetchPostEngagement} from "./post-engagement.mjs";
 import {verifiedName,verifiedAvatar,verifiedCommentClass} from "./verified-identity.mjs";
 import { setupMentionInput, extractMentions, getMentionedUserIds } from "./mentions.js";
 import { uploadMedia } from "./media.js";
@@ -60,7 +61,9 @@ const state = {
   isFollowingAuthor: false,
   commentAuthors: {},
   commentIndex: {},
-  comments: []
+  comments: [],
+  commentCursor: null,
+  commentsHasMore: false
 };
 
 let commentReplyTo = null;
@@ -601,12 +604,11 @@ async function loadCommentAuthors(comments) {
   const ids = Array.from(
     new Set(comments.map((comment) => comment.author_id).filter(Boolean))
   );
-  if (!ids.length) {
-    state.commentAuthors = {};
-    return;
-  }
-  const profiles = await fetchProfilesByIds(ids);
-  const map = {};
+  if (!ids.length) return;
+  const missing=ids.filter(id=>!state.commentAuthors[id]);
+  if(!missing.length)return;
+  const profiles = await fetchProfilesByIds(missing);
+  const map = {...state.commentAuthors};
   profiles.forEach((profile) => {
     if (profile?.id) {
       map[profile.id] = profile;
@@ -966,8 +968,9 @@ function handleIncomingComment(payload, postId) {
     state.comments.push(comment);
   }
   state.comments.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  loadCommentAuthors([comment]);
   renderComments(state.comments);
+  void loadCommentAuthors([comment]).then(()=>renderComments(state.comments))
+    .catch(error=>console.warn("Comment author unavailable:",error));
 }
 
 function subscribeToComments(postId) {
@@ -1048,95 +1051,150 @@ function renderAds(settings) {
   }
 }
 
+function setupCommentPagination(postId){
+  const button=document.getElementById("loadMoreArticleComments");
+  const status=document.getElementById("loadMoreArticleCommentsStatus");
+  if(!button)return;
+  button.hidden=!state.commentsHasMore;
+  let loading=false;
+  button.addEventListener("click",async()=>{
+    if(loading||!state.commentsHasMore||!state.commentCursor)return;
+    loading=true;button.disabled=true;
+    if(status)status.textContent="Loading more comments…";
+    try{
+      const page=await fetchPostCommentPage({postId,cursor:state.commentCursor,limit:40});
+      state.commentCursor=page.nextCursor;
+      state.commentsHasMore=page.hasMore;
+      const seen=new Set(state.comments.map(comment=>comment.id));
+      const next=page.items.filter(comment=>!seen.has(comment.id));
+      state.comments.push(...next);
+      await loadCommentAuthors(next);
+      renderComments(state.comments);
+      button.hidden=!state.commentsHasMore;
+      if(status)status.textContent=next.length+" more comments loaded.";
+    }catch(error){
+      if(status)status.textContent="Couldn't load older comments. Please retry.";
+      console.warn("Comment page unavailable:",error);
+    }finally{
+      loading=false;button.disabled=false;
+    }
+  });
+}
+
 async function boot() {
   try {
-    state.user = await getCurrentUserWithRole();
-    state.settings = await fetchSettings();
+    // Public article content must never wait for auth, theme or sidebar.
+    const optional=(promise,fallback,label)=>Promise.resolve(promise).catch(error=>{
+      console.warn("Optional article data unavailable:",label,error);
+      return fallback;
+    });
+    const userPromise=optional(getCurrentUserWithRole(),null,"identity");
+    const settingsPromise=optional(fetchSettings(),{},"settings");
+    const postId=getQueryParam("id"),slug=getQueryParam("slug");
+    const post=await fetchPostByIdOrSlug({id:postId,slug});
+    if(!post){
+      document.getElementById("postTitle").textContent="Post not found";
+      document.getElementById("postContent").innerHTML=
+        '<p>This post is unavailable or may have been removed.</p><a class="btn" href="/index.html">Explore the latest posts</a>';
+      document.querySelectorAll("#commentForm, #comments, .post-actions, .post-review")
+        .forEach(node=>{node.hidden=true;});
+      return;
+    }
+    updateMeta(post);
+    // Render the article immediately with a temporary category label, then
+    // update that label without rebuilding the full HTML and its listeners.
+    renderPost({categories:[]},post);
+    renderTakeaways(post);
+    setupReveal();
+
+    const profilePromise=post.author_id
+      ?supabase.from("public_profiles")
+        .select("id,display_name,username,avatar_url,headline,bio,is_verified,verification_tier,verification_expires_at,frame_style")
+        .eq("id",post.author_id).maybeSingle()
+      :Promise.resolve({data:null,error:null});
+    const authorCountPromise=post.author_id
+      ?supabase.from("posts").select("id",{count:"exact",head:true})
+        .eq("status","published").eq("author_id",post.author_id)
+      :Promise.resolve({count:0,error:null});
+
+    const [user,settings,categories,relatedPage,commentPage,engagement,ads,postMedia,profileResult,authorCount] = await Promise.all([
+      userPromise,
+      settingsPromise,
+      optional(fetchCategories(),[],"categories"),
+      optional(fetchFeedPosts({limit:24,categoryId:post.category_id||null}),{items:[]},"related posts"),
+      optional(fetchPostCommentPage({postId:post.id,limit:40}),{
+        items:[],hasMore:false,nextCursor:null
+      },"comments"),
+      fetchPostEngagement(supabase,[post.id])
+        .catch(error=>{console.warn("Article engagement unavailable:",error);return null;}),
+      optional(fetchAds({status:"active",limit:8}),[],"advertising"),
+      optional(fetchPostMedia(post.id),[],"article media"),
+      optional(profilePromise,{data:null},"author profile"),
+      optional(authorCountPromise,{count:0},"author count")
+    ]);
+    state.user=user;
+    state.settings=settings;
     applyTheme(state.settings);
-    if (state.settings.themeId) {
-      const theme = await fetchThemeById(state.settings.themeId);
-      if (theme) applyThemeVariables(theme);
+    if(state.settings.themeId){
+      void fetchThemeById(state.settings.themeId)
+        .then(theme=>{if(theme)applyThemeVariables(theme);})
+        .catch(error=>console.warn("Article theme unavailable:",error));
     }
     renderAuthActions();
     showAdminLinks();
+    state.categories=categories;
+    const category=categories.find(cat=>cat.id===post.category_id);
+    const categoryLabel=document.getElementById("postCategory");
+    if(categoryLabel&&category)categoryLabel.textContent=category.name;
+    state.ads=ads;
+    state.postMedia=postMedia;
+    state.likeCount=Math.max(0,Number(engagement?.likeCounts?.[post.id])||0);
+    state.hasLiked=Boolean(user&&engagement?.likedPostIds?.includes(post.id));
+    state.authorPostCount=Math.max(0,Number(authorCount?.count)||0);
+    state.authorProfile=profileResult?.data||null;
+    state.comments=commentPage.items;
+    state.commentCursor=commentPage.nextCursor;
+    state.commentsHasMore=commentPage.hasMore;
 
-    const postId = getQueryParam("id");
-    const slug = getQueryParam("slug");
-
-    const post = await fetchPostByIdOrSlug({ id: postId, slug });
-
-    if (!post) {
-      console.warn("⚠️ Post not found for id:", postId, "slug:", slug);
-      document.getElementById("postTitle").textContent = "Post not found";
-      document.getElementById("postContent").innerHTML =
-        '<p>This post is unavailable or may have been removed.</p><a class="btn" href="/index.html">Explore the latest posts</a>';
-      document.querySelectorAll("#commentForm, #comments, .post-actions, .post-review").forEach(node => { node.hidden = true; });
-      return;
-    }
-
-    updateMeta(post);
-
-    const [categories, relatedPosts, comments, likes, ads, postMedia] = await Promise.all([
-      fetchCategories(),
-      fetchPosts({ status: "published" }),
-      fetchComments({ status: "approved", postId: post.id }),
-      fetchPostLikes({ postId: post.id }),
-      fetchAds({ status: "active" }),
-      fetchPostMedia(post.id)
-    ]);
-
-    state.categories = categories;
-    state.likes = likes;
-    state.ads = ads;
-    state.postMedia = postMedia;
-    state.likeCount = likes.length;
-    state.hasLiked = !!state.user && likes.some((like) => like.user_id === state.user.id);
-    state.authorPostCount = relatedPosts.filter((item) => item.author_id === post.author_id).length;
-    if (post.author_id) {
-      const profile = await supabase
-        .from("public_profiles")
-        .select("*")
-        .eq("id", post.author_id)
-        .maybeSingle();
-      state.authorProfile = profile.data || null;
-    }
-    if (state.user) {
-      state.isBookmarked = await fetchBookmarkStatus(post.id, state.user.id);
-    }
-    if (state.user && post.author_id) {
-      state.isFollowingAuthor = await fetchFollowStatus({
-        targetType: "author",
-        targetId: post.author_id,
-        followerId: state.user.id
-      });
-    }
-
-    renderPost({ categories }, post);
+    updateCounts(post);
     renderGallery(state.postMedia);
-    state.comments = comments || [];
-    await loadCommentAuthors(state.comments);
+    await optional(loadCommentAuthors(state.comments),null,"comment authors");
     renderComments(state.comments);
-    renderRelated({ posts: relatedPosts }, post);
-    renderTakeaways(post);
+    setupCommentPagination(post.id);
+    renderRelated({posts:relatedPage.items},post);
     renderAuthorMini(post);
     renderAuthorCard(post);
-    await incrementViewIfNeeded(post);
+
+    // Private extras may require auth; process concurrently without delaying
+    // the already-rendered article or its public comments.
+    if(user?.id){
+      const [saved,following]=await Promise.all([
+        optional(fetchBookmarkStatus(post.id,user.id),false,"bookmark status"),
+        post.author_id?optional(fetchFollowStatus({
+          targetType:"author",targetId:post.author_id,followerId:user.id
+        }),false,"follow status"):Promise.resolve(false)
+      ]);
+      state.isBookmarked=saved;
+      state.isFollowingAuthor=following;
+      renderAuthorMini(post);
+    }
     renderAds(state.settings);
     setupLike(post);
     setupBookmark(post);
     setupFollowAuthor(post);
     setupShare(post);
-    setupCommentForm(post, state.comments);
+    setupCommentForm(post,state.comments);
     subscribeToComments(post.id);
-    setupReveal();
-    // Progress syncing is optional, private and never blocks article rendering.
-    mountArticleJourney({post,user:state.user});
-  } catch (err) {
-    reportAppError(err, "Post load failed");
-    const message = extractErrorMessage(err, "Something went wrong while loading this post.");
-    document.getElementById("postTitle").textContent = "Error loading post";
-    document.getElementById("postContent").innerHTML =
-      `<p>${escapeHTML(message)}</p>`;
+    void incrementViewIfNeeded(post);
+    // Optional private reader progress should never block the article.
+    void mountArticleJourney({post,user:state.user});
+  }catch(err){
+    reportAppError(err,"Post load failed");
+    const message=extractErrorMessage(err,"Something went wrong while loading this post.");
+    const title=document.getElementById("postTitle");
+    if(title&&!title.textContent)title.textContent="Error loading post";
+    const body=document.getElementById("postContent");
+    if(body&&!body.textContent.trim())body.innerHTML='<p>'+escapeHTML(message)+'</p>';
   }
 }
 
