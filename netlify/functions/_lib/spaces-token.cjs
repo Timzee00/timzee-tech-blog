@@ -16,4 +16,14 @@ function createRoomToken({apiKey,apiSecret,userId,roomId,role,displayName="",now
  const signature=createHmac("sha256",apiSecret).update(signingInput).digest("base64url");
  return signingInput+"."+signature;
 }
-module.exports={createRoomToken,UUID};
+
+function createRoomServiceToken({apiKey,apiSecret,roomId,action,now=Date.now()}){
+ if(!apiKey||!apiSecret||!UUID.test(String(roomId))||
+    !["delete","remove"].includes(action))throw Error("Invalid room management credentials");
+ const at=Math.floor(now/1000);
+ const claims={iss:apiKey,sub:"spaces-service",iat:at,nbf:at-3,exp:at+60,jti:randomUUID(),
+ video:action==="delete"?{roomCreate:true}:{room:"space_"+roomId,roomAdmin:true}};
+ const signingInput=encode({alg:"HS256",typ:"JWT"})+"."+encode(claims);
+ return signingInput+"."+createHmac("sha256",apiSecret).update(signingInput).digest("base64url");
+}
+module.exports={createRoomToken,createRoomServiceToken,UUID};
