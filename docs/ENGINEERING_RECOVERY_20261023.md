@@ -92,3 +92,16 @@ The repository now contains both migrations with filenames matching live
 history instead of a duplicate version that could be replayed by future
 `supabase db push`. No migration was re-applied and no existing indexes
 were changed in this reconciliation.
+
+## 2026-10-23 emergency privilege-escalation remediation
+Audit discovered that `public.protect_profile_privileged_fields()` checked
+dangerous fields on INSERT, but its trigger was bound only to UPDATE.
+Migration `20261023225101_guard_profile_insert_privileged_fields` (already applied to the linked Supabase
+project) attaches an additional BEFORE INSERT trigger, preserving the
+existing UPDATE trigger. Its insert guard now also rejects caller-supplied
+`level`. No existing profiles were changed.
+A transaction-only test with a temporary profile table using the same trigger
+passed: normal insert accepted, forged admin, verification, level and another
+user's ID rejected. The transaction was rolled back; production data unchanged.
+Remaining release work: authenticated PostgREST test accounts, all npm tests,
+browser tests, rotation/review if any account was actually compromised.
