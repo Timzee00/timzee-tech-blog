@@ -59,7 +59,11 @@ async function openWorkspace(id){
   state.role=membership.data?.role||"viewer";
  }
  const manager=["owner","admin"].includes(state.role);
+ const editor=["owner","admin","editor"].includes(state.role);
  $("teamInviteForm").hidden=!manager;
+ $("teamProjectForm").hidden=!editor;
+ $("teamProjectForm").elements.status.querySelector('option[value="approved"]').disabled=!manager;
+ $("teamSpaceLink").textContent=editor?"Host a Space":"Explore workspace Spaces";
  $("teamInviteForm").elements.role.querySelector("option[value=admin]").disabled=!isOwner;
  $("teamSettingsForm").hidden=!isOwner;
  if(isOwner){
@@ -95,13 +99,34 @@ async function loadProjects(){
  state.projects=records;
  const list=$("teamProjectList");list.replaceChildren();
  if(!records.length)list.append(make("p","No collaborative projects yet.","studio-muted"));
- for(const project of records)list.append(row(project.title,project.kind+" · "+project.status,
- [["Edit",()=>{const f=$("teamProjectForm");
- f.elements.id.value=project.id;f.elements.kind.value=project.kind;
- f.elements.title.value=project.title;f.elements.body.value=project.body;
- f.elements.status.value=project.status;f.elements.title.focus();}],
- ["Plan a Space",()=>{window.location.assign("spaces.html?workspace="+encodeURIComponent(state.active.id)
-  +"&project="+encodeURIComponent(project.id));}]]));
+ $("teamProjectPreview").hidden=true;
+ const editor=["owner","admin","editor"].includes(state.role);
+ const manager=["owner","admin"].includes(state.role);
+ for(const project of records){
+  const buttons=[["View",()=>{
+    $("teamProjectPreview").hidden=false;
+    $("teamPreviewTitle").textContent=project.title;
+    $("teamPreviewMeta").textContent=project.kind+" · "+project.status;
+    $("teamPreviewBody").textContent=project.body||"No project notes.";
+    $("teamProjectPreview").scrollIntoView({behavior:"smooth",block:"nearest"});
+  }]];
+  if(editor){
+   buttons.push(["Edit",()=>{
+    const f=$("teamProjectForm");
+    f.elements.id.value=project.id;f.elements.kind.value=project.kind;
+    f.elements.title.value=project.title;f.elements.body.value=project.body;
+    f.elements.status.value=!manager&&project.status==="approved"?"review":project.status;
+    if(!manager&&project.status==="approved")
+      notice("Edits to an approved project require fresh owner review.");
+    f.elements.title.focus();
+   }]);
+   buttons.push(["Plan a Space",()=>{
+    window.location.assign("spaces.html?workspace="+encodeURIComponent(state.active.id)
+      +"&project="+encodeURIComponent(project.id));
+   }]);
+  }
+  list.append(row(project.title,project.kind+" · "+project.status,buttons));
+ }
 }
 $("createWorkspaceForm").addEventListener("submit",async event=>{
  event.preventDefault();if(!state.user)return;
@@ -144,7 +169,7 @@ $("teamInviteForm").addEventListener("submit",async event=>{
  }catch(e){notice(e.message||"Invitation failed.","error")}finally{button.disabled=false}
 });
 $("teamProjectForm").addEventListener("submit",async event=>{
- event.preventDefault();if(!state.active)return;
+ event.preventDefault();if(!state.active||!["owner","admin","editor"].includes(state.role))return;
  const v=getForm(event.currentTarget),button=event.submitter;button.disabled=true;
  try{
   const item={kind:v.kind,status:v.status,title:v.title.trim(),body:v.body};

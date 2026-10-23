@@ -64,3 +64,10 @@ rooms from crowding out a user's selected view. Stale responses after tab
 switches are discarded, expired rooms are not promoted as live, and RLS
 continues to determine visibility. Full browser pagination and mobile QA are
 still release gates.
+
+## Workspace role presentation
+Creator/company team viewers can now inspect full collaborative project notes
+in a read-only preview. Editing, Space planning, and project approval controls
+are hidden for roles without permission. Editors revising approved projects
+submit them back to team review; only owners/admins may re-approve via the
+existing database trigger. RLS remains the security boundary, not the UI.

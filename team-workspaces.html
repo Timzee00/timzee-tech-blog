@@ -40,6 +40,11 @@
     <button type="submit" class="btn ghost">Send invitation</button></form>
     <hr><h3>Collaborative content plans</h3>
     <div id="teamProjectList" class="studio-stack" role="list"></div>
+    <section id="teamProjectPreview" class="studio-panel" hidden aria-labelledby="teamPreviewTitle">
+      <h4 id="teamPreviewTitle">Project</h4>
+      <p id="teamPreviewMeta" class="studio-muted"></p>
+      <div id="teamPreviewBody" style="white-space:pre-wrap;overflow-wrap:anywhere"></div>
+    </section>
     <form id="teamProjectForm" class="studio-form"><input name="id" type="hidden">
     <label>Format<select name="kind"><option value="brief">Creative brief</option><option value="article">Article</option><option value="video-script">Video script</option><option value="event-plan">Live event plan</option><option value="announcement">Announcement</option></select></label>
     <label>Review stage<select name="status"><option value="draft">Draft</option><option value="review">Team review</option><option value="approved">Approved internally</option></select></label>
