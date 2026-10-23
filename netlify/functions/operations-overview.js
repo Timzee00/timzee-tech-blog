@@ -13,6 +13,7 @@ const json=(statusCode,body)=>({
 const QUEUES=Object.freeze([
   {key:"verification",table:"verification_applications",column:"status",value:"pending"},
   {key:"reports",table:"content_reports",column:"status",value:"open"},
+  {key:"spaceReports",table:"spaces_reports",column:"review_status",value:"pending"},
   {key:"communityReports",table:"community_reports",column:"status",values:["pending","open"]},
   {key:"autoModeration",table:"community_auto_moderation",column:"state",value:"pending"},
   {key:"scheduledPosts",table:"posts",column:"status",value:"scheduled"},

@@ -33,3 +33,7 @@
 .space-reactions span{color:var(--color-text-muted,#72848a);font-size:.85rem}
 .space-controls button[hidden],.space-tabs[hidden]{display:none}
 @media(max-width:640px){.spaces-hero>.btn{width:100%}.space-person{width:72px}.speaker-stage{min-height:215px}.space-controls .btn{flex:1 1 125px}.space-people{max-height:190px}}
+.space-report-dialog{border:1px solid var(--color-border,#a8b6ba);border-radius:18px;
+ width:min(92vw,540px);max-height:85dvh;overflow:auto;
+ padding:clamp(16px,4vw,24px);background:var(--color-surface,#fff);color:var(--color-text,#15262f)}
+.space-report-dialog::backdrop{background:#07171dd9}

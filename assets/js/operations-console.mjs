@@ -5,6 +5,7 @@ import {getSession} from "./supabase.js";
 const QUEUES=[
   {key:"verification",title:"Verification applications",detail:"Applications waiting for evidence review",tab:"verification",action:"Review verification"},
   {key:"reports",title:"User & content reports",detail:"Open account and content complaints",url:"../moderator/dashboard.html?tab=reports",action:"Review reports"},
+  {key:"spaceReports",title:"Live Space reports",detail:"Reports against voice rooms requiring review",url:"../admin/spaces-reports.html",action:"Review Space reports"},
   {key:"communityReports",title:"Community reports",detail:"Open board-specific complaints",url:"../discussion.html",action:"Open communities"},
   {key:"autoModeration",title:"Auto-moderation queue",detail:"Flagged forum submissions requiring review",url:"../discussion.html",action:"Open communities"},
   {key:"scheduledPosts",title:"Scheduled articles",detail:"Editorial posts queued for publication",tab:"posts",action:"Manage posts"},
