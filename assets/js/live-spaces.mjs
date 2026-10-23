@@ -89,7 +89,7 @@ async function createRoom(event){
 }
 async function openRoom(id){
  if(!validId(id))return;
- await leave(false);
+ await leave();
  state.roomId=id;
  $("spacesDiscovery").hidden=true;$("spaceDetail").hidden=false;
  $("spaceTitle").textContent="Loading Space…";$("spaceSourceLinks").replaceChildren();
@@ -130,6 +130,7 @@ function configureControls(){
  $("spaceEnd").hidden=!host;
  $("spaceEnd").textContent=room?.status==="ended"?"Confirm audio stopped":"End room";
  $("spaceLeave").hidden=!state.joined;
+ $("spaceReport").hidden=!state.joined;
  $("spaceMic").hidden=!state.joined||!state.livekit||!["host","speaker"].includes(state.role);
  $("spaceAsk").hidden=!state.joined||state.role!=="listener"||!room?.allow_requests;
  $("spaceReconnect").hidden=!state.joined||state.role==="host";
@@ -429,6 +430,28 @@ $("spaceBack").addEventListener("click",async()=>{
  history.replaceState({},"","spaces.html");await loadRooms();
 });
 $("spaceShare").addEventListener("click",()=>void shareRoom());
+$("spaceReport").addEventListener("click",()=>{
+ if(!state.joined)return;
+ $("spaceReportDialog").showModal();
+ $("spaceReportReason").focus();
+});
+$("spaceReportCancel").addEventListener("click",()=>$("spaceReportDialog").close());
+$("spaceReportForm").addEventListener("submit",async event=>{
+ event.preventDefault();
+ if(!state.joined||!state.user?.id||!validId(state.roomId))return;
+ const form=event.currentTarget,reason=form.elements.reason.value.trim();
+ if(reason.length<10||reason.length>500)return;
+ const submit=event.submitter;submit.disabled=true;
+ try{
+  const result=await supabase.from("spaces_reports").insert({
+   room_id:state.roomId,reporter_id:state.user.id,reason
+  });
+  if(result.error)throw result.error;
+  form.reset();$("spaceReportDialog").close();
+  alertStatus("Your report was received for moderation review.","success");
+ }catch(error){alertStatus(error.message||"Unable to submit report.","error")}
+ finally{submit.disabled=false}
+});
 $("spaceStart").addEventListener("click",goLive);
 $("spaceEnd").addEventListener("click",endRoom);
 $("spaceJoin").addEventListener("click",join);

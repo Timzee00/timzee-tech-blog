@@ -43,7 +43,7 @@
 <section id="spaceDetail" class="space-panel space-detail" hidden aria-label="Selected audio room">
 <div class="space-topbar"><button type="button" class="btn ghost sm" id="spaceBack">← All Spaces</button>
 <span id="spaceLiveBadge" class="space-live-badge">LIVE</span>
-<button id="spaceShare" type="button" class="btn ghost sm">Share</button></div>
+<button id="spaceShare" type="button" class="btn ghost sm">Share</button><button id="spaceReport" type="button" class="btn ghost sm" hidden>Report</button></div>
 <h2 id="spaceTitle">Space</h2><p id="spaceDescription" class="studio-muted"></p>
 <p id="spaceMeta" class="studio-muted"></p>
 <div id="spaceSourceLinks" class="studio-action-row"></div>
@@ -68,4 +68,17 @@
 <h3>Invite a listener</h3><form id="spaceInviteForm" class="studio-form">
 <label>Exact username<input name="username" pattern="[A-Za-z0-9_.]{3,32}" maxlength="32" required></label><button type="submit" class="btn ghost">Invite</button></form>
 </section><div id="spaceAudioElements" hidden></div></section>
+<dialog id="spaceReportDialog" class="space-report-dialog" aria-labelledby="spaceReportHeading">
+ <form id="spaceReportForm" class="studio-form">
+  <h2 id="spaceReportHeading" class="span-all">Report a live Space</h2>
+  <p class="studio-muted span-all">Reports go to platform staff for review. False reports may be subject to moderation.</p>
+  <label class="span-all" for="spaceReportReason">Describe the issue
+   <textarea id="spaceReportReason" name="reason" minlength="10" maxlength="500" rows="5" required
+    placeholder="Please describe what happened, without sharing sensitive information."></textarea></label>
+  <div class="studio-action-row span-all">
+   <button class="btn" type="submit">Submit report</button>
+   <button class="btn ghost" id="spaceReportCancel" type="button">Cancel</button>
+  </div>
+ </form>
+</dialog>
 </main><script type="module" src="assets/js/live-spaces.mjs"></script></body></html>
