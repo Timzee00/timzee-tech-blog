@@ -82,3 +82,13 @@ between the viewer and those candidate IDs, in both directions. Failed privacy
 queries return no suggestions rather than accidentally proposing existing
 contacts. A synthetic 32-candidate, three-existing-contacts simulation passed.
 Live auth/mobile/relationship RLS tests remain required before release.
+
+## Database migration history reconciliation — 23 October
+Confirmed the live Supabase migration records retain exact SQL text for
+`20261022130909_feed_previews_keyset_indexes_20261022` and
+`20261022144817_feed_lookup_scale_indexes_20261022`. The former was
+byte-for-byte identical to the previously staged `20261022141500` file.
+The repository now contains both migrations with filenames matching live
+history instead of a duplicate version that could be replayed by future
+`supabase db push`. No migration was re-applied and no existing indexes
+were changed in this reconciliation.

@@ -30,7 +30,7 @@ deployed Netlify artifact. This audit measures SQL and source structure,
   overlap and many unused-index measurements reflect very small tables.
 
 ### Changes applied to the live database
-`20261022141500_feed_previews_keyset_indexes.sql`
+`20261022130909_feed_previews_keyset_indexes_20261022.sql`
 
 - `posts.feed_excerpt` stores the first 240 characters of plain-text article
   copy so a feed never needs the full HTML body.

@@ -101,7 +101,7 @@ test("feed and detail screens never request unlimited related posts or likes",()
  assert.match(detail,/loadMoreArticleComments/);
 });
 test("database migration maintains short previews and indexes public access paths",()=>{
- const sql=read("supabase/migrations/20261022141500_feed_previews_keyset_indexes.sql");
+ const sql=read("supabase/migrations/20261022130909_feed_previews_keyset_indexes_20261022.sql");
  assert.match(sql,/BEFORE INSERT OR UPDATE OF content ON public\.posts/);
  assert.match(sql,/NEW\.feed_excerpt := left\(/);
  assert.match(sql,/posts_public_cursor_idx/);
