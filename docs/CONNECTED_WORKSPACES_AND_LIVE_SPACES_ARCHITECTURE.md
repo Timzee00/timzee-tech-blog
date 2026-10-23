@@ -47,3 +47,12 @@ All cross-feature links must use immutable entity IDs, preserve attribution, and
 - Expired rooms are hidden from live discovery pending server status cleanup.
 - Cancelling a scheduled room does not require an audio-provider delete request.
 - Database `spaces_start` now records the actual start instant; credentials and end-to-end audio still require testing.
+
+## Audio expiry worker
+The existing five-minute `automation-maintenance` schedule now cleans expired
+live audio rooms. It sends LiveKit DeleteRoom before marking the room ended in
+Postgres; 404 (already gone) is also accepted. Work is bounded to eight rooms
+per tick, with a short provider timeout. Provider/database failures are raised
+for scheduled logs/retry, not silently marked successful. This worker is
+inactive while Netlify remains paused. Real provider integration testing is
+required after credentials are configured.
