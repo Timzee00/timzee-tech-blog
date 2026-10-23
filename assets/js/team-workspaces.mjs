@@ -1,0 +1,135 @@
+import {supabase,getCurrentUser} from "./supabase.js";
+const $=id=>document.getElementById(id);
+const state={user:null,workspaces:[],active:null,projects:[]};
+const make=(tag,text="",className="")=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=String(text);if(className)el.className=className;return el};
+const notice=(message,tone="neutral")=>{const n=$("teamStatus");n.textContent=message;n.dataset.tone=tone};
+const requireSuccess=result=>{if(result.error)throw result.error;return result.data};
+const getForm=form=>Object.fromEntries(new FormData(form).entries());
+function row(title,subtitle,buttons=[]){
+ const wrapper=make("div","","studio-row");
+ const summary=make("div");summary.append(make("strong",title),make("p",subtitle));
+ wrapper.append(summary);
+ for(const [label,cb] of buttons){const button=make("button",label,"btn ghost sm");button.type="button";button.addEventListener("click",cb);wrapper.append(button)}
+ return wrapper;
+}
+async function load(){
+ state.user=await getCurrentUser();
+ $("teamSignedOut").hidden=Boolean(state.user);
+ $("teamApplication").hidden=!state.user;
+ if(!state.user){notice("Sign in to open your team workspaces.");return}
+ await Promise.all([loadWorkspaces(),loadInvites()]);
+ notice("Workspaces are private to owners and invited members. Organization verification is a separate approval.");
+}
+async function loadWorkspaces(){
+ state.workspaces=requireSuccess(await supabase.from("team_workspaces")
+ .select("id,kind,name,description,website,owner_id,created_at")
+ .order("created_at",{ascending:false}).limit(50))||[];
+ const list=$("teamList");list.replaceChildren();
+ if(!state.workspaces.length)list.append(make("p","No teams yet. Create one above.","studio-muted"));
+ for(const ws of state.workspaces){
+  list.append(row(ws.name,ws.kind==="organization"?"Organization workspace":"Creator team",
+  [["Open",()=>openWorkspace(ws.id)]]));
+ }
+ if(state.active&&state.workspaces.some(w=>w.id===state.active.id))await openWorkspace(state.active.id);
+}
+async function loadInvites(){
+ const invites=requireSuccess(await supabase.from("team_workspace_members")
+ .select("workspace_id,role,created_at").eq("user_id",state.user.id).eq("status","invited").limit(30))||[];
+ $("invitedSection").hidden=!invites.length;
+ $("teamInvites").replaceChildren();
+ for(const invite of invites){
+  $("teamInvites").append(row("Workspace invitation",invite.role+" · Workspace "+invite.workspace_id.slice(0,8),
+  [["Accept",async()=>{try{const accepted=requireSuccess(await supabase.rpc("team_accept_invite",{p_workspace:invite.workspace_id}));
+   if(!accepted)throw Error("This invitation is no longer available.");
+   notice("Invitation accepted.","success");await loadInvites();await loadWorkspaces();
+  }catch(e){notice(e.message,"error")}}]]));
+ }
+}
+async function openWorkspace(id){
+ const workspace=state.workspaces.find(w=>w.id===id);
+ if(!workspace)return;
+ state.active=workspace;$("teamDetails").hidden=false;
+ $("teamTitle").textContent=workspace.name;
+ $("teamDescription").textContent=(workspace.kind==="organization"?"Company / organization · Unverified until official review. ":"Creator team. ")+(workspace.description||"");
+ $("teamSpaceLink").href="spaces.html?workspace="+encodeURIComponent(id);
+ const isOwner=workspace.owner_id===state.user.id;
+ $("teamInviteForm").hidden=!isOwner;
+ await Promise.all([loadMembers(),loadProjects()]);
+}
+async function loadMembers(){
+ const list=$("teamMembers");list.replaceChildren();
+ list.append(row("Workspace owner","Full control"));
+ const result=await supabase.from("team_workspace_members").select("user_id,role,status")
+  .eq("workspace_id",state.active.id).limit(50);
+ const members=requireSuccess(result)||[];
+ for(const member of members){
+  const owner=state.active.owner_id===state.user.id;
+  const controls=owner?[["Remove",async()=>{if(!confirm("Remove this teammate?"))return;
+   try{requireSuccess(await supabase.rpc("team_remove_member",{p_workspace:state.active.id,p_user:member.user_id}));
+   await loadMembers();notice("Membership removed.","success")}catch(e){notice(e.message,"error")}}]]:[];
+  list.append(row("Member "+member.user_id.slice(0,8),member.role+" · "+member.status,controls));
+ }
+}
+async function loadProjects(){
+ const records=requireSuccess(await supabase.from("team_studio_projects")
+ .select("id,workspace_id,kind,title,body,status,created_by,updated_at")
+ .eq("workspace_id",state.active.id).order("updated_at",{ascending:false}).limit(80))||[];
+ state.projects=records;
+ const list=$("teamProjectList");list.replaceChildren();
+ if(!records.length)list.append(make("p","No collaborative projects yet.","studio-muted"));
+ for(const project of records)list.append(row(project.title,project.kind+" · "+project.status,
+ [["Edit",()=>{const f=$("teamProjectForm");
+ f.elements.id.value=project.id;f.elements.kind.value=project.kind;
+ f.elements.title.value=project.title;f.elements.body.value=project.body;
+ f.elements.status.value=project.status;f.elements.title.focus();}]]));
+}
+$("createWorkspaceForm").addEventListener("submit",async event=>{
+ event.preventDefault();if(!state.user)return;
+ const values=getForm(event.currentTarget),button=event.submitter;button.disabled=true;
+ try{
+  const created=requireSuccess(await supabase.from("team_workspaces").insert({
+   owner_id:state.user.id,kind:values.kind,name:values.name.trim(),
+   description:values.description.trim(),website:values.website.trim()||null
+  }).select("id").single());
+  event.currentTarget.reset();notice("Workspace created. You can now plan events and content.","success");
+  await loadWorkspaces();await openWorkspace(created.id);
+ }catch(e){notice(e.message||"Unable to create workspace.","error")}finally{button.disabled=false}
+});
+$("teamInviteForm").addEventListener("submit",async event=>{
+ event.preventDefault();if(!state.active)return;
+ const values=getForm(event.currentTarget),button=event.submitter;button.disabled=true;
+ try{
+  const name=values.username.trim();
+  if(!/^[A-Za-z0-9_.]{3,32}$/.test(name))throw Error("Enter an exact public username.");
+  const person=requireSuccess(await supabase.from("public_profiles")
+    .select("id,username").eq("username",name).maybeSingle());
+  if(!person)throw Error("No account matches that username.");
+  requireSuccess(await supabase.rpc("team_invite_member",{
+   p_workspace:state.active.id,p_user:person.id,p_role:values.role
+  }));
+  event.currentTarget.reset();notice("Invitation created; it must be accepted by the teammate.","success");
+  await loadMembers();
+ }catch(e){notice(e.message||"Invitation failed.","error")}finally{button.disabled=false}
+});
+$("teamProjectForm").addEventListener("submit",async event=>{
+ event.preventDefault();if(!state.active)return;
+ const v=getForm(event.currentTarget),button=event.submitter;button.disabled=true;
+ try{
+  const item={kind:v.kind,status:v.status,title:v.title.trim(),body:v.body};
+  let response;
+  if(v.id)response=await supabase.from("team_studio_projects").update(item)
+   .eq("id",v.id).eq("workspace_id",state.active.id).select("id").single();
+  else response=await supabase.from("team_studio_projects").insert({
+   ...item,status:"draft",created_by:state.user.id,workspace_id:state.active.id
+  }).select("id").single();
+  const saved=requireSuccess(response);event.currentTarget.elements.id.value=saved.id;
+  notice("Team project saved. This has not been published.","success");await loadProjects();
+ }catch(e){notice(e.message||"Unable to save project.","error")}finally{button.disabled=false}
+});
+$("newTeamProject").addEventListener("click",()=>{$("teamProjectForm").reset();$("teamProjectForm").elements.id.value="";$("teamProjectForm").elements.title.focus()});
+$("copyTeamProject").addEventListener("click",async()=>{
+ const f=$("teamProjectForm");const value=f.elements.title.value+"\n\n"+f.elements.body.value;
+ try{await navigator.clipboard.writeText(value);notice("Content copied. Publish it explicitly in the editor of your choice.","success")}
+ catch{notice("Clipboard unavailable on this device.","error")}
+});
+load().catch(e=>notice(e.message||"Unable to load workspaces.","error"));

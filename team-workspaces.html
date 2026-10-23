@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#0d222d">
+<title>Team Workspaces · Timzee Tech Hub</title>
+<link rel="stylesheet" href="assets/css/styles.css"><link rel="stylesheet" href="assets/css/spaces-workspaces.css">
+<script defer src="assets/js/theme-init.js"></script></head>
+<body><a class="skip-link" href="#workspaceMain">Skip to workspaces</a>
+<header class="site-header"><div class="container wrap"><a class="brand" href="index.html"><span class="logo">Timzee <span>Tech</span> Hub</span></a>
+<nav class="nav-pill" aria-label="Main navigation"><a href="index.html">Home</a><a href="discussion.html">Communities</a><a href="creator-studio.html">Creator Studio</a><a href="spaces.html">Live Spaces</a></nav>
+<div class="header-actions"><a href="profile.html" class="btn ghost sm">Profile</a></div></div></header>
+<main class="container studio-shell" id="workspaceMain">
+<section class="studio-hero"><div><p class="studio-kicker">CREATOR & ORGANIZATION WORKSPACES</p>
+<h1>Create together. Publish with purpose.</h1>
+<p>Build shared content plans, manage trusted teammates, and take your next conversation live. Organization workspaces are not proof of identity verification.</p></div>
+<div class="studio-hero-links"><a class="btn" href="creator-studio.html">Private Creator Studio</a><a class="btn ghost" href="spaces.html">Explore live rooms</a></div></section>
+<p class="studio-status" id="teamStatus" role="status" aria-live="polite">Checking account…</p>
+<section id="teamSignedOut" class="studio-panel" hidden><h2>Work together after signing in</h2><p>Sign in to create a creator team or organization workspace.</p><a href="login.html?redirect=team-workspaces.html" class="btn">Sign in</a></section>
+<div id="teamApplication" hidden>
+ <section class="studio-panel"><h2>Start a workspace</h2>
+ <form id="createWorkspaceForm" class="studio-form"><label>Workspace type<select name="kind" required><option value="organization">Company or organization</option><option value="creator">Creator team</option></select></label>
+ <label>Name<input name="name" maxlength="120" minlength="2" placeholder="Your team's public-facing name" required></label>
+ <label>Website (optional)<input name="website" type="url" maxlength="300" placeholder="https://example.com"></label>
+ <label class="span-all">Description<textarea name="description" maxlength="2000" rows="2" placeholder="What will your team create?"></textarea></label>
+ <button class="btn" type="submit">Create workspace</button></form></section>
+ <section class="studio-panel" id="invitedSection" hidden><h2>Invitations for you</h2><div id="teamInvites"></div></section>
+ <div class="studio-two">
+  <aside class="studio-panel"><h2>My workspaces</h2><div id="teamList" class="studio-stack" role="list"></div></aside>
+  <section class="studio-panel" id="teamDetails" hidden>
+    <h2 id="teamTitle">Workspace</h2><p id="teamDescription" class="studio-muted"></p>
+    <div class="studio-action-row"><a class="btn ghost" id="teamSpaceLink" href="spaces.html">Host a Space</a><a class="btn ghost" href="creator-studio.html">Personal drafts</a></div>
+    <h3>Team members</h3><div id="teamMembers" class="studio-stack"></div>
+    <form id="teamInviteForm" class="studio-form"><label>Invite by exact username<input name="username" pattern="[A-Za-z0-9_.]{3,32}" maxlength="32" required placeholder="username"></label>
+    <label>Role<select name="role"><option value="editor">Editor</option><option value="viewer">Viewer</option><option value="admin">Administrator</option></select></label>
+    <button type="submit" class="btn ghost">Send invitation</button></form>
+    <hr><h3>Collaborative content plans</h3>
+    <div id="teamProjectList" class="studio-stack" role="list"></div>
+    <form id="teamProjectForm" class="studio-form"><input name="id" type="hidden">
+    <label>Format<select name="kind"><option value="brief">Creative brief</option><option value="article">Article</option><option value="video-script">Video script</option><option value="event-plan">Live event plan</option><option value="announcement">Announcement</option></select></label>
+    <label>Review stage<select name="status"><option value="draft">Draft</option><option value="review">Team review</option><option value="approved">Approved internally</option></select></label>
+    <label class="span-all">Title<input name="title" minlength="2" maxlength="180" required></label>
+    <label class="span-all">Content<textarea name="body" maxlength="20000" rows="9" placeholder="Write a brief, rundown or content draft…"></textarea></label>
+    <div class="studio-action-row span-all"><button class="btn" type="submit">Save team project</button><button id="newTeamProject" type="button" class="btn ghost">New draft</button>
+    <button id="copyTeamProject" type="button" class="btn ghost">Copy for publishing</button></div></form>
+    <p class="studio-muted">Approval here is internal. This workspace cannot bypass community editorial review, publishing permissions, or organization verification.</p>
+  </section>
+ </div>
+</div></main><script type="module" src="assets/js/team-workspaces.mjs"></script></body></html>
