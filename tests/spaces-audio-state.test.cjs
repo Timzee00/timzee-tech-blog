@@ -38,3 +38,16 @@ test("reconnect checks heartbeat and renews server-granted speaking role",()=>{
  assert.match(source,/state\.role=success\(await supabase\.rpc\("spaces_join"/);
  assert.match(source,/if\(state\.livekit!==livekit\)return/);
 });
+
+test("intentional audio Leave cannot cause a false provider-disconnect warning",()=>{
+ assert.match(source,/const existing=state\.livekit;state\.livekit=null/);
+ assert.match(source,/existing\.disconnect\(\)/);
+ assert.match(source,/if\(state\.livekit!==livekit\)return/);
+});
+test("ended rooms retain a working host path to confirm audio shutdown",()=>{
+ assert.match(source,/const wasScheduled=state\.room\.status==="scheduled"/);
+ assert.match(source,/if\(!wasScheduled\)\{/);
+ assert.match(source,/await providerControl\("end"\)/);
+ assert.match(source,/Room and audio shutdown confirmed/);
+ assert.match(source,/state\.room\.status!=="ended"/);
+});

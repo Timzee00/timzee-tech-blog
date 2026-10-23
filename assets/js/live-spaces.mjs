@@ -304,7 +304,7 @@ async function connectJoinedRoom(){
  try{
   await startAudio();return true;
  }catch(error){
-  if(state.livekit){state.livekit.disconnect();state.livekit=null}
+  if(state.livekit){const failed=state.livekit;state.livekit=null;failed.disconnect()}
   audioStatus("Could not connect audio: "+(error.message||"Unavailable")+". Use Reconnect to retry.");
   configureControls();return false;
  }
@@ -341,8 +341,13 @@ function startPolling(){
 }
 async function leave(callRpc=true){
  stopPolling();
- if(state.livekit){await state.livekit.localParticipant.setMicrophoneEnabled(false).catch(()=>{});
-  state.livekit.disconnect();state.livekit=null}
+ if(state.livekit){
+  // Clear the active connection before intentional disconnect: the LiveKit
+  // Disconnected callback must not report a user-initiated Leave as failure.
+  const existing=state.livekit;state.livekit=null;
+  await existing.localParticipant.setMicrophoneEnabled(false).catch(()=>{});
+  existing.disconnect();
+ }
  $("spaceAudioElements").replaceChildren();$("spacePlayAudio").hidden=true;
  if(callRpc&&state.joined&&state.roomId&&state.user)
   await supabase.rpc("spaces_leave",{p_room:state.roomId}).catch(()=>{});
@@ -370,15 +375,19 @@ async function providerControl(action,userId=null){
 async function endRoom(){
  if(!state.roomId||!state.room||!confirm("End this room and disconnect everyone?"))return;
  try{
-  const hadAudio=state.room.status==="live";
+  const wasScheduled=state.room.status==="scheduled";
   if(state.room.status!=="ended"){
    const okay=success(await supabase.rpc("spaces_end",{p_room:state.roomId}));
    if(!okay)throw Error("Room was already ended.");
   }
-  // DeleteRoom is authorized separately and disconnects all LiveKit tracks.
-  if(hadAudio)await providerControl("end");
+  // An already-ended room can still have LiveKit tracks after a failed
+  // provider shutdown. Allow the host to confirm/retry DeleteRoom.
+  if(!wasScheduled){
+   if(!state.audioConfigured)throw Error("Audio provider is unavailable to confirm shutdown.");
+   await providerControl("end");
+  }
   await leave();await refreshRoom();
-  alertStatus(hadAudio?"Room and voice session ended.":"Scheduled room cancelled.","success");
+  alertStatus(wasScheduled?"Scheduled room cancelled.":"Room and audio shutdown confirmed.","success");
  }catch(e){
   await refreshRoom();
   alertStatus("The room may be ended in the database, but audio shutdown was not confirmed: "+

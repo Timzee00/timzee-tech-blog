@@ -82,3 +82,11 @@ confirmed before recording room status `ended`, and failures remain visible
 for retry. The old maintenance chain no longer duplicates this operation.
 The schedule is inactive while the Netlify site is paused; free-tier function
 invocation budgeting must be reviewed before resuming.
+
+## Ended-room provider reconciliation
+A room already marked ended may still have active media tracks if the host's
+first DeleteRoom call failed. The Confirm audio stopped control now retries
+the authorized provider deletion for previously live or already-ended rooms.
+A never-started scheduled room is cancelled without requiring audio. Deliberate
+Leave/Reconnect clears the active room reference before disconnect, preventing
+a false network-failure message from the provider event callback.
