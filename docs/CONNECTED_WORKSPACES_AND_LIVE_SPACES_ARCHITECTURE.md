@@ -71,3 +71,14 @@ in a read-only preview. Editing, Space planning, and project approval controls
 are hidden for roles without permission. Editors revising approved projects
 submit them back to team review; only owners/admins may re-approve via the
 existing database trigger. RLS remains the security boundary, not the UI.
+
+## Reliability repair: independent media expiry worker (2026-10-23)
+The previous 5-minute `automation-maintenance` chain could exit before it
+attempted LiveKit shutdown when an unrelated publisher, verification or
+founder digest RPC failed. LiveKit expiry now has an independent function,
+`spaces-expiry-worker`, scheduled every five minutes in `netlify.toml`.
+It uses the existing bounded `expireSpaces` helper: provider shutdown must be
+confirmed before recording room status `ended`, and failures remain visible
+for retry. The old maintenance chain no longer duplicates this operation.
+The schedule is inactive while the Netlify site is paused; free-tier function
+invocation budgeting must be reviewed before resuming.

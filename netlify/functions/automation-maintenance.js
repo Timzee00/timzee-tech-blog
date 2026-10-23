@@ -8,7 +8,6 @@
  */
 const { createClient } = require("@supabase/supabase-js");
 const { maybeRefreshFeedCandidates } = require("./_lib/feed-refresh.cjs");
-const {expireSpaces}=require("./_lib/spaces-expiry.cjs");
 
 // One-time media migration and orphan deletion do not belong in this recurring
 // publishing job. A truncated reference scan cannot prove an object is unused.
@@ -53,11 +52,6 @@ exports.handler = async () => {
     throw digest.error;
   }
   if(digest.data?.notified)console.log("Founder operations review notifications:",digest.data.notified);
-
-  // End expired media at LiveKit before finalizing database session state.
-  // Work is bounded to eight rooms per tick and requires no additional cron.
-  const spaces=await expireSpaces({db:supabase,env:process.env});
-  if(!spaces.skipped)console.log("Expired Spaces closed:",spaces.expired);
 
   // Expensive shared ranking snapshots are opt-in until the database function
   // and consumption path have passed isolated staging tests.
