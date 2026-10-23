@@ -47,3 +47,13 @@ on the paused Netlify site. It neither deploys nor makes production writes.
 
 Release requires confirming the exact deployed commit and re-testing
 everything after hosting is available. Preserve all live data and backups.
+
+
+## Second code pass: stale news imports
+The Scout previously calculated the number of old items but still sent them to
+\`rankScoutItems\`, which could insert outdated drafts. It now filters known-old
+articles **before** ranking/import, applies seven-day age to ordinary stories
+and thirty days to time-sensitive opportunities, and handles compact GDELT
+timestamps. Missing/malformed timestamps remain drafts for editorial review
+rather than being silently discarded. The \`stale_items_skipped\` metric now
+reflects actual filtered candidates in the bounded inspected batch.

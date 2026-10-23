@@ -40,3 +40,19 @@ test("accepts only HTTP(S) article links and strips fragments", () => {
   assert.equal(normalizeScoutArticleUrl("javascript:alert(1)"),"");
   assert.equal(normalizeScoutArticleUrl("file:///etc/passwd"),"");
 });
+
+
+test("actually excludes old articles before ranking and draft import",()=>{
+  const {isStaleScoutItem}=require("../netlify/functions/_lib/scout-budget.cjs");
+  const now=Date.parse("2026-10-23T12:00:00Z");
+  assert.equal(isStaleScoutItem({published_at:"2026-10-01T12:00:00Z"},{now,maxAgeDays:7}),true);
+  assert.equal(isStaleScoutItem({published_at:"2026-10-20T12:00:00Z"},{now,maxAgeDays:7}),false);
+  assert.equal(isStaleScoutItem({published_at:"2026-10-01T12:00:00Z"},{now,maxAgeDays:30}),false);
+  assert.equal(isStaleScoutItem({published_at:"20261001T120000Z"},{now,maxAgeDays:7}),true);
+  assert.equal(isStaleScoutItem({published_at:"not-a-date"},{now,maxAgeDays:7}),false);
+  assert.equal(isStaleScoutItem({published_at:null},{now,maxAgeDays:7}),false);
+  const scout= require("node:fs").readFileSync("netlify/functions/scout-news.js","utf8");
+  assert.match(scout,/if\(isStaleScoutItem\(item,\{maxAgeDays\}\)\)\{staleItemsSkipped\+\+;continue;\}/);
+  assert.match(scout,/rankScoutItems\(eligible,/);
+  assert.doesNotMatch(scout,/stale_items_skipped: filteredStale/);
+});

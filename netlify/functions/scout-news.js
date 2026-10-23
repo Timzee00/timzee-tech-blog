@@ -3,7 +3,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { requireRole } = require("./_lib/auth-role.js");
 const { randomUUID } = require("crypto");
 const { isScheduledInvocation } = require("./_lib/scheduled-event.cjs");
-const { clampScoutItems, scheduleScoutSources, classifyScoutSource, normalizeScoutDate, normalizeScoutArticleUrl, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
+const { clampScoutItems, scheduleScoutSources, classifyScoutSource, normalizeScoutDate, normalizeScoutArticleUrl, isStaleScoutItem, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
 const {rankScoutItems, topicFor} = require("./_lib/scout-ranking.cjs");
 
 const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(payload) });
@@ -157,13 +157,20 @@ exports.handler = async (event) => {
 
     let insertedCount = 0;
     let duplicates = 0;
-    let filteredStale = items.filter(item=>item.published_at &&
-      Date.now()-Date.parse(item.published_at)>
-        (["jobs","scholarships","travel","freebies","opportunities"].includes(topicFor(item))?30:7)*86400000).length;
+    // Apply the age gate before ranking/importing; previously only a metric
+    // counted stale stories while the importer still inserted those records.
+    let staleItemsSkipped=0;
+    const eligible=[];
+    for(const item of items.slice(0,SCOUT_LIMITS.MAX_ARTICLES_INSPECTED)){
+      const maxAgeDays=["jobs","scholarships","travel","freebies","opportunities"]
+        .includes(topicFor(item))?30:7;
+      if(isStaleScoutItem(item,{maxAgeDays})){staleItemsSkipped++;continue;}
+      eligible.push(item);
+    }
     let unusableArticles = 0;
     let inspectedArticles = 0;
     const insertErrors = [];
-    for (const item of rankScoutItems(items.slice(0, SCOUT_LIMITS.MAX_ARTICLES_INSPECTED),{limit:SCOUT_LIMITS.MAX_ARTICLES_INSPECTED,maxPerTopic:8})) {
+    for (const item of rankScoutItems(eligible,{limit:SCOUT_LIMITS.MAX_ARTICLES_INSPECTED,maxPerTopic:8})) {
       if (Date.now() >= deadline) break;
       inspectedArticles++;
       if (insertedCount >= perSource) break;
@@ -217,7 +224,7 @@ exports.handler = async (event) => {
     sourceOutcomes.push({
       source: source.name, status: outcome, fetched_items: items.length,
       inspected_items: inspectedArticles, unusable_items: unusableArticles,
-      stale_items_skipped: filteredStale,
+      stale_items_skipped: staleItemsSkipped,
       imported: insertedCount, duplicates,
       ...(insertErrors.length ? { error: insertErrors[0] } : {})
     });

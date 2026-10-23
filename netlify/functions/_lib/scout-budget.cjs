@@ -49,4 +49,12 @@ function normalizeScoutArticleUrl(raw) {
     return url.toString();
   } catch { return ""; }
 }
-module.exports={clampScoutItems,scheduleScoutSources,classifyScoutSource,normalizeScoutDate,normalizeScoutArticleUrl,SCOUT_LIMITS};
+// Unknown or invalid source timestamps are retained for editorial review.
+// Known old dates, including GDELT compact timestamps, are skipped before import.
+function isStaleScoutItem(item,{now=Date.now(),maxAgeDays=7}={}){
+  if(!item?.published_at)return false;
+  const timestamp=Date.parse(normalizeScoutDate(item.published_at,new Date(now)));
+  if(!Number.isFinite(timestamp))return false;
+  return now-timestamp>maxAgeDays*86400000;
+}
+module.exports={clampScoutItems,scheduleScoutSources,classifyScoutSource,normalizeScoutDate,normalizeScoutArticleUrl,isStaleScoutItem,SCOUT_LIMITS};
