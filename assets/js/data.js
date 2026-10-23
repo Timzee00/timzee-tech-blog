@@ -404,24 +404,39 @@ export async function fetchTopProfiles(limit = 5) {
 // the current viewer (if logged in) and anyone already friends/pending with
 // them, so the section only ever surfaces genuinely new connections.
 export async function fetchSuggestedPeople(currentUserId, limit = 8) {
-  const result = await supabase
-    .from("public_profiles")
+  const take=Math.max(1,Math.min(24,Math.trunc(Number(limit)||8)));
+  // Fetch bounded extra candidates so an account with existing friends does
+  // not receive an empty recommendation rail when suitable members exist.
+  const candidateLimit=Math.min(96,take*4);
+  const result=await supabase.from("public_profiles")
     .select("id, display_name, username, avatar_url, is_verified, created_at")
-    .order("created_at", { ascending: false })
-    .limit(limit + (currentUserId ? 1 : 0));
-  const profiles = normalizeResponse(result).filter((profile) => profile.id !== currentUserId);
+    .order("created_at",{ascending:false}).limit(candidateLimit);
+  const profiles=normalizeResponse(result).filter(profile=>profile.id!==currentUserId);
+  const uuid=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
+  if(!currentUserId||!uuid.test(String(currentUserId))||!profiles.length)
+    return profiles.slice(0,take);
+  const candidateIds=profiles.map(profile=>profile.id).filter(id=>uuid.test(String(id)));
+  if(!candidateIds.length)return [];
 
-  if (!currentUserId || !profiles.length) return profiles.slice(0, limit);
-
-  const existing = await supabase
-    .from("friendships")
-    .select("requester_id, addressee_id, status")
-    .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
-  const excluded = new Set(
-    (existing.data || []).map((row) => (row.requester_id === currentUserId ? row.addressee_id : row.requester_id))
-  );
-
-  return profiles.filter((profile) => !excluded.has(profile.id)).slice(0, limit);
+  // Never download a member's entire friendship graph to filter one screen.
+  // Both directions are checked, and the browser receives only matching rows.
+  const [outgoing,incoming]=await Promise.all([
+    supabase.from("friendships").select("addressee_id")
+      .eq("requester_id",currentUserId).in("addressee_id",candidateIds)
+      .limit(candidateIds.length),
+    supabase.from("friendships").select("requester_id")
+      .eq("addressee_id",currentUserId).in("requester_id",candidateIds)
+      .limit(candidateIds.length)
+  ]);
+  if(outgoing.error||incoming.error){
+    console.warn("Friend suggestions temporarily unavailable: relationship lookup failed.");
+    return []; // Fail closed: never suggest someone already connected.
+  }
+  const excluded=new Set([
+    ...(outgoing.data||[]).map(row=>row.addressee_id),
+    ...(incoming.data||[]).map(row=>row.requester_id)
+  ]);
+  return profiles.filter(profile=>!excluded.has(profile.id)).slice(0,take);
 }
 
 export async function sendFriendRequestTo(currentUser, targetUserId) {

@@ -74,3 +74,11 @@ remain unchanged. A read-only function-definition check and five-article RPC
 probe passed. Migration version: `20261023111914`. Not a claim that every
 other security advisory is resolved; review remaining callable functions
 individually and retain public RPC access only when authorization is sound.
+
+## 23 October: bounded friend suggestions
+Public member discovery no longer loads a viewer's entire friendship history.
+It inspects at most 96 recent profile candidates and checks only relationships
+between the viewer and those candidate IDs, in both directions. Failed privacy
+queries return no suggestions rather than accidentally proposing existing
+contacts. A synthetic 32-candidate, three-existing-contacts simulation passed.
+Live auth/mobile/relationship RLS tests remain required before release.
