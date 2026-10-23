@@ -62,3 +62,15 @@ reflects actual filtered candidates in the bounded inspected batch.
 Curator diagnostics now display the server's actual operational status, not a generic
 "enabled" message that can conceal an overdue Scout. They also show the latest
 recorded source-fetch timestamp. This is read-only and does not start a worker.
+
+## 23 October: public Security Definer briefing hardening
+Live Supabase function `public.my_tech_brief(p_limit integer)` used
+`coalesce(lower(p.status),'published')='published'`, which treated a NULL
+status as public despite running under SECURITY DEFINER (bypassing the
+ordinary posts read policy). We applied an additive, non-destructive function
+replacement to the live project requiring `p.status='published'`, matching
+the public posts RLS read policy. The publish_at gate and output contract
+remain unchanged. A read-only function-definition check and five-article RPC
+probe passed. Migration version: `20261023111914`. Not a claim that every
+other security advisory is resolved; review remaining callable functions
+individually and retain public RPC access only when authorization is sound.
