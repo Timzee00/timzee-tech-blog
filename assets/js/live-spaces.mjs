@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const tabs=["live","upcoming","mine","here"];
 const q=new URLSearchParams(location.search);
-const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),audioConfigured:false,capabilityChecked:false};
+const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),audioConfigured:false,capabilityChecked:false,roomsRequestId:0};
 const el=(tag,text="",className="")=>{const item=document.createElement(tag);item.textContent=String(text);if(className)item.className=className;return item};
 const alertStatus=(message,tone="neutral")=>{const s=$("spacesStatus");s.textContent=message;s.dataset.tone=tone};
 const audioStatus=message=>$("spaceAudioStatus").textContent=message;
@@ -34,10 +34,38 @@ async function loadAudioCapabilities(){
  return state.audioConfigured;
 }
 async function loadRooms(){
- const rows=success(await supabase.from("spaces_rooms")
-  .select("id,owner_id,workspace_id,post_id,community_id,title,description,visibility,status,starts_at,capacity,max_duration_minutes,allow_requests")
-  .order("starts_at",{ascending:false}).limit(60))||[];
- state.rooms=rows;renderRooms();
+ const requestId=++state.roomsRequestId;
+ const tab=state.tab;
+ if((tab==="mine"&&!state.user)||(tab==="here"&&
+   !["community","post","workspace"].some(key=>validId(q.get(key))))){
+  state.rooms=[];renderRooms();return;
+ }
+ let query=supabase.from("spaces_rooms")
+  .select("id,owner_id,workspace_id,post_id,community_id,title,description,visibility,status,starts_at,capacity,max_duration_minutes,allow_requests");
+ const now=Date.now();
+ if(tab==="live"){
+  // All configured room durations are at most 60 minutes.
+  query=query.eq("status","live")
+   .gte("starts_at",new Date(now-60*60000).toISOString());
+ }else if(tab==="upcoming"){
+  query=query.eq("status","scheduled")
+   .gte("starts_at",new Date(now-5*60000).toISOString());
+ }else if(tab==="mine"){
+  query=query.eq("owner_id",state.user.id);
+ }else if(tab==="here"){
+  const fields=[["community","community_id"],["post","post_id"],["workspace","workspace_id"]];
+  const match=fields.find(([key])=>validId(q.get(key)));
+  query=query.eq(match[1],q.get(match[0]));
+ }
+ try{
+  const rows=success(await query.order("starts_at",{ascending:false}).limit(50))||[];
+  if(requestId!==state.roomsRequestId)return; // Discard stale network responses after a tab switch.
+  state.rooms=rows;renderRooms();
+ }catch(error){
+  if(requestId!==state.roomsRequestId)return;
+  state.rooms=[];renderRooms();
+  alertStatus(error.message||"Space discovery is temporarily unavailable.","error");
+ }
 }
 function visibleRooms(){
  const room=state.rooms;
@@ -55,7 +83,9 @@ function renderRooms(){
   "Nothing here yet. Start a meaningful conversation.","studio-muted"));
  for(const r of rooms){
   const article=el("article","","space-item");
-  const badge=el("span",r.status==="live"?"● LIVE":"◷ UPCOMING",r.status==="live"?"space-live-badge":"space-live-badge space-upcoming-badge");
+  const live=r.status==="live"&&!roomExpired(r);
+  const badge=el("span",roomExpired(r)?"TIME ENDED":live?"● LIVE":r.status==="scheduled"?"◷ UPCOMING":"ENDED",
+   live?"space-live-badge":"space-live-badge space-upcoming-badge");
   const title=el("h3",r.title),intro=el("p",r.description||"Join the conversation.");
   intro.textContent=intro.textContent.slice(0,120);
   article.append(badge,title,intro,el("p",dateLabel(r.starts_at)+" · "+r.capacity+" seats · "+r.visibility));
@@ -70,7 +100,7 @@ function setTab(name){
   const selected=node.dataset.spaceTab===name;
   node.classList.toggle("active",selected);node.setAttribute("aria-selected",String(selected));
  });
- renderRooms();
+ void loadRooms();
 }
 async function loadWorkspaces(){
  if(!state.user)return;

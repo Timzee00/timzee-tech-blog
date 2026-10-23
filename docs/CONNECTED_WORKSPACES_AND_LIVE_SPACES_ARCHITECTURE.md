@@ -56,3 +56,11 @@ per tick, with a short provider timeout. Provider/database failures are raised
 for scheduled logs/retry, not silently marked successful. This worker is
 inactive while Netlify remains paused. Real provider integration testing is
 required after credentials are configured.
+
+## Scoped room discovery
+Live, Upcoming, Mine and context-linked room queries now filter on the server
+before applying a 50-row cap. This prevents unrelated scheduled or private
+rooms from crowding out a user's selected view. Stale responses after tab
+switches are discarded, expired rooms are not promoted as live, and RLS
+continues to determine visibility. Full browser pagination and mobile QA are
+still release gates.
