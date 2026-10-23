@@ -1,6 +1,6 @@
 import {supabase,getCurrentUser} from "./supabase.js";
 const $=id=>document.getElementById(id);
-const state={user:null,workspaces:[],active:null,projects:[]};
+const state={user:null,workspaces:[],active:null,role:null,projects:[]};
 const make=(tag,text="",className="")=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=String(text);if(className)el.className=className;return el};
 const notice=(message,tone="neutral")=>{const n=$("teamStatus");n.textContent=message;n.dataset.tone=tone};
 const requireSuccess=result=>{if(result.error)throw result.error;return result.data};
@@ -33,12 +33,11 @@ async function loadWorkspaces(){
  if(state.active&&state.workspaces.some(w=>w.id===state.active.id))await openWorkspace(state.active.id);
 }
 async function loadInvites(){
- const invites=requireSuccess(await supabase.from("team_workspace_members")
- .select("workspace_id,role,created_at").eq("user_id",state.user.id).eq("status","invited").limit(30))||[];
+ const invites=requireSuccess(await supabase.rpc("team_pending_invites"))||[];
  $("invitedSection").hidden=!invites.length;
  $("teamInvites").replaceChildren();
  for(const invite of invites){
-  $("teamInvites").append(row("Workspace invitation",invite.role+" · Workspace "+invite.workspace_id.slice(0,8),
+  $("teamInvites").append(row(invite.workspace_name||"Workspace invitation",(invite.workspace_kind||"Team")+" · "+invite.role,
   [["Accept",async()=>{try{const accepted=requireSuccess(await supabase.rpc("team_accept_invite",{p_workspace:invite.workspace_id}));
    if(!accepted)throw Error("This invitation is no longer available.");
    notice("Invitation accepted.","success");await loadInvites();await loadWorkspaces();
@@ -53,7 +52,21 @@ async function openWorkspace(id){
  $("teamDescription").textContent=(workspace.kind==="organization"?"Company / organization · Unverified until official review. ":"Creator team. ")+(workspace.description||"");
  $("teamSpaceLink").href="spaces.html?workspace="+encodeURIComponent(id);
  const isOwner=workspace.owner_id===state.user.id;
- $("teamInviteForm").hidden=!isOwner;
+ state.role=isOwner?"owner":null;
+ if(!isOwner){
+  const membership=await supabase.from("team_workspace_members")
+    .select("role").eq("workspace_id",id).eq("user_id",state.user.id).eq("status","active").maybeSingle();
+  state.role=membership.data?.role||"viewer";
+ }
+ const manager=["owner","admin"].includes(state.role);
+ $("teamInviteForm").hidden=!manager;
+ $("teamInviteForm").elements.role.querySelector("option[value=admin]").disabled=!isOwner;
+ $("teamSettingsForm").hidden=!isOwner;
+ if(isOwner){
+  const f=$("teamSettingsForm");
+  f.elements.name.value=workspace.name;f.elements.website.value=workspace.website||"";
+  f.elements.description.value=workspace.description||"";
+ }
  await Promise.all([loadMembers(),loadProjects()]);
 }
 async function loadMembers(){
@@ -62,12 +75,17 @@ async function loadMembers(){
  const result=await supabase.from("team_workspace_members").select("user_id,role,status")
   .eq("workspace_id",state.active.id).limit(50);
  const members=requireSuccess(result)||[];
+ const ids=members.map(m=>m.user_id);
+ const profiles=ids.length?await supabase.from("public_profiles")
+  .select("id,display_name,username").in("id",ids).limit(50):{data:[]};
+ const names=new Map((profiles.data||[]).map(p=>[p.id,p.display_name||p.username]));
  for(const member of members){
   const owner=state.active.owner_id===state.user.id;
   const controls=owner?[["Remove",async()=>{if(!confirm("Remove this teammate?"))return;
    try{requireSuccess(await supabase.rpc("team_remove_member",{p_workspace:state.active.id,p_user:member.user_id}));
    await loadMembers();notice("Membership removed.","success")}catch(e){notice(e.message,"error")}}]]:[];
-  list.append(row("Member "+member.user_id.slice(0,8),member.role+" · "+member.status,controls));
+  list.append(row(names.get(member.user_id)||"Member "+member.user_id.slice(0,8),
+   member.role+" · "+member.status,controls));
  }
 }
 async function loadProjects(){
@@ -94,6 +112,18 @@ $("createWorkspaceForm").addEventListener("submit",async event=>{
   event.currentTarget.reset();notice("Workspace created. You can now plan events and content.","success");
   await loadWorkspaces();await openWorkspace(created.id);
  }catch(e){notice(e.message||"Unable to create workspace.","error")}finally{button.disabled=false}
+});
+$("teamSettingsForm").addEventListener("submit",async event=>{
+ event.preventDefault();if(!state.active||state.role!=="owner")return;
+ const f=event.currentTarget,values=getForm(f),submit=event.submitter;submit.disabled=true;
+ try{
+  requireSuccess(await supabase.from("team_workspaces").update({
+   name:values.name.trim(),description:values.description.trim(),
+   website:values.website.trim()||null
+  }).eq("id",state.active.id).select("id").single());
+  await loadWorkspaces();notice("Workspace settings updated.","success");
+ }catch(e){notice(e.message||"Could not save workspace settings.","error")}
+ finally{submit.disabled=false}
 });
 $("teamInviteForm").addEventListener("submit",async event=>{
  event.preventDefault();if(!state.active)return;

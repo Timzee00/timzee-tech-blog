@@ -28,6 +28,12 @@
   <section class="studio-panel" id="teamDetails" hidden>
     <h2 id="teamTitle">Workspace</h2><p id="teamDescription" class="studio-muted"></p>
     <div class="studio-action-row"><a class="btn ghost" id="teamSpaceLink" href="spaces.html">Host a Space</a><a class="btn ghost" href="creator-studio.html">Personal drafts</a></div>
+    <form id="teamSettingsForm" class="studio-form" hidden>
+      <label>Workspace name<input name="name" minlength="2" maxlength="120" required></label>
+      <label>Official website (optional)<input name="website" type="url" maxlength="300"></label>
+      <label class="span-all">Description<textarea name="description" maxlength="2000" rows="2"></textarea></label>
+      <button class="btn ghost" type="submit">Save workspace settings</button>
+    </form>
     <h3>Team members</h3><div id="teamMembers" class="studio-stack"></div>
     <form id="teamInviteForm" class="studio-form"><label>Invite by exact username<input name="username" pattern="[A-Za-z0-9_.]{3,32}" maxlength="32" required placeholder="username"></label>
     <label>Role<select name="role"><option value="editor">Editor</option><option value="viewer">Viewer</option><option value="admin">Administrator</option></select></label>
