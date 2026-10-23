@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const tabs=["live","upcoming","mine","here"];
 const q=new URLSearchParams(location.search);
-const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,reactionChannel:null,busy:false};
+const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false};
 const el=(tag,text="",className="")=>{const item=document.createElement(tag);item.textContent=String(text);if(className)item.className=className;return item};
 const alertStatus=(message,tone="neutral")=>{const s=$("spacesStatus");s.textContent=message;s.dataset.tone=tone};
 const audioStatus=message=>$("spaceAudioStatus").textContent=message;
@@ -196,6 +196,16 @@ async function startAudio(){
   if(speakers.length)setSpeaking(speakers[0].identity,true);
   else $("activeSpeakerAvatar").classList.remove("speaking");
  });
+ livekit.on(sdk.RoomEvent.DataReceived,(payload,participant,kind,topic)=>{
+  if(topic!=="reactions"||payload.byteLength>128)return;
+  try{
+   const data=JSON.parse(new TextDecoder().decode(payload));
+   if(data?.type==="reaction"&&["🔥","😂","👏","🙌","💯"].includes(data.emoji)){
+    const id=String(participant?.identity||"").replace(/^u_/,"");
+    $("reactionNotice").textContent=data.emoji+" from "+(state.profiles.get(id)?.display_name||"a listener");
+   }
+  }catch{}
+ });
  livekit.on(sdk.RoomEvent.ParticipantConnected,()=>void loadPeople());
  livekit.on(sdk.RoomEvent.ParticipantDisconnected,()=>void loadPeople());
  livekit.on(sdk.RoomEvent.Disconnected,()=>audioStatus("Audio disconnected. Rejoin to speak or listen."));
@@ -309,20 +319,18 @@ async function shareRoom(){
  catch(e){if(e.name!=="AbortError")alertStatus("Unable to share link.","error")}
 }
 async function react(symbol){
- if(!state.joined){alertStatus("Join a room before reacting.","error");return}
- $("reactionNotice").textContent=symbol+" Sent";
- // Reactions are ephemeral. Never alter participant privileges via broadcast.
- const channel=state.reactionChannel;
- if(channel)await channel.send({type:"broadcast",event:"reaction",payload:{emoji:symbol}});
-}
-function activateReactions(){
- if(state.reactionChannel){supabase.removeChannel(state.reactionChannel);state.reactionChannel=null}
- const roomId=state.roomId;
- state.reactionChannel=supabase.channel("space-emotes:"+roomId)
- .on("broadcast",{event:"reaction"},({payload})=>{
-  if(["🔥","😂","👏","🙌","💯"].includes(payload?.emoji))
-   $("reactionNotice").textContent=payload.emoji+" Reaction";
- }).subscribe();
+ if(!state.joined||!state.livekit){
+  alertStatus("Connect to live audio to send reactions.","error");return;
+ }
+ if(Date.now()-state.lastReactionAt<2500)return;
+ state.lastReactionAt=Date.now();
+ try{
+  await state.livekit.localParticipant.publishData(
+    new TextEncoder().encode(JSON.stringify({type:"reaction",emoji:symbol})),
+    {reliable:false,topic:"reactions"}
+  );
+  $("reactionNotice").textContent=symbol+" Sent";
+ }catch(error){alertStatus("Reaction unavailable on this connection.","error")}
 }
 async function init(){
  state.user=await getCurrentUser().catch(()=>null);
@@ -334,7 +342,7 @@ async function init(){
  if(q.has("post")||q.has("workspace")||q.has("community"))setTab("here");
  await loadRooms();
  const selected=q.get("room");
- if(validId(selected)){await openRoom(selected);activateReactions()}
+ if(validId(selected)){await openRoom(selected)}
 }
 $("spacesCreateToggle").addEventListener("click",()=>{if(authRequired())showCreate(true)});
 $("spacesCancel").addEventListener("click",()=>showCreate(false));
@@ -350,7 +358,7 @@ $("spaceBack").addEventListener("click",async()=>{
 $("spaceShare").addEventListener("click",()=>void shareRoom());
 $("spaceStart").addEventListener("click",goLive);
 $("spaceEnd").addEventListener("click",endRoom);
-$("spaceJoin").addEventListener("click",async()=>{await join();if(state.joined)activateReactions()});
+$("spaceJoin").addEventListener("click",join);
 $("spaceLeave").addEventListener("click",async()=>{await leave();alertStatus("Left the room.","success")});
 $("spaceAsk").addEventListener("click",requestMic);
 $("spaceReconnect").addEventListener("click",refreshSpeaking);

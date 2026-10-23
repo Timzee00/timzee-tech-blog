@@ -10,7 +10,7 @@ function createRoomToken({apiKey,apiSecret,userId,roomId,role,displayName="",now
   iss:apiKey,sub:"u_"+userId,iat:issue,nbf:issue-3,exp:issue+120,jti:randomUUID(),
   name:String(displayName||"Member").slice(0,80),
   video:{room:"space_"+roomId,roomJoin:true,canPublish,canSubscribe:true,
-    canPublishData:false,canPublishSources:canPublish?["microphone"]:[]}
+    canPublishData:true,canPublishSources:canPublish?["microphone"]:[]}
  };
  const signingInput=encode({alg:"HS256",typ:"JWT"})+"."+encode(claims);
  const signature=createHmac("sha256",apiSecret).update(signingInput).digest("base64url");
