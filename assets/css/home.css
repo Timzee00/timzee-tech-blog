@@ -495,20 +495,27 @@
   text-align: center;
 }
 
-.people-card img {
-  width: 56px;
-  height: 56px;
+.people-card-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  text-decoration: none;
+}
+.people-card-avatar .tz-avatar-verified { inline-size:56px; block-size:56px; }
+.people-card-avatar .tz-avatar-verified > img {
+  inline-size: 100%;
+  block-size: 100%;
   border-radius: 50%;
   object-fit: cover;
 }
-
 .people-card-name {
   font-size: var(--text-sm, 0.85rem);
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   max-width: 116px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
+.people-card-name .tz-identity-name { justify-content: center; }
 
 .people-card .add-friend-btn { width: 100%; }

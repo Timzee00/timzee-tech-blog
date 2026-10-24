@@ -61,3 +61,21 @@ test("suggestion limits are enforced even when callers request thousands",async(
  assert.ok(users.length<=24);
  assert.equal(calls[0].limit,96);
 });
+
+test("homepage suggested people and leaderboard use trusted current verification badges",()=>{
+ const app=fs.readFileSync(path.resolve(__dirname,"../assets/js/app.js"),"utf8");
+ const data=fs.readFileSync(path.resolve(__dirname,"../assets/js/data.js"),"utf8");
+ const css=fs.readFileSync(path.resolve(__dirname,"../assets/css/home.css"),"utf8");
+ const queries=[
+   data.slice(data.indexOf("export async function fetchTopProfiles"),data.indexOf("export async function fetchSuggestedPeople")),
+   data.slice(data.indexOf("export async function fetchSuggestedPeople"),data.indexOf("export async function sendFriendRequestTo"))
+ ];
+ for(const source of queries)for(const field of ["is_verified","verification_tier","verification_expires_at","frame_style"])
+   assert.ok(source.includes(field),"Missing trusted verification field "+field);
+ assert.match(app,/import \\{verifiedAvatar,verifiedName\\} from "\\.\\/verified-identity\\.mjs"/);
+ assert.match(app,/verifiedAvatar\\(profile\\.avatar_url,profile/);
+ assert.equal((app.match(/verifiedName\\(name,profile,\\{compact:true\\}\\)/g)||[]).length,2);
+ assert.doesNotMatch(app,/class="verified-badge small"/);
+ assert.match(css,/\\.people-card-avatar \\.tz-avatar-verified > img/);
+ assert.match(css,/\\.people-card-name \\.tz-identity-name/);
+});

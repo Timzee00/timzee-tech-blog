@@ -394,7 +394,7 @@ export async function searchPosts({ query = "", tags = [] } = {}) {
 export async function fetchTopProfiles(limit = 5) {
   const result = await supabase
     .from("public_profiles")
-    .select("id, display_name, username, avatar_url, points, level, is_verified, is_featured, is_staff_pick")
+    .select("id, display_name, username, avatar_url, points, level, is_verified, verification_tier, verification_expires_at, frame_style, is_featured, is_staff_pick")
     .order("points", { ascending: false })
     .limit(limit);
   return normalizeResponse(result);
@@ -409,7 +409,7 @@ export async function fetchSuggestedPeople(currentUserId, limit = 8) {
   // not receive an empty recommendation rail when suitable members exist.
   const candidateLimit=Math.min(96,take*4);
   const result=await supabase.from("public_profiles")
-    .select("id, display_name, username, avatar_url, is_verified, created_at")
+    .select("id, display_name, username, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style, created_at")
     .order("created_at",{ascending:false}).limit(candidateLimit);
   const profiles=normalizeResponse(result).filter(profile=>profile.id!==currentUserId);
   const uuid=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;

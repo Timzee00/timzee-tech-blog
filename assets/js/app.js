@@ -33,6 +33,7 @@ import {
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
 import {mountReaderHome} from "./reader-home.mjs";
+import {verifiedAvatar,verifiedName} from "./verified-identity.mjs";
 import "./nav.js";
 
 const POSTS_PAGE_SIZE = 24;
@@ -731,18 +732,15 @@ function renderSuggestedPeople() {
   }
   section.style.display = "block";
 
-  const defaultAvatar = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
   rail.innerHTML = state.suggestedPeople
     .map((profile) => {
       const name = profile.display_name || profile.username || "Member";
-      const avatar = isSafeUrl(profile.avatar_url) ? profile.avatar_url : defaultAvatar;
-      const verified = profile.is_verified ? `<span class="verified-badge small">✓</span>` : "";
       return `
         <div class="people-card" data-user-id="${escapeHTML(profile.id || "")}">
-          <a href="profile.html?id=${encodeURIComponent(profile.id || "")}">
-            <img src="${avatar}" alt="${escapeHTML(name)} avatar">
+          <a class="people-card-avatar" href="profile.html?id=${encodeURIComponent(profile.id || "")}" aria-label="View ${escapeHTML(name)}'s profile">
+            ${verifiedAvatar(profile.avatar_url,profile,{size:"md",alt:name+" avatar"})}
           </a>
-          <div class="people-card-name">${escapeHTML(name)}${verified}</div>
+          <div class="people-card-name">${verifiedName(name,profile,{compact:true})}</div>
           <button type="button" class="btn sm add-friend-btn" data-user-id="${escapeHTML(profile.id || "")}">Add Friend</button>
         </div>
       `;
@@ -782,12 +780,11 @@ function renderLeaderboard() {
       const avatar = isSafeUrl(profile.avatar_url) ? profile.avatar_url : defaultAvatar;
       const points = profile.points || 0;
       const level = profile.level || deriveLevel(points).label;
-      const verified = profile.is_verified ? `<span class="verified-badge small">✓</span>` : "";
       return `
         <div class="leaderboard-item">
           <a href="profile.html?id=${encodeURIComponent(profile.id || '')}" aria-label="View profile"><img src="${avatar}" alt="member avatar"></a>
           <div>
-            <div><strong>${escapeHTML(name)}</strong>${verified}</div>
+            <div><strong>${verifiedName(name,profile,{compact:true})}</strong></div>
             <div class="leaderboard-meta">
               <span>${points} pts</span>
               <span>${escapeHTML(level)}</span>
