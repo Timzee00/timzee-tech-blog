@@ -6,6 +6,7 @@
     <title>Ask the AI - Timzee Tech Hub</title>
     <meta name="description" content="Chat with the Timzee AI assistant">
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/ai-message-renderer.css">
     <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
@@ -92,6 +93,7 @@
       import { getCurrentUser } from "./assets/js/supabase.js";
       import { createConversation, getConversationHistory, chat as aiChat, SYSTEM_PROMPTS } from "./assets/js/groq.js";
       import { escapeHTML } from "./assets/js/utils.js";
+       import {renderAssistantMessage} from "./assets/js/ai-message-renderer.mjs";
       import { supabase } from "./assets/js/supabase.js";
       import "./assets/js/nav.js";
 
@@ -163,8 +165,13 @@
         bubbleWrap.style.marginBottom = "10px";
         const bubble = document.createElement("div");
         bubble.className = `chat-bubble ${role === "user" ? "self" : ""}`;
-        bubble.style.whiteSpace = "pre-wrap";
-        bubble.textContent = content;
+        if (role === "assistant") {
+          bubble.classList.add("ai-rich-response");
+          renderAssistantMessage(bubble, content);
+        } else {
+          bubble.style.whiteSpace = "pre-wrap";
+          bubble.textContent = content;
+        }
         bubbleWrap.appendChild(bubble);
         messagesEl.appendChild(bubbleWrap);
         messagesEl.scrollTop = messagesEl.scrollHeight;

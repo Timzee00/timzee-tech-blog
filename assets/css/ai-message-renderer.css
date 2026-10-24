@@ -1,0 +1,16 @@
+/* Assistant output: readable Markdown, accessible scrollable tables and code. */
+#aiChatMessages .ai-rich-response{white-space:normal;min-width:0;max-width:100%;overflow-wrap:anywhere;line-height:1.65}
+.ai-rich-content>*{margin:0 0 12px}
+.ai-rich-content>*:last-child{margin-bottom:0}
+.ai-rich-content :is(h2,h3,h4){font-size:clamp(1rem,2.4vw,1.2rem);font-weight:750;line-height:1.4;margin:14px 0 7px}
+.ai-rich-content :is(ol,ul){padding-inline-start:1.5em}
+.ai-rich-content li{margin-bottom:5px}
+.ai-rich-content :is(pre,blockquote){max-width:100%;border-radius:10px;padding:11px;background:var(--color-surface-muted,rgba(128,128,128,.12))}
+.ai-rich-content pre{overflow-x:auto;white-space:pre;font-size:.86em}
+.ai-rich-content code{font:.88em/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
+.ai-table-scroll{max-width:100%;overflow-x:auto;border:1px solid var(--color-border,#8598a2);border-radius:10px;margin:12px 0}
+.ai-table-scroll:focus-visible{outline:2px solid var(--color-primary,#23bfae)}
+.ai-table-scroll table{width:max-content;min-width:100%;border-collapse:collapse;font-size:.9em;white-space:normal}
+.ai-table-scroll :is(td,th){min-width:110px;max-width:280px;vertical-align:top;text-align:left;padding:10px 12px;border-bottom:1px solid var(--color-border,#8598a2);overflow-wrap:anywhere}
+.ai-table-scroll th{background:var(--color-surface-muted,rgba(128,128,128,.14));font-weight:750}
+.ai-table-scroll tr:last-child td{border-bottom:0}
