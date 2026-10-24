@@ -1,37 +1,98 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Email Operations | Timzee Tech Hub</title>
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Email Delivery Centre | Timzee Tech Hub</title>
 <link rel="stylesheet" href="../assets/css/admin.css"><script defer src="../assets/js/theme-init.js"></script>
-<style>body{font-family:system-ui,sans-serif}main{max-width:1000px;margin:30px auto;padding:0 20px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0}.metric{padding:22px;border:1px solid #c7d4d4;border-radius:14px;background:var(--card-solid,#fff);color:var(--ink,#152e32)}.metric strong{display:block;font-size:2rem;margin-top:8px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}button{cursor:pointer}#status{margin:18px 0}.review-panel{margin-top:28px}.review-list{display:grid;gap:14px}.review-card{border:1px solid #9ca3af70;border-radius:14px;padding:18px;background:var(--card-solid,#fff);color:var(--ink,#152e32)}.review-card header{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}.review-card p{overflow-wrap:anywhere}.review-form{display:grid;gap:10px;margin-top:14px}.review-form label{font-weight:600;display:grid;gap:4px}.review-form select,.review-form textarea{width:100%;font:inherit;color:inherit;background:var(--card-solid,#fff);padding:10px;border:1px solid #96a3a3;border-radius:9px}.review-form textarea{min-height:90px;resize:vertical}.review-form button{justify-self:start}.review-id{font:inherit;word-break:break-all;font-size:.84rem;opacity:.8}.review-help{font-size:.88rem;opacity:.85}</style></head>
-<body class="admin-shell">
-<main><a href="panel.html">← Back to Super Admin</a><h1>Email Operations</h1><p>Read-only operational dashboard. Campaign sending is not enabled here.</p>
-<div class="toolbar"><button class="btn" type="button" id="refresh">Refresh metrics</button><button class="btn ghost" type="button" id="verifyBrevo">Verify Brevo connection</button><button class="btn ghost" type="button" id="digestPreview">Preview eligible digests</button><button class="btn ghost" type="button" id="inactivityPreview">Preview inactive members</button><button class="btn ghost" type="button" id="legacyRecovery">Existing-user recovery overview</button><span id="deliveryState" aria-live="polite"></span></div>
-<p role="status" id="status">Authenticating…</p>
+<style>
+body.admin-shell{font:15px/1.5 system-ui,sans-serif;min-width:0}
+.ops-wrap{box-sizing:border-box;max-width:1050px;margin:auto;padding:clamp(14px,4vw,32px)}
+.ops-wrap *{box-sizing:border-box}
+.ops-back{display:inline-flex;min-height:44px;align-items:center;font-weight:700}
+.ops-title{font-size:clamp(1.7rem,5vw,2.5rem);line-height:1.2;margin:8px 0}
+.ops-muted{color:var(--color-text-muted,#5e6f76);font-size:.92rem}
+.ops-panel{margin:16px 0;padding:clamp(15px,3vw,24px);background:var(--color-surface,var(--card-solid,#fff));color:var(--color-text,var(--ink,#182e34));border:1px solid var(--color-border,#9daeb2);border-radius:16px}
+.ops-panel h2{margin:0 0 8px;font-size:clamp(1.15rem,3.4vw,1.45rem)}
+.toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:14px 0}
+.toolbar button{min-height:46px;padding:10px 15px;max-width:100%;cursor:pointer;white-space:normal;text-align:center;line-height:1.3}
+.toolbar button:disabled{opacity:.55;cursor:wait}
+.toolbar :focus-visible,.review-form :focus-visible,summary:focus-visible{outline:3px solid var(--color-primary,#087f73);outline-offset:3px}
+#deliveryState{display:inline-block;border:1px solid var(--color-border,#9daeb2);border-radius:40px;padding:7px 11px;font-size:.84rem;font-weight:700}
+#status,#reviewStatus{padding:10px 12px;background:var(--color-surface-muted,#edf5f5);color:var(--color-text,#203139);border-radius:10px;min-height:44px;overflow-wrap:anywhere}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:11px;margin:17px 0}
+.metric{padding:16px;border-radius:12px;background:var(--color-surface-muted,#edf5f5);border:1px solid var(--color-border,#9daeb2);min-width:0}
+.metric span{display:block;color:var(--color-text-muted,#55686f);font-size:.85rem}
+.metric strong{display:block;font-size:clamp(1.45rem,4vw,2rem);margin-top:7px;font-variant-numeric:tabular-nums}
+.ops-advanced{padding:14px;border:1px solid var(--color-border,#9daeb2);border-radius:12px}
+.ops-advanced summary{font-weight:750;cursor:pointer}
+.review-list{display:grid;gap:12px}
+.review-card{border:1px solid var(--color-border,#9daeb2);border-radius:12px;padding:15px;background:var(--color-surface-muted,#edf5f5);overflow-wrap:anywhere}
+.review-card header{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.review-id{word-break:break-all;font-size:.8rem}
+.review-form{display:grid;gap:10px;margin-top:12px}
+.review-form label{display:grid;gap:4px;font-weight:700}
+.review-form select,.review-form textarea{width:100%;font:inherit;background:var(--color-surface,#fff);color:inherit;border:1px solid var(--color-border-strong,#8aa0a3);border-radius:9px;padding:10px;min-height:46px}
+.review-form textarea{min-height:90px;resize:vertical}
+.review-form button{justify-self:start;min-height:46px}
+.review-help{font-size:.85rem;color:var(--color-text-muted,#55686f)}
+#legacyRecoveryPanel[hidden]{display:none}
+.ops-terms dt{font-weight:800}.ops-terms dd{margin:0 0 10px;color:var(--color-text-muted,#55686f)}
+@media(max-width:560px){.toolbar{display:grid;grid-template-columns:1fr}.toolbar button{width:100%}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{padding:12px}.review-form button{width:100%}}
+@media(max-width:340px){.metrics{grid-template-columns:1fr}}
+</style></head>
+<body class="admin-shell"><main class="ops-wrap">
+<a class="ops-back" href="panel.html">← Back to Super Admin</a>
+<header><small class="ops-muted">Communications / Super Admin</small><h1 class="ops-title">Email delivery centre</h1>
+<p class="ops-muted">Understand which emails are waiting, confirm Brevo is connected and handle anything needing review. No campaigns are sent here.</p></header>
+<section class="ops-panel" aria-labelledby="overviewHeading">
+<h2 id="overviewHeading">Is email working?</h2><p class="ops-muted">Start with the email queue. If messages aren't moving, check your Brevo connection.</p>
+<div class="toolbar"><button class="btn" type="button" id="refresh">Refresh email status</button>
+<button class="btn ghost" type="button" id="verifyBrevo">Check Brevo connection</button>
+<span id="deliveryState" aria-live="polite">Checking…</span></div>
+<p id="status" role="status" aria-live="polite">Checking email service…</p>
 <div id="metrics" class="metrics" aria-live="polite"></div>
-<section id="legacyRecoveryPanel" class="review-panel" hidden><h2>Existing member recovery overview</h2><p>Read-only counts based on available activity signals, not proof that someone stopped visiting. Newsletter consent does not authorize inactivity marketing. No emails are queued.</p><div id="legacyRecoveryMetrics" class="metrics" aria-live="polite"></div><p id="legacyRecoveryNote" role="status"></p></section>
-<p>Metrics cover queued Timzee Tech Hub receipt emails only. “Accepted” is not “delivered.” Provider delivery outcomes depend on webhook activation. Supabase Auth SMTP messages are not included in these job counts.</p>
-<section class="review-panel" aria-labelledby="reviewHeading">
-<h2 id="reviewHeading">Manual delivery reconciliation</h2>
-<p>Review uncertain sends against Brevo transaction logs before recording a decision. This review does not queue, resend, or delete emails.</p>
-<div class="toolbar"><button class="btn ghost" type="button" id="refreshReviews">Refresh review queue</button><span id="reviewStatus" role="status" aria-live="polite">Not loaded</span></div>
+<p class="ops-muted">Accepted by Brevo is not the same as delivered. Confirmed delivery requires provider events. Supabase Auth password-reset emails are counted separately.</p>
+</section>
+<section class="ops-panel" aria-labelledby="reviewHeading">
+<h2 id="reviewHeading">Emails that need attention</h2>
+<p class="ops-muted">Sometimes Brevo doesn't confirm whether it accepted an email. To avoid duplicates, the system holds these cases for you to review before recording a decision. This action never sends email.</p>
+<div class="toolbar"><button class="btn ghost" type="button" id="refreshReviews">Refresh review queue</button></div>
+<p id="reviewStatus" role="status" aria-live="polite">Loading review cases…</p>
 <div id="reviewList" class="review-list" aria-live="polite"></div>
 </section>
+<section class="ops-panel" aria-labelledby="extraHeading"><h2 id="extraHeading">Optional checks</h2>
+<p class="ops-muted">Preview who would be eligible for summaries or inactive-member reminders. These checks never queue or send email.</p>
+<details class="ops-advanced"><summary>Show reminder and member checks</summary>
+<div class="toolbar"><button class="btn ghost" type="button" id="digestPreview">Preview message summaries</button>
+<button class="btn ghost" type="button" id="inactivityPreview">Preview inactive members</button>
+<button class="btn ghost" type="button" id="legacyRecovery">View member activity overview</button></div>
+<section id="legacyRecoveryPanel" hidden><h3>Existing member activity overview</h3>
+<p class="ops-muted">These estimates don't prove inactivity, and newsletter subscriptions do not authorize reminders.</p>
+<div id="legacyRecoveryMetrics" class="metrics" aria-live="polite"></div><p id="legacyRecoveryNote" role="status"></p></section></details>
+</section>
+<details class="ops-panel ops-advanced"><summary>What do the statuses mean?</summary>
+<dl class="ops-terms"><dt>Waiting to send</dt><dd>The message is queued but Brevo hasn't accepted it yet.</dd>
+<dt>Being processed</dt><dd>The scheduled worker is attempting delivery.</dd>
+<dt>Accepted by Brevo</dt><dd>Brevo received the request; actual delivery is not guaranteed.</dd>
+<dt>Delivered</dt><dd>Brevo reports the recipient's email system accepted it.</dd>
+<dt>Needs review</dt><dd>A potentially uncertain send was held, preventing accidental duplicate emails.</dd>
+<dt>Skipped safely</dt><dd>Sending was prevented by safety, consent or eligibility rules.</dd></dl></details>
 </main>
 <script type="module">
 import {supabase,getSession} from "../assets/js/supabase.js";
 const status=document.getElementById("status"),metrics=document.getElementById("metrics"),delivery=document.getElementById("deliveryState");
-const labels={pending:"Pending",processing:"Processing",sent:"Accepted by Brevo",delivered:"Confirmed delivered",awaiting_delivery_confirmation:"Awaiting delivery update",provider_failed:"Bounced / rejected",failed:"Failed jobs",quarantined:"Needs manual review",reviewed_cases:"Reviewed / closed",suppressed:"Suppressed",sent_last_24h:"Accepted (24 hours)",total:"Total jobs"};
+const labels={pending:"Waiting to send",processing:"Being processed",sent:"Accepted by Brevo",delivered:"Delivered",failed:"Failed",quarantined:"Needs review",suppressed:"Skipped safely"};
 async function readOperationsResponse(response){
-  let data=null;
-  try{data=await response.json();}catch{}
-  if(!data){
-    if(response.status===404)throw Error("Email function is missing from this Netlify deploy. Rebuild the updated branch when credits return.");
-    if(response.status===401||response.status===403)throw Error("Your admin session has expired or this account lacks access.");
-    throw Error("Email service response is unavailable (HTTP "+response.status+"). Check deployed Functions.");
-  }
-  if(!response.ok)throw Error((data.error||"Email service unavailable")+
-    (data.diagnostic_code?" ["+data.diagnostic_code+"]":""));
-  return data;
+ let data=null;try{data=await response.json();}catch{}
+ if(response.status===401||response.status===403)throw Error("Sign in again with your super-admin account.");
+ if(response.status===404)throw Error("Email functions are missing from the live deployment. Publish the latest version.");
+ const code=String(data?.diagnostic_code||data?.code||"");
+ if(!response.ok){
+   if(code==="P0001"||code==="42501")throw Error("The email service could not confirm database permissions. This is a server issue. Reference: "+code);
+   if(code==="PGRST202")throw Error("A database function is not ready. Apply the latest Supabase migration and refresh its schema cache.");
+   if(response.status>=500)throw Error("The email service is temporarily unavailable. This check did not send email. Retry after checking the server logs."+(code?" Reference: "+code:""));
+   throw Error(data?.error||"Email request failed.");
+ }
+ if(!data)throw Error("The email service returned an unreadable response.");
+ return data;
 }
 async function refresh(){
   const session=await getSession();
@@ -41,7 +102,7 @@ async function refresh(){
     const response=await fetch("/.netlify/functions/email-operations",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});
     const body=await readOperationsResponse(response);
     if(!response.ok)throw new Error(body.error||"Metrics unavailable");
-    delivery.textContent=body.delivery_enabled?"Delivery enabled":"Delivery paused";
+    delivery.textContent=body.delivery_enabled?"Sending allowed (delivery not confirmed)":"Sending paused";
     metrics.replaceChildren();
     for(const [key,label] of Object.entries(labels)){
       const card=document.createElement("div");card.className="metric";
@@ -49,7 +110,9 @@ async function refresh(){
       const number=document.createElement("strong");number.textContent=Number(body.statistics?.[key]||0).toLocaleString();
       card.append(title,number);metrics.append(card);
     }
-    status.textContent="Metrics loaded. Oldest pending job: "+(body.statistics?.oldest_pending_at||"None");
+    const queued=Number(body.statistics?.pending||0);
+     status.textContent=queued?queued+" email"+(queued===1?" is":"s are")+" waiting to be processed.":
+       "Updated successfully. No emails are currently queued.";
   }catch(error){metrics.replaceChildren();status.textContent=error.message||"Unable to load email metrics";}
 }
 document.getElementById("refresh").addEventListener("click",refresh);
@@ -81,16 +144,16 @@ async function loadReviews(){
     const data=await readOperationsResponse(response);
     if(!response.ok)throw new Error(data.error||"Could not load reviews");
     const cases=Array.isArray(data.cases)?data.cases:[];
-    feedback.textContent=cases.length? `${cases.length} awaiting review (up to 25 shown)`:"No uncertain deliveries awaiting review";
+    feedback.textContent=cases.length?`${cases.length} cases need review`:"No uncertain deliveries need review.";
     for(const item of cases){
       const card=document.createElement("article");card.className="review-card";
       const header=document.createElement("header");
-      const title=document.createElement("strong");title.textContent=item.template||"Transactional email";
+      const title=document.createElement("strong");title.textContent=String(item.template||"Transactional email").replaceAll("_"," ");
       const date=document.createElement("time");date.textContent=item.created_at?new Date(item.created_at).toLocaleString():"Date unavailable";
       header.append(title,date);card.append(header);
       const ref=document.createElement("p");ref.className="review-id";ref.textContent="Case: "+String(item.id||"");
       const details=document.createElement("p");details.textContent="Attempts: "+Number(item.attempts||0)+" · Delivery: "+String(item.delivery_state||"unconfirmed")+" · Last review: "+String(item.last_decision||"unreviewed");
-      const reason=document.createElement("p");reason.textContent="Reason: "+String(item.reason||"Outcome uncertain");
+      const reason=document.createElement("p");reason.textContent="Why it needs attention: "+String(item.reason||"Delivery outcome was uncertain");
       card.append(ref,details,reason);
       const form=document.createElement("form");form.className="review-form";
       const actionLabel=document.createElement("label");actionLabel.textContent="Review decision";
@@ -103,7 +166,7 @@ async function loadReviews(){
       ];
       for(const [value,title] of options){const option=document.createElement("option");option.value=value;option.textContent=title;select.append(option);}
       actionLabel.append(select);
-      const noteLabel=document.createElement("label");noteLabel.textContent="Audit note (reference what you checked)";
+      const noteLabel=document.createElement("label");noteLabel.textContent="What did you find in Brevo? (required)";
       const note=document.createElement("textarea");note.required=true;note.minLength=15;note.maxLength=1000;note.placeholder="Record the Brevo transaction evidence or why you need more time.";noteLabel.append(note);
       const hint=document.createElement("span");hint.className="review-help";hint.textContent="No email is sent. Enter no passwords or unnecessary personal information.";
       const button=document.createElement("button");button.type="submit";button.className="btn";button.textContent="Record review";
