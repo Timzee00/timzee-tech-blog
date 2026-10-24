@@ -25,9 +25,9 @@ test("encrypted payload round-trips with client P-256 private key",()=>{
  assert.equal(record[20],65);
  const serverKey=record.subarray(21,86);
  const secret=client.computeSecret(serverKey);
- const ikm=Buffer.from(crypto.hkdfSync("sha256",secret,auth,Buffer.concat([Buffer.from("WebPush: info\\0"),ua,serverKey]),32));
- const key=Buffer.from(crypto.hkdfSync("sha256",ikm,record.subarray(0,16),Buffer.from("Content-Encoding: aes128gcm\\0"),16));
- const nonce=Buffer.from(crypto.hkdfSync("sha256",ikm,record.subarray(0,16),Buffer.from("Content-Encoding: nonce\\0"),12));
+ const ikm=Buffer.from(crypto.hkdfSync("sha256",secret,auth,Buffer.concat([Buffer.from("WebPush: info\0"),ua,serverKey]),32));
+ const key=Buffer.from(crypto.hkdfSync("sha256",ikm,record.subarray(0,16),Buffer.from("Content-Encoding: aes128gcm\0"),16));
+ const nonce=Buffer.from(crypto.hkdfSync("sha256",ikm,record.subarray(0,16),Buffer.from("Content-Encoding: nonce\0"),12));
  const ciphertext=record.subarray(86);
  const decipher=crypto.createDecipheriv("aes-128-gcm",key,nonce);
  decipher.setAuthTag(ciphertext.subarray(-16));
