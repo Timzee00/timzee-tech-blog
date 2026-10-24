@@ -182,7 +182,7 @@ async function handleMenuAction(event) {
           detail:{messageId:messageEl.dataset.messageId}
         }));
       }else{
-        window.siteToast?.("The 15-minute edit window has expired.",{type:"info",title:"Edit unavailable"});
+        window.siteToast?.("Your verified-tier edit window has expired.",{type:"info",title:"Edit unavailable"});
       }
     }else if(action==="info"){
       window.dispatchEvent(new CustomEvent("timzee:chat-message-info",{detail:{messageId:messageEl.dataset.messageId}}));
