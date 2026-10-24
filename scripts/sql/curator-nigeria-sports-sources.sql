@@ -11,7 +11,13 @@ WITH curated(name,url,category,tags) AS (
   ('Premium Times Nigeria','https://www.premiumtimesng.com/feed','nigeria',ARRAY['nigeria','news']::text[]),
   ('BBC All Sports','https://feeds.bbci.co.uk/sport/rss.xml','sports',ARRAY['sports','world']::text[]),
   ('BBC Africa','https://feeds.bbci.co.uk/news/world/africa/rss.xml','africa',ARRAY['africa','world']::text[]),
-  ('BBC Football','https://feeds.bbci.co.uk/sport/football/rss.xml','sports',ARRAY['sports','football','world']::text[])
+  ('BBC Football','https://feeds.bbci.co.uk/sport/football/rss.xml','sports',ARRAY['sports','football','world']::text[]),
+  ('BBC Sport - Boxing','https://feeds.bbci.co.uk/sport/boxing/rss.xml','sports',ARRAY['sports','boxing','world']::text[]),
+  ('BBC Sport - Athletics','https://feeds.bbci.co.uk/sport/athletics/rss.xml','sports',ARRAY['sports','athletics','world']::text[]),
+  ('BBC Sport - Formula 1','https://feeds.bbci.co.uk/sport/formula1/rss.xml','sports',ARRAY['sports','motorsport','world']::text[]),
+  ('BBC Sport - Tennis','https://feeds.bbci.co.uk/sport/tennis/rss.xml','sports',ARRAY['sports','tennis','world']::text[]),
+  ('BBC Sport - Cricket','https://feeds.bbci.co.uk/sport/cricket/rss.xml','sports',ARRAY['sports','cricket','world']::text[]),
+  ('ESPN - NBA','https://www.espn.com/espn/rss/nba/news','sports',ARRAY['sports','basketball','nba','world']::text[])
 )
 INSERT INTO public.curator_sources
  (id,name,url,feed_url,source_type,category,tags,enabled,is_active,max_items,created_at,updated_at)

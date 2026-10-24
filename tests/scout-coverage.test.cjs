@@ -50,3 +50,14 @@ test("Scout reads a broad source shortlist but still caps network fetches",()=>{
  assert.match(code,/ignoreDuplicates: true/);
  assert.match(code,/source_tags: source\.tags/);
 });
+
+test("repeatable source catalog includes Nigerian outlets and non-football sports",()=>{
+ const sql=fs.readFileSync("scripts/sql/curator-nigeria-sports-sources.sql","utf8");
+ for(const expected of ["rss.punchng.com/v1/category/sports","premiumtimesng.com/feed",
+   "sport/athletics/rss.xml","sport/boxing/rss.xml","sport/formula1/rss.xml",
+   "sport/tennis/rss.xml","espn/rss/nba/news"]){
+   assert.ok(sql.includes(expected),expected);
+ }
+ assert.match(sql,/ON CONFLICT \(url\) DO UPDATE/);
+ assert.match(sql,/SET enabled=false,is_active=false/);
+});
