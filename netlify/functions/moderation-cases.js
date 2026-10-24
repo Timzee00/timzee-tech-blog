@@ -25,6 +25,14 @@ const targetSchemas=Object.freeze({
 const trimmed=(value,n=1600)=>String(value||"").slice(0,n);
 function parseRequest(body){
  const kind=String(body.kind||"decision");
+ if(kind==="flag_review"){
+   const id=Number(body.flagId),decision=String(body.decision||"");
+   const note=trimmed(body.reason,2500).trim();
+   if(!Number.isSafeInteger(id)||id<=0||!uuid.test(body.requestId||"")||
+     !["approve","hide","dismiss"].includes(decision)||note.length<20||note.length>2000)
+     return {error:"Choose a flagged item, decision, and investigation reason of at least 20 characters."};
+   return {kind,flagId:id,decision,reason:note,requestId:body.requestId};
+ }
  if(kind==="reinstate"){
    if(!uuid.test(body.targetId||"")||!uuid.test(body.requestId||"")||trimmed(body.reason,2500).trim().length<20)
      return {error:"Choose a valid account and explain why its restriction should be lifted."};
@@ -45,6 +53,28 @@ async function profilePreview(db,id){
  const {data,error}=await db.from("profiles").select("id,display_name,username,role,account_status").eq("id",id).maybeSingle();
  if(error)throw Error("Cannot inspect account information");
  return data||null;
+}
+async function flagDetail(db,id){
+ const record=await db.from("moderation_automated_flags")
+  .select("id,target_type,target_id,risk_score,signals,state,created_at,updated_at").eq("id",id).maybeSingle();
+ if(record.error)throw Error("Automatic moderation queue is unavailable");
+ const flag=record.data;
+ if(!flag)return null;
+ const type=targetSchemas[flag.target_type];
+ let preview=null,subject=null,ownerId=null;
+ if(type){
+  const row=await db.from(type.table).select(type.fields).eq("id",flag.target_id).maybeSingle();
+  if(row.error)throw Error("Reported item could not be reviewed");
+  if(row.data){
+   const raw=row.data;
+   ownerId=raw[type.owner]||null;
+   preview={title:trimmed(raw.title||raw.display_name||"",200),
+    text:trimmed(raw[type.text]||"",1200),created_at:raw.created_at||null,
+    status:raw.status||raw.moderation_status||(raw.is_available===false||raw.is_public===false?"Hidden":"Available")};
+  }
+ }
+ subject=await profilePreview(db,ownerId);
+ return {flag,preview,subject};
 }
 async function caseDetail(db,id){
  const result=await db.from("content_reports").select("id,reporter_id,content_type,content_id,reason,status,created_at,resolved_at,resolved_by,investigation_state").eq("id",id).maybeSingle();
@@ -99,6 +129,23 @@ exports.handler=async event=>{
    if(role.error)return reply(403,{error:"Your moderator account is not authorized or is inactive."});
    if(event.httpMethod==="GET"){
      const query=event.queryStringParameters||{};
+     if(query.queue==="flags"){
+       const page=Math.max(0,Math.min(1000,Number.parseInt(query.page||"0",10)||0));
+       const status=["pending","reviewed","dismissed","all"].includes(query.status)?query.status:"pending";
+       let request=db.from("moderation_automated_flags")
+        .select("id,target_type,target_id,risk_score,signals,state,created_at",{count:"exact"});
+       if(status!=="all")request=request.eq("state",status);
+       const {data,error,count}=await request.order("risk_score",{ascending:false})
+        .order("created_at",{ascending:true}).range(page*40,page*40+39);
+       if(error)throw Error("Automatic review queue unavailable");
+       return reply(200,{ok:true,flags:data||[],total:Number(count||0),page});
+     }
+     if(query.flag){
+       const id=Number(query.flag);
+       if(!Number.isSafeInteger(id)||id<=0)return reply(400,{error:"Invalid safety flag identifier"});
+       const details=await flagDetail(db,id);
+       return details?reply(200,{ok:true,details}):reply(404,{error:"Flag not found"});
+     }
      if(query.id){
        if(!uuid.test(query.id))return reply(400,{error:"Invalid report identifier"});
        const data=await caseDetail(db,query.id);
@@ -118,7 +165,12 @@ exports.handler=async event=>{
    const input=parseRequest(parsed.payload);
    if(input.error)return reply(400,{error:input.error});
    let data,error;
-   if(input.kind==="reinstate"){
+   if(input.kind==="flag_review"){
+     ({data,error}=await db.rpc("staff_review_automated_flag",{
+       p_actor:role.user.id,p_flag:input.flagId,p_decision:input.decision,
+       p_reason:input.reason,p_request:input.requestId
+     }));
+   }else if(input.kind==="reinstate"){
      ({data,error}=await db.rpc("staff_lift_account_restriction",{
        p_actor:role.user.id,p_target:input.targetId,p_reason:input.reason,p_request:input.requestId
      }));
