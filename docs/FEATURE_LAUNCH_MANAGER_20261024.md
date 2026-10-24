@@ -27,7 +27,7 @@ Users who disable the general Announcements notification category may not see a 
 
 ## Security and deployment
 
-- New public tables are RLS-protected and their default table privileges explicitly narrowed in a second hardening migration.
+- New public tables are RLS-protected and their default table privileges explicitly narrowed in a hardening migration. Guest/member SELECT policies are separated by role, with a covering index on the creator foreign key.
 - Anonymous visitors can read only public feature rows. All feature writes require a server-confirmed admin or super-admin role.
 - Members can only read/subscribe/unsubscribe to their own reminder records and cannot subscribe to already live cards.
 - No user-supplied HTML is injected into the launch board or contextual banners.
@@ -35,5 +35,6 @@ Users who disable the general Announcements notification category may not see a 
 - Migration sequence (both required):
   1. 20261024173000_feature_launch_manager.sql
   2. 20261024173500_feature_launch_grants_hardening.sql
+  3. 20261024174000_feature_launch_reader_rls_indexes.sql
 
 **Deploy sequence:** the live Supabase migrations can be applied independently, but the new UI is available to visitors only after Netlify publishes a build containing this code. The previous production deploy is unchanged until redeployment. Run npm run check, npm run build, and QA logged-in/guest interactions before considering a new rollout complete.
