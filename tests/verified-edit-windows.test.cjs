@@ -16,7 +16,7 @@ test("trusted active verified tiers control editing duration",()=>{
 test("UI availability and mutation use the same server-side window",()=>{
  assert.match(sql,/CREATE OR REPLACE FUNCTION public\.can_edit_chat_message/);
  assert.match(sql,/CREATE OR REPLACE FUNCTION public\.edit_chat_message/);
- assert.equal((sql.match(/private\.chat_message_edit_window\(/g)||[]).length,3);
+ assert.equal((sql.match(/private\.chat_message_edit_window\(/g)||[]).length,4);
  assert.match(sql,/sender_id=\(SELECT auth\.uid\(\)\)/);
  assert.match(sql,/v_row\.sender_id IS DISTINCT FROM v_actor/);
  assert.match(sql,/v_row\.body IS DISTINCT FROM p_expected_body/);
