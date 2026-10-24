@@ -424,7 +424,7 @@ async function setupNotificationBadge(supabase, getCurrentUser, fetchUnreadNotif
     if (!notifLink) {
       notifLink = document.createElement("a");
       notifLink.id = "notificationLink";
-      notifLink.className = "btn ghost";
+      notifLink.className = "btn ghost notification-link";
       notifLink.setAttribute("aria-label", "Notifications");
       notifLink.href = "/profile.html?tab=notifications";
       notifLink.style.position = "relative";
@@ -432,6 +432,11 @@ async function setupNotificationBadge(supabase, getCurrentUser, fetchUnreadNotif
       const bellIcon = document.createElement("span");
       bellIcon.innerHTML = icon("bell");
       bellIcon.style.fontSize = "1.2em";
+      bellIcon.className = "notification-bell-icon";
+      bellIcon.setAttribute("aria-hidden", "true");
+      const bellLabel = document.createElement("span");
+      bellLabel.className = "notification-link-label";
+      bellLabel.textContent = "Notifications";
 
       const badge = document.createElement("span");
       badge.id = "notificationCount";
@@ -453,6 +458,7 @@ async function setupNotificationBadge(supabase, getCurrentUser, fetchUnreadNotif
       `;
 
       notifLink.appendChild(bellIcon);
+      notifLink.appendChild(bellLabel);
       notifLink.appendChild(badge);
       authActions.insertBefore(notifLink, authActions.firstChild);
     }
