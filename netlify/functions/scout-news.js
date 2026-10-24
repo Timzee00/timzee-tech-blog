@@ -121,7 +121,23 @@ exports.handler = async (event) => {
     }
   }
 
-  const finalSources = scheduleScoutSources([...fetchedSources, ...persistedFallbacks.filter((source) => !source.__error && source.feed_url)]);
+  const allSources = [...fetchedSources, ...persistedFallbacks.filter((source) => !source.__error && source.feed_url)];
+  const sourceOrder = scheduleScoutSources(allSources, allSources.length);
+  const sourceText = source => [source.name, source.category, ...(Array.isArray(source.tags) ? source.tags : [])].join(" ");
+  const nigeria = source => /\\bnigeria\\b/i.test(sourceText(source));
+  const sports = source => /\\b(sports?|football|tennis|formula.one|basketball|boxing|athletics)\\b/i.test(sourceText(source));
+  const chosen = [], seen = new Set();
+  function take(predicate, max) {
+    for (const source of sourceOrder) {
+      if (max <= 0 || chosen.length >= SCOUT_LIMITS.MAX_SOURCES) break;
+      if (seen.has(source.id) || !predicate(source)) continue;
+      chosen.push(source); seen.add(source.id); max--;
+    }
+  }
+  take(nigeria, 2);
+  take(source => sports(source) && !nigeria(source), 1);
+  take(() => true, SCOUT_LIMITS.MAX_SOURCES - chosen.length);
+  const finalSources = chosen;
   const setupErrors = persistedFallbacks.filter((source) => source.__error).map((source) => ({ source: source.name, error: source.__error }));
   if (!finalSources.length) return jsonResponse(200, { ok: true, skipped: "no_sources", feedErrors: setupErrors });
 
