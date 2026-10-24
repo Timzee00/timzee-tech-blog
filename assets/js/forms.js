@@ -62,7 +62,12 @@ function bindForm({ formId, statusId, table, map }) {
       if (status) { status.textContent = "Please review the privacy notice and give consent before submitting."; status.style.display = "block"; }
       return;
     }
-    const payload = map(data);
+    let payload;
+    try{payload=map(data);}
+    catch(error){
+      if(status){status.textContent=error.message||"Please check the supplied details.";status.style.display="block";}
+      return;
+    }
     if (form.dataset.requiresConsent === "true") payload.consent_at = new Date().toISOString();
     submitting = true;
     const button = form.querySelector('button[type="submit"]');
@@ -106,7 +111,26 @@ async function boot() {
   });
   bindForm({
     formId: "adsForm", statusId: "adsStatus", table: "ad_applications",
-    map: (data) => ({ id: crypto.randomUUID(), name: data.name || "", email: data.email || "", company: data.company || "", budget: data.budget || "", message: data.message || "", created_at: new Date().toISOString(), status: "open" })
+    map: (data) => {
+      const validateLink=(raw,label)=>{
+        if(!raw?.trim())return "";
+        let url;
+        try{url=new URL(raw.trim())}catch{throw Error(label+" must be a valid HTTPS URL.");}
+        if(url.protocol!=="https:"||url.username||url.password||
+          /^(localhost|127(?:\.\d+){3}|10(?:\.\d+){3}|192\.168(?:\.\d+){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d+){2}|.*\.local)$/i.test(url.hostname))
+         throw Error(label+" must link to a public HTTPS website.");
+        if(url.toString().length>500)throw Error(label+" is too long.");
+        return url.toString();
+      };
+      const website=validateLink(data.website_url,"Your campaign website");
+      const creative=validateLink(data.creative_url,"Your media link");
+      const details=[data.message||""];
+      if(website)details.push("Campaign website: "+website);
+      if(creative)details.push("Creative media (image/video): "+creative);
+      return { id:crypto.randomUUID(),name:data.name||"",email:data.email||"",
+        company:data.company||"",budget:data.budget||"",message:details.join("\n\n"),
+        created_at:new Date().toISOString(),status:"open" };
+    }
   });
 }
 
