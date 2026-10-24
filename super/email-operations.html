@@ -16,7 +16,7 @@ body.admin-shell{font:15px/1.5 system-ui,sans-serif;min-width:0}
 .toolbar button:disabled{opacity:.55;cursor:wait}
 .toolbar :focus-visible,.review-form :focus-visible,summary:focus-visible{outline:3px solid var(--color-primary,#087f73);outline-offset:3px}
 #deliveryState{display:inline-block;border:1px solid var(--color-border,#9daeb2);border-radius:40px;padding:7px 11px;font-size:.84rem;font-weight:700}
-#status,#reviewStatus{padding:10px 12px;background:var(--color-surface-muted,#edf5f5);color:var(--color-text,#203139);border-radius:10px;min-height:44px;overflow-wrap:anywhere}
+#status,#reviewStatus,#providerStatus,#optionalStatus{padding:10px 12px;background:var(--color-surface-muted,#edf5f5);color:var(--color-text,#203139);border-radius:10px;min-height:44px;overflow-wrap:anywhere}
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:11px;margin:17px 0}
 .metric{padding:16px;border-radius:12px;background:var(--color-surface-muted,#edf5f5);border:1px solid var(--color-border,#9daeb2);min-width:0}
 .metric span{display:block;color:var(--color-text-muted,#55686f);font-size:.85rem}
@@ -41,26 +41,29 @@ body.admin-shell{font:15px/1.5 system-ui,sans-serif;min-width:0}
 <body class="admin-shell"><main class="ops-wrap">
 <a class="ops-back" href="panel.html">← Back to Super Admin</a>
 <header><small class="ops-muted">Communications / Super Admin</small><h1 class="ops-title">Email delivery centre</h1>
-<p class="ops-muted">Understand which emails are waiting, confirm Brevo is connected and handle anything needing review. No campaigns are sent here.</p></header>
+<p class="ops-muted">Check whether important account and report-update emails are reaching members. Optional message summaries and inactive-user reminders require members to opt in.</p></header>
 <section class="ops-panel" aria-labelledby="overviewHeading">
 <h2 id="overviewHeading">Is email working?</h2><p class="ops-muted">Start with the email queue. If messages aren't moving, check your Brevo connection.</p>
 <div class="toolbar"><button class="btn" type="button" id="refresh">Refresh email status</button>
 <button class="btn ghost" type="button" id="verifyBrevo">Check Brevo connection</button>
 <span id="deliveryState" aria-live="polite">Checking…</span></div>
 <p id="status" role="status" aria-live="polite">Checking email service…</p>
+<p id="providerStatus" role="status" aria-live="polite">Brevo connection not yet checked. This page never sends a test email.</p>
 <div id="metrics" class="metrics" aria-live="polite"></div>
+<details class="ops-advanced"><summary>More email statistics</summary><div id="advancedMetrics" class="metrics"></div></details>
 <p class="ops-muted">Accepted by Brevo is not the same as delivered. Confirmed delivery requires provider events. Supabase Auth password-reset emails are counted separately.</p>
 </section>
 <section class="ops-panel" aria-labelledby="reviewHeading">
 <h2 id="reviewHeading">Emails that need attention</h2>
-<p class="ops-muted">Sometimes Brevo doesn't confirm whether it accepted an email. To avoid duplicates, the system holds these cases for you to review before recording a decision. This action never sends email.</p>
+<p class="ops-muted">Only uncertain delivery results appear here. Check the matching transaction in Brevo before recording a decision. Your review does not resend, delete, or duplicate an email.</p>
 <div class="toolbar"><button class="btn ghost" type="button" id="refreshReviews">Refresh review queue</button></div>
 <p id="reviewStatus" role="status" aria-live="polite">Loading review cases…</p>
 <div id="reviewList" class="review-list" aria-live="polite"></div>
 </section>
-<section class="ops-panel" aria-labelledby="extraHeading"><h2 id="extraHeading">Optional checks</h2>
-<p class="ops-muted">Preview who would be eligible for summaries or inactive-member reminders. These checks never queue or send email.</p>
+<section class="ops-panel" aria-labelledby="extraHeading"><h2 id="extraHeading">Optional email reminders</h2>
+<p class="ops-muted">Preview only members who opted in. These checks never send or queue emails. Ordinary notifications, support updates, report outcomes and password-reset emails are separate. <a href="../settings.html#email">See member email preferences</a>.</p>
 <details class="ops-advanced"><summary>Show reminder and member checks</summary>
+<p id="optionalStatus" role="status" aria-live="polite">Optional previews have not been checked. They never send emails.</p>
 <div class="toolbar"><button class="btn ghost" type="button" id="digestPreview">Preview message summaries</button>
 <button class="btn ghost" type="button" id="inactivityPreview">Preview inactive members</button>
 <button class="btn ghost" type="button" id="legacyRecovery">View member activity overview</button></div>
@@ -86,7 +89,7 @@ async function readOperationsResponse(response){
  if(response.status===404)throw Error("Email functions are missing from the live deployment. Publish the latest version.");
  const code=String(data?.diagnostic_code||data?.code||"");
  if(!response.ok){
-   if(code==="P0001"||code==="42501")throw Error("The email service could not confirm database permissions. This is a server issue. Reference: "+code);
+   if(code==="P0001"||code==="42501")throw Error("A protected email check was rejected by the database. This is a server issue. No emails were sent by this check. Reference: "+code);
    if(code==="PGRST202")throw Error("A database function is not ready. Apply the latest Supabase migration and refresh its schema cache.");
    if(response.status>=500)throw Error("The email service is temporarily unavailable. This check did not send email. Retry after checking the server logs."+(code?" Reference: "+code:""));
    throw Error(data?.error||"Email request failed.");
@@ -121,15 +124,16 @@ document.getElementById("verifyBrevo").addEventListener("click",async()=>{
   const session=await getSession();
   if(!session?.access_token){status.textContent="Sign in as super admin first.";return;}
   button.disabled=true;button.textContent="Verifying…";
-  status.textContent="Checking Brevo API credentials securely (no email will be sent)…";
+  document.getElementById("providerStatus").textContent="Checking Brevo API credentials securely; no email will be sent…";
   try{
     const response=await fetch("/.netlify/functions/email-operations?verifyProvider=1",{
       headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
     });
     const result=await readOperationsResponse(response);
-    status.textContent=result.authenticated?"Brevo API authentication successful. No email was sent.":
+    document.getElementById("providerStatus").textContent=result.authenticated?
+      "Brevo account authenticated. Sender verification and actual email delivery must still be checked. No email was sent.":
       (result.error||result.message||"Brevo connection could not be verified.");
-  }catch(error){status.textContent="Connection test failed: "+(error?.message||"Network error");}
+  }catch(error){document.getElementById("providerStatus").textContent="Connection check failed: "+(error?.message||"Network error");}
   finally{button.disabled=false;button.textContent="Verify Brevo connection";}
 });
 
@@ -196,7 +200,7 @@ async function loadReviews(){
 document.getElementById("legacyRecovery").addEventListener("click",async()=>{
   const button=document.getElementById("legacyRecovery");
   const session=await getSession();
-  if(!session?.access_token){status.textContent="Sign in as super admin first.";return;}
+  if(!session?.access_token){document.getElementById("optionalStatus").textContent="Sign in as super admin first.";return;}
   button.disabled=true;button.textContent="Checking…";
   try{
     const response=await fetch("/.netlify/functions/email-operations?legacyRecovery=1",{
@@ -226,38 +230,38 @@ document.getElementById("legacyRecovery").addEventListener("click",async()=>{
     document.getElementById("legacyRecoveryNote").textContent=
       "No emails have been scheduled. Existing users without recorded permission must not be automatically added to marketing campaigns.";
     panel.hidden=false;
-    status.textContent="Existing-user recovery overview loaded. No emails queued or sent.";
-  }catch(error){status.textContent=error.message||"Could not load recovery counts";}
+    document.getElementById("optionalStatus").textContent="Existing-user recovery overview loaded. No emails queued or sent.";
+  }catch(error){document.getElementById("optionalStatus").textContent=error.message||"Could not load recovery counts";}
   finally{button.disabled=false;button.textContent="Existing-user recovery overview";}
 });
 document.getElementById("inactivityPreview").addEventListener("click",async()=>{
   const button=document.getElementById("inactivityPreview");
   const session=await getSession();
-  if(!session?.access_token){status.textContent="Sign in as super admin first.";return;}
+  if(!session?.access_token){document.getElementById("optionalStatus").textContent="Sign in as super admin first.";return;}
   button.disabled=true;button.textContent="Checking…";
   try{
     const response=await fetch("/.netlify/functions/email-operations?inactivityPreview=1",{
       headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
     });
     const result=await readOperationsResponse(response);
-    if(!response.ok)throw Error(result.error||"Inactivity preview unavailable");
-    status.textContent=`${Number(result.eligible||0)} opted-in members eligible for a check-in. Sending ${result.enabled?"configured":"paused"}. No emails queued or sent.`;
-  }catch(error){status.textContent=error.message||"Inactivity preview failed";}
+    
+    document.getElementById("optionalStatus").textContent=`${Number(result.eligible||0)} opted-in members eligible for a check-in. Sending ${result.enabled?"configured":"paused"}. No emails queued or sent.`;
+  }catch(error){document.getElementById("optionalStatus").textContent=error.message||"Inactivity preview failed";}
   finally{button.disabled=false;button.textContent="Preview inactive members";}
 });
 document.getElementById("digestPreview").addEventListener("click",async()=>{
   const button=document.getElementById("digestPreview");
   const session=await getSession();
-  if(!session?.access_token){status.textContent="Sign in as super admin first.";return;}
+  if(!session?.access_token){document.getElementById("optionalStatus").textContent="Sign in as super admin first.";return;}
   button.disabled=true;button.textContent="Checking…";
   try{
     const response=await fetch("/.netlify/functions/email-operations?digestPreview=1",{
       headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"
     });
     const result=await readOperationsResponse(response);
-    if(!response.ok)throw Error(result.error||"Digest preview unavailable");
-    status.textContent=`${Number(result.eligible||0)} eligible digest groups. Dispatch ${result.enabled?"configured":"disabled"}. No emails queued or sent.`;
-  }catch(error){status.textContent=error.message||"Digest preview failed";}
+    
+    document.getElementById("optionalStatus").textContent=`${Number(result.eligible||0)} eligible digest groups. Dispatch ${result.enabled?"configured":"disabled"}. No emails queued or sent.`;
+  }catch(error){document.getElementById("optionalStatus").textContent=error.message||"Digest preview failed";}
   finally{button.disabled=false;button.textContent="Preview eligible digests";}
 });
 document.getElementById("refreshReviews").addEventListener("click",loadReviews);
