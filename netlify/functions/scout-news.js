@@ -124,8 +124,8 @@ exports.handler = async (event) => {
   const allSources = [...fetchedSources, ...persistedFallbacks.filter((source) => !source.__error && source.feed_url)];
   const sourceOrder = scheduleScoutSources(allSources, allSources.length);
   const sourceText = source => [source.name, source.category, ...(Array.isArray(source.tags) ? source.tags : [])].join(" ");
-  const nigeria = source => /\\bnigeria\\b/i.test(sourceText(source));
-  const sports = source => /\\b(sports?|football|tennis|formula.one|basketball|boxing|athletics)\\b/i.test(sourceText(source));
+  const nigeria = source => /\bnigeria\b/i.test(sourceText(source));
+  const sports = source => /\b(sports?|football|tennis|formula.one|basketball|boxing|athletics)\b/i.test(sourceText(source));
   const chosen = [], seen = new Set();
   function take(predicate, max) {
     for (const source of sourceOrder) {
