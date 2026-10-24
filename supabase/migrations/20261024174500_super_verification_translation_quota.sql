@@ -67,7 +67,7 @@ BEGIN
   characters=public.verified_translation_usage.characters+excluded.characters,updated_at=now()
  WHERE public.verified_translation_usage.requests < v_limit
  RETURNING requests INTO v_used;
- IF v_used IS NULL THEN RAISE EXCEPTION 'Translation hourly quota reached ('||v_limit||' requests)' USING ERRCODE='P0001'; END IF;
+ IF v_used IS NULL THEN RAISE EXCEPTION 'Translation hourly quota reached (% requests)',v_limit USING ERRCODE='P0001'; END IF;
  RETURN jsonb_build_object('remaining',v_limit-v_used,'resets_at',v_window+interval '1 hour','limit',v_limit);
 END $quota$;
 REVOKE ALL ON FUNCTION public.consume_verified_translation_quota(integer) FROM PUBLIC,anon;
