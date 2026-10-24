@@ -21,11 +21,8 @@ exports.handler=async event=>{
   if(!auth.ok)return result(401,{error:'Session expired'});
   const user=await auth.json();
   if(!user.id)return result(401,{error:'Session unavailable'});
-  const profile=await fetch(url.replace(/\/$/,'')+'/rest/v1/profiles?id=eq.'+encodeURIComponent(user.id)+'&select=is_verified&limit=1',
-   {headers:{apikey:key,Authorization:'Bearer '+key},signal:AbortSignal.timeout(9000)});
-  if(!profile.ok)return result(503,{error:'Could not check verification'});
-  const rows=await profile.json();
-  if(rows[0]?.is_verified!==true)return result(403,{error:'Translation is currently for verified creators'});
+  // Every signed-in member can translate. A server-side hourly quota keeps
+  // free-tier usage bounded; verified accounts have a larger allowance.
   // Count translation use in Postgres; serverless instances cannot share a Map.
   const quotaResponse=await fetch(url.replace(/\/$/,'')+'/rest/v1/rpc/consume_verified_translation_quota',{
     method:'POST',signal:AbortSignal.timeout(9000),
@@ -34,9 +31,9 @@ exports.handler=async event=>{
   });
   if(!quotaResponse.ok){
     const failure=await quotaResponse.json().catch(()=>({}));
-    const exhausted=/hourly quota reached/i.test(failure.message||'');
+    const exhausted=/hourly quota reached|translation limit reached/i.test(failure.message||'');
     return result(exhausted?429:quotaResponse.status===401?401:503,{
-      error:exhausted?'Translation limit reached (18/hour). Try again next hour.':
+      error:exhausted?'Hourly translation limit reached. Try again next hour.':
         'Translation allowance unavailable. Please try again.'
     });
   }

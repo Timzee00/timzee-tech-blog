@@ -24,7 +24,18 @@ exports.handler = async (event) => {
   const userId = payload.userId;
   const action = payload.action;
   if (action === "verify" || action === "set_tier") {
-    return jsonResponse(409, {error:"Verification cannot be granted or upgraded here. Review the applicant's evidence in Verification reviews."});
+    if (guard.role !== "super") return jsonResponse(403, {error:"Only super administrators can manage verification directly."});
+    const tier = String(payload.verificationTier || "").trim().toLowerCase();
+    const reason = String(payload.reason || "").trim();
+    if (!["silver","gold","platinum"].includes(tier) || reason.length < 25 || reason.length > 1800) {
+      return jsonResponse(400, {error:"Choose Silver, Gold or Platinum and document the evidence and decision (25–1800 characters). Business verification requires formal organization review."});
+    }
+    if (typeof payload.userId !== "string" || !/^[0-9a-f-]{36}$/i.test(payload.userId)) return jsonResponse(400,{error:"Invalid user."});
+    const {data,error}=await supabase.rpc("admin_manage_verified_identity",{
+      p_actor:guard.user.id,p_user:payload.userId,p_tier:tier,p_reason:reason
+    });
+    if(error)return jsonResponse(409,{error:error.message || "Verification action could not be completed."});
+    return jsonResponse(200,{profile:data});
   }
   if (!userId || !action) return jsonResponse(400, { error: "Missing userId or action." });
 

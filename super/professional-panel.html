@@ -556,12 +556,12 @@
           }
         };
 
-        const updateUserAction = async (userId, action, reason = "") => {
+        const updateUserAction = async (userId, action, reason = "", verificationTier = null) => {
           try {
             const res = await fetchWithAuth("/.netlify/functions/update-user", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ userId, action, reason })
+              body: JSON.stringify({ userId, action, reason, verificationTier })
             });
             const parsed = await safeParseJson(res);
             if (!res.ok) {
@@ -613,6 +613,7 @@
                 <div style="color:var(--color-text-muted);font-size:12px;">Status: ${escapeHTML(user.account_status || "active")} ${user.is_verified ? "• Verified ("+escapeHTML(user.verification_tier||"silver")+")" : ""} ${user.is_staff_pick ? "• Staff Pick" : ""} ${user.is_featured ? "• Featured" : ""}</div>
                 <div class="admin-list-actions"><a class="btn ghost" href="../profile.html?id=${user.id}" target="_blank" rel="noopener noreferrer">View profile</a><details><summary>Manage</summary><div class="admin-list-actions">
                   ${user.is_verified ? `<button class="btn ghost" data-user-action="unverify" data-user-id="${user.id}">Revoke verification</button>` : ""}
+                  <button class="btn ghost" data-user-action="${user.is_verified ? "set_tier" : "verify"}" data-user-id="${user.id}" data-current-tier="${escapeHTML(user.verification_tier||"silver")}">${user.is_verified ? "Change verification tier" : "Verify account"}</button>
                    <a class="btn ghost" href="../admin/dashboard.html?tab=verification">${user.is_verified ? "Review tier / evidence" : "Review verification application"}</a>
                   <button class="btn ghost" data-user-action="${user.account_status === "suspended" ? "activate" : "suspend"}" data-user-id="${user.id}">${user.account_status === "suspended" ? "Activate" : "Suspend"}</button>
                   <button class="btn ghost" data-user-action="${user.is_featured ? "unfeature" : "feature"}" data-user-id="${user.id}">${user.is_featured ? "Unfeature" : "Feature"}</button>
@@ -637,7 +638,31 @@
                    }
                    if (!await window.appUI.confirm("Revoke verification and save this audit reason?")) {btn.disabled=false;return;}
                  }
-                 const result = await updateUserAction(btn.dataset.userId, action, reason);
+                 let verificationTier=null;
+                 if(action==="verify"||action==="set_tier"){
+                   const chosen=await window.appUI.prompt("Choose Silver, Gold or Platinum. Official Business badges require review of organization evidence.",{
+                     title:action==="verify"?"Verify account":"Change verified tier",label:"New verification tier (silver, gold, platinum)",inputType:"text",defaultValue:btn.dataset.currentTier==="standard"?"silver":(btn.dataset.currentTier||"silver")
+                   });
+                   if(chosen===null){btn.disabled=false;return;}
+                   verificationTier=String(chosen).trim().toLowerCase();
+                   if(!["silver","gold","platinum"].includes(verificationTier)){
+                     window.appUI.toast("Choose silver, gold or platinum. Business verification requires application review.",{tone:"error"});
+                     btn.disabled=false;return;
+                   }
+                   reason=await window.appUI.prompt("Describe the evidence personally reviewed, how you established authenticity, and the reason for awarding this tier (25–1800 characters).",{
+                     title:"Audited verification decision",label:"Required audit reason",inputType:"text"
+                   });
+                   if(reason===null){btn.disabled=false;return;}
+                   reason=String(reason).trim();
+                   if(reason.length<25||reason.length>1800){
+                     window.appUI.toast("Enter 25–1800 characters of verifiable evidence and decision notes.",{tone:"error"});
+                     btn.disabled=false;return;
+                   }
+                   if(!await window.appUI.confirm("Confirm verified identity decision for this user? This grants a public identity badge, logs the reason and notifies the user.")){
+                     btn.disabled=false;return;
+                   }
+                 }
+                 const result = await updateUserAction(btn.dataset.userId, action, reason, verificationTier);
                 if (result.error) {
                   window.appUI.toast(result.error);
                   btn.disabled = false;
