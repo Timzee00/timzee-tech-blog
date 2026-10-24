@@ -38,7 +38,12 @@ export function generateRoundupDraft(rows,topic){
     '<h2>Before you act</h2>',
     '<p>Check each official announcement and its current terms. For jobs and scholarships, apply using verified channels. For freebies, check regional eligibility, hidden charges and legal access.</p>'
   ].join("\n");
-  return {title:items.length+' '+heading+' updates worth knowing',content,excerpt:'A sourced roundup of '+items.length+' '+topic+' updates. Verify each announcement before acting.',tags:[topic,"roundup"],source_url:items[0].url,source_id:rows[0].source_id,source_name:"Timzee curated roundup",image_url:rows[0].image_url||"",published_at:new Date().toISOString(),status:"draft"};
+  // This new editorial item needs its own URL identity: curator_posts.url
+  // AND curator_posts.source_url each have a unique index. A fragment keeps
+  // links pointed to the original report; the sources in content stay canonical.
+  const roundupSource=new URL(items[0].url);
+  roundupSource.hash="timzee-roundup-"+crypto.randomUUID();
+  return {title:items.length+' '+heading+' updates worth knowing',content,excerpt:'A sourced roundup of '+items.length+' '+topic+' updates. Verify each announcement before acting.',tags:[topic,"roundup"],source_url:roundupSource.toString(),source_id:rows[0].source_id,source_name:"Timzee curated roundup",image_url:rows[0].image_url||"",published_at:new Date().toISOString(),status:"draft"};
 }
 
 const ROUNDUP_SIGNALS={

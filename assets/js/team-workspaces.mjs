@@ -132,12 +132,18 @@ $("createWorkspaceForm").addEventListener("submit",async event=>{
  event.preventDefault();if(!state.user)return;
  const values=getForm(event.currentTarget),button=event.submitter;button.disabled=true;
  try{
-  const created=requireSuccess(await supabase.from("team_workspaces").insert({
-   owner_id:state.user.id,kind:values.kind,name:values.name.trim(),
+  // Avoid INSERT RETURNING: a separate read can see the newly committed
+  // owner-scoped row through its membership and access policies.
+  const createdId=crypto.randomUUID();
+  const created=await supabase.from("team_workspaces").insert({
+   id:createdId,owner_id:state.user.id,kind:values.kind,name:values.name.trim(),
    description:values.description.trim(),website:values.website.trim()||null
-  }).select("id").single());
+  });
+  if(created.error)throw created.error;
+  await loadWorkspaces();
+  if(!state.workspaces.some(ws=>ws.id===createdId))throw Error("Workspace saved but is not visible yet. Refresh your session and check access.");
   event.currentTarget.reset();notice("Workspace created. You can now plan events and content.","success");
-  await loadWorkspaces();await openWorkspace(created.id);
+  await openWorkspace(createdId);
  }catch(e){notice(e.message||"Unable to create workspace.","error")}finally{button.disabled=false}
 });
 $("teamSettingsForm").addEventListener("submit",async event=>{

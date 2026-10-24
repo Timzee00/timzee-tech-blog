@@ -168,7 +168,7 @@ class CuratorManager {
               ${ROUNDUP_TOPICS.map(topic => '<option value="'+htmlEscape(topic)+'">'+htmlEscape(topic)+'</option>').join("")}
             </select>
             <button type="button" class="btn ghost" id="suggestCuratorRoundup">Suggest related stories</button>
-            <button type="button" class="btn ghost" id="createCuratorRoundup">Group selected stories into draft</button>
+            <button type="button" class="btn ghost" id="createCuratorRoundup">Auto-group stories into draft</button>
             <span id="roundupSelectionCount" role="status">0 selected (2–6 required)</span>
           </div>
           <div id="postsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
@@ -597,10 +597,16 @@ class CuratorManager {
 
   async createRoundup(){
     const topic=this.container.querySelector("#roundupTopic")?.value||"";
+    if(!this.roundupIds.size){
+      // Discover source briefs for this topic without forcing hand-selection.
+      const candidates=suggestRoundupIds(this.posts,topic);
+      if(candidates.length<2){window.appUI.toast("Not enough matching source briefs. Import more reports or change the topic.",{tone:"warning"});return;}
+      this.roundupIds=new Set(candidates);this.renderPosts();
+    }
     const chosen=this.posts.filter(post=>this.roundupIds.has(post.id));
     try{
       const draft=generateRoundupDraft(chosen,topic);
-      if(!await window.appUI.confirm("Save "+chosen.length+" stories as one "+topic+" roundup draft? Verify every source and deadline before publication."))return;
+      if(!await window.appUI.confirm("Group these "+chosen.length+" "+topic+" stories into one draft?\n\n"+chosen.map(post=>"• "+String(post.title||"Untitled").slice(0,85)).join("\n")+"\n\nReview sources and facts before publishing."))return;
       await createCuratorPost(draft);
       this.roundupIds.clear();
       await this.load();

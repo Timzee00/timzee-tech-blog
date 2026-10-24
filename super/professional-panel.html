@@ -555,12 +555,12 @@
           }
         };
 
-        const updateUserAction = async (userId, action) => {
+        const updateUserAction = async (userId, action, reason = "") => {
           try {
             const res = await fetchWithAuth("/.netlify/functions/update-user", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ userId, action })
+              body: JSON.stringify({ userId, action, reason })
             });
             const parsed = await safeParseJson(res);
             if (!res.ok) {
@@ -609,9 +609,10 @@
               <div class="form-card" style="margin-bottom:12px;" data-user-id="${user.id}">
                 <strong>${escapeHTML(user.display_name || user.email || "Member")}</strong>
                 <div style="color:var(--color-text-muted);font-size:12px;">${escapeHTML(user.email || "—")} • ${escapeHTML(user.role || "user")}</div>
-                <div style="color:var(--color-text-muted);font-size:12px;">Status: ${user.account_status || "active"} ${user.is_verified ? "• Verified" : ""} ${user.is_staff_pick ? "• Staff Pick" : ""} ${user.is_featured ? "• Featured" : ""}</div>
+                <div style="color:var(--color-text-muted);font-size:12px;">Status: ${escapeHTML(user.account_status || "active")} ${user.is_verified ? "• Verified ("+escapeHTML(user.verification_tier||"silver")+")" : ""} ${user.is_staff_pick ? "• Staff Pick" : ""} ${user.is_featured ? "• Featured" : ""}</div>
                 <div class="admin-list-actions"><a class="btn ghost" href="../profile.html?id=${user.id}" target="_blank" rel="noopener noreferrer">View profile</a><details><summary>Manage</summary><div class="admin-list-actions">
-                  <button class="btn ghost" data-user-action="${user.is_verified ? "unverify" : "verify"}" data-user-id="${user.id}">${user.is_verified ? "Unverify" : "Verify"}</button>
+                  ${user.is_verified ? `<button class="btn ghost" data-user-action="unverify" data-user-id="${user.id}">Revoke verification</button>` : ""}
+                   <a class="btn ghost" href="../admin/dashboard.html?tab=verification">${user.is_verified ? "Review tier / evidence" : "Review verification application"}</a>
                   <button class="btn ghost" data-user-action="${user.account_status === "suspended" ? "activate" : "suspend"}" data-user-id="${user.id}">${user.account_status === "suspended" ? "Activate" : "Suspend"}</button>
                   <button class="btn ghost" data-user-action="${user.is_featured ? "unfeature" : "feature"}" data-user-id="${user.id}">${user.is_featured ? "Unfeature" : "Feature"}</button>
                   <button class="btn ghost" data-user-action="${user.is_staff_pick ? "unstaff" : "staff"}" data-user-id="${user.id}">${user.is_staff_pick ? "Unstaff" : "Staff Pick"}</button>
@@ -624,7 +625,18 @@
               btn.addEventListener("click", async () => {
                 btn.disabled = true;
                 const action = btn.dataset.userAction;
-                const result = await updateUserAction(btn.dataset.userId, action);
+                let reason = "";
+                 if (action === "unverify") {
+                   reason = await window.appUI.prompt("Document why this verified identity is being revoked (25–1800 characters).", {title:"Revoke verified identity",label:"Audit reason",inputType:"text"});
+                   if (reason === null) {btn.disabled=false;return;}
+                   reason = String(reason).trim();
+                   if (reason.length < 25 || reason.length > 1800) {
+                     window.appUI.toast("Please enter a documented reason (25–1800 characters).",{tone:"error"});
+                     btn.disabled=false;return;
+                   }
+                   if (!await window.appUI.confirm("Revoke verification and save this audit reason?")) {btn.disabled=false;return;}
+                 }
+                 const result = await updateUserAction(btn.dataset.userId, action, reason);
                 if (result.error) {
                   window.appUI.toast(result.error);
                   btn.disabled = false;
