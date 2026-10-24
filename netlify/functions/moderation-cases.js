@@ -23,6 +23,10 @@ const targetSchemas=Object.freeze({
  direct_message:{table:"direct_messages",fields:"id,body,sender_id,recipient_id,deleted_at,created_at",owner:"sender_id",text:"body"}
 });
 const trimmed=(value,n=1600)=>String(value||"").slice(0,n);
+// Present an excerpt for review without executing or displaying raw article markup.
+const excerpt=(value,n=1200)=>trimmed(String(value||"").replace(/<script[^>]*>[\s\S]*?<\/script>/gi," ")
+ .replace(/<style[^>]*>[\s\S]*?<\/style>/gi," ")
+ .replace(/<[^>]+>/g," ").replace(/&nbsp;/gi," ").replace(/\s+/g," ").trim(),n);
 function parseRequest(body){
  const kind=String(body.kind||"decision");
  if(kind==="flag_review"){
@@ -69,7 +73,7 @@ async function flagDetail(db,id){
    const raw=row.data;
    ownerId=raw[type.owner]||null;
    preview={title:trimmed(raw.title||raw.display_name||"",200),
-    text:trimmed(raw[type.text]||"",1200),created_at:raw.created_at||null,
+    text:excerpt(raw[type.text],1200),created_at:raw.created_at||null,
     status:raw.status||raw.moderation_status||(raw.is_available===false||raw.is_public===false?"Hidden":"Available")};
   }
  }
@@ -96,24 +100,25 @@ async function caseDetail(db,id){
          (report.reporter_id===raw.recipient_id?raw.sender_id:null):raw[schema.owner];
        preview={id:raw.id,type:report.content_type,
          title:trimmed(raw.title||raw.display_name||"",180),
-         text:raw.deleted_at?"[Previously deleted message]":trimmed(raw[schema.text],1200),
+         text:raw.deleted_at?"[Previously deleted message]":excerpt(raw[schema.text],1200),
          created_at:raw.created_at||null,status:raw.status||raw.moderation_status||
            (raw.is_available===false||raw.is_public===false?"Not public":"Available")};
      }
    }else accessNote="Reported content is unavailable or was removed.";
  }else accessNote="This report category requires a separate specialist investigation.";
- const [reporter,subject,notes,history,sanctions,flags]=await Promise.all([
+ const [reporter,subject,notes,history,sanctions,flags,legacy]=await Promise.all([
    profilePreview(db,report.reporter_id),
    profilePreview(db,subjectId),
    db.from("moderation_case_notes").select("id,outcome,action,reason,evidence_summary,created_at,reviewer_id").eq("report_id",id).order("created_at",{ascending:false}).limit(30),
    db.from("content_reports").select("id",{count:"exact",head:true}).eq("content_type",report.content_type).eq("content_id",report.content_id),
    subjectId?db.from("moderation_account_actions").select("id,action,reason,ends_at,lifted_at,created_at,actor_id").eq("target_id",subjectId).order("created_at",{ascending:false}).limit(15):Promise.resolve({data:[],error:null}),
-   db.from("moderation_automated_flags").select("id,signals,risk_score,state,created_at").eq("target_type",report.content_type).eq("target_id",report.content_id).limit(1)
+   db.from("moderation_automated_flags").select("id,signals,risk_score,state,created_at").eq("target_type",report.content_type).eq("target_id",report.content_id).limit(1),
+   db.from("moderation_audit").select("action,created_at,moderator_id").eq("content_type","content_reports").eq("content_id",id).order("created_at",{ascending:false}).limit(20)
  ]);
- if(notes.error||history.error||sanctions.error){throw Error("Report investigation history unavailable");}
+ if(notes.error||history.error||sanctions.error||legacy.error){throw Error("Report investigation history unavailable");}
  // Automatic flags are an optional, strictly server-owned enrichment.
  return {report,preview,accessNote,reporter,subject,subjectId,
-   notes:notes.data||[],relatedReportCount:history.count||0,sanctions:sanctions.data||[],
+   notes:notes.data||[],legacyActions:legacy.data||[],relatedReportCount:history.count||0,sanctions:sanctions.data||[],
    automaticFlags:flags.error?[]:(flags.data||[])};
 }
 exports.handler=async event=>{

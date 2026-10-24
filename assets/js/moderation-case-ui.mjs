@@ -1,7 +1,7 @@
 import {getSession} from "./supabase.js";
 const $=id=>document.getElementById(id);
 const uuid=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
-const state={reports:[],total:0,page:0,busy:false};
+const state={reports:[],total:0,page:0,busy:false,error:null};
 const el=(tag,text,className)=>{
  const node=document.createElement(tag);
  if(text!==undefined)node.textContent=String(text||"");
@@ -59,7 +59,7 @@ export async function loadReportQueue(){
  if($("modReportCount"))$("modReportCount").textContent="Loading reports…";
  try{
   const result=await api({status,page:state.page});
-  state.reports=result.reports||[];state.total=Number(result.total||0);
+  state.error=null;state.reports=result.reports||[];state.total=Number(result.total||0);
   renderList();
  }catch(error){
   if($("modReports"))$("modReports").replaceChildren(el("p",error.message));
@@ -173,6 +173,13 @@ export async function openReportCase(id){
   history.append(el("h3","Automated signals and review history"));
   for(const flag of details.automaticFlags||[]){
    history.append(el("p","Automated signal: "+(flag.signals||[]).join(", ")+". Risk "+flag.risk_score+"/100. These are indicators, not proof.","moderation-warning"));
+  }
+  for(const previous of details.legacyActions||[]){
+   const item=node("article",undefined,"moderation-history-item");
+   item.append(node("strong","Earlier recorded action: "+human(previous.action)),
+     node("small",date(previous.created_at)));
+   item.append(node("p","This is a legacy audit entry; a complete evidence summary may not have been saved at the time."));
+   history.append(item);
   }
   for(const note of details.notes||[]){
    const card=el("article",undefined,"moderation-history-item");
