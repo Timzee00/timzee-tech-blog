@@ -187,7 +187,11 @@ function configureControls(){
  $("spaceReport").hidden=!state.joined;
  $("spaceMic").hidden=!state.joined||!state.livekit||!["host","speaker"].includes(state.role);
  $("spaceAsk").hidden=!state.joined||state.role!=="listener"||!room?.allow_requests;
- $("spaceReconnect").hidden=!state.joined||state.role==="host";
+ // Hosts also need a recovery path when their audio connection drops.
+ const reconnect=$("spaceReconnect");
+ reconnect.hidden=!state.joined||!live||roomExpired(room)||
+   (state.role==="host"&&Boolean(state.livekit));
+ reconnect.textContent=state.livekit?"↻ Refresh speaking access":"↻ Reconnect audio";
  $("spaceHostPanel").hidden=!host;
  if(host)void loadRequests();
 }
