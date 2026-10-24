@@ -42,6 +42,14 @@ exports.handler = async () => {
     throw verification.error;
   }
   console.log("Verification lifecycle maintenance completed:",verification.data);
+  // Temporary suspensions expire automatically, even when no moderator is online.
+  // This operation is server-only, bounded and replay-safe.
+  const expiries=await supabase.rpc("expire_moderation_suspensions");
+  if(expiries.error){
+    console.error("Moderation suspension expiry failed:",expiries.error.code||"DB_ERROR");
+    throw new Error("Moderation expiry maintenance failed");
+  }
+  if(Number(expiries.data||0)>0)console.log("Expired moderation suspensions:",Number(expiries.data));
 
   // One quiet in-app digest per UTC day, only for super admins who opt in
   // and only when action is actually required. The database guarantees

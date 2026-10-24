@@ -96,7 +96,8 @@ test("report decisions must use the shared audited moderation endpoint",()=>{
  assert.match(read("assets/js/moderation-case-ui.mjs"),/staff|evidence|Investigation/);
  assert.match(read("netlify/functions/moderation-cases.js"),/staff_decide_content_report/);
  assert.doesNotMatch(moderator,/from\("content_reports"\)\.update\(/);
- assert.match(endpoint,/content_reports:\["resolve","dismiss"\]/);
+ assert.doesNotMatch(endpoint,/content_reports:\["resolve","dismiss"\]/);
+ assert.match(read("netlify/functions/moderation-cases.js"),/staff_decide_content_report/);
  assert.match(reportMigration,/status='open' RETURNING id INTO v_changed/);
  assert.doesNotMatch(reportMigration,/WHEN 'content_reports' THEN 'content_reports'[\s\S]*?IF p_action='delete' THEN/);
 });

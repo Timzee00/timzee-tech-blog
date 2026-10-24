@@ -15,8 +15,7 @@ const allowed=Object.freeze({
   discussion_messages:["delete"],
   marketplace_items:["hide","delete"],
   videos:["hide","delete"],
-  novels:["hide","delete"],
-  content_reports:["resolve","dismiss"]
+  novels:["hide","delete"]
 });
 const json=(statusCode,body)=>({
   statusCode,
