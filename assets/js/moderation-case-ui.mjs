@@ -175,10 +175,10 @@ export async function openReportCase(id){
    history.append(el("p","Automated signal: "+(flag.signals||[]).join(", ")+". Risk "+flag.risk_score+"/100. These are indicators, not proof.","moderation-warning"));
   }
   for(const previous of details.legacyActions||[]){
-   const item=node("article",undefined,"moderation-history-item");
-   item.append(node("strong","Earlier recorded action: "+human(previous.action)),
-     node("small",date(previous.created_at)));
-   item.append(node("p","This is a legacy audit entry; a complete evidence summary may not have been saved at the time."));
+   const item=el("article",undefined,"moderation-history-item");
+   item.append(el("strong","Earlier recorded action: "+human(previous.action)),
+     el("small",date(previous.created_at)));
+   item.append(el("p","This is a legacy audit entry; a complete evidence summary may not have been saved at the time."));
    history.append(item);
   }
   for(const note of details.notes||[]){
