@@ -612,9 +612,25 @@
                 <div style="color:var(--color-text-muted);font-size:12px;">${escapeHTML(user.email || "—")} • ${escapeHTML(user.role || "user")}</div>
                 <div style="color:var(--color-text-muted);font-size:12px;">Status: ${escapeHTML(user.account_status || "active")} ${user.is_verified ? "• Verified ("+escapeHTML(user.verification_tier||"silver")+")" : ""} ${user.is_staff_pick ? "• Staff Pick" : ""} ${user.is_featured ? "• Featured" : ""}</div>
                 <div class="admin-list-actions"><a class="btn ghost" href="../profile.html?id=${user.id}" target="_blank" rel="noopener noreferrer">View profile</a><details><summary>Manage</summary><div class="admin-list-actions">
-                  ${user.is_verified ? `<button class="btn ghost" data-user-action="unverify" data-user-id="${user.id}">Revoke verification</button>` : ""}
-                  <button class="btn ghost" data-user-action="${user.is_verified ? "set_tier" : "verify"}" data-user-id="${user.id}" data-current-tier="${escapeHTML(user.verification_tier||"silver")}">${user.is_verified ? "Change verification tier" : "Verify account"}</button>
-                   <a class="btn ghost" href="../admin/dashboard.html?tab=verification">${user.is_verified ? "Review tier / evidence" : "Review verification application"}</a>
+                  <div class="super-verification-controls" data-verification-controls="${user.id}" style="display:grid;gap:10px;width:min(100%,340px);min-width:0;padding:12px;border:1px solid var(--color-border, #c4d0d4);border-radius:12px;">
+                    <strong style="font-size:.9rem">Manage verification</strong>
+                    <label style="display:grid;gap:5px;">Verification tier
+                      <select data-verification-tier aria-label="Verification tier" style="width:100%;min-height:42px;">
+                        <option value="silver" ${user.verification_tier==="silver"?"selected":""}>Silver</option>
+                        <option value="gold" ${user.verification_tier==="gold"?"selected":""}>Gold</option>
+                        <option value="platinum" ${user.verification_tier==="platinum"?"selected":""}>Platinum</option>
+                      </select>
+                    </label>
+                    <label style="display:grid;gap:5px;">Decision reason and evidence reviewed (25–1800 characters)
+                      <textarea data-verification-reason rows="4" minlength="25" maxlength="1800" aria-label="Verification decision reason" placeholder="Explain what was checked and why this action is appropriate. Do not paste private identity documents." style="width:100%;max-width:100%;box-sizing:border-box;"></textarea>
+                    </label>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                      <button type="button" class="btn ghost" data-user-action="${user.is_verified ? "set_tier" : "verify"}" data-user-id="${user.id}">${user.is_verified ? "Change tier" : "Verify account"}</button>
+                      ${user.is_verified ? `<button type="button" class="btn danger" data-user-action="unverify" data-user-id="${user.id}">Revoke verification</button>` : ""}
+                    </div>
+                    <p data-verification-feedback role="status" aria-live="polite" style="margin:0;font-size:.8rem;overflow-wrap:anywhere;">Business verification requires formal organization review.</p>
+                    <a class="btn ghost" href="../admin/dashboard.html?tab=verification">Review identity applications and evidence</a>
+                  </div>
                   <button class="btn ghost" data-user-action="${user.account_status === "suspended" ? "activate" : "suspend"}" data-user-id="${user.id}">${user.account_status === "suspended" ? "Activate" : "Suspend"}</button>
                   <button class="btn ghost" data-user-action="${user.is_featured ? "unfeature" : "feature"}" data-user-id="${user.id}">${user.is_featured ? "Unfeature" : "Feature"}</button>
                   <button class="btn ghost" data-user-action="${user.is_staff_pick ? "unstaff" : "staff"}" data-user-id="${user.id}">${user.is_staff_pick ? "Unstaff" : "Staff Pick"}</button>
@@ -628,41 +644,31 @@
                 btn.disabled = true;
                 const action = btn.dataset.userAction;
                 let reason = "";
-                 if (action === "unverify") {
-                   reason = await window.appUI.prompt("Document why this verified identity is being revoked (25–1800 characters).", {title:"Revoke verified identity",label:"Audit reason",inputType:"text"});
-                   if (reason === null) {btn.disabled=false;return;}
-                   reason = String(reason).trim();
-                   if (reason.length < 25 || reason.length > 1800) {
-                     window.appUI.toast("Please enter a documented reason (25–1800 characters).",{tone:"error"});
-                     btn.disabled=false;return;
-                   }
-                   if (!await window.appUI.confirm("Revoke verification and save this audit reason?")) {btn.disabled=false;return;}
-                 }
-                 let verificationTier=null;
-                 if(action==="verify"||action==="set_tier"){
-                   const chosen=await window.appUI.prompt("Choose Silver, Gold or Platinum. Official Business badges require review of organization evidence.",{
-                     title:action==="verify"?"Verify account":"Change verified tier",label:"New verification tier (silver, gold, platinum)",inputType:"text",defaultValue:btn.dataset.currentTier==="standard"?"silver":(btn.dataset.currentTier||"silver")
-                   });
-                   if(chosen===null){btn.disabled=false;return;}
-                   verificationTier=String(chosen).trim().toLowerCase();
-                   if(!["silver","gold","platinum"].includes(verificationTier)){
-                     window.appUI.toast("Choose silver, gold or platinum. Business verification requires application review.",{tone:"error"});
-                     btn.disabled=false;return;
-                   }
-                   reason=await window.appUI.prompt("Describe the evidence personally reviewed, how you established authenticity, and the reason for awarding this tier (25–1800 characters).",{
-                     title:"Audited verification decision",label:"Required audit reason",inputType:"text"
-                   });
-                   if(reason===null){btn.disabled=false;return;}
-                   reason=String(reason).trim();
-                   if(reason.length<25||reason.length>1800){
-                     window.appUI.toast("Enter 25–1800 characters of verifiable evidence and decision notes.",{tone:"error"});
-                     btn.disabled=false;return;
-                   }
-                   if(!await window.appUI.confirm("Confirm verified identity decision for this user? This grants a public identity badge, logs the reason and notifies the user.")){
-                     btn.disabled=false;return;
-                   }
-                 }
-                 const result = await updateUserAction(btn.dataset.userId, action, reason, verificationTier);
+                let verificationTier = null;
+                if (["verify", "set_tier", "unverify"].includes(action)) {
+                  const controls = btn.closest(".super-verification-controls");
+                  const reasonField = controls?.querySelector("[data-verification-reason]");
+                  const feedback = controls?.querySelector("[data-verification-feedback]");
+                  reason = String(reasonField?.value || "").trim();
+                  if (reason.length < 25 || reason.length > 1800) {
+                    if (feedback) feedback.textContent = "Please write a reason between 25 and 1800 characters."; 
+                    reasonField?.focus();btn.disabled=false;return;
+                  }
+                  if (action !== "unverify") {
+                    verificationTier = controls?.querySelector("[data-verification-tier]")?.value || "";
+                    if (!["silver","gold","platinum"].includes(verificationTier)) {
+                      if (feedback) feedback.textContent = "Choose a supported verification tier."; 
+                      btn.disabled=false;return;
+                    }
+                  }
+                  const label = action === "unverify" ? "Revoke this verified identity" :
+                    (action === "verify" ? "Verify this account" : "Change verified tier") + " to " + verificationTier;
+                  if (!await window.appUI.confirm(label + "? The decision and reason will be audited, and the user notified.")) {
+                    btn.disabled=false;return;
+                  }
+                  if (feedback) feedback.textContent = "Saving audited verification decision…";
+                }
+                  const result = await updateUserAction(btn.dataset.userId, action, reason, verificationTier);
                 if (result.error) {
                   window.appUI.toast(result.error);
                   btn.disabled = false;
