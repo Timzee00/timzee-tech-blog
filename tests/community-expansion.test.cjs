@@ -69,12 +69,18 @@ test("automoderation quarantines rather than automatically deleting borderline p
 });
 test("My Tech ranks explicit interests and the article brief does not expose drafts",()=>{
  const rec=file("supabase/migrations/20261017024000_personal_community_feed.sql");
- const brief=file("supabase/migrations/20261017031000_my_tech_five_story_brief.sql");
+ const brief=file("supabase/migrations/20261017031500_my_tech_five_story_brief.sql");
+ // The later SECURITY DEFINER migration fixes draft/null-status exposure.
+ const guarded=file("supabase/migrations/20261023111914_restrict_my_tech_brief_to_explicit_published_articles.sql");
  assert.match(rec,/community_user_interests/);
  assert.match(rec,/community_feed_feedback/);
  assert.match(rec,/diversity_position/);
  assert.match(rec,/least\(greatest\(coalesce\(p_limit,20\),1\),20\)/);
- assert.match(brief,/coalesce\(lower\(p.status\),'published'\)='published'/);
+ assert.match(brief,/CREATE OR REPLACE FUNCTION public\.my_tech_brief/);
+ assert.match(guarded,/WHERE p\.status='published'/);
+ assert.doesNotMatch(guarded,/coalesce\(lower\(p\.status\),'published'\)='published'/);
+ assert.match(guarded,/AND \(p\.publish_at IS NULL OR p\.publish_at<=timezone\('utc',now\(\)\)\)/);
+ assert.match(guarded,/LIMIT least\(greatest\(coalesce\(p_limit,5\),1\),5\)/);
  assert.match(brief,/LIMIT least\(greatest\(coalesce\(p_limit,5\),1\),5\)/);
 });
 test("verification documents are private and cannot be self-approved",()=>{

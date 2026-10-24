@@ -74,7 +74,10 @@ test('only owner-scoped forum attachments can be uploaded and legacy media stays
  assert.match(sql,/auth_upload_own_community_media/);
  assert.match(sql,/storage\.foldername\(name\)\)\[2\]=\(SELECT auth\.uid\(\)\)::text/);
  assert.match(sql,/UPDATE public\.community_threads t SET media_url=old\.media_url/);
- assert.match(client,/function mediaHtml\(url,type\)/);
+ // Extra arguments identify member-only media for authenticated signing.
+ assert.match(client,/function mediaHtml\(url,type,kind="thread",itemId="",position=0\)/);
+ assert.match(client,/String\(url\)\.startsWith\("forum-private-media\/"\)/);
+ assert.match(client,/if\(!isSafeUrl\(url\)\)return "";/);
  assert.match(client,/loading='lazy'/);
  assert.match(client,/preload='none'/);
  assert.match(client,/file\.size>12\*1024\*1024/);
