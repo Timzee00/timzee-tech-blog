@@ -34,6 +34,9 @@ body.admin-shell{font:15px/1.5 system-ui,sans-serif;min-width:0}
 .review-form button{justify-self:start;min-height:46px}
 .review-help{font-size:.85rem;color:var(--color-text-muted,#55686f)}
 #legacyRecoveryPanel[hidden]{display:none}
+#deliveryState[data-state="ok"]{border-color:#22826c}
+#deliveryState[data-state="warning"]{border-color:#b27d2c}
+#deliveryState[data-state="error"]{border-color:#c95050}
 .ops-terms dt{font-weight:800}.ops-terms dd{margin:0 0 10px;color:var(--color-text-muted,#55686f)}
 @media(max-width:560px){.toolbar{display:grid;grid-template-columns:1fr}.toolbar button{width:100%}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{padding:12px}.review-form button{width:100%}}
 @media(max-width:340px){.metrics{grid-template-columns:1fr}}
@@ -82,7 +85,7 @@ body.admin-shell{font:15px/1.5 system-ui,sans-serif;min-width:0}
 <script type="module">
 import {supabase,getSession} from "../assets/js/supabase.js";
 const status=document.getElementById("status"),metrics=document.getElementById("metrics"),delivery=document.getElementById("deliveryState");
-const labels={pending:"Waiting to send",processing:"Being processed",sent:"Accepted by Brevo",delivered:"Delivered",failed:"Failed",quarantined:"Needs review",suppressed:"Skipped safely"};
+const labels={pending:"Waiting to send",processing:"Being processed",sent:"Accepted by Brevo",delivered:"Delivered",failed:"Failed",quarantined:"Needs review",suppressed:"Skipped safely",reviewed_cases:"Reviewed cases",provider_failed:"Provider failures",awaiting_delivery_confirmation:"Awaiting delivery confirmation"};
 async function readOperationsResponse(response){
  let data=null;try{data=await response.json();}catch{}
  if(response.status===401||response.status===403)throw Error("Sign in again with your super-admin account.");
@@ -105,18 +108,45 @@ async function refresh(){
     const response=await fetch("/.netlify/functions/email-operations",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});
     const body=await readOperationsResponse(response);
     if(!response.ok)throw new Error(body.error||"Metrics unavailable");
-    delivery.textContent=body.delivery_enabled?"Sending allowed (delivery not confirmed)":"Sending paused";
-    metrics.replaceChildren();
-    for(const [key,label] of Object.entries(labels)){
-      const card=document.createElement("div");card.className="metric";
-      const title=document.createElement("span");title.textContent=label;
-      const number=document.createElement("strong");number.textContent=Number(body.statistics?.[key]||0).toLocaleString();
-      card.append(title,number);metrics.append(card);
+    const statistics=body.statistics||{};
+    const renderMetricCards=(host,keys)=>{
+      if(!host)return;
+      host.replaceChildren();
+      for(const key of keys){
+        const card=document.createElement("div");card.className="metric";
+        const label=document.createElement("span");label.textContent=labels[key]||key;
+        const amount=document.createElement("strong");amount.textContent=Number(statistics[key]||0).toLocaleString();
+        card.append(label,amount);host.append(card);
+      }
+    };
+    renderMetricCards(metrics,["pending","sent","delivered","quarantined"]);
+    renderMetricCards(document.getElementById("advancedMetrics"),["processing","failed","suppressed","reviewed_cases","provider_failed","awaiting_delivery_confirmation"]);
+    const pending=Number(statistics.pending||0);
+    const delivered=Number(statistics.delivered||0);
+    const oldest=Date.parse(statistics.oldest_pending_at||"");
+    const delayed=pending>0&&Number.isFinite(oldest)&&(Date.now()-oldest)>30*60*1000;
+    if(!body.delivery_enabled){
+      delivery.textContent="Sending paused";delivery.dataset.state="warning";
+      status.textContent="Email sending is switched off. No pending email will be delivered until the service is re-enabled.";
+    }else if(delayed){
+      delivery.textContent="Queue needs attention";delivery.dataset.state="warning";
+      status.textContent=pending+" email"+(pending===1?" has":"s have")+" waited longer than 30 minutes. Check the Netlify email worker. Never manually resend a message unless its delivery outcome is confirmed.";
+    }else if(pending>0){
+      delivery.textContent="Sending enabled";delivery.dataset.state="warning";
+      status.textContent=pending+" email"+(pending===1?" is":"s are")+" awaiting the next scheduled send. This is not an immediate messaging system.";
+    }else if(delivered>0){
+      delivery.textContent="Deliveries confirmed";delivery.dataset.state="ok";
+      status.textContent="No emails are waiting. "+delivered+" message"+(delivered===1?" has":"s have")+" provider-confirmed delivery.";
+    }else{
+      delivery.textContent="Enabled — no delivery proof";delivery.dataset.state="warning";
+      status.textContent="The email queue is empty, but there is no confirmed delivery yet. Check the Brevo connection and send a controlled test when available.";
     }
-    const queued=Number(body.statistics?.pending||0);
-     status.textContent=queued?queued+" email"+(queued===1?" is":"s are")+" waiting to be processed.":
-       "Updated successfully. No emails are currently queued.";
-  }catch(error){metrics.replaceChildren();status.textContent=error.message||"Unable to load email metrics";}
+  }catch(error){
+    metrics.replaceChildren();
+    document.getElementById("advancedMetrics")?.replaceChildren();
+    delivery.textContent="Status unavailable";delivery.dataset.state="error";
+    status.textContent=error.message||"Could not check email delivery. No email was sent by this check.";
+  }
 }
 document.getElementById("refresh").addEventListener("click",refresh);
 document.getElementById("verifyBrevo").addEventListener("click",async()=>{

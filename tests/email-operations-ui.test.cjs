@@ -14,3 +14,10 @@ test("email dashboard explains permission failures without hiding the reference 
  assert.ok(html.includes('code==="P0001"||code==="42501"'));
  assert.ok(html.includes("This is a server issue."));
 });
+
+test("email dashboard reports stale queues without confusing accepted and delivered",()=>{
+ for(const marker of ["advancedMetrics","renderMetricCards","Queue needs attention","Deliveries confirmed","pending","delivered","providerStatus","optionalStatus"])
+   assert.ok(html.includes(marker),"Missing delivery UI behavior: "+marker);
+ assert.ok(html.includes('delivery.dataset.state="error"'));
+ assert.ok(html.includes('await readOperationsResponse(response)'));
+});
