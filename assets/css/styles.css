@@ -25,6 +25,7 @@
 @import url("viewport-guard.css");
 @import url("verified-identity.css");
 @import url("reader-journey.css");
+@import url("feature-launches.css");
 
 html[data-reader-font="small"] .reader-content{font-size:.95rem;}
 html[data-reader-font="medium"] .reader-content{font-size:1.05rem;}

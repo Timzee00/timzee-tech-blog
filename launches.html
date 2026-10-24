@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upcoming Features & Launch Countdown | Timzee Tech Hub</title>
+  <meta name="description" content="See what Timzee Tech Hub is building next. Explore upcoming features, watch launch countdowns and opt in to reminders.">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#087f73">
+  <link rel="canonical" href="https://timzee-tech-blog.netlify.app/launches.html">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script defer src="assets/js/theme-init.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container wrap">
+      <a class="brand" href="index.html">
+        <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
+        <span class="tagline" id="siteTagline">Stories, technology, and conversations.</span>
+      </a>
+      <nav class="nav-pill">
+        <a href="discussion.html">Discussion</a>
+        <a href="marketplace.html">Marketplace</a>
+        <a href="videos.html">Videos</a>
+        <a href="novels.html">Novels</a>
+        <div class="nav-more">
+          <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret">&#9662;</span></button>
+          <div class="nav-more-menu">
+            <a href="launches.html" aria-current="page">Coming Soon</a>
+            <a href="announcements.html">Announcements</a>
+            <a href="ads.html">Advertise</a>
+            <a href="support.html">Support</a>
+          </div>
+        </div>
+      </nav>
+      <div class="header-actions">
+        <a class="icon-btn" href="stories.html" data-label="Stories" aria-label="Stories" title="Stories">&#128247;</a>
+        <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
+        <div class="auth-actions" id="authActions"></div>
+      </div>
+    </div>
+  </header>
+  <main id="main-content" class="page-shell launch-page">
+    <div class="container">
+      <section class="launch-hero" aria-labelledby="launchHeroTitle">
+        <div class="launch-hero-copy">
+          <span class="launch-overline">THE NEXT CHAPTER</span>
+          <h1 id="launchHeroTitle">Something extraordinary is <em>on its way.</em></h1>
+          <p>Our platform keeps evolving. See what we're building, follow the progress, and be among the first to know when a feature is ready.</p>
+          <span class="launch-hero-count" id="launchesCount">New releases are coming</span>
+        </div>
+        <div class="launch-hero-visual" aria-hidden="true">
+          <div class="launch-orbit launch-orbit-one"></div>
+          <div class="launch-orbit launch-orbit-two"></div>
+          <span class="launch-orb-label">NEXT</span>
+        </div>
+      </section>
+      <div class="launch-list-heading">
+        <div>
+          <p class="launch-overline">RELEASE ROADMAP</p>
+          <h2>What's coming to Timzee Tech?</h2>
+        </div>
+        <p>Dates are targets, not guarantees. Only a <strong>Live now</strong> label confirms release.</p>
+      </div>
+      <p class="launch-feedback" id="launchesStatus" role="status" aria-live="polite">Loading upcoming features…</p>
+      <div class="launch-grid" id="launchesGrid" aria-label="Feature launch cards"></div>
+      <p class="launch-footer-note">Launch reminders are optional and appear in your in-app notifications. You can cancel a reminder on this page before release.</p>
+    </div>
+  </main>
+  <footer class="footer"><div class="container"><a class="footer-wordmark" href="index.html">Timzee <span>Tech Hub</span></a><div class="footer-links"><a href="contact.html">Contact</a><a href="support.html">Support</a></div></div></footer>
+  <script type="module" src="assets/js/launches.mjs"></script>
+</body>
+</html>

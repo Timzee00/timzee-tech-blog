@@ -50,7 +50,7 @@ function notificationCategory(notification) {
   if (type.includes("reply") || type.includes("comment")) return "replies";
   if (type.includes("follow") || type.includes("friend")) return "follows";
   if (type.includes("mention")) return "mentions";
-  if (type.includes("announcement")) return "announcements";
+  if (type.includes("announcement") || type === "feature_launch") return "announcements";
   if (type === "profile_view") return "profileViews";
   if (type.includes("market") || type.includes("inquir") || type.includes("listing")) return "marketplace";
   return "replies";

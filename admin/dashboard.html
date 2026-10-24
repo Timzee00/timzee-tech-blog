@@ -28,6 +28,7 @@
         <button data-tab="posts">Manage Posts</button>
         <button data-tab="comments">Moderate Comments</button>
         <button data-tab="announcements">Announcements</button>
+        <button type="button" data-tab="launches">🚀 Feature Launches</button>
         <button data-tab="faq">FAQ</button>
         <button data-tab="curator">🤖 Curator Bot</button>
         <button data-tab="users">Users</button>
@@ -185,6 +186,68 @@
             <tbody id="announcementsTable"></tbody>
           </table>
         </div>
+      </section>
+
+      <section class="admin-card" data-panel="launches" style="display:none;" aria-labelledby="featureManagerHeading">
+        <h2 id="featureManagerHeading">🚀 Feature Launch Manager</h2>
+        <p class="hint">Set Coming Soon, In Progress, On Hold, or Live from here. Add a target date for the countdown and optionally auto-publish when it arrives. This marks a feature visually; it does not override backend access restrictions.</p>
+        <div class="launch-manager-grid">
+          <div>
+            <h3 class="launch-manager-heading">Create or edit a launch</h3>
+            <p id="featureEditHint" class="launch-manager-note">Create a feature to get started.</p>
+            <form id="featureForm" class="admin-form launch-manager-form">
+              <label for="featureTitle">Feature name <input id="featureTitle" name="title" maxlength="120" placeholder="e.g. Community voice calls" required></label>
+              <label for="featureSlug">Permanent short link <input id="featureSlug" name="slug" maxlength="64" placeholder="community-voice-calls" pattern="[a-z0-9]+(-[a-z0-9]+)*" required></label>
+              <label for="featureDescription">What's coming? <textarea id="featureDescription" name="description" maxlength="1200" rows="4" placeholder="Tell your community what makes it exciting."></textarea></label>
+              <label for="featureStatus">Progress
+                <select id="featureStatus">
+                  <option value="coming_soon">✨ Coming soon</option>
+                  <option value="in_progress">🛠 In progress</option>
+                  <option value="paused">⏸ On hold</option>
+                  <option value="live">✅ Live now</option>
+                </select>
+              </label>
+              <label for="featureTarget">Optional existing page or section
+                <input id="featureTarget" name="target_path" maxlength="180" list="featureTargetChoices" placeholder="Pick a page or type a section path">
+                <datalist id="featureTargetChoices">
+                  <option value="/index.html" label="Homepage"></option>
+                  <option value="/index.html#suggestedPeopleSection" label="Homepage friend recommendations"></option>
+                  <option value="/index.html#readerJourneySection" label="Homepage reading journey"></option>
+                  <option value="/discussion.html" label="Community discussions"></option>
+                  <option value="/spaces.html" label="Live audio spaces"></option>
+                  <option value="/team-workspaces.html" label="Team workspaces"></option>
+                  <option value="/marketplace.html" label="Marketplace"></option>
+                  <option value="/videos.html" label="Videos"></option>
+                  <option value="/fyp.html" label="For You feed"></option>
+                  <option value="/stories.html" label="Stories"></option>
+                  <option value="/my-tech.html" label="Personalized news"></option>
+                </datalist>
+              </label>
+              <p class="launch-manager-note">When set, a small status banner appears on that page or immediately above the section. Leave empty for the launch board only.</p>
+              <label for="featureLaunchAt">Countdown target (your local time)
+                <input id="featureLaunchAt" type="datetime-local" name="launch_at">
+              </label>
+              <label class="launch-checkbox"><input id="featureAutoLaunch" type="checkbox"> Automatically set Live when target date arrives</label>
+              <label class="launch-checkbox"><input id="featurePublic" type="checkbox" checked> Show on public launch board</label>
+              <label class="launch-checkbox"><input id="featureNotify" type="checkbox" checked> Allow followers to get an in-app launch reminder</label>
+              <div class="inline-actions">
+                <button class="btn" id="featureSave" type="submit">Create feature</button>
+                <button class="btn ghost" id="featureCancel" type="button">Reset</button>
+              </div>
+            </form>
+          </div>
+          <div>
+            <div class="inline-actions" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <h3 class="launch-manager-heading">Managed features</h3>
+              <button class="btn ghost sm" type="button" id="featureManagerRefresh">Refresh</button>
+            </div>
+            <label for="featureManagerSearch">Search features</label>
+            <input id="featureManagerSearch" type="search" placeholder="Title, status, or page" aria-label="Search managed features" style="width:100%;margin:8px 0 14px">
+            <div id="featureManagerList" class="launch-manager-items"></div>
+          </div>
+        </div>
+        <p class="launch-manager-result" id="featureManagerStatus" role="status" aria-live="polite"></p>
+        <a href="../launches.html" class="btn ghost sm">View public launch board ↗</a>
       </section>
 
       <section class="admin-card" data-panel="faq" style="display:none;">

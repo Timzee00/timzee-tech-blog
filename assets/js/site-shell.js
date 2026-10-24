@@ -26,6 +26,7 @@ function ensureProductNavigation(){
     }
   };
   addLink("fyp.html", "For You");
+  addLink("launches.html", "Coming Soon");
   addLink("settings.html", "Settings");
 }
 function updateFooterBrand(name) {
@@ -112,6 +113,6 @@ export function ensureSiteFooter() {
   container.append(legal);
   const brand = document.createElement("small"); brand.className = "footer-brand"; brand.textContent = BRAND_TEXT; container.append(brand);
 }
-async function loadPageEnhancements(){const path=currentSitePath();const imports=[import("./experience-preferences.js")];if(path==="discussion.html")imports.push(import("./discussion-discovery.js"));if(path==="chat.html")imports.push(import("./chat-context-menu.js"));if(path==="ai-chat.html")imports.push(import("./ai-context.js"));if(imports.length)await Promise.allSettled(imports);}
+async function loadPageEnhancements(){const path=currentSitePath();const imports=[import("./experience-preferences.js"),import("./launch-context.mjs")];if(path==="discussion.html")imports.push(import("./discussion-discovery.js"));if(path==="chat.html")imports.push(import("./chat-context-menu.js"));if(path==="ai-chat.html")imports.push(import("./ai-context.js"));if(imports.length)await Promise.allSettled(imports);}
 function scheduleIdle(task){if(typeof window.requestIdleCallback==="function")window.requestIdleCallback(task,{timeout:900});else window.setTimeout(task,220);}
 if(typeof window!=="undefined"){const start=()=>{ensureProductNavigation();ensureSiteFooter();void import("./privacy-consent.js");scheduleIdle(()=>void loadPageEnhancements());};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();}

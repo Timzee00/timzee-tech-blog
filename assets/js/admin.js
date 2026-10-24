@@ -353,6 +353,20 @@ function ensureCuratorManager() {
   return curatorManagerPromise;
 }
 
+let launchManagerPromise=null;
+function ensureLaunchManager(){
+  if(launchManagerPromise)return launchManagerPromise;
+  launchManagerPromise=import("./launch-admin.mjs")
+    .then(module=>module.mountFeatureLaunchManager())
+    .catch(error=>{
+      console.warn("Launch Manager failed to load",error);
+      const status=document.getElementById("featureManagerStatus");
+      if(status){status.textContent="Launch Manager couldn't load. Reopen this tab to retry.";status.dataset.tone="error";}
+      launchManagerPromise=null;
+    });
+  return launchManagerPromise;
+}
+
 function setupTabs() {
   const buttons = document.querySelectorAll(".admin-nav button");
   const panels = document.querySelectorAll("[data-panel]");
@@ -364,6 +378,7 @@ function setupTabs() {
         panel.style.display = panel.dataset.panel === button.dataset.tab ? "block" : "none";
       });
       if (button.dataset.tab === "curator") void ensureCuratorManager();
+      if (button.dataset.tab === "launches") void ensureLaunchManager();
     });
   });
 }
@@ -2069,7 +2084,7 @@ async function bootDashboard() {
   await setupFaq();
   handleLogout();
   const requestedTab=new URLSearchParams(location.search).get("tab");
-  if (requestedTab==="curator"||requestedTab==="operations") {
+  if (["curator","operations","launches"].includes(requestedTab)) {
     document.querySelector('.admin-nav button[data-tab="'+requestedTab+'"]')?.click();
   }
 }
