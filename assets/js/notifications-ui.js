@@ -1,4 +1,52 @@
 let channel = null;
+
+const deviceAlertKey=userId=>"timzee:device-alerts:"+userId;
+const deviceAlertsEnabled=userId=>{
+ try{return localStorage.getItem(deviceAlertKey(userId))==="on"}catch{return false}
+};
+async function registerDeviceAlertWorker(){
+ if(!("serviceWorker" in navigator))throw Error("Your browser does not support device notifications.");
+ return navigator.serviceWorker.register("/sw.js");
+}
+async function showDeviceAlert(note,userId){
+ if(!deviceAlertsEnabled(userId)||!notificationAllowed(note))return;
+ if(document.visibilityState!=="hidden"||typeof Notification==="undefined"||Notification.permission!=="granted")return;
+ try{
+  const reg=await registerDeviceAlertWorker();
+  const url=safeSameOriginLink(note?.link_url||note?.link)||"/profile.html?tab=notifications";
+  await reg.showNotification(String(note?.title||"Timzee Tech update").slice(0,100),{
+   body:String(note?.body||"You have a new notification.").slice(0,200),
+   tag:"timzee-"+String(note?.id||"update").slice(0,80),
+   icon:"/assets/img/avatar-placeholder.svg",data:{url}
+  });
+ }catch(e){console.warn("Device alert could not display",e?.name||"unavailable")}
+}
+function setupDeviceAlertButton(userId){
+ const button=document.getElementById("deviceAlertsBtn");
+ const label=document.getElementById("deviceAlertsHelp");
+ if(!button||!label)return;
+ const redraw=()=>{
+  const on=deviceAlertsEnabled(userId);
+  button.textContent=on?"Disable device alerts":"Enable device alerts";
+  label.textContent=on?"Enabled while a Timzee Tech tab is open. Alerts with the browser fully closed are not yet supported.":
+    "Allow browser notifications when a Timzee tab is in the background.";
+ };
+ button.onclick=async()=>{
+  if(deviceAlertsEnabled(userId)){
+   try{localStorage.removeItem(deviceAlertKey(userId))}catch{}
+   redraw();return;
+  }
+  try{
+   if(typeof Notification==="undefined")throw Error("Device notifications aren't supported here.");
+   if(await Notification.requestPermission()!=="granted")throw Error("Enable notifications in your browser settings.");
+   await registerDeviceAlertWorker();
+   localStorage.setItem(deviceAlertKey(userId),"on");
+   redraw();
+  }catch(e){label.textContent=e.message||"Unable to enable device alerts."}
+ };
+ redraw();
+}
+
 let activeToasts = [];
 let stylesReady = false;
 let currentUserId = null;
@@ -59,6 +107,7 @@ function notificationAllowed(notification) { return notificationPreferences[noti
 
 function showNotificationToast(notification, userId, supabase) {
   if (!notificationAllowed(notification)) return;
+  void showDeviceAlert(notification,userId);
   injectStyles();
   const region = getRegion();
   const toast = document.createElement("article"); toast.className = "timzee-notification-toast"; toast.setAttribute("role", "status");
@@ -90,6 +139,7 @@ async function attachForUser(supabase, user) {
   if (channel) { await supabase.removeChannel(channel); channel = null; }
   currentUserId = user.id;
   await loadNotificationPreferences(supabase, user.id);
+  setupDeviceAlertButton(user.id);
   injectStyles();
   channel = supabase.channel(`notification-toasts-${user.id}`)
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (payload) => showNotificationToast(payload.new, user.id, supabase))

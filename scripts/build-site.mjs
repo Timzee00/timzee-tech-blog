@@ -15,7 +15,7 @@ await mkdir(output, { recursive: true });
 // Only public assets belong in the CDN bundle. Never publish the repository,
 // migrations, server source, dependency tree, or operational reports.
 for (const entry of await readdir(root)) {
-  if (entry.endsWith(".html") || ["_headers", "robots.txt", "sitemap.xml"].includes(entry)) {
+  if (entry.endsWith(".html") || ["_headers", "robots.txt", "sitemap.xml", "sw.js"].includes(entry)) {
     await cp(resolve(root, entry), resolve(output, entry));
   }
 }
