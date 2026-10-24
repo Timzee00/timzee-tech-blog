@@ -64,7 +64,9 @@ test("framed creator identity uses shared renderer across comment, feed and chat
  assert.match(forum,/function forumAuthor/);
  assert.match(forum,/loadVerifiedIdentityMap/);
  assert.match(post,/tz-comment-author/);
- assert.match(fyp,/feedIdentityMap=await loadVerifiedIdentityMap/);
+ // Hydrate into a temporary map before publishing identity decorations.
+ assert.match(fyp,/identities=await loadVerifiedIdentityMap\(supabase,visible\.map/);
+ assert.match(fyp,/feedIdentityMap=identities/);
  assert.match(chat,/refreshChatAvatarFrames/);
  assert.match(html,/id="chatAvatarFrame"/);
  assert.match(html,/id="infoAvatarFrame"/);

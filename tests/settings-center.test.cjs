@@ -55,8 +55,9 @@ test("advanced choices are backed by real server tables and scoped to user",()=>
  const js=read("assets/js/settings-advanced.js");
  assert.match(js,/from\("community_user_interests"\)/);
  assert.match(js,/from\("chat_privacy"\)/);
- assert.match(js,/from\("community_feed_feedback"\)/);
- assert.match(js,/from\("user_content_feedback"\)/);
+ // Reset uses a fixed allowlist and every delete is scoped to the account.
+ assert.match(js,/for\(const table of \["user_content_feedback","community_feed_feedback"\]\)/);
+ assert.match(js,/supabase\.from\(table\)\.delete\(\)\.eq\("user_id",uid\)/);
  assert.match(js,/\.eq\("user_id",uid\)/);
  assert.match(js,/user_id:uid/);
  assert.match(js,/max_rows_per_collection:500/);

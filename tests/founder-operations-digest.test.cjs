@@ -28,7 +28,7 @@ test("founder opt-out is included in supported settings and visible only to supe
  const admin=read("assets/js/admin.js");
  assert.match(prefs,/operationsDigest: true/);
  assert.match(settings,/state\.profile\?\.role!=="super"/);
- assert.match(settings,/data\.path="notifications\.operationsDigest"/);
+ assert.match(settings,/input\.dataset\.path="notifications\.operationsDigest"/);
  assert.match(settings,/mountFounderDigestPreference\(\); applyControls\(\)/);
  assert.match(admin,/requestedTab==="curator"\|\|requestedTab==="operations"/);
 });

@@ -86,7 +86,7 @@ test("following articles and progress writes are bounded, validated and server-o
 test("history deletion scopes to account and optional post; preferences suppress article recording",async()=>{
  const {reader,calls}=moduleWithFakeDatabase({privacy:false});
  assert.equal(await reader.getReadingPreference({id:USER}),false);
- await assert.rejects(()=>reader.forgetReadingEntry("not-a-user"),/Sign in/);
+ await assert.rejects(()=>reader.forgetReadingEntry("not-a-user"),/sign in/i);
  await reader.forgetReadingEntry(USER,POST);
  const deletion=calls.find(x=>x.deleted);
  assert.ok(deletion);

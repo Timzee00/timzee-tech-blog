@@ -62,7 +62,7 @@ test("community frontend uses server clock and keyset cursor, never offset pagin
  assert.match(snapshot,/date_trunc\('minute',now\(\)\)/);
 });
 test("automated moderation provides explainable signals with reviewer control and protected RLS",()=>{
- const migration=read("supabase/migrations/20261017020000_auto_moderation_queue.sql");
+ const migration=read("supabase/migrations/20261017020500_auto_moderation_queue.sql");
  const client=read("assets/js/community-forum.mjs");
  assert.match(migration,/community_auto_mod_staff_read/);
  assert.match(migration,/community_review_auto_flag/);

@@ -22,8 +22,9 @@ const posts=[
 test("matched recommendations prioritize chosen topics, without private drafts or future items",()=>{
  const result=rank(posts,["Programming","Cybersecurity"]);
  assert.equal(result.length,2);
- assert.equal(result[0].id,id(1));
- assert.equal(result[1].id,id(3));
+ // Both score 7; newer published article wins the deterministic tie-break.
+ assert.equal(result[0].id,id(3));
+ assert.equal(result[1].id,id(1));
 });
 test("opt-out/no interests produces no recommendations and excludes already featured posts",()=>{
  assert.equal(rank(posts,[]).length,0);
