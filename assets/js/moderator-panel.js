@@ -1,6 +1,7 @@
 import { supabase, getCurrentUserWithRole, getUserRole, signOut } from "./supabase.js";
 import { escapeHTML } from "./utils.js";
 import {mountReportInvestigator,loadReportQueue} from "./moderation-case-ui.mjs";
+import {mountSafetyFlags,loadSafetyFlags} from "./moderation-flags-ui.mjs";
 
 const state = {
   user: null,
@@ -151,6 +152,7 @@ function bindModerationActions() {
     try {
       await moderateContent(action, type, id);
       await refreshAll();
+  await loadSafetyFlags();
     } catch (err) {
       window.appUI.toast(err.message || "Action failed.");
     } finally {
@@ -185,11 +187,12 @@ async function init() {
   });
 
   mountReportInvestigator();
+  mountSafetyFlags();
   bindModerationActions();
   await refreshAll();
   // A staff overview can link directly to a report without showing the wrong tab.
   const requested=new URLSearchParams(window.location.search).get("tab");
-  if(["posts","comments","discussions","marketplace","videos","novels","reports"].includes(requested)){
+  if(["posts","comments","discussions","marketplace","videos","novels","reports","flags"].includes(requested)){
     document.querySelector('.admin-nav button[data-tab="'+requested+'"]')?.click();
   }
 }

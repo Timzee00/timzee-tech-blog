@@ -24,3 +24,7 @@
 .moderation-warning{border-left:3px solid #a77b2c;padding:10px 14px}
 .moderation-restore{margin-top:15px}
 @media(max-width:520px){.moderation-report-list{grid-template-columns:1fr}.moderation-decision-form button,.moderation-case-detail>.btn{width:100%}}
+
+#modFlagListSection[hidden],#modFlagDetails[hidden]{display:none!important}
+.moderation-info .moderation-detail-line{padding:10px 0}
+@media(max-width:800px){.admin-shell .admin-nav{display:flex;overflow-x:auto;flex-wrap:nowrap;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;gap:5px}.admin-shell .admin-nav button{flex:0 0 auto;white-space:nowrap;scroll-snap-align:start;min-height:46px}}

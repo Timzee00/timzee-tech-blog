@@ -31,6 +31,7 @@
         <button data-tab="videos">🎥 Videos</button>
         <button data-tab="novels">📖 Novels</button>
         <button data-tab="reports">🚩 Reports</button>
+        <button data-tab="flags">🛡️ Safety Queue</button>
       </nav>
 
       <section class="admin-card" data-panel="posts">
@@ -75,6 +76,20 @@
         <div id="modReports" class="moderation-report-list">Loading...</div>
         <div class="moderation-paging"><button type="button" class="btn ghost" id="modReportsPrev">Previous</button><button type="button" class="btn ghost" id="modReportsNext">Next</button></div></div>
         <div id="modReportDetail" class="moderation-case-detail" hidden></div>
+      </section>
+      <section class="admin-card" data-panel="flags" style="display:none">
+        <h2>Automatic safety review queue</h2>
+        <p class="hint">Automatic checks flag suspicious comments and heavily reported content. These are indicators, not proof. Investigate before hiding anything; never ban users based on report counts alone.</p>
+        <div id="modFlagListSection">
+          <div class="inline-actions" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+            <label for="modFlagStatus">Status <select id="modFlagStatus"><option value="pending">Needs review</option><option value="all">All flags</option><option value="reviewed">Reviewed</option><option value="dismissed">Dismissed</option></select></label>
+            <button type="button" class="btn ghost" id="modFlagRefresh">Refresh flags</button>
+          </div>
+          <p id="modFlagCount" class="hint" role="status" aria-live="polite"></p>
+          <div id="modFlagList" class="moderation-report-list"></div>
+          <div class="moderation-paging"><button type="button" id="modFlagPrev" class="btn ghost">Previous</button><button type="button" id="modFlagNext" class="btn ghost">Next</button></div>
+        </div>
+        <div id="modFlagDetails" class="moderation-case-detail" hidden></div>
       </section>
     </main>
 
