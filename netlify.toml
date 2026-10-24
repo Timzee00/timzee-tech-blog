@@ -20,6 +20,9 @@
 [functions."email-worker"]
   schedule = "*/15 * * * *"
 
+[functions."push-worker"]
+  schedule = "*/5 * * * *"
+
 [[redirects]]
   from = "/sitemap.xml"
   to = "/.netlify/functions/sitemap"

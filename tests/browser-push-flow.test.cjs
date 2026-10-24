@@ -1,0 +1,36 @@
+const test=require("node:test");
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const read=name=>fs.readFileSync(path.resolve(__dirname,"..",name),"utf8");
+test("browser push is explicit opt in with service worker and unsubscribing",()=>{
+ const html=read("settings.html"),client=read("assets/js/browser-push.mjs"),worker=read("sw.js");
+ assert.match(html,/id="browserPushToggle"/);
+ assert.match(html,/browser-push\.mjs/);
+ assert.match(client,/Notification\.requestPermission\(\)/);
+ assert.match(client,/navigator\.serviceWorker\.register\("\/sw\.js"/);
+ assert.match(client,/pushManager\.subscribe/);
+ assert.match(client,/subscription\.unsubscribe\(\)/);
+ assert.match(worker,/showNotification/);
+ assert.match(worker,/notificationclick/);
+ assert.doesNotMatch(worker,/\.cache\.add|caches\.open/);
+});
+test("push is server signed, encrypted, RLS secured and disabled until configured",()=>{
+ const api=read("netlify/functions/push-subscriptions.js");
+ const deliver=read("netlify/functions/push-worker.js");
+ const lib=read("netlify/functions/_lib/web-push.cjs");
+ const sql=read("supabase/migrations/20261024190000_secure_web_push_delivery.sql");
+ const toml=read("netlify.toml");
+ assert.match(api,/auth\.getUser\(token\)/);
+ assert.match(api,/validateSubscription\(payload\.subscription\)/);
+ assert.match(api,/PUSH_ENABLED/);
+ assert.match(deliver,/claim_web_push_deliveries/);
+ assert.match(deliver,/complete_web_push_delivery/);
+ assert.match(deliver,/sendPush/);
+ assert.match(lib,/aes128gcm/);
+ assert.match(lib,/makeVapidAuth/);
+ assert.match(sql,/ENABLE ROW LEVEL SECURITY/g);
+ assert.match(sql,/REVOKE ALL ON public\.web_push_subscriptions/);
+ assert.match(sql,/service_role/);
+ assert.match(toml,/functions\."push-worker"/);
+});
