@@ -290,3 +290,12 @@ html[data-reduce-motion="true"] .tz-avatar-verified.tz-frame::after{animation:no
 .seller-info #sellerName .tz-identity-name{max-width:100%;overflow-wrap:anywhere}
 .seller-info #sellerVerifiedBadge{display:block;max-width:300px;font-size:.72rem;line-height:1.5;color:var(--color-text-muted,#637681);overflow-wrap:anywhere}
 @media(max-width:360px){.seller-info #sellerAvatar .tz-avatar-verified{inline-size:50px;block-size:50px}}
+
+/* Keep the same circular identity emblem in every rich-content context. */
+.tz-verified-badge{--tz-badge-size:24px;inline-size:var(--tz-badge-size)!important;block-size:var(--tz-badge-size)!important;min-inline-size:var(--tz-badge-size);min-block-size:var(--tz-badge-size);aspect-ratio:1;border-radius:50%;box-sizing:border-box}
+.tz-verified-badge--small{--tz-badge-size:19px}
+.tz-verified-badge img,.post-article .tz-verified-badge img,.author-card .tz-verified-badge img{display:block;inline-size:100%!important;block-size:100%!important;width:100%!important;height:100%!important;aspect-ratio:1;object-fit:contain;max-width:100%!important;max-height:100%!important}
+@media(max-width:600px){.tz-verified-badge{--tz-badge-size:21px}.tz-verified-badge--small{--tz-badge-size:17px}}
+/* Use theme-aware text contrast instead of muted grey-on-white author details. */
+.author-card :is(.author-name,.author-role,p),#authorProfileCard :is(.author-name,.author-role,p){color:var(--color-text,#20303a);opacity:1}
+.author-card :is(.author-role,p),#authorProfileCard :is(.author-role,p){opacity:.88}

@@ -26,8 +26,8 @@
 <label>Duration<select name="duration"><option value="10">10 minutes</option><option value="30" selected>30 minutes</option><option value="60">60 minutes</option></select></label>
 <label>Host as workspace (optional)<select name="workspace_id" id="spacesWorkspace"><option value="">Personal account</option></select></label>
 <label>Allow listener speaking requests<select name="allow_requests"><option value="true">Yes</option><option value="false">No</option></select></label>
-<label class="span-all">Related article ID (optional)<input name="post_id" id="spacesPostId" placeholder="Link to a published article" pattern="[A-Fa-f0-9-]{36}"></label>
-<label class="span-all">Related community ID (optional)<input name="community_id" id="spacesCommunityId" pattern="[A-Fa-f0-9-]{36}" placeholder="Connect to a community"></label>
+<label class="span-all">Related published article (optional)<select name="post_id" id="spacesPostId"><option value="">No article linked</option></select></label>
+<label class="span-all">Related community (optional)<select name="community_id" id="spacesCommunityId"><option value="">No community linked</option></select></label>
 <div class="studio-action-row span-all"><button type="submit" class="btn" id="spacesSubmit">Create Space</button><button type="button" class="btn ghost" id="spacesCancel">Cancel</button></div>
 </form><p class="studio-muted">Audio is opt-in and microphones start muted. Public, link-only and invite-only rooms have different access controls. Live audio requires an active configured provider.</p>
 </section>

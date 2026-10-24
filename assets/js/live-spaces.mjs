@@ -102,6 +102,30 @@ function setTab(name){
  });
  void loadRooms();
 }
+async function loadRelatedChoices(){
+ const fields=[
+  {id:"spacesPostId",table:"posts",param:"post",filter:q=>q.eq("status","published").order("created_at",{ascending:false})},
+  {id:"spacesCommunityId",table:"discussion_topics",param:"community",filter:q=>q.eq("community_state","active").order("title",{ascending:true})}
+ ];
+ await Promise.all(fields.map(async field=>{
+  const select=$(field.id);if(!select)return;
+  try{
+   const {data,error}=await field.filter(supabase.from(field.table).select("id,title")).limit(100);
+   if(error)throw error;
+   for(const item of data||[]){
+    if(!validId(item.id))continue;
+    const option=el("option",String(item.title||"Untitled").slice(0,110));
+    option.value=item.id;select.append(option);
+   }
+   const linked=q.get(field.param);
+   if(validId(linked)&&![...select.options].some(opt=>opt.value===linked)){
+    const one=await supabase.from(field.table).select("id,title").eq("id",linked).maybeSingle();
+    if(!one.error&&one.data){const option=el("option",String(one.data.title||"Linked item").slice(0,110));option.value=linked;select.append(option)}
+   }
+   if(validId(linked)&&[...select.options].some(opt=>opt.value===linked))select.value=linked;
+  }catch(error){console.warn("Related Space choices unavailable:",field.table,error?.message||"unavailable")}
+ }));
+}
 async function loadWorkspaces(){
  if(!state.user)return;
  const result=await supabase.from("team_workspaces").select("id,name,kind").limit(50);
@@ -492,8 +516,7 @@ async function init(){
  if(!state.user)alertStatus("You can browse public rooms. Sign in to speak or host.");
  else {alertStatus(state.audioConfigured?"Explore or create a Space. Microphone starts muted.":"You can schedule Spaces, but live audio is not configured yet.");await loadWorkspaces()}
  const linkedPost=q.get("post"),linkedCommunity=q.get("community");
- if(validId(linkedPost))$("spacesPostId").value=linkedPost;
- if(validId(linkedCommunity))$("spacesCommunityId").value=linkedCommunity;
+ await loadRelatedChoices();
  const linkedProject=q.get("project");
  if(state.user&&validId(linkedProject)){
   const project=await supabase.from("team_studio_projects")
