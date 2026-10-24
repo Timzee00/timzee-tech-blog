@@ -76,7 +76,7 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
   }
   return body.messageId.trim();
 }
-exports.handler=async()=>{
+async function runEmailWorker(){
   const url=process.env.SUPABASE_URL;
   const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
   const brevoKey=process.env.BREVO_API_KEY;
@@ -177,5 +177,16 @@ exports.handler=async()=>{
   }
   console.log("Email worker completed",results);
   return {statusCode:200,body:JSON.stringify(results)};
+}
+
+// A scheduled invocation must never leak database/provider details to callers.
+// Preserve fail-closed delivery behavior and record only the failing stage.
+exports.handler=async()=>{
+  try { return await runEmailWorker(); }
+  catch(error){
+    const code=String(error?.code||"WORKER_FAILURE").replace(/[^a-zA-Z0-9_]/g,"").slice(0,32);
+    console.error("Email worker failed safely",code);
+    return {statusCode:503,headers:{"content-type":"application/json","cache-control":"no-store"},body:JSON.stringify({ok:false,error:"Email processing temporarily unavailable",code})};
+  }
 };
 // Schedule is managed centrally by netlify.toml every 15 minutes.
