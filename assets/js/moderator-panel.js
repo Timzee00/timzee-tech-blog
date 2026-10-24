@@ -2,7 +2,8 @@ import { supabase, getCurrentUserWithRole, getUserRole, signOut } from "./supaba
 import { escapeHTML } from "./utils.js";
 
 const state = {
-  user: null
+  user: null,
+  reports: []
 };
 
 function setupTabs() {
@@ -137,21 +138,37 @@ async function loadNovels() {
     </div>`), "No novels found.");
 }
 
-async function loadReports() {
-  const result = await supabase.from("content_reports").select("id, content_type, content_id, reason, status, created_at").order("created_at", { ascending: false }).limit(100);
-  if (result.error) return renderList("modReports", [], result.error.message);
-  renderList("modReports", (result.data || []).map((report) => `
-    <div class="form-card" style="margin-bottom:12px;">
-      <strong>${escapeHTML(report.content_type)}</strong>
-      <div style="color:#666;font-size:12px;">${escapeHTML(report.reason || "No reason")}</div>
-      <div style="color:#666;font-size:12px;">Status: ${escapeHTML(report.status || "open")}</div>
-      <div class="inline-actions" style="margin-top:8px;">
-        <button class="btn ghost" data-action="resolve-report" data-id="${report.id}">Resolve</button>
-        <button class="btn ghost" data-action="dismiss-report" data-id="${report.id}">Dismiss</button>
-      </div>
-    </div>`), "No reports found.");
+function renderReports(){
+ const filter=document.getElementById("modReportFilter")?.value||"open";
+ const search=(document.getElementById("modReportSearch")?.value||"").trim().toLowerCase();
+ const selected=state.reports.filter(r=>
+  (filter==="all"||r.status===filter||(filter==="open"&&["open","pending"].includes(r.status||"open"))) &&
+  (!search||[r.content_type,r.reason,r.id].some(x=>String(x||"").toLowerCase().includes(search)))
+ );
+ const count=document.getElementById("modReportCount");
+ if(count)count.textContent=selected.length+" matching reports from the latest "+state.reports.length+" records.";
+ const target={posts:"../post.html?id=",post:"../post.html?id=",user:"../profile.html?id=",profile:"../profile.html?id=",marketplace_item:"../marketplace.html?item="};
+ renderList("modReports",selected.map(r=>{
+  const pending=["open","pending"].includes(r.status||"open");
+  const href=target[r.content_type]||"";
+  const open=href&&/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(r.content_id||"")
+    ?'<a class="btn ghost" href="'+href+encodeURIComponent(r.content_id)+'" target="_blank" rel="noopener noreferrer">Review item</a>':"";
+  return `<article class="form-card" style="margin-bottom:12px">
+    <strong>${escapeHTML(r.content_type||"Report")}</strong>
+    <p style="font-size:13px;color:var(--color-text,#20303a);overflow-wrap:anywhere">${escapeHTML(r.reason||"No reason")}</p>
+    <p class="hint">Status: ${escapeHTML(r.status||"open")}</p>
+    <div class="inline-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      ${open}
+      ${pending?'<button class="btn ghost" data-action="resolve-report" data-id="'+r.id+'">Mark reviewed</button><button class="btn ghost" data-action="dismiss-report" data-id="'+r.id+'">Dismiss</button>':""}
+    </div></article>`;
+ }),"No matching reports. Change the filter or search.");
 }
-
+async function loadReports(){
+ const result=await supabase.from("content_reports").select("id,content_type,content_id,reason,status,created_at")
+  .order("created_at",{ascending:false}).limit(100);
+ if(result.error)return renderList("modReports",[],escapeHTML(result.error.message));
+ state.reports=result.data||[];renderReports();
+}
 async function updateReportStatus(reportId, status) {
   if(!["resolved","dismissed"].includes(status))throw Error("Unsupported report decision.");
   // Only the staff-only RPC can complete and audit a report decision.
@@ -182,9 +199,13 @@ function bindModerationActions() {
     if (!button) return;
     const reportId = button.dataset.id;
     if (!reportId) return;
+    const resolve=button.dataset.action==="resolve-report";
+    if(!await window.appUI.confirm(resolve?
+      "Confirm that you reviewed the complaint and took any needed action. Marking reviewed does not automatically sanction the reported account.":
+      "Dismiss this report as unsubstantiated or requiring no further action?"))return;
     button.disabled = true;
     try {
-      await updateReportStatus(reportId, button.dataset.action === "resolve-report" ? "resolved" : "dismissed");
+      await updateReportStatus(reportId, resolve ? "resolved" : "dismissed");
       await loadReports();
     } catch (err) {
       window.appUI.toast(err.message || "Report update failed.");
@@ -217,6 +238,9 @@ async function init() {
     window.location.href = "../index.html";
   });
 
+  document.getElementById("modReportSearch")?.addEventListener("input",renderReports);
+  document.getElementById("modReportFilter")?.addEventListener("change",renderReports);
+  document.getElementById("modReportsRefresh")?.addEventListener("click",()=>void loadReports());
   bindModerationActions();
   await refreshAll();
   // A staff overview can link directly to a report without showing the wrong tab.

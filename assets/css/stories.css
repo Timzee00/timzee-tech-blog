@@ -385,3 +385,8 @@
 .story-music-controls span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 .73rem system-ui;opacity:.9}
 .story-music-controls audio{display:none}
 @media(max-width:450px){.story-music-controls{padding:5px 9px}}
+
+/* Keep story captions above the interactive rail, with readable contrast. */
+.story-viewer-caption:not(:empty){display:block;flex:0 0 auto;position:relative;z-index:6;max-height:min(20dvh,160px);overflow-y:auto;margin:0 max(12px,3vw) 8px;padding:12px 14px;border-radius:12px;background:linear-gradient(135deg,rgba(8,14,21,.94),rgba(20,31,42,.83));color:#fff;text-align:center;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 4px 15px rgba(0,0,0,.32)}
+.story-viewer-caption:empty{display:none}
+@media(max-width:480px){.story-viewer-caption:not(:empty){padding:9px 12px;margin:0 10px 6px;max-height:18dvh}}

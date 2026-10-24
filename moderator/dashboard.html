@@ -64,7 +64,14 @@
       </section>
 
       <section class="admin-card" data-panel="reports" style="display:none;">
-        <h2>Reports</h2>
+        <h2>Report review</h2>
+        <p class="hint">Review the reported item before deciding. Marking a report resolved records review; it does not automatically punish anyone.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <label for="modReportSearch" style="flex:1 1 180px">Search complaints<input id="modReportSearch" type="search" placeholder="Reason, content type or report ID"></label>
+          <label for="modReportFilter" style="flex:0 1 180px">Status<select id="modReportFilter"><option value="open">Needs review</option><option value="all">All reports</option><option value="resolved">Resolved</option><option value="dismissed">Dismissed</option></select></label>
+          <button class="btn ghost" id="modReportsRefresh" type="button">Refresh</button>
+        </div>
+        <p id="modReportCount" class="hint" role="status" aria-live="polite"></p>
         <div id="modReports" class="form-card">Loading...</div>
       </section>
     </main>
