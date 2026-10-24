@@ -54,8 +54,8 @@
    <div class="creator-studio-sidebar-heading">
     <h2>Your drafts</h2><button type="button" class="btn ghost sm" id="creatorNewDraft">+ New</button>
    </div>
-   <p class="creator-studio-help">Saved securely in your account. Only you can open or edit these drafts.</p>
-   <div class="creator-studio-list" id="creatorDraftList" role="list" aria-label="Your saved drafts"></div>
+   <p class="creator-studio-help">Drafts inactive for 7 days move to the recoverable bin. Restore within 30 days before permanent deletion.</p>
+   <div class="creator-studio-list" id="creatorDraftList" role="list" aria-label="Your saved drafts"></div><details class="creator-draft-bin"><summary>Recoverable bin · 30 days</summary><div id="creatorDraftBin" role="list" aria-label="Recoverable creator drafts"></div></details>
   </aside>
   <section class="creator-studio-editor" aria-labelledby="creatorEditorHeading">
    <div class="creator-studio-editor-top">
@@ -87,7 +87,7 @@
      <button type="submit" id="creatorSaveDraft" class="btn">Save draft</button>
      <button type="button" id="creatorPreviewDraft" class="btn ghost" aria-pressed="false">Preview</button>
      <button type="button" id="creatorUseDraft" class="btn ghost">Continue in Communities</button>
-     <button type="button" id="creatorDeleteDraft" class="btn ghost" disabled>Delete draft</button>
+     <button type="button" id="creatorDeleteDraft" class="btn ghost" disabled>Move to bin</button>
     </div>
    </form>
    <section id="creatorDraftPreview" class="creator-studio-preview" aria-label="Draft preview" hidden>

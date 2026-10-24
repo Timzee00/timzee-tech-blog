@@ -1,10 +1,10 @@
 import {supabase,getCurrentUser} from "./supabase.js";
-import {creatorDraftLimit,listCreatorDrafts,saveCreatorDraft,deleteCreatorDraft,validateCreatorDraft} from "./creator-drafts.mjs";
+import {creatorDraftLimit,listCreatorDrafts,saveCreatorDraft,deleteCreatorDraft,listBinnedDrafts,restoreCreatorDraft,validateCreatorDraft} from "./creator-drafts.mjs";
 import {verifiedLevel} from "./verified-identity.mjs";
 import {renderCommunityMarkdown} from "./community-markdown.mjs";
 
 const $=id=>document.getElementById(id);
-const state={user:null,profile:null,drafts:[],selectedId:null,dirty:false,busy:false};
+const state={user:null,profile:null,drafts:[],bin:[],selectedId:null,dirty:false,busy:false};
 const create=(tag,klass,text)=>{
  const el=document.createElement(tag);
  if(klass)el.className=klass;
@@ -97,6 +97,26 @@ function renderList(){
   wrapper.append(button);host.append(wrapper);
  }
 }
+function renderBin(){
+ const host=$("creatorDraftBin");if(!host)return;
+ host.replaceChildren();
+ if(!state.bin.length){host.append(create("p","creator-studio-help","The bin is empty."));return;}
+ for(const draft of state.bin){
+  const row=create("div","creator-bin-item");
+  const title=create("div","",draft.title||"Untitled");
+  const expiry=new Date(Date.parse(draft.deleted_at)+30*86400000);
+  const readable=Number.isFinite(expiry.getTime())?expiry.toLocaleDateString():"Unknown";
+  title.append(create("small",""," · Expires "+readable));
+  const action=create("button","btn ghost sm","Restore");
+  action.type="button";
+  action.addEventListener("click",async()=>{
+   action.disabled=true;
+   try{await restoreCreatorDraft(supabase,state.user.id,draft.id);await refreshDrafts();status("Draft restored.","success");}
+   catch(error){action.disabled=false;status(error.message||"Restore failed.","error");}
+  });
+  row.append(title,action);host.append(row);
+ }
+}
 function updateStats(){
  const tier=verifiedLevel(state.profile);
  $("creatorDraftTier").textContent=tier?tier[0].toUpperCase()+tier.slice(1)+" verified":"Standard member";
@@ -105,8 +125,8 @@ function updateStats(){
 }
 async function refreshDrafts(){
  const current=state.selectedId;
- state.drafts=await listCreatorDrafts(supabase,state.user.id);
- updateStats();renderList();
+ [state.drafts,state.bin]=await Promise.all([listCreatorDrafts(supabase,state.user.id),listBinnedDrafts(supabase,state.user.id)]);
+ updateStats();renderList();renderBin();
  if(current&&!state.drafts.some(d=>d.id===current)){
   state.selectedId=null;$("creatorDeleteDraft").disabled=true;
  }
@@ -143,14 +163,14 @@ async function saveCurrent(){
 }
 async function deleteCurrent(){
  if(!state.user||!state.selectedId||state.busy)return;
- if(!window.confirm("Permanently delete this private draft?"))return;
+ if(!window.confirm("Move this draft to the recoverable 30-day bin?"))return;
  state.busy=true;$("creatorDeleteDraft").disabled=true;
  try{
   await deleteCreatorDraft(supabase,state.user.id,state.selectedId);
   state.selectedId=null;
   await refreshDrafts();
   clearEditor();
-  status("Draft deleted from your account.","success");
+  status("Draft moved to your bin. You can restore it for 30 days.","success");
  }catch(error){
   status(error?.message||"Couldn't delete the draft.","error");
  }finally{state.busy=false;$("creatorDeleteDraft").disabled=!state.selectedId;}

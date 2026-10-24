@@ -1334,7 +1334,7 @@ async function openCreatorDraft(){
  try{
   const {data,error}=await supabase.from("creator_drafts")
    .select("id,title,body,kind,community_id")
-   .eq("id",id).eq("user_id",state.user.id).maybeSingle();
+   .eq("id",id).eq("user_id",state.user.id).is("deleted_at",null).maybeSingle();
   if(error)throw error;
   if(!data){notify("This draft was not found in your account.",true);return;}
   if(data.kind==="video-script"){
