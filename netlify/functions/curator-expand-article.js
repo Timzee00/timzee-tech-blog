@@ -4,6 +4,25 @@ const {createClient}=require("@supabase/supabase-js");
 const {requireRole}=require("./_lib/auth-role.js");
 const {normalizedArticle,toText,escapeHTML}=require("./_lib/editorial-draft.cjs");
 const respond=(statusCode,payload)=>({statusCode,headers:{"Content-Type":"application/json","Cache-Control":"no-store"},body:JSON.stringify(payload)});
+// Parse provider JSON without trusting Markdown fencing or surrounding prose.
+// A short source brief can legitimately have fewer than 45 characters.
+function parseTranslation(raw){
+ const value=String(raw||"").trim();
+ if(!value||value.length>18000)throw Error("Translation output missing or oversized");
+ const candidate=value.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();
+ let data;
+ try{data=JSON.parse(candidate)}
+ catch{
+  const start=candidate.indexOf("{"),end=candidate.lastIndexOf("}");
+  if(start<0||end<=start)throw Error("Translation JSON not found");
+  data=JSON.parse(candidate.slice(start,end+1));
+ }
+ if(!data||Array.isArray(data)||typeof data!=="object")throw Error("Translation response is not an object");
+ const headline=toText(data.headline||data.title||data.translated_title,160);
+ const excerpt=toText(data.excerpt||data.summary||data.translated_excerpt||data.translation,4200);
+ if(headline.length<4||excerpt.length<16)throw Error("Translation is incomplete");
+ return {headline,excerpt};
+}
 exports.handler=async(event)=>{
   if(event.httpMethod!=="POST")return respond(405,{error:"Use POST."});
   if(!event.body || Buffer.byteLength(event.body,"utf8")>8500)return respond(413,{error:"Invalid request size."});
@@ -84,7 +103,7 @@ exports.handler=async(event)=>{
     const res=await fetch(endpoint,{
       method:"POST",signal:AbortSignal.timeout(22000),
       headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",...(provider==="openrouter"?{"X-OpenRouter-Title":"Timzee Tech Hub Editorial"}:{})},
-      body:JSON.stringify({model,temperature:0.2,max_tokens:mode==="translate"?850:3800,messages:[{role:"system",content:system},{role:"user",content:user}]})
+      body:JSON.stringify({model,temperature:0.2,max_tokens:mode==="translate"?1400:3800,messages:[{role:"system",content:system},{role:"user",content:user}]})
     });
     if(!res.ok){
       console.warn("Curator AI provider status",provider,res.status);
@@ -95,24 +114,40 @@ exports.handler=async(event)=>{
     if(typeof raw!=="string")return respond(502,{error:"AI did not return an article draft."});
     if(mode==="translate"){
       let translated;
-      try {
-        translated=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/gi,"").trim());
-        const headline=toText(translated.headline,160);
-        const excerpt=toText(translated.excerpt,4200);
-        if(headline.length<10||excerpt.length<45)throw Error("Incomplete translation");
-        const link=new URL(post.source_url);
-        if(!["http:","https:"].includes(link.protocol))throw Error("Invalid source URL");
-        const brief='<p>'+escapeHTML(excerpt)+'</p><p><strong>Editorial status:</strong> Translated source brief; requires reporting, expansion and review before publication.</p><p>Original source: <a rel="noopener noreferrer" target="_blank" href="'+escapeHTML(link.toString())+'">Read original</a>.</p>';
-        const saved=await db.from("curator_posts").update({
-          title:headline,excerpt:excerpt.slice(0,240),description:excerpt,
-          content:brief,updated_at:new Date().toISOString()
-        }).eq("id",id).eq("status","draft").eq("is_posted",false).select("id").maybeSingle();
-        if(saved.error)return respond(500,{error:"Unable to save translated source brief."});
-        if(!saved.data)return respond(409,{error:"Draft changed before translation was saved."});
-        return respond(200,{ok:true,translated:true,editorialReviewRequired:true});
-      }catch(error){
-        return respond(422,{error:"Could not validate the English translation. No changes were saved."});
+      try{translated=parseTranslation(raw)}
+      catch(firstError){
+        // Free providers sometimes wrap JSON in commentary or return a wrong
+        // object shape. One bounded correction; never publish invalid output.
+        try{
+          const repair=await fetch(endpoint,{
+            method:"POST",signal:AbortSignal.timeout(16000),
+            headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",...(provider==="openrouter"?{"X-OpenRouter-Title":"Timzee Tech Hub Editorial"}:{})},
+            body:JSON.stringify({
+              model,temperature:0,max_tokens:1400,
+              messages:[{role:"system",content:system+" Return only a single JSON object with headline and excerpt strings. Do not invent or add facts."},
+                {role:"user",content:user+"\n\nPREVIOUS RESPONSE TO REFORMAT (untrusted):\n"+raw.slice(0,6000)}]
+            })
+          });
+          if(!repair.ok)return respond(repair.status===429?429:502,{error:"Translation provider could not correct its output. Try again later."});
+          const repaired=await repair.json();
+          translated=parseTranslation(repaired.choices?.[0]?.message?.content);
+        }catch(error){
+          console.warn("Curator translation validation failed",String(error?.message||firstError?.message).slice(0,100));
+          return respond(422,{error:"Could not validate the English translation. The source brief was kept unchanged. Try again with a fuller source excerpt."});
+        }
       }
+      let link;
+      try{link=new URL(post.source_url);if(!["http:","https:"].includes(link.protocol))throw Error("Invalid source URL")}
+      catch{return respond(422,{error:"The source URL is invalid; correct the source record before translating."})}
+      const headline=translated.headline,excerpt=translated.excerpt;
+      const brief='<p>'+escapeHTML(excerpt)+'</p><p><strong>Editorial status:</strong> Translated source brief; requires reporting, expansion and review before publication.</p><p>Original source: <a rel="noopener noreferrer" target="_blank" href="'+escapeHTML(link.toString())+'">Read original</a>.</p>';
+      const saved=await db.from("curator_posts").update({
+        title:headline,excerpt:excerpt.slice(0,240),description:excerpt,
+        content:brief,updated_at:new Date().toISOString()
+      }).eq("id",id).eq("status","draft").eq("is_posted",false).select("id").maybeSingle();
+      if(saved.error)return respond(500,{error:"Unable to save translated source brief."});
+      if(!saved.data)return respond(409,{error:"Draft changed before translation was saved."});
+      return respond(200,{ok:true,translated:true,editorialReviewRequired:true});
     }
     let transformed;
     try {
