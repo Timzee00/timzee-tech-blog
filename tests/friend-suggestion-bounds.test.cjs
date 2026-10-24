@@ -72,10 +72,10 @@ test("homepage suggested people and leaderboard use trusted current verification
  ];
  for(const source of queries)for(const field of ["is_verified","verification_tier","verification_expires_at","frame_style"])
    assert.ok(source.includes(field),"Missing trusted verification field "+field);
- assert.match(app,/import \\{verifiedAvatar,verifiedName\\} from "\\.\\/verified-identity\\.mjs"/);
- assert.match(app,/verifiedAvatar\\(profile\\.avatar_url,profile/);
- assert.equal((app.match(/verifiedName\\(name,profile,\\{compact:true\\}\\)/g)||[]).length,2);
- assert.doesNotMatch(app,/class="verified-badge small"/);
- assert.match(css,/\\.people-card-avatar \\.tz-avatar-verified > img/);
- assert.match(css,/\\.people-card-name \\.tz-identity-name/);
+ assert.ok(app.includes('import {verifiedAvatar,verifiedName} from "./verified-identity.mjs";'));
+ assert.ok(app.includes('verifiedAvatar(profile.avatar_url,profile,'));
+ assert.equal(app.split('verifiedName(name,profile,{compact:true})').length-1,2);
+ assert.ok(!app.includes('class="verified-badge small"'));
+ assert.ok(css.includes('.people-card-avatar .tz-avatar-verified > img'));
+ assert.ok(css.includes('.people-card-name .tz-identity-name'));
 });
