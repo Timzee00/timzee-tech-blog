@@ -161,7 +161,11 @@ document.getElementById("verifyBrevo").addEventListener("click",async()=>{
     });
     const result=await readOperationsResponse(response);
     document.getElementById("providerStatus").textContent=result.authenticated?
-      "Brevo account authenticated. Sender verification and actual email delivery must still be checked. No email was sent.":
+      (result.sender_verified===true?
+        "Brevo API and your sender address are verified. No test email was sent. Check the delivery cards for actual results.":
+        result.sender_verified===false?
+        "Brevo API works, but your sender address does not appear verified. Check Brevo → Senders before sending.":
+        "Brevo API works, but sender verification could not be checked. No email was sent."):
       (result.error||result.message||"Brevo connection could not be verified.");
   }catch(error){document.getElementById("providerStatus").textContent="Connection check failed: "+(error?.message||"Network error");}
   finally{button.disabled=false;button.textContent="Verify Brevo connection";}

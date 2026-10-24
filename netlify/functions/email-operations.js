@@ -78,14 +78,33 @@ exports.handler=async event=>{
   if(event.queryStringParameters?.verifyProvider === "1") {
     const apiKey=process.env.BREVO_API_KEY;
     if(!apiKey)return reply(503,{provider:"Brevo",authenticated:false,error:"Brevo API key is missing"});
+    const headers={"api-key":apiKey,"accept":"application/json"};
     try {
-      const response=await fetch("https://api.brevo.com/v3/account",{
-        headers:{"api-key":apiKey,"accept":"application/json"},
-        signal:AbortSignal.timeout(8000)
+      // Read-only provider requests: never create a contact, email or campaign.
+      const account=await fetch("https://api.brevo.com/v3/account",{
+        headers,signal:AbortSignal.timeout(8000)
       });
-      return reply(response.ok?200:503,{
-        provider:"Brevo",authenticated:response.ok,http_status:response.status,
-        message:response.ok?"Brevo API credentials authenticated. No email was sent.":"Brevo rejected the API credentials or the account request."
+      if(!account.ok)return reply(503,{
+        provider:"Brevo",authenticated:false,http_status:account.status,
+        error:"Brevo could not authenticate the configured API key. No email was sent."
+      });
+      const senderAddress=String(process.env.BREVO_SENDER_EMAIL||"").trim().toLowerCase();
+      let senderVerified=null;
+      try {
+        const senderResponse=await fetch("https://api.brevo.com/v3/senders",{
+          headers,signal:AbortSignal.timeout(8000)
+        });
+        if(senderResponse.ok){
+          const senders=await senderResponse.json();
+          const sender=Array.isArray(senders?.senders)?
+            senders.senders.find(item=>String(item?.email||"").trim().toLowerCase()===senderAddress):null;
+          senderVerified=Boolean(sender&&(sender.active===true||sender.verified===true));
+        }
+      } catch { /* Brevo can authenticate even when sender listing is temporarily unavailable. */ }
+      return reply(200,{
+        provider:"Brevo",authenticated:true,sender_verified:senderVerified,
+        message:senderVerified===true?"Brevo account and sender are verified. No test email was sent.":
+          senderVerified===false?"Brevo account works, but the configured sender address is not verified.":"Brevo account works; sender verification was temporarily unavailable."
       });
     } catch {
       return reply(503,{provider:"Brevo",authenticated:false,error:"Could not reach Brevo to verify credentials"});
