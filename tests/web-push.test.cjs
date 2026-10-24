@@ -1,7 +1,7 @@
 const test=require("node:test");
 const assert=require("node:assert/strict");
 const crypto=require("node:crypto");
-const {validateEndpoint,validateSubscription,encryptPayload,makeVapidAuth,sendPush}=require("../netlify/functions/_lib/web-push.cjs");
+const {validateEndpoint,validateSubscription,validVapidPair,encryptPayload,makeVapidAuth,sendPush}=require("../netlify/functions/_lib/web-push.cjs");
 const client=crypto.createECDH("prime256v1");
 const ua=client.generateKeys();
 const auth=crypto.randomBytes(16);
@@ -54,4 +54,12 @@ test("push sends only to approved HTTPS provider, not arbitrary host",async()=>{
  assert.equal(requested.url,subscription.endpoint);
  assert.match(requested.opts.headers.Authorization,/^vapid t=/);
  assert.equal(requested.opts.headers["Content-Encoding"],"aes128gcm");
+});
+
+test("server refuses incomplete and mismatched VAPID key pairs",()=>{
+ assert.equal(validVapidPair(publicKey,privateKey),true);
+ const other=crypto.generateKeyPairSync("ec",{namedCurve:"prime256v1"});
+ assert.equal(validVapidPair(publicKey,other.privateKey.export({format:"der",type:"pkcs8"}).toString("base64url")),false);
+ assert.equal(validVapidPair("invalid",privateKey),false);
+ assert.equal(validVapidPair(publicKey,"bad-private"),false);
 });

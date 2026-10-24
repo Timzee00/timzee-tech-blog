@@ -26,6 +26,18 @@ function validateSubscription(subscription) {
   if (ua.length !== 65 || ua[0] !== 4 || auth.length !== 16) throw Error("Malformed push encryption keys");
   return { endpoint: subscription.endpoint, keys: {p256dh:b64(ua),auth:b64(auth)} };
 }
+function validVapidPair(publicKey,privateKey) {
+  try {
+    const declared=unb64(publicKey);
+    if(declared.length!==65||declared[0]!==4)return false;
+    const privateDer=unb64(privateKey);
+    const key=crypto.createPrivateKey({key:privateDer,format:"der",type:"pkcs8"});
+    if(key.asymmetricKeyType!=="ec"||key.asymmetricKeyDetails?.namedCurve!=="prime256v1")return false;
+    const jwk=crypto.createPublicKey(key).export({format:"jwk"});
+    const actual=Buffer.concat([Buffer.from([4]),unb64(jwk.x),unb64(jwk.y)]);
+    return actual.length===declared.length&&crypto.timingSafeEqual(actual,declared);
+  } catch { return false; }
+}
 function makeVapidAuth(endpoint, publicKey, privateKey, subject, now = Date.now()) {
   const url = validateEndpoint(endpoint);
   const pub = unb64(publicKey);
@@ -68,4 +80,4 @@ async function sendPush(subscription, message,config,{fetchImpl=fetch}={}) {
   });
   return {success:response.ok,status:response.status,permanent:response.status===404||response.status===410};
 }
-module.exports={validateEndpoint,validateSubscription,makeVapidAuth,encryptPayload,sendPush};
+module.exports={validateEndpoint,validateSubscription,validVapidPair,makeVapidAuth,encryptPayload,sendPush};

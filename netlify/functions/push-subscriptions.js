@@ -1,13 +1,13 @@
 "use strict";
 const crypto=require("node:crypto");
 const {createClient}=require("@supabase/supabase-js");
-const {validateSubscription}=require("./_lib/web-push.cjs");
+const {validateSubscription,validVapidPair}=require("./_lib/web-push.cjs");
 const json=(statusCode,payload)=>({statusCode,headers:{"content-type":"application/json","cache-control":"no-store"},body:JSON.stringify(payload)});
 exports.handler=async event=>{
  const method=String(event.httpMethod||"").toUpperCase();
  if(!["GET","POST","DELETE"].includes(method))return json(405,{error:"Method not allowed"});
  const publicKey=process.env.PUSH_VAPID_PUBLIC_KEY||"";
- const ready=Boolean(publicKey&&process.env.PUSH_VAPID_PRIVATE_KEY&&process.env.PUSH_ENABLED==="true");
+ const ready=process.env.PUSH_ENABLED==="true" && validVapidPair(publicKey,process.env.PUSH_VAPID_PRIVATE_KEY||"") && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.BREVO_SENDER_EMAIL||"");
  if(method==="GET")return json(200,{enabled:ready,publicKey:ready?publicKey:null});
  if(!ready)return json(503,{error:"Browser notifications are not available yet."});
  if((event.body||"").length>5000)return json(413,{error:"Subscription is too large"});

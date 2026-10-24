@@ -1,12 +1,13 @@
 "use strict";
 const {createClient}=require("@supabase/supabase-js");
-const {sendPush}=require("./_lib/web-push.cjs");
+const {sendPush,validVapidPair}=require("./_lib/web-push.cjs");
 const json=(statusCode,obj)=>({statusCode,headers:{"content-type":"application/json","cache-control":"no-store"},body:JSON.stringify(obj)});
 exports.handler=async()=>{
  const cfg={publicKey:process.env.PUSH_VAPID_PUBLIC_KEY,privateKey:process.env.PUSH_VAPID_PRIVATE_KEY,
    subject:"mailto:"+String(process.env.BREVO_SENDER_EMAIL||"")};
- if(process.env.PUSH_ENABLED!=="true"||!cfg.publicKey||!cfg.privateKey)
-   return json(200,{state:"paused",processed:0});
+ if(process.env.PUSH_ENABLED!=="true")return json(200,{state:"paused",processed:0});
+ if(!validVapidPair(cfg.publicKey,cfg.privateKey)||!/^mailto:[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cfg.subject))
+   return json(503,{error:"Push signing configuration is invalid",processed:0});
  const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
  if(!url||!key)return json(503,{error:"Push database is unavailable"});
  const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
