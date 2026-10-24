@@ -19,7 +19,7 @@ exports.handler=async()=>{
      let delivery;
      try{
        delivery=await sendPush({endpoint:job.endpoint,keys:{p256dh:job.p256dh,auth:job.auth_key}},{
-         title:"Timzee Tech Hub",body:"You have a new notification. Open Timzee Tech to review it.",url:"/index.html"
+         title:"Timzee Tech Hub",body:"You have a new notification. Open Timzee Tech to review it.",url:"/profile.html?tab=notifications"
        },cfg);
      }catch(error){
        delivery={success:false,permanent:false,status:0};

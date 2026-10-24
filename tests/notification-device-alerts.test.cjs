@@ -7,3 +7,11 @@ test("device alerts require explicit opt-in and stay same-origin",()=>{
  for(const [source,needle] of [[html,'id="deviceAlertsBtn"'],[s,'button.onclick=async()=>'],[s,'Notification.requestPermission()'],[s,'document.visibilityState!=="hidden"'],[s,'navigator.serviceWorker.register("/sw.js")'],[s,'notificationAllowed(note)'],[sw,'notificationclick'],[sw,'parsed.origin!==self.location.origin'],[build,'"sw.js"']]) assert.ok(source.includes(needle),needle);
  assert.ok(!sw.includes("caches.open("));
 });
+
+test("lock screen alerts never expose message text and dismissing a toast keeps its inbox unread",()=>{
+ const src=require("node:fs").readFileSync(require("node:path").resolve(__dirname,"../assets/js/notifications-ui.js"),"utf8");
+ assert.ok(src.includes('showNotification("Timzee Tech notification"'));
+ assert.ok(src.includes('body:"You have a new update. Open Timzee Tech to review it."'));
+ assert.ok(src.includes('close.addEventListener("click", () => { removeToast(toast); })'));
+ assert.ok(!src.includes('close.addEventListener("click", () => { markRead('));
+});

@@ -34,3 +34,7 @@ test("push is server signed, encrypted, RLS secured and disabled until configure
  assert.match(sql,/service_role/);
  assert.match(toml,/functions\."push-worker"/);
 });
+test("background notifications open the notification inbox, not an unrelated home page",()=>{
+ const worker=read("netlify/functions/push-worker.js");
+ assert.ok(worker.includes('url:"/profile.html?tab=notifications"'));
+});

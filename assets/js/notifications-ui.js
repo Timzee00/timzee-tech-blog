@@ -14,8 +14,9 @@ async function showDeviceAlert(note,userId){
  try{
   const reg=await registerDeviceAlertWorker();
   const url=safeSameOriginLink(note?.link_url||note?.link)||"/profile.html?tab=notifications";
-  await reg.showNotification(String(note?.title||"Timzee Tech update").slice(0,100),{
-   body:String(note?.body||"You have a new notification.").slice(0,200),
+  await reg.showNotification("Timzee Tech notification",{
+   // The device may be locked or shared: never reveal private user messages.
+   body:"You have a new update. Open Timzee Tech to review it.",
    tag:"timzee-"+String(note?.id||"update").slice(0,80),
    icon:"/assets/img/avatar-placeholder.svg",data:{url}
   });
@@ -118,7 +119,7 @@ function showNotificationToast(notification, userId, supabase) {
   const link = safeSameOriginLink(notification?.link_url || notification?.link);
   if (link) { const action = document.createElement("a"); action.className = "timzee-notification-action"; action.href = link; action.textContent = "Open"; action.addEventListener("click", () => markRead(notification.id, userId, supabase), { once: true }); actions.appendChild(action); }
   const close = document.createElement("button"); close.type = "button"; close.className = "timzee-notification-close"; close.setAttribute("aria-label", "Dismiss notification"); close.textContent = "×";
-  close.addEventListener("click", () => { markRead(notification.id, userId, supabase); removeToast(toast); }); actions.appendChild(close);
+  close.addEventListener("click", () => { removeToast(toast); }); // Dismissing a toast does not mark the inbox item read. actions.appendChild(close);
   toast.append(main, actions); region.prepend(toast); activeToasts.push(toast); while (activeToasts.length > 3) removeToast(activeToasts[0]); window.setTimeout(() => removeToast(toast), 7000);
 }
 
