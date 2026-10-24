@@ -13,14 +13,14 @@ const interestAreas = [
   ["travel","Travel and exchange",/\b(visa|travel grants?|exchange program|work abroad|digital nomad|immigration|study visa)\b/i],
   ["freebies","Free and affordable",/\b(freebies?|giveaways?|free tier|free access|open access|promo code|discount|legitimate alternatives?|free trial)\b/i],
   ["opportunities","Opportunities",/\b(applications? open|apply now|competitions?|calls? for proposals?|accelerators?|contests?|funding opportunities)\b/i],
-  ["football","Football",/\b(football|soccer|premier league|champions league|transfer window|world cup|afcon|uefa|fifa|arsenal|chelsea|manchester united|liverpool)\b/i],
-  ["sports","Sports",/\b(nba|basketball|tennis|olympics|formula one|grand prix|athletics|boxing|wrestling)\b/i],
+  ["football","Football",/\b(football|soccer|premier league|champions league|transfer window|world cup|afcon|wafcon|npfl|nff|super eagles|super falcons|caf|uefa|fifa|arsenal|chelsea|manchester united|liverpool|osimhen|boniface)\b/i],
+  ["sports","Sports",/\b(sports?|nba|basketball|tennis|olympics?|formula one|formula 1|f1|grand prix|athletics|boxing|wrestling|cricket|rugby|volleyball|badminton|table tennis|judo|taekwondo|golf|nfl|ufc|mma|cycling|d.tigress)\b/i],
   ["music","Music and artists",/\b(music|album|single release|grammy|afrobeats|afrobeat|concert|tour dates|artist|record label|spotify|billboard charts?)\b/i],
   ["entertainment","Entertainment and culture",/\b(celebrity|entertainment|film|movies?|nollywood|hollywood|streaming series|viral moment|pop culture)\b/i],
   ["world","World affairs",/\b(conflict|war|ceasefire|diplomacy|sanctions|humanitarian|united nations|elections?|geopolitics|military)\b/i]
 ];
 function topicFor(item){
-  const haystack=[item.title, ...(Array.isArray(item.tags)?item.tags:[])].join(" ").slice(0,1200);
+  const haystack=[item.title, ...(Array.isArray(item.tags)?item.tags:[]), ...(Array.isArray(item.source_tags)?item.source_tags:[])].join(" ").slice(0,1200);
   // Time-sensitive opportunity feeds must be classified ahead of generic
   // words like "AI" or "startup" in their headlines.
   const priority=["jobs","scholarships","travel","freebies","opportunities","football","sports","music","entertainment","world"];

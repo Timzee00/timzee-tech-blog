@@ -3,7 +3,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { requireRole } = require("./_lib/auth-role.js");
 const { randomUUID } = require("crypto");
 const { isScheduledInvocation } = require("./_lib/scheduled-event.cjs");
-const { clampScoutItems, scheduleScoutSources, classifyScoutSource, normalizeScoutDate, normalizeScoutArticleUrl, isStaleScoutItem, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
+const { clampScoutItems, scheduleScoutSources, classifyScoutSource, normalizeScoutDate, normalizeScoutArticleUrl, isStaleScoutItem, isUsableScoutFeedUrl, SCOUT_LIMITS } = require("./_lib/scout-budget.cjs");
 const {rankScoutItems, topicFor} = require("./_lib/scout-ranking.cjs");
 
 const jsonResponse = (statusCode, payload) => ({ statusCode, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(payload) });
@@ -88,11 +88,11 @@ exports.handler = async (event) => {
   const perSource = clampScoutItems(settingsResult.data?.posts_per_source || 5);
 
   const sourcesResult = await supabase.from("curator_sources").select("*").eq("enabled", true)
-    .order("last_fetched_at", { ascending: true, nullsFirst: true }).limit(12);
+    .order("last_fetched_at", { ascending: true, nullsFirst: true }).limit(64);
   if (sourcesResult.error) return jsonResponse(500, { error: sourcesResult.error.message || "Unable to load curator sources." });
   const fetchedSources = sourcesResult.data || [];
-  const envFeedUrls = parseEnvFeeds(process.env.NEWS_FEEDS);
-  const envTipUrls = parseEnvFeeds(process.env.NEWS_TIPS_FEEDS);
+  const envFeedUrls = parseEnvFeeds(process.env.NEWS_FEEDS).filter(isUsableScoutFeedUrl);
+  const envTipUrls = parseEnvFeeds(process.env.NEWS_TIPS_FEEDS).filter(isUsableScoutFeedUrl);
   const knownUrls = new Set(fetchedSources.flatMap((source) => [source.feed_url, source.url]).filter(Boolean));
   const combinedEnv = [...new Set([...envFeedUrls, ...envTipUrls])].slice(0, 12);
   const fallbackSources = combinedEnv.filter((url) => !knownUrls.has(url)).map((url, index) => ({
@@ -111,9 +111,9 @@ exports.handler = async (event) => {
   for (const source of fallbackSources) {
     const upsert = await supabase
       .from("curator_sources")
-      .upsert(source, { onConflict: "url" })
+      .upsert(source, { onConflict: "url", ignoreDuplicates: true })
       .select("*")
-      .single();
+      .maybeSingle();
     if (upsert.error) {
       persistedFallbacks.push({ ...source, __error: upsert.error.message || "source_upsert_failed" });
     } else if (upsert.data) {
@@ -165,7 +165,7 @@ exports.handler = async (event) => {
       const maxAgeDays=["jobs","scholarships","travel","freebies","opportunities"]
         .includes(topicFor(item))?30:7;
       if(isStaleScoutItem(item,{maxAgeDays})){staleItemsSkipped++;continue;}
-      eligible.push(item);
+      eligible.push({ ...item, source_tags: source.tags || [] });
     }
     let unusableArticles = 0;
     let inspectedArticles = 0;
