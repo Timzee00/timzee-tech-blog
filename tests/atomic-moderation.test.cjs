@@ -92,7 +92,9 @@ test("report decisions must use the shared audited moderation endpoint",()=>{
  const moderator=read("assets/js/moderator-panel.js");
  const endpoint=read("netlify/functions/moderate-content.js");
  const reportMigration=read("supabase/migrations/20261019023000_audited_report_resolution.sql");
- assert.match(moderator,/moderateContent\(status==="resolved"\?"resolve":"dismiss","content_reports",reportId\)/);
+ assert.match(moderator,/mountReportInvestigator/);
+ assert.match(read("assets/js/moderation-case-ui.mjs"),/staff|evidence|Investigation/);
+ assert.match(read("netlify/functions/moderation-cases.js"),/staff_decide_content_report/);
  assert.doesNotMatch(moderator,/from\("content_reports"\)\.update\(/);
  assert.match(endpoint,/content_reports:\["resolve","dismiss"\]/);
  assert.match(reportMigration,/status='open' RETURNING id INTO v_changed/);

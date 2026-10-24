@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Moderator Panel - Timzee Tech Hub</title>
-    <link rel="stylesheet" href="../assets/css/admin.css">
+    <link rel="stylesheet" href="../assets/css/admin.css"><link rel="stylesheet" href="../assets/css/moderation-cases.css">
       <script defer src="../assets/js/theme-init.js"></script>
   </head>
   <body class="admin-shell">
@@ -64,15 +64,17 @@
       </section>
 
       <section class="admin-card" data-panel="reports" style="display:none;">
-        <h2>Report review</h2>
-        <p class="hint">Review the reported item before deciding. Marking a report resolved records review; it does not automatically punish anyone.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <h2>Report investigations</h2>
+        <p class="hint">Inspect the original content, assess the evidence and record a reason before a decision. A report alone is not proof of a violation.</p>
+        <div id="modReportListSection"><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
           <label for="modReportSearch" style="flex:1 1 180px">Search complaints<input id="modReportSearch" type="search" placeholder="Reason, content type or report ID"></label>
           <label for="modReportFilter" style="flex:0 1 180px">Status<select id="modReportFilter"><option value="open">Needs review</option><option value="all">All reports</option><option value="resolved">Resolved</option><option value="dismissed">Dismissed</option></select></label>
           <button class="btn ghost" id="modReportsRefresh" type="button">Refresh</button>
         </div>
         <p id="modReportCount" class="hint" role="status" aria-live="polite"></p>
-        <div id="modReports" class="form-card">Loading...</div>
+        <div id="modReports" class="moderation-report-list">Loading...</div>
+        <div class="moderation-paging"><button type="button" class="btn ghost" id="modReportsPrev">Previous</button><button type="button" class="btn ghost" id="modReportsNext">Next</button></div></div>
+        <div id="modReportDetail" class="moderation-case-detail" hidden></div>
       </section>
     </main>
 

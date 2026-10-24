@@ -1,0 +1,26 @@
+.moderation-report-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr));gap:14px;margin:14px 0}
+.moderation-report-card,.moderation-info,.moderation-case-history,.moderation-decision-form,.moderation-restore{min-width:0;max-width:100%;overflow-wrap:anywhere;border:1px solid var(--color-border,#7b8d92);border-radius:14px;padding:clamp(14px,3vw,20px);background:var(--color-surface,var(--admin-bg-2,#142b30));color:var(--color-text,var(--admin-text,#fafafa))}
+.moderation-report-card{display:flex;flex-direction:column;gap:12px}
+.moderation-report-card p{margin:0;line-height:1.6;flex:1;overflow-wrap:anywhere}
+.moderation-report-card button{min-height:46px}
+.moderation-report-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.moderation-status{border:1px solid var(--color-border,#7b8d92);border-radius:99px;padding:5px 10px;font-size:.85rem;font-weight:650;color:var(--color-text,var(--admin-text,#fafafa))}
+.moderation-muted,.moderation-report-card small{color:var(--color-text-muted,var(--admin-text-muted,#b4bec3));font-size:.91rem}
+.moderation-paging{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:18px auto}
+.moderation-paging button{min-height:46px}
+.moderation-case-detail{overflow-wrap:anywhere;min-width:0}
+.moderation-case-detail[hidden],#modReportListSection[hidden],.moderation-decision-form label[hidden]{display:none!important}
+.moderation-case-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:14px;margin:18px 0}
+.moderation-info h3,.moderation-case-history h3,.moderation-decision-form h3{margin:0 0 12px}
+.moderation-detail-line{border-bottom:1px solid var(--color-border,#647985);padding:8px 0}
+.moderation-detail-line p{white-space:pre-wrap;line-height:1.6;overflow-wrap:anywhere;margin:7px 0}
+.moderation-decision-form{display:grid;gap:16px;margin-top:16px}
+.moderation-decision-form label,.moderation-restore label{display:grid;gap:8px;font-weight:650}
+.moderation-decision-form select,.moderation-decision-form input,.moderation-decision-form textarea,.moderation-restore textarea{width:100%;box-sizing:border-box;min-width:0;max-width:100%;background:var(--color-surface-muted,#253e44);color:var(--color-text,#fff);border:1px solid var(--color-border,#8aa0a3);border-radius:10px;padding:12px;font:inherit}
+.moderation-decision-form textarea,.moderation-restore textarea{min-height:95px;resize:vertical}
+.moderation-decision-form button,.moderation-restore button{min-height:48px;justify-self:start}
+.moderation-history-item{padding:12px 0;border-top:1px solid var(--color-border,#70858c)}
+.moderation-history-item small{display:block;margin-top:5px}
+.moderation-warning{border-left:3px solid #a77b2c;padding:10px 14px}
+.moderation-restore{margin-top:15px}
+@media(max-width:520px){.moderation-report-list{grid-template-columns:1fr}.moderation-decision-form button,.moderation-case-detail>.btn{width:100%}}
