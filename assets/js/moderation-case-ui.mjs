@@ -107,6 +107,16 @@ function investigationForm(host,record,caseData){
   const o=el("option",text);o.value=value;o.disabled=!enabled;action.append(o);
  }
  actionWrap.append(action);form.append(actionWrap);
+ const checklist=el("fieldset",undefined,"moderation-investigation-checklist");
+ checklist.append(el("legend","Investigation checklist"));
+ for(const description of ["I read the complaint and inspected the reported item",
+   "I examined available context and previous actions",
+   "I considered alternative explanations and coordinated reports"]){
+  const row=el("label"),control=el("input");
+  control.type="checkbox";control.required=true;
+  row.append(control,el("span",description));checklist.append(row);
+ }
+ form.append(checklist);
  const evidence=inputControl(form,"Evidence reviewed (minimum 20 characters)","evidence");
  const reason=inputControl(form,"Decision and justification (minimum 20 characters)","reason");
  const banWrap=el("label","Type BAN to confirm a permanent ban");
@@ -175,6 +185,13 @@ export async function openReportCase(id){
   label(evidence,"Item",details.preview?.title||human(record.content_type));
   label(evidence,"Content excerpt",details.preview?.text||details.accessNote||"Item removed or unavailable");
   label(evidence,"Content status",details.preview?.status||"Unknown");
+  if(details.postContext){
+   label(evidence,"Original article",details.postContext.title||"Untitled article");
+   label(evidence,"Article status",details.postContext.status);
+   const source=el("a","Open original article","btn ghost");
+   source.href="../post.html?id="+encodeURIComponent(details.postContext.id);
+   source.target="_blank";source.rel="noopener noreferrer";evidence.append(source);
+  }
   label(evidence,"Reported account",details.subject?.display_name||details.subject?.username||"Unable to establish");
   label(evidence,"Account standing",details.subject?.account_status||"Unverified");
   // Offer first-party context links only when the target identity is trusted.

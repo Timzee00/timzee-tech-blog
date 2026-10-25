@@ -86,7 +86,7 @@ async function caseDetail(db,id){
  const report=result.data;
  if(!report)return null;
  const schema=targetSchemas[report.content_type];
- let subjectId=null,preview=null,accessNote=null;
+ let subjectId=null,preview=null,accessNote=null,postContext=null;
  if(schema){
    const res=await db.from(schema.table).select(schema.fields).eq("id",report.content_id).maybeSingle();
    if(res.error)throw Error("Unable to review reported content");
@@ -103,6 +103,14 @@ async function caseDetail(db,id){
          text:raw.deleted_at?"[Previously deleted message]":excerpt(raw[schema.text],1200),
          created_at:raw.created_at||null,status:raw.status||raw.moderation_status||
            (raw.is_available===false||raw.is_public===false?"Not public":"Available")};
+       if(["comment","comments"].includes(report.content_type)&&uuid.test(raw.post_id||"")){
+         const parent=await db.from("posts").select("id,title,status,created_at")
+           .eq("id",raw.post_id).maybeSingle();
+         if(!parent.error&&parent.data)postContext={
+           id:parent.data.id,title:excerpt(parent.data.title,180),
+           status:String(parent.data.status||"unknown").slice(0,30)
+         };
+       }
      }
    }else accessNote="Reported content is unavailable or was removed.";
  }else accessNote="This report category requires a separate specialist investigation.";
@@ -117,7 +125,7 @@ async function caseDetail(db,id){
  ]);
  if(notes.error||history.error||sanctions.error||legacy.error){throw Error("Report investigation history unavailable");}
  // Automatic flags are an optional, strictly server-owned enrichment.
- return {report,preview,accessNote,reporter,subject,subjectId,
+ return {report,preview,postContext,accessNote,reporter,subject,subjectId,
    notes:notes.data||[],legacyActions:legacy.data||[],relatedReportCount:history.count||0,sanctions:sanctions.data||[],
    automaticFlags:flags.error?[]:(flags.data||[])};
 }

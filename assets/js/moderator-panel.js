@@ -191,7 +191,7 @@ async function init() {
   bindModerationActions();
   await refreshAll();
   // A staff overview can link directly to a report without showing the wrong tab.
-  const requested=new URLSearchParams(window.location.search).get("tab");
+  const requested=new URLSearchParams(window.location.search).get("tab")||"reports";
   if(["posts","comments","discussions","marketplace","videos","novels","reports","flags"].includes(requested)){
     document.querySelector('.admin-nav button[data-tab="'+requested+'"]')?.click();
   }

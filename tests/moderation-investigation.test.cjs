@@ -96,3 +96,13 @@ test("moderation queue searches the full database and accepts an investigation f
  assert.ok(ui.includes('latestQueueRequest'));
  assert.ok(page.includes('value="investigating"'));
 });
+
+test("reports open directly with context and evidence checklist",()=>{
+ const a=read("netlify/functions/moderation-cases.js");
+ const b=read("assets/js/moderation-case-ui.mjs");
+ const h=read("moderator/dashboard.html");
+ assert.match(a,/postContext/);
+ assert.match(b,/Investigation checklist/);
+ assert.match(b,/Original article/);
+ assert.match(h,/class="active" data-tab="reports"/);
+});

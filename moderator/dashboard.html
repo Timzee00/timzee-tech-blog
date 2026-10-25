@@ -24,17 +24,17 @@
 
     <main id="main-content" class="container admin-panel">
       <nav class="admin-nav">
-        <button class="active" data-tab="posts">📰 Posts</button>
+        <button data-tab="posts">📰 Posts</button>
         <button data-tab="comments">💬 Comments</button>
         <button data-tab="discussions">🗣️ Discussions</button>
         <button data-tab="marketplace">🛒 Marketplace</button>
         <button data-tab="videos">🎥 Videos</button>
         <button data-tab="novels">📖 Novels</button>
-        <button data-tab="reports">🚩 Reports</button>
+        <button class="active" data-tab="reports">🚩 Reports</button>
         <button data-tab="flags">🛡️ Safety Queue</button>
       </nav>
 
-      <section class="admin-card" data-panel="posts">
+      <section class="admin-card" data-panel="posts" style="display:none;">
         <h2>Posts</h2>
         <div id="modPosts" class="form-card">Loading...</div>
       </section>
@@ -64,7 +64,7 @@
         <div id="modNovels" class="form-card">Loading...</div>
       </section>
 
-      <section class="admin-card" data-panel="reports" style="display:none;">
+      <section class="admin-card" data-panel="reports">
         <h2>Report investigations</h2>
         <p class="hint">Inspect the original content, assess the evidence and record a reason before a decision. A report alone is not proof of a violation.</p>
         <div id="modReportListSection"><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
