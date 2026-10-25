@@ -28,3 +28,8 @@
 #modFlagListSection[hidden],#modFlagDetails[hidden]{display:none!important}
 .moderation-info .moderation-detail-line{padding:10px 0}
 @media(max-width:800px){.admin-shell .admin-nav{display:flex;overflow-x:auto;flex-wrap:nowrap;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;gap:5px}.admin-shell .admin-nav button{flex:0 0 auto;white-space:nowrap;scroll-snap-align:start;min-height:46px}}
+
+/* Evidence links are accessible on mobile and never leak private-message URLs. */
+.moderation-context-links{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.moderation-context-links a{min-height:44px;max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:center}
+@media(max-width:520px){.moderation-context-links a{width:100%}}

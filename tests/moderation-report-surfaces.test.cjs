@@ -23,3 +23,14 @@ test("only bounded reasons and exact identifiers enter the moderation queue",()=
  assert.match(helper,/reporter_id:reporterId/);
  assert.doesNotMatch(helper,/message_body|messageText|chat_content/);
 });
+
+test("investigator provides safe context links without exposing private DMs",()=>{
+ const read=require("node:fs").readFileSync;
+ const file=require("node:path").resolve(__dirname,"../assets/js/moderation-case-ui.mjs");
+ const code=read(file,"utf8");
+ assert.match(code,/Review reported account profile/);
+ assert.match(code,/View public article context/);
+ assert.match(code,/Private DMs stay inside staff-only investigation/);
+ assert.match(code,/details\.subjectId&&uuid\.test\(details\.subjectId\)/);
+ assert.match(code,/volume alone does not prove guilt/);
+});

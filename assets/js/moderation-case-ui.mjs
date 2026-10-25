@@ -167,7 +167,9 @@ export async function openReportCase(id){
   label(complaint,"Reason",record.reason);
   label(complaint,"Reporter",details.reporter?.display_name||details.reporter?.username||"Reporter not available");
   label(complaint,"Submitted",date(record.created_at));
-  label(complaint,"Related reports",""+details.relatedReportCount+" about this exact item");
+  label(complaint,"Related reports",""+details.relatedReportCount+" about this exact item (volume alone does not prove guilt)");
+  label(complaint,"Investigation stage",record.investigation_state==="investigating"?"Being investigated":statusText(record.status));
+
   const evidence=el("section",undefined,"moderation-info");
   evidence.append(el("h3","Original reported item"));
   label(evidence,"Item",details.preview?.title||human(record.content_type));
@@ -175,6 +177,23 @@ export async function openReportCase(id){
   label(evidence,"Content status",details.preview?.status||"Unknown");
   label(evidence,"Reported account",details.subject?.display_name||details.subject?.username||"Unable to establish");
   label(evidence,"Account standing",details.subject?.account_status||"Unverified");
+  // Offer first-party context links only when the target identity is trusted.
+  // Private DMs stay inside staff-only investigation; never construct a public URL.
+  const contextLinks=el("div",undefined,"moderation-context-links");
+  const addLink=(url,title)=>{
+    const a=el("a",title,"btn ghost");
+    a.href=url;a.rel="noopener";contextLinks.append(a);
+  };
+  if(details.subjectId&&uuid.test(details.subjectId))
+    addLink("../profile.html?id="+encodeURIComponent(details.subjectId),"Review reported account profile");
+  if(details.preview?.id&&uuid.test(details.preview.id)){
+    const type=record.content_type;
+    if(["post","posts"].includes(type))
+      addLink("../post.html?id="+encodeURIComponent(details.preview.id),"View public article context");
+    if(["marketplace_item"].includes(type))
+      addLink("../marketplace.html","Review marketplace context");
+  }
+  if(contextLinks.childElementCount) evidence.append(contextLinks);
   grid.append(complaint,evidence);host.append(grid);
   const history=el("section",undefined,"moderation-case-history");
   history.append(el("h3","Automated signals and review history"));
