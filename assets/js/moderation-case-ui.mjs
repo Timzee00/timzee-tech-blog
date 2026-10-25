@@ -2,6 +2,7 @@ import {getSession} from "./supabase.js";
 const $=id=>document.getElementById(id);
 const uuid=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
 const state={reports:[],total:0,page:0,busy:false,error:null};
+let latestQueueRequest=0;
 const el=(tag,text,className)=>{
  const node=document.createElement(tag);
  if(text!==undefined)node.textContent=String(text||"");
@@ -18,6 +19,7 @@ async function api(options={}){
  if(options.id)query.set("id",options.id);
  if(options.status)query.set("status",options.status);
  if(options.page!==undefined)query.set("page",String(options.page));
+ if(options.search)query.set("search",options.search);
  const response=await fetch("/.netlify/functions/moderation-cases"+(query.size?"?"+query:""),{
   method:options.body?"POST":"GET",cache:"no-store",
   headers:{Authorization:"Bearer "+session.access_token,...(options.body?{"Content-Type":"application/json"}:{})},
@@ -35,10 +37,9 @@ const label=(container,title,value)=>{
 function renderList(){
  const host=$("modReports");if(!host)return;
  host.replaceChildren();
- const search=($("modReportSearch")?.value||"").trim().toLowerCase();
- const filtered=state.reports.filter(r=>!search||[r.id,r.content_type,r.reason,r.content_id].some(x=>String(x||"").toLowerCase().includes(search)));
- if(!filtered.length)host.append(el("p","No reports match this filter.","moderation-muted"));
- for(const report of filtered){
+ if(state.error){host.append(el("p",state.error,"moderation-muted"));return;}
+ if(!state.reports.length)host.append(el("p","No reports match these filters.","moderation-muted"));
+ for(const report of state.reports){
   const card=el("article",undefined,"moderation-report-card");
   const top=el("div",undefined,"moderation-report-top");
   top.append(el("strong",human(report.content_type)));
@@ -49,21 +50,27 @@ function renderList(){
   button.addEventListener("click",()=>void openReportCase(report.id));
   card.append(button);host.append(card);
  }
- if($("modReportCount"))$("modReportCount").textContent=state.total+" reports in this status · "+filtered.length+" shown on this page (page "+(state.page+1)+").";
+ if($("modReportCount"))$("modReportCount").textContent=state.total+" matching reports · "+state.reports.length+" shown (page "+(state.page+1)+").";
  if($("modReportsPrev"))$("modReportsPrev").disabled=state.busy||state.page===0;
  if($("modReportsNext"))$("modReportsNext").disabled=state.busy||(state.page+1)*40>=state.total;
 }
 export async function loadReportQueue(){
+ const requestNumber=++latestQueueRequest;
  const status=$("modReportFilter")?.value||"open";
- state.busy=true;
- if($("modReportCount"))$("modReportCount").textContent="Loading reports…";
+ const search=($("modReportSearch")?.value||"").trim();
+ state.busy=true;state.error=null;
+ if($("modReportCount"))$("modReportCount").textContent="Searching reports…";
  try{
-  const result=await api({status,page:state.page});
-  state.error=null;state.reports=result.reports||[];state.total=Number(result.total||0);
-  renderList();
+  const result=await api({status,page:state.page,search});
+  if(requestNumber!==latestQueueRequest)return;
+  state.reports=result.reports||[];state.total=Number(result.total||0);
  }catch(error){
-  if($("modReports"))$("modReports").replaceChildren(el("p",error.message));
- }finally{state.busy=false;renderList();}
+  if(requestNumber!==latestQueueRequest)return;
+  state.error=error.message||"Report search failed";
+  state.reports=[];state.total=0;
+ }finally{
+  if(requestNumber===latestQueueRequest){state.busy=false;renderList();}
+ }
 }
 function inputControl(form,title,name,tag="textarea"){
  const wrap=el("label",title);
@@ -204,7 +211,11 @@ export async function openReportCase(id){
  }
 }
 export function mountReportInvestigator(){
- $("modReportSearch")?.addEventListener("input",renderList);
+ let searchTimer=null;
+ $("modReportSearch")?.addEventListener("input",()=>{
+   if(searchTimer!==null)clearTimeout(searchTimer);
+   searchTimer=setTimeout(()=>{searchTimer=null;state.page=0;void loadReportQueue();},320);
+ });
  $("modReportFilter")?.addEventListener("change",()=>{state.page=0;void loadReportQueue();});
  $("modReportsRefresh")?.addEventListener("click",()=>void loadReportQueue());
  $("modReportsPrev")?.addEventListener("click",()=>{state.page=Math.max(0,state.page-1);void loadReportQueue();});

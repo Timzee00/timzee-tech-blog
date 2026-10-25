@@ -156,11 +156,23 @@ exports.handler=async event=>{
        const data=await caseDetail(db,query.id);
        return data?reply(200,{ok:true,case:data}):reply(404,{error:"Report not found"});
      }
-     const filter=["open","resolved","dismissed","all"].includes(query.status)?query.status:"open";
+     const filter=["open","investigating","resolved","dismissed","all"].includes(query.status)?query.status:"open";
      const page=Math.max(0,Math.min(1000,Number.parseInt(query.page||"0",10)||0));
+     const search=String(query.search||"").trim();
+     if(search.length>80)return reply(400,{error:"Search must be 80 characters or fewer."});
      let request=db.from("content_reports").select("id,content_type,content_id,reason,status,created_at,investigation_state",{count:"exact"});
-     if(filter==="open")request=request.eq("status","open");
+     if(filter==="investigating")request=request.eq("status","open").eq("investigation_state","investigating");
      else if(filter!=="all")request=request.eq("status",filter);
+     if(search){
+       if(uuid.test(search))request=request.or("id.eq."+search+",content_id.eq."+search);
+       else if(Object.hasOwn(targetSchemas,search.toLowerCase()) || search.toLowerCase()==="chat_group")
+         request=request.eq("content_type",search.toLowerCase());
+       else {
+         // Escape LIKE wildcards: searches should not unexpectedly scan every case.
+         const literal=search.replace(/[\\%_]/g,match=>"\\"+match);
+         request=request.ilike("reason","%"+literal+"%");
+       }
+     }
      const {data,error,count}=await request.order("created_at",{ascending:false}).range(page*40,page*40+39);
      if(error)throw Error("Cannot load moderation queue");
      return reply(200,{ok:true,reports:data||[],total:Number(count||0),page,pageSize:40});

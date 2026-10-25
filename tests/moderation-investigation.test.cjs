@@ -82,3 +82,17 @@ test("moderation database is locked behind service role and requires case eviden
  assert.match(ui,/Evidence reviewed/);
  assert.match(flagUI,/Automated safety review/);
 });
+
+test("moderation queue searches the full database and accepts an investigation filter",()=>{
+ const server=read("netlify/functions/moderation-cases.js");
+ const ui=read("assets/js/moderation-case-ui.mjs");
+ const page=read("moderator/dashboard.html");
+ assert.ok(server.includes('query.search||""'));
+ assert.ok(server.includes('request=request.ilike("reason","%"+literal+"%")'));
+ assert.ok(server.includes('request=request.or("id.eq."+search+",content_id.eq."+search)'));
+ assert.ok(server.includes('request=request.eq("status","open").eq("investigation_state","investigating")'));
+ assert.ok(ui.includes('query.set("search",options.search)'));
+ assert.ok(ui.includes('setTimeout(()=>{searchTimer=null;state.page=0;void loadReportQueue();},320)'));
+ assert.ok(ui.includes('latestQueueRequest'));
+ assert.ok(page.includes('value="investigating"'));
+});
