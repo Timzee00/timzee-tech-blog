@@ -479,13 +479,14 @@ async function refreshSpeaking(){
  try{
   const heartbeat=await supabase.rpc("spaces_heartbeat",{p_room:state.roomId});
   if(heartbeat.error||!heartbeat.data)throw Error("Room session expired. Leave and rejoin.");
+  const restoreMic=state.desiredMic;
   await leave(false);
   state.role=success(await supabase.rpc("spaces_join",{p_room:state.roomId}));
   if(!state.role)throw Error("Room access renewal was denied.");
   state.joined=true;
-  const connected=await connectJoinedRoom();
+  const connected=await connectJoinedRoom({enableMic:restoreMic});
   startPolling();
-  alertStatus(connected?"Audio reconnected. Your microphone starts muted.":
+  alertStatus(connected?"Audio reconnected; microphone preference restored where allowed.":
    "Room access restored, but audio remains unavailable. Try Reconnect again.",
    connected?"success":"error");
  }catch(error){

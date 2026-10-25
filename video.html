@@ -1258,9 +1258,13 @@
           const video=state.videos.find(v=>v.id===state.commentsOpenFor);
           if(!video||video.user_id!==state.user?.id)return;
           const checkbox=event.target;checkbox.disabled=true;
-          const {error}=await supabase.from('videos').update({[column]:checkbox.checked})
-            .eq('id',video.id).eq('user_id',state.user.id);
-          if(error){checkbox.checked=!checkbox.checked;window.appUI?.toast?.(error.message);}
+          const {data,error}=await supabase.from('videos').update({[column]:checkbox.checked})
+            .eq('id',video.id).eq('user_id',state.user.id)
+            .select('id,allow_comments,allow_download').maybeSingle();
+          if(error||!data||data.id!==video.id||data[column]!==checkbox.checked){
+            checkbox.checked=!checkbox.checked;
+            window.appUI?.toast?.(error?.message||"The database did not confirm this change. Please try again.");
+          }
           else{
             video[column]=checkbox.checked;
             if(column==='allow_comments'){

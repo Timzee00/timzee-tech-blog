@@ -45,3 +45,9 @@ test("reconnect stays hidden for guests, ended and expired sessions",()=>{
  assert.equal(view({status:"ended"}).hidden,true);
  assert.equal(view({expired:true}).hidden,true);
 });
+
+test("Space reconnects with the member's previous microphone preference",()=>{
+ const ui=require("node:fs").readFileSync("assets/js/live-spaces.mjs","utf8");
+ assert.ok(ui.includes("const restoreMic=state.desiredMic"));
+ assert.ok(ui.includes("connectJoinedRoom({enableMic:restoreMic})"));
+});

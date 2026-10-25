@@ -89,3 +89,10 @@ test("reel owner can edit caption with an authoritative persisted update",()=>{
  assert.ok(html.includes('.eq("id",reel.id).eq("user_id",state.user.id).select("id,title,description").maybeSingle()'));
  assert.ok(html.includes('if(!result.data||result.data.id!==reel.id'));
 });
+
+test("video creator settings need an authoritative database confirmation",()=>{
+ const fs=require("node:fs");
+ const html=fs.readFileSync("video.html","utf8");
+ assert.ok(html.includes(".select('id,allow_comments,allow_download').maybeSingle()"));
+ assert.ok(html.includes("The database did not confirm this change"));
+});

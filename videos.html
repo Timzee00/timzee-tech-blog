@@ -221,7 +221,11 @@
             window.location.reload();
           });
           document.getElementById("uploadBtnHeader").addEventListener("click", () => { document.getElementById("uploadSection").style.display = "block"; });
-          if (location.hash === "#uploadSection") document.getElementById("uploadSection").style.display = "block";
+          if (location.hash === "#uploadSection") {
+             const section=document.getElementById("uploadSection");
+             section.style.display="block";
+             requestAnimationFrame(()=>section.scrollIntoView({behavior:"auto",block:"start"}));
+           }
           document.getElementById("uploadBtnHeader").style.display = "inline-flex";
         } else {
           authActions.innerHTML = `<a class="btn ghost" href="login.html?next=${encodeURIComponent('videos.html')}">Log In</a>`;
@@ -705,7 +709,7 @@
             console.warn("Render failed:", trimError);
             state.editorDirty=true;
             state.trimmedFile=null;
-            trimStatus.textContent = "Edits could not be saved. Fix the issue or select Use Original before uploading.";
+            trimStatus.textContent = "Edited clip was not saved: "+String(trimError?.message||"Your browser could not record the clip").slice(0,180)+". Try again or choose Use Original.";
             trimStatus.style.color = "#b91c1c";
           } finally {state.editRenderInProgress=false;}
         };
