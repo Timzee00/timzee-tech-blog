@@ -20,8 +20,8 @@ function view({role="host",connected=false,joined=true,expired=false,status="liv
   joined,role,livekit:connected?{}:null,audioConfigured:true
  };
  const script=source.slice(begin,end)+";configureControls();";
- new Function("state","$","roomExpired","loadRequests",script)(
-  state,$,()=>expired,()=>{}
+ new Function("state","$","roomExpired","loadRequests","q",script)(
+  state,$,()=>expired,()=>{},{get:()=>null}
  );
  return $("spaceReconnect");
 }
