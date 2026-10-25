@@ -641,7 +641,7 @@ function beginEditMessage(messageId){
   area.value=String(message.body||'');
   area.disabled=false;
   panel.hidden=false;
-  $("chatEditRemaining").textContent='15-minute limit · checked by server';
+  $("chatEditRemaining").textContent='Your tier determines the editing window · checked by server';
   $("chatEditStatus").textContent='Edit text or caption. Your current draft is preserved.';
   area.focus();
   area.setSelectionRange(area.value.length,area.value.length);
@@ -667,6 +667,8 @@ async function saveEditedMessage(){
       p_message_id:editing.id,p_new_body:value,p_expected_body:editing.expectedBody
     });
     if(error)throw error;
+    if(!data||data.id!==editing.id||String(data.body||"").trim()!==value)
+      throw Error("The server did not confirm this edit. Please retry before leaving the conversation.");
     if(state.activeThreadId===editing.threadId){
       if(data)mergeMessage(data);
       if(state.editing===editing)closeEditPanel(true);

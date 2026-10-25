@@ -23,3 +23,10 @@ test("UI availability and mutation use the same server-side window",()=>{
  assert.match(sql,/deleted_at IS NOT NULL/);
  assert.match(ui,/can_edit_chat_message/);
 });
+
+test("chat message editor does not claim success without the server returning the saved text",()=>{
+ const fs=require("node:fs"),path=require("node:path");
+ const script=fs.readFileSync(path.resolve(__dirname,"../assets/js/chat-v2.js"),"utf8");
+ assert.ok(script.includes('String(data.body||"").trim()!==value'));
+ assert.ok(script.includes("Your tier determines the editing window"));
+});

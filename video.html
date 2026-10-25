@@ -536,6 +536,17 @@
       .reel-create-link{position:fixed;top:calc(70px + env(safe-area-inset-top));right:clamp(12px,4vw,24px);z-index:95;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1px solid #ffffff70;background:#0f766e;color:white;font:800 27px/1 system-ui;text-decoration:none;box-shadow:0 4px 17px #0008}
       .reel-create-link:focus-visible{outline:3px solid #7dd3fc;outline-offset:3px}
       @media(max-width:480px){.reel-create-link{top:calc(65px + env(safe-area-inset-top));right:10px}}
+      .reel-edit-caption{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:36px;padding:4px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.38);color:white;background:rgba(10,30,35,.78);font:750 12px system-ui;cursor:pointer}
+      .reel-edit-caption:focus-visible{outline:3px solid #7dd3fc;outline-offset:2px}
+      .reel-editor-dialog{border:1px solid #658e8b;border-radius:17px;width:min(92vw,460px);max-height:85dvh;overflow-y:auto;background:#10252b;color:white;padding:22px}
+      .reel-editor-dialog::backdrop{background:rgba(1,6,10,.8)}
+      .reel-editor-dialog form{display:grid;gap:13px}
+      .reel-editor-dialog label{display:grid;gap:5px;font:650 14px system-ui}
+      .reel-editor-dialog :is(input,textarea){box-sizing:border-box;min-height:43px;width:100%;padding:11px;border:1px solid #7f9f9e;border-radius:9px;background:#18353c;color:white;font:inherit}
+      .reel-editor-dialog textarea{resize:vertical;min-height:95px}
+      .reel-editor-dialog .edit-actions{display:flex;flex-wrap:wrap;gap:8px}
+      .reel-editor-dialog .edit-actions button{min-height:44px;padding:8px 14px;border-radius:9px;border:1px solid #8eb7b1;background:#17685e;color:white;font:700 14px system-ui}
+      .reel-editor-dialog #reelEditStatus{font-size:13px;min-height:20px}
       .reel-feed-modes { position:fixed; top:calc(14px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%); z-index:90; display:flex; gap:4px; padding:4px; border-radius:999px; background:rgba(10,13,18,.84); border:1px solid rgba(255,255,255,.19); backdrop-filter:blur(12px); }
       .reel-feed-modes button { border:0; background:transparent; color:#cbd5e1; border-radius:999px; padding:9px 15px; min-height:42px; font:700 13px system-ui; cursor:pointer; white-space:nowrap; }
       .reel-feed-modes button.active { color:#fff; background:#0f766e; }
@@ -563,6 +574,19 @@
       <div id="reelRoot"></div>
     </main>
 
+    <dialog class="reel-editor-dialog" id="reelEditor" aria-labelledby="reelEditorTitle">
+      <form id="reelEditorForm">
+        <h2 id="reelEditorTitle">Edit your reel</h2>
+        <p>Your title and caption are saved to the video and updated in the feed.</p>
+        <label>Title <input id="reelEditTitle" maxlength="150" required></label>
+        <label>Caption <textarea id="reelEditDescription" maxlength="3000" rows="4"></textarea></label>
+        <p role="status" aria-live="polite" id="reelEditStatus"></p>
+        <div class="edit-actions">
+          <button id="reelEditorSave" type="submit">Save changes</button>
+          <button id="reelEditorCancel" type="button">Cancel</button>
+        </div>
+      </form>
+    </dialog>
     <div class="drawer-backdrop" id="drawerBackdrop"></div>
     <div class="comment-drawer" id="commentDrawer" aria-hidden="true">
       <div class="comment-drawer-header">
@@ -636,6 +660,48 @@
         commentsOpenFor: null
       };
 
+      const reelEditor=document.getElementById("reelEditor"),reelForm=document.getElementById("reelEditorForm");
+      let editingReelId=null;
+      document.getElementById("reelEditorCancel").addEventListener("click",()=>reelEditor.close());
+      reelEditor.addEventListener("close",()=>{editingReelId=null;});
+      document.addEventListener("click",event=>{
+        const edit=event.target.closest("[data-edit-reel]");
+        if(!edit)return;
+        const reel=state.videos.find(row=>row.id===edit.dataset.editReel);
+        if(!reel||!state.user||reel.user_id!==state.user.id)return;
+        editingReelId=reel.id;
+        document.getElementById("reelEditTitle").value=reel.title||"";
+        document.getElementById("reelEditDescription").value=reel.description||"";
+        document.getElementById("reelEditStatus").textContent="Changes will be saved only after the server confirms them.";
+        reelEditor.showModal();
+      });
+      reelForm.addEventListener("submit",async event=>{
+        event.preventDefault();
+        const reel=state.videos.find(row=>row.id===editingReelId);
+        if(!reel||!state.user||reel.user_id!==state.user.id)return;
+        const title=document.getElementById("reelEditTitle").value.trim(),
+          description=document.getElementById("reelEditDescription").value.trim(),
+          resultStatus=document.getElementById("reelEditStatus"),
+          save=document.getElementById("reelEditorSave");
+        if(!title||title.length>150||description.length>3000){resultStatus.textContent="Enter a title and keep the caption within the limit.";return;}
+        save.disabled=true;resultStatus.textContent="Saving…";
+        try{
+          const result=await supabase.from("videos").update({title,description})
+            .eq("id",reel.id).eq("user_id",state.user.id).select("id,title,description").maybeSingle();
+          if(result.error)throw result.error;
+          if(!result.data||result.data.id!==reel.id||result.data.title!==title||result.data.description!==description)
+            throw Error("The database did not confirm your changes. Nothing has been marked saved.");
+          reel.title=title;reel.description=description;
+          state.videos.forEach((item,index)=>{
+            if(item.id!==reel.id)return;
+            const caption=document.getElementById("caption-"+index);
+            if(caption)caption.innerHTML=renderSocialText(title)+(description?" — "+renderSocialText(description):"");
+          });
+          resultStatus.textContent="Saved!";
+          reelEditor.close();
+        }catch(error){resultStatus.textContent="Could not save: "+(error.message||"Please try again");}
+        finally{save.disabled=false;}
+      });
       function updateReelModeButtons() {
         document.querySelectorAll("[data-reel-mode]").forEach(button => {
           const active = button.dataset.reelMode === state.mode;
@@ -711,6 +777,7 @@
             <div class="reel-topbar">
               <a class="reel-back" href="videos.html" aria-label="Back to videos">←</a>
               <div class="reel-wordmark">Timzee <span>Reels</span></div>
+              ${state.user?.id===video.user_id?'<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">✎ Edit</button>':''}
               <button type="button" class="reel-mute" id="mute-${index}" aria-label="Toggle sound">🔊</button>
             </div>
 

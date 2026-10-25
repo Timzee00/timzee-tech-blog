@@ -80,3 +80,12 @@ test("comment/discussion migration grants limited per-user reactions",()=>{
  assert.match(migration,/video_social_counts/);
  assert.match(src("supabase/migrations/20261015103000_video_comment_like_counts.sql"),/video_comment_like_counts/);
 });
+
+test("reel owner can edit caption with an authoritative persisted update",()=>{
+ const html=require("node:fs").readFileSync(require("node:path").resolve(__dirname,"../video.html"),"utf8");
+ for(const field of ["reelEditor","reelEditTitle","reelEditDescription","reelEditorSave"])
+   assert.ok(html.includes('id="'+field+'"'));
+ assert.ok(html.includes('data-edit-reel'));
+ assert.ok(html.includes('.eq("id",reel.id).eq("user_id",state.user.id).select("id,title,description").maybeSingle()'));
+ assert.ok(html.includes('if(!result.data||result.data.id!==reel.id'));
+});
