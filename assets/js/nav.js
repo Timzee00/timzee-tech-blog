@@ -80,6 +80,17 @@ function setupMobileMenu() {
     toggle.innerHTML = "<span class=\"menu-icon\"></span><span>Menu</span>";
     wrap.insertBefore(toggle, menu);
   }
+  // Make a key social action visible without requiring members to find it
+  // inside a mobile drawer. Theme remains available in the menu.
+  if (!wrap.querySelector(".site-status-quick-link")) {
+    const statusLink=document.createElement("a");
+    statusLink.className="site-status-quick-link";
+    statusLink.href="/stories.html";
+    statusLink.setAttribute("aria-label","Open Status updates");
+    statusLink.title="Status";
+    statusLink.innerHTML='<span class="site-status-ring" aria-hidden="true">◉</span><span>Status</span>';
+    wrap.insertBefore(statusLink,toggle);
+  }
 
   let backdrop = document.querySelector(".drawer-backdrop-layer");
   if (!backdrop) {

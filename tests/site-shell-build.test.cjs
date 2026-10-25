@@ -34,3 +34,13 @@ test("invalid documents are not rewritten", async () => {
   const html = '<header class="site-header">Missing document body</header>';
   assert.equal(injectSiteShell(html), html);
 });
+
+test("mobile navbar surfaces Status directly while preserving Theme in drawer",()=>{
+ const fs=require("node:fs"),path=require("node:path");
+ const nav=fs.readFileSync(path.resolve(__dirname,"../assets/js/nav.js"),"utf8");
+ const css=fs.readFileSync(path.resolve(__dirname,"../assets/css/navbar.css"),"utf8");
+ assert.ok(nav.includes('className="site-status-quick-link"'));
+ assert.ok(nav.includes('href="/stories.html"'));
+ assert.ok(nav.includes('siteMenuThemeChip'));
+ assert.ok(css.includes('.site-header .wrap>.theme-control{display:none!important}'));
+});

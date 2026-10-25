@@ -136,3 +136,20 @@
     min-height:62px;
   }
 }
+
+/* One-tap Status action in the mobile header. The Theme switch remains in Menu. */
+.site-status-quick-link{display:none}
+@media(max-width:960px){
+ .site-header .wrap>.theme-control{display:none!important}
+ .site-header .wrap>.site-status-quick-link{display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;padding:8px 7px;min-height:44px;min-width:58px;text-decoration:none;font:700 12px/1.1 var(--font-body,system-ui);color:var(--color-text);border-radius:10px}
+ .site-header .wrap>.site-status-quick-link .site-status-ring{display:inline-grid;place-items:center;color:var(--color-primary,#0f766e);font-size:21px;line-height:1}
+ .site-header .wrap>.site-status-quick-link:hover{background:var(--color-surface-muted)}
+ .site-header .wrap>.site-status-quick-link:focus-visible{outline:3px solid var(--color-primary);outline-offset:2px}
+ .site-header .wrap{gap:clamp(5px,2vw,12px)}
+ .site-header .brand{min-width:0}
+ .site-header .brand .logo{font-size:clamp(15px,4vw,18px)}
+}
+@media(max-width:360px){
+ .site-header .wrap>.site-status-quick-link{flex-direction:column;min-width:44px;padding:3px;gap:0;font-size:10px}
+ .site-header .wrap>.menu-toggle{padding-inline:7px}
+}
