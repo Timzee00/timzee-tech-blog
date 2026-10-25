@@ -36,7 +36,7 @@ test("founder opt-out is included in supported settings and visible only to supe
  assert.match(admin,/button\.dataset\.tab === "launches"/);
 });
 
-test("existing maintenance worker triggers digest after verification lifecycle",async()=>{
+test("maintenance worker expires temporary suspensions before founder digest",async()=>{
  const source=read("netlify/functions/automation-maintenance.js");
  const calls=[];
  const db={rpc:async name=>{calls.push(name);return{data:{notified:0},error:null};}};
@@ -50,7 +50,7 @@ test("existing maintenance worker triggers digest after verification lifecycle",
  vm.runInNewContext("(function(require,module,exports){"+source+"\n})",
    {process:{env},console:{log(){},error(){}}})(requireStub,module,module.exports);
  await module.exports.handler();
- assert.deepEqual(calls,["process_automation_tick","process_verification_maintenance","process_founder_operations_digest"]);
+ assert.deepEqual(calls,["process_automation_tick","process_verification_maintenance","expire_moderation_suspensions","process_founder_operations_digest"]);
 });
 
 test("digest failure is surfaced rather than silently marked successful",async()=>{
@@ -63,4 +63,24 @@ test("digest failure is surfaced rather than silently marked successful",async()
    {process:{env:{SUPABASE_URL:"https://example.supabase.co",SUPABASE_SERVICE_ROLE_KEY:"test"}},
     console:{log(){},error(){}}})(requireStub,module,module.exports);
  await assert.rejects(()=>module.exports.handler(),e=>e.code==="FAIL");
+});
+
+
+test("suspension-expiry failure is visible and never proceeds to founder digest",async()=>{
+ const source=read("netlify/functions/automation-maintenance.js");
+ const calls=[];
+ const db={rpc:async name=>{
+  calls.push(name);
+  return {data:0,error:name==="expire_moderation_suspensions"?{code:"E_TEST"}:null};
+ }};
+ const module={exports:{}};
+ const requireStub=id=>id==="@supabase/supabase-js"?{createClient:()=>db}:
+   id==="./_lib/feed-refresh.cjs"?{maybeRefreshFeedCandidates:async()=>({skipped:true})}:null;
+ vm.runInNewContext("(function(require,module,exports){"+source+"\n})",
+   {process:{env:{SUPABASE_URL:"https://example.supabase.co",SUPABASE_SERVICE_ROLE_KEY:"test"}},
+    console:{log(){},error(){}}})(requireStub,module,module.exports);
+ await assert.rejects(()=>module.exports.handler(),/Moderation expiry maintenance failed/);
+ assert.deepEqual(calls,[
+   "process_automation_tick","process_verification_maintenance","expire_moderation_suspensions"
+ ]);
 });
