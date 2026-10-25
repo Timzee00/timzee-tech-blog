@@ -24,3 +24,13 @@ test("owner autojoin, shared verified frames and separate audio window are wired
  assert.ok(ui.includes('verifiedName(name,profile,{compact:true})'));
  assert.ok(html.includes('id="spacePopout"'));
 });
+
+test("a separate audio window broadcasts presence to a site-wide dock",()=>{
+ const fs=require("node:fs"),path=require("node:path");
+ const src=fs.readFileSync(path.resolve(__dirname,"../assets/js/space-mini-dock.mjs"),"utf8");
+ const shell=fs.readFileSync(path.resolve(__dirname,"../assets/js/site-shell.js"),"utf8");
+ assert.match(ui,/publishSpacePresence/);
+ assert.match(ui,/clearSpacePresence/);
+ assert.match(shell,/space-mini-dock\.mjs/);
+ assert.match(src,/target="timzee-space-audio"/);
+});

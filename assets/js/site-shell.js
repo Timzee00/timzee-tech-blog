@@ -1,6 +1,7 @@
 import "./ui-controls.js";
 import "./image-fallback.js";
 import "./nav.js";
+import "./space-mini-dock.mjs";
 import "./visitor-analytics.js";
 import { pageFileName } from "./route-page.mjs";
 

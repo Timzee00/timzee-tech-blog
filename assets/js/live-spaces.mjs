@@ -1,6 +1,25 @@
 import {supabase,getCurrentUser} from "./supabase.js";
 import {verifiedAvatar,verifiedName} from "./verified-identity.mjs";
 const $=id=>document.getElementById(id);
+const SPACE_PRESENCE_KEY="timzee:space-window-v1";
+const POPUP_OWNER=typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():"";
+let presenceInterval=null;
+function publishSpacePresence(){
+ if(q.get("mini")!=="1"||!state.joined||!state.livekit||!state.roomId)return;
+ try{localStorage.setItem(SPACE_PRESENCE_KEY,JSON.stringify({
+   roomId:state.roomId,title:String(state.room?.title||"Live Space").slice(0,100),
+   owner:POPUP_OWNER,seen:Date.now()
+ }))}catch{}
+}
+function clearSpacePresence(){
+ if(presenceInterval){clearInterval(presenceInterval);presenceInterval=null}
+ if(q.get("mini")!=="1")return;
+ try{
+   const current=JSON.parse(localStorage.getItem(SPACE_PRESENCE_KEY)||"null");
+   if(current?.owner===POPUP_OWNER)localStorage.removeItem(SPACE_PRESENCE_KEY);
+ }catch{}
+}
+
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const tabs=["live","upcoming","mine","here"];
 const q=new URLSearchParams(location.search);
@@ -332,6 +351,11 @@ async function startAudio({enableMic=false}={}){
   throw error;
  }
  state.livekit=livekit;state.role=grant.role;
+ if(q.get("mini")==="1"){
+   publishSpacePresence();
+   if(presenceInterval)clearInterval(presenceInterval);
+   presenceInterval=setInterval(publishSpacePresence,12000);
+ }
  $("spacePlayAudio").hidden=Boolean(livekit.canPlaybackAudio);
  $("spaceMic").textContent=state.desiredMic?"🎙 Mute mic":"🎙 Turn on mic";
  audioStatus("Audio connected as "+grant.role+". "+(state.desiredMic?"Microphone live.":"Microphone off; playback enabled."));
@@ -377,7 +401,7 @@ function startPolling(){
  state.poll=setInterval(async()=>{await loadPeople();if(state.role==="host")await loadRequests()},15000);
 }
 async function leave(callRpc=true){
- stopPolling();
+ stopPolling();clearSpacePresence();
  if(state.livekit){
   // Clear the active connection before intentional disconnect: the LiveKit
   // Disconnected callback must not report a user-initiated Leave as failure.
@@ -609,5 +633,5 @@ $("spaceMic").addEventListener("click",async()=>{
 });
 document.querySelectorAll("[data-react]").forEach(b=>b.addEventListener("click",()=>void react(b.dataset.react)));
 $("spaceInviteForm").addEventListener("submit",inviteListener);
-window.addEventListener("pagehide",()=>{stopPolling();if(state.livekit)state.livekit.disconnect()});
+window.addEventListener("pagehide",()=>{stopPolling();clearSpacePresence();if(state.livekit)state.livekit.disconnect()});
 init().catch(e=>alertStatus(e.message||"Could not load Live Spaces.","error"));
