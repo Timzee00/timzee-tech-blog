@@ -57,3 +57,12 @@ test("reels provide a creator shortcut",()=>{
  assert.ok(html.includes('class="reel-create-link"'));
  assert.ok(html.includes('href="videos.html#uploadSection"'));
 });
+
+test("video editor resets stale edits when a new file is chosen and seeks before recording",()=>{
+ const fs=require("node:fs"),path=require("node:path");
+ const html=fs.readFileSync(path.resolve(__dirname,"../videos.html"),"utf8");
+ assert.match(html,/state\.trimmedFile=null;\s*state\.editorDirty=false;\s*state\.editRenderInProgress=false;/);
+ assert.match(html,/async function renderEditedVideo/);
+ assert.match(html,/videoEl\.addEventListener\("seeked",onSeek\)/);
+ assert.match(html,/The browser recorded no edited frames/);
+});

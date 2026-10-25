@@ -488,6 +488,11 @@
         const textLayer = document.getElementById("textOverlayLayer");
         const drawColor = document.getElementById("drawColor");
 
+        // A newly selected source file must invalidate edits from the prior file,
+        // even when this browser cannot run the editor.
+        state.trimmedFile=null;
+        state.editorDirty=false;
+        state.editRenderInProgress=false;
         const supportsCapture =
           typeof trimPreview.captureStream === "function" && typeof window.MediaRecorder !== "undefined";
         if (!supportsCapture) {
@@ -733,12 +738,33 @@
       // the pen-drawing canvas overlaid, and each text overlay drawn on top —
       // frame by frame onto an output canvas — then records that canvas's
       // stream (video) combined with the source video's own audio track.
-      function renderEditedVideo(videoEl, drawCanvas, textOverlays, filterCSS, start, end) {
+      async function renderEditedVideo(videoEl, drawCanvas, textOverlays, filterCSS, start, end) {
+        // Seek completion is asynchronous. Starting the recording before it
+        // finishes can produce the wrong first frame or an empty Android WebM.
+        if(!Number.isFinite(videoEl.duration)||!videoEl.videoWidth)throw Error("Wait for the clip preview to finish loading.");
+        videoEl.pause();
+        await new Promise((resolve,reject)=>{
+          if(Math.abs(videoEl.currentTime-start)<.08&&videoEl.readyState>=2){resolve();return;}
+          let finished=false;
+          const done=error=>{
+            if(finished)return;
+            finished=true;clearTimeout(timeout);
+            videoEl.removeEventListener("seeked",onSeek);
+            videoEl.removeEventListener("error",onError);
+            error?reject(error):resolve();
+          };
+          const onSeek=()=>done(),onError=()=>done(Error("Video could not seek to the selected start."));
+          const timeout=setTimeout(()=>done(Error("Video seek timed out; try a shorter clip.")),9000);
+          videoEl.addEventListener("seeked",onSeek);
+          videoEl.addEventListener("error",onError);
+          try{videoEl.currentTime=start}catch(error){done(error)}
+        });
         return new Promise((resolve, reject) => {
           const outCanvas = document.createElement("canvas");
           outCanvas.width = videoEl.videoWidth || drawCanvas.width || 720;
           outCanvas.height = videoEl.videoHeight || drawCanvas.height || 1280;
           const ctx = outCanvas.getContext("2d");
+          if(!ctx){reject(Error("Your browser could not create the editing canvas."));return;}
 
           let videoStream;
           try {
@@ -775,6 +801,7 @@
           recorder.onstop = () => {
             videoEl.removeEventListener("timeupdate", onTimeUpdate);
             cancelAnimationFrame(rafId);
+            if(!chunks.length){reject(Error("The browser recorded no edited frames. Try again with the clip playing."));return;}
             resolve(new Blob(chunks, { type: mimeType || "video/webm" }));
           };
 
@@ -806,7 +833,6 @@
           }
 
           let rafId;
-          videoEl.currentTime = start;
           videoEl.addEventListener("timeupdate", onTimeUpdate);
           recorder.start();
           rafId = requestAnimationFrame(drawFrame);
