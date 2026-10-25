@@ -30,7 +30,10 @@ test("founder opt-out is included in supported settings and visible only to supe
  assert.match(settings,/state\.profile\?\.role!=="super"/);
  assert.match(settings,/input\.dataset\.path="notifications\.operationsDigest"/);
  assert.match(settings,/mountFounderDigestPreference\(\); applyControls\(\)/);
- assert.match(admin,/requestedTab==="curator"\|\|requestedTab==="operations"/);
+ assert.match(admin,/\["curator","operations","launches"\]\.includes\(requestedTab\)/);
+ assert.match(admin,/document\.querySelector\('\.admin-nav button\[data-tab=/);
+ assert.match(admin,/button\.dataset\.tab === "curator"/);
+ assert.match(admin,/button\.dataset\.tab === "launches"/);
 });
 
 test("existing maintenance worker triggers digest after verification lifecycle",async()=>{
