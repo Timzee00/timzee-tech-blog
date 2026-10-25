@@ -240,3 +240,10 @@ html[data-chat-wallpaper="linen"] .chat-page .chat-message.received{color:#17272
 .chat-page .chat-sidebar .chat-tab-badge{flex:0 0 auto;margin:0;min-width:19px;height:19px;padding:0 4px;font-size:10px}
 .chat-page .chat-sidebar .chat-tab-badge[hidden]{display:none!important}
 @media(max-width:355px){.chat-page .chat-sidebar .chat-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.chat-page .chat-sidebar .chat-tab{font-size:12px}}
+
+/* Four fully visible chat filters on narrow screens — avoid clipped badges. */
+@media(max-width:520px){
+ .chat-page .chat-sidebar .chat-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;overflow:visible;max-width:calc(100% - 20px)}
+ .chat-page .chat-sidebar .chat-tab{display:flex;align-items:center;justify-content:center;min-width:0;min-height:44px;gap:7px;padding:8px 10px;white-space:nowrap;font-size:clamp(12px,3.2vw,14px);overflow:hidden;text-overflow:ellipsis}
+ .chat-page .chat-sidebar .chat-tab-badge{flex:0 0 auto;min-width:20px;height:20px;padding:0 5px;line-height:20px}
+}

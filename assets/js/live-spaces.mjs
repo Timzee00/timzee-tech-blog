@@ -193,7 +193,11 @@ async function openRoom(id,{enableMic=false}={}){
  $("spaceTitle").textContent="Loading Space…";$("spaceSourceLinks").replaceChildren();
  await refreshRoom();
  history.replaceState({}, "", "spaces.html?room="+encodeURIComponent(id)+(q.get("mini")==="1"?"&mini=1":""));
- if(q.get("mini")!=="1"&&state.user?.id===state.room?.owner_id&&state.room?.status==="live"&&state.audioConfigured&&!roomExpired(state.room))await join({enableMic});
+ // A live Space host always enters their own room. Audio popouts with
+ // explicit join intent connect automatically so visitors can browse freely.
+ const hostIsLive=state.user?.id===state.room?.owner_id&&state.room?.status==="live";
+ const audioWindowRequested=q.get("mini")==="1"&&q.get("join")==="1";
+ if((hostIsLive||audioWindowRequested)&&state.room?.status==="live"&&state.audioConfigured&&!roomExpired(state.room))await join({enableMic:true});
 }
 async function refreshRoom(){
  if(!state.roomId)return;
@@ -229,8 +233,10 @@ function configureControls(){
  $("spaceEnd").hidden=!host;
  $("spaceEnd").textContent=room?.status==="ended"?"Confirm audio stopped":"End room";
  $("spaceLeave").hidden=!state.joined;
- const popout=$("spacePopout");popout.hidden=!state.joined||q.get("mini")==="1";
- if(state.roomId)popout.href="spaces.html?room="+encodeURIComponent(state.roomId)+"&mini=1";
+ const popout=$("spacePopout");
+ popout.hidden=q.get("mini")==="1"||!state.user||!state.audioConfigured||
+  !room||room.status!=="live"||roomExpired(room);
+ if(state.roomId)popout.href="spaces.html?room="+encodeURIComponent(state.roomId)+"&mini=1&join=1";
  $("spaceReport").hidden=!state.joined;
  $("spaceMic").hidden=!state.joined||!state.livekit||!["host","speaker"].includes(state.role);
  $("spaceAsk").hidden=!state.joined||state.role!=="listener"||!room?.allow_requests;
@@ -614,7 +620,11 @@ $("spaceStart").addEventListener("click",goLive);
 $("spaceEnd").addEventListener("click",endRoom);
 $("spaceJoin").addEventListener("click",()=>void join({enableMic:true}));
 $("spaceLeave").addEventListener("click",async()=>{await leave();alertStatus("Left the room.","success")});
-$("spacePopout").addEventListener("click",()=>{void leave().then(()=>alertStatus("Audio window opened. Tap Join there to keep listening while browsing."))});
+$("spacePopout").addEventListener("click",()=>{
+ // Separate audio windows use their own server token. Stop this tab's
+ // microphone to avoid echo or double audio when the new window joins.
+ if(state.joined)void leave().then(()=>alertStatus("Continue in the separate audio window while browsing here.","success"));
+});
 $("spacePlayAudio").addEventListener("click",async()=>{
  if(!state.livekit)return;
  try{await state.livekit.startAudio();$("spacePlayAudio").hidden=true;
