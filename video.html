@@ -533,6 +533,9 @@
         .comment-drawer { max-width: 480px; left: 50%; transform: translate(-50%, 100%); }
         .comment-drawer.open { transform: translate(-50%, 0); }
       }
+      .reel-create-link{position:fixed;top:calc(70px + env(safe-area-inset-top));right:clamp(12px,4vw,24px);z-index:95;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1px solid #ffffff70;background:#0f766e;color:white;font:800 27px/1 system-ui;text-decoration:none;box-shadow:0 4px 17px #0008}
+      .reel-create-link:focus-visible{outline:3px solid #7dd3fc;outline-offset:3px}
+      @media(max-width:480px){.reel-create-link{top:calc(65px + env(safe-area-inset-top));right:10px}}
       .reel-feed-modes { position:fixed; top:calc(14px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%); z-index:90; display:flex; gap:4px; padding:4px; border-radius:999px; background:rgba(10,13,18,.84); border:1px solid rgba(255,255,255,.19); backdrop-filter:blur(12px); }
       .reel-feed-modes button { border:0; background:transparent; color:#cbd5e1; border-radius:999px; padding:9px 15px; min-height:42px; font:700 13px system-ui; cursor:pointer; white-space:nowrap; }
       .reel-feed-modes button.active { color:#fff; background:#0f766e; }
@@ -556,6 +559,7 @@
         <button type="button" data-reel-mode="for-you" aria-pressed="true" class="active">For You</button>
         <button type="button" data-reel-mode="following" aria-pressed="false">Following</button>
       </nav>
+      <a class="reel-create-link" href="videos.html#uploadSection" aria-label="Create and upload a reel" title="Create reel">+</a>
       <div id="reelRoot"></div>
     </main>
 

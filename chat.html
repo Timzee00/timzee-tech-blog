@@ -63,9 +63,9 @@
           </div>
           <div class="chat-tabs" role="tablist" aria-label="Chat filters">
             <button class="chat-tab active" type="button" data-tab="all" role="tab" aria-selected="true">All</button>
-            <button class="chat-tab" type="button" data-tab="groups" role="tab" aria-selected="false">Groups</button>
+            <button class="chat-tab" type="button" data-tab="groups" role="tab" aria-selected="false">Groups <span class="chat-tab-badge" id="groupsBadge" hidden>0</span></button>
             <button class="chat-tab" type="button" data-tab="requests" role="tab" aria-selected="false">Requests <span class="chat-tab-badge" id="requestsBadge" hidden>0</span></button>
-            <button class="chat-tab" type="button" data-tab="blocked" role="tab" aria-selected="false">Blocked</button>
+            <button class="chat-tab" type="button" data-tab="blocked" role="tab" aria-selected="false">Blocked <span class="chat-tab-badge" id="blockedBadge" hidden>0</span></button>
           </div>
           <div class="chat-tab-panel" data-panel="all"><div class="chat-list" id="friendList"></div></div>
           <div class="chat-tab-panel" data-panel="groups" hidden><div class="chat-list" id="groupList"></div></div>

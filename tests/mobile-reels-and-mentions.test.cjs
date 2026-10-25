@@ -42,3 +42,18 @@ test("mentions preserve cursor, reject email tokens, and allow empty typed @",()
   assert.equal("hello @member".match(token)?.[2],"member");
   assert.equal("hello@domain.com".match(token),null);
 });
+
+test("mobile chat search and filters preserve tab counts",()=>{
+ const fs=require("node:fs"),path=require("node:path");
+ const get=n=>fs.readFileSync(path.resolve(__dirname,"..",n),"utf8");
+ for(const id of ["requestsBadge","groupsBadge","blockedBadge"])assert.ok(get("chat.html").includes('id="'+id+'"'));
+ assert.ok(get("assets/css/chat-fixes.css").includes("grid-template-columns:repeat(4,minmax(0,1fr))"));
+ assert.ok(get("assets/js/chat-v2.js").includes('badge=$("groupsBadge")'));
+ assert.ok(get("assets/js/chat-v2.js").includes('badge=$("blockedBadge")'));
+});
+test("reels provide a creator shortcut",()=>{
+ const fs=require("node:fs"),path=require("node:path");
+ const html=fs.readFileSync(path.resolve(__dirname,"../video.html"),"utf8");
+ assert.ok(html.includes('class="reel-create-link"'));
+ assert.ok(html.includes('href="videos.html#uploadSection"'));
+});

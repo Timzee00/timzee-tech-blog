@@ -230,3 +230,13 @@ html[data-chat-wallpaper="aurora"] .chat-page .chat-messages{background:radial-g
 html[data-chat-wallpaper="platinum"] .chat-page .chat-messages{background:linear-gradient(145deg,#c2cbd1,#f4f6f8 35%,#bdc8cf)}
 html[data-chat-wallpaper="platinum"] .chat-page .chat-message.received,
 html[data-chat-wallpaper="linen"] .chat-page .chat-message.received{color:#17272e}
+
+/* Keep mobile search input beside (not over) its icon, and expose all filters. */
+.chat-page .chat-sidebar .chat-search-shell{display:flex!important;position:relative;align-items:center;box-sizing:border-box;gap:10px;min-width:0;width:auto;max-width:calc(100% - 20px);padding:0 12px!important;overflow:hidden}
+.chat-page .chat-sidebar .chat-search-shell>svg{display:block;position:static!important;transform:none!important;flex:0 0 20px;width:20px;height:20px}
+.chat-page .chat-sidebar .chat-search-shell>input[type="search"]{position:static!important;inset:auto!important;transform:none!important;display:block!important;flex:1 1 auto;width:0!important;min-width:0!important;max-width:100%!important;box-sizing:border-box;min-height:44px;padding:0!important;margin:0!important;border:0!important;box-shadow:none!important;background:transparent!important;font-size:16px!important;color:var(--color-text)!important}
+.chat-page .chat-sidebar .chat-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;min-width:0;max-width:calc(100% - 20px);overflow:visible}
+.chat-page .chat-sidebar .chat-tab{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:0;max-width:100%;gap:3px;padding:9px 4px;min-height:44px;white-space:normal;text-align:center;font-size:clamp(10px,2.65vw,13px);overflow-wrap:anywhere;line-height:1.25}
+.chat-page .chat-sidebar .chat-tab-badge{flex:0 0 auto;margin:0;min-width:19px;height:19px;padding:0 4px;font-size:10px}
+.chat-page .chat-sidebar .chat-tab-badge[hidden]{display:none!important}
+@media(max-width:355px){.chat-page .chat-sidebar .chat-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.chat-page .chat-sidebar .chat-tab{font-size:12px}}
