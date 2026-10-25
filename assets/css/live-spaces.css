@@ -37,3 +37,15 @@
  width:min(92vw,540px);max-height:85dvh;overflow:auto;
  padding:clamp(16px,4vw,24px);background:var(--color-surface,#fff);color:var(--color-text,#15262f)}
 .space-report-dialog::backdrop{background:#07171dd9}
+
+.space-person{width:108px;min-width:0;overflow:visible}
+.space-person-avatar{display:inline-grid;place-items:center;min-height:65px;min-width:65px}
+.space-person-avatar .tz-avatar-verified{inline-size:62px;block-size:62px}
+.space-person strong{white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
+.space-person .tz-identity-name{justify-content:center;max-width:100%}
+.space-person .tz-verified-badge{inline-size:19px!important;block-size:19px!important}
+.space-avatar-large{overflow:visible;background:transparent;border:0;box-shadow:none!important}
+.space-avatar-large .tz-avatar-verified{inline-size:100px;block-size:100px}
+.space-avatar-large.speaking .tz-avatar-verified{box-shadow:0 0 0 4px #239d73,0 0 22px 8px #24df8c66}
+#spacePopout{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;min-height:46px}
+#spacePopout[hidden]{display:none!important}

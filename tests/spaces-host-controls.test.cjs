@@ -16,3 +16,11 @@ test("listener controls are local and do not affect speaker publishing permissio
  assert.match(ui,/livekit\.startAudio/);
  assert.match(ui,/livekit\.canPlaybackAudio/);
 });
+
+test("owner autojoin, shared verified frames and separate audio window are wired",()=>{
+ assert.ok(ui.includes('await openRoom(room.id,{enableMic:f.timing==="now"})'));
+ assert.ok(ui.includes('q.get("mini")!=="1"'));
+ assert.ok(ui.includes('verification_expires_at,frame_style'));
+ assert.ok(ui.includes('verifiedName(name,profile,{compact:true})'));
+ assert.ok(html.includes('id="spacePopout"'));
+});

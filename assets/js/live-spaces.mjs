@@ -1,9 +1,10 @@
 import {supabase,getCurrentUser} from "./supabase.js";
+import {verifiedAvatar,verifiedName} from "./verified-identity.mjs";
 const $=id=>document.getElementById(id);
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const tabs=["live","upcoming","mine","here"];
 const q=new URLSearchParams(location.search);
-const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),audioConfigured:false,capabilityChecked:false,roomsRequestId:0};
+const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),desiredMic:false,audioConfigured:false,capabilityChecked:false,roomsRequestId:0};
 const el=(tag,text="",className="")=>{const item=document.createElement(tag);item.textContent=String(text);if(className)item.className=className;return item};
 const alertStatus=(message,tone="neutral")=>{const s=$("spacesStatus");s.textContent=message;s.dataset.tone=tone};
 const audioStatus=message=>$("spaceAudioStatus").textContent=message;
@@ -160,19 +161,20 @@ async function createRoom(event){
    const started=success(await supabase.rpc("spaces_start",{p_room:room.id}));
    if(!started)throw Error("Room created but could not go live. Open it to start when eligible.");
   }
-  form.reset();showCreate(false);await loadRooms();await openRoom(room.id);
-  alertStatus(f.timing==="now"?"Space is live; join to connect your microphone.":"Space scheduled. Audio must be configured before going live.","success");
+  form.reset();showCreate(false);await loadRooms();await openRoom(room.id,{enableMic:f.timing==="now"});
+  alertStatus(f.timing==="now"?"Your live Space is open; host audio is connecting.":"Space scheduled. Audio must be configured before going live.","success");
  }catch(e){alertStatus(e.message||"Could not create Space.","error")}
  finally{state.busy=false;$("spacesSubmit").disabled=false}
 }
-async function openRoom(id){
+async function openRoom(id,{enableMic=false}={}){
  if(!validId(id))return;
  await leave();
  state.roomId=id;
  $("spacesDiscovery").hidden=true;$("spaceDetail").hidden=false;
  $("spaceTitle").textContent="Loading Space…";$("spaceSourceLinks").replaceChildren();
  await refreshRoom();
- history.replaceState({}, "", "spaces.html?room="+encodeURIComponent(id));
+ history.replaceState({}, "", "spaces.html?room="+encodeURIComponent(id)+(q.get("mini")==="1"?"&mini=1":""));
+ if(q.get("mini")!=="1"&&state.user?.id===state.room?.owner_id&&state.room?.status==="live"&&state.audioConfigured&&!roomExpired(state.room))await join({enableMic});
 }
 async function refreshRoom(){
  if(!state.roomId)return;
@@ -208,6 +210,8 @@ function configureControls(){
  $("spaceEnd").hidden=!host;
  $("spaceEnd").textContent=room?.status==="ended"?"Confirm audio stopped":"End room";
  $("spaceLeave").hidden=!state.joined;
+ const popout=$("spacePopout");popout.hidden=!state.joined||q.get("mini")==="1";
+ if(state.roomId)popout.href="spaces.html?room="+encodeURIComponent(state.roomId)+"&mini=1";
  $("spaceReport").hidden=!state.joined;
  $("spaceMic").hidden=!state.joined||!state.livekit||!["host","speaker"].includes(state.role);
  $("spaceAsk").hidden=!state.joined||state.role!=="listener"||!room?.allow_requests;
@@ -228,7 +232,7 @@ async function loadPeople(){
  state.participants=(response.data||[]).filter(p=>Date.parse(p.last_seen_at)>=cutoff);
  const ids=state.participants.map(p=>p.user_id).filter(validId);
  if(ids.length){
-  const profiles=await supabase.from("public_profiles").select("id,display_name,username,avatar_url")
+  const profiles=await supabase.from("public_profiles").select("id,display_name,username,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style")
   .in("id",ids).limit(50);
   if(!profiles.error)for(const p of profiles.data||[])state.profiles.set(p.id,p);
  }
@@ -236,9 +240,10 @@ async function loadPeople(){
   container.replaceChildren();
   for(const p of people){
    const profile=state.profiles.get(p.user_id),name=profile?.display_name||profile?.username||"Member";
-   const row=el("div","","space-person"),avatar=el("span",(name[0]||"?").toUpperCase(),"avatar");
-   avatar.setAttribute("aria-hidden","true");
-   row.append(avatar,el("strong",name),el("small",p.role));
+   const row=el("div","","space-person"),avatar=el("span","","space-person-avatar"),who=el("strong");
+   avatar.innerHTML=verifiedAvatar(profile?.avatar_url,profile,{size:"lg",alt:name+" avatar"});
+   who.innerHTML=verifiedName(name,profile,{compact:true});
+   row.append(avatar,who,el("small",p.role));
    if(state.joined&&p.user_id!==state.user?.id){
     const muted=state.mutedUsers.has(p.user_id);
     row.append(button(muted?"Unmute here":"Mute for me",()=>{
@@ -265,7 +270,7 @@ function setSpeaking(participantId,active=true){
  const profile=state.profiles.get(String(participantId||"").replace(/^u_/,""));
  const name=profile?.display_name||profile?.username||"Speaker";
  $("activeSpeaker").textContent=name;
- $("activeSpeakerAvatar").textContent=(name[0]||"🎙").toUpperCase();
+ $("activeSpeakerAvatar").innerHTML=verifiedAvatar(profile?.avatar_url,profile,{size:"xl",alt:name+" avatar"});
  $("activeSpeakerAvatar").classList.toggle("speaking",active);
 }
 async function authenticateRoom(){
@@ -279,7 +284,7 @@ async function authenticateRoom(){
  if(!resp.ok)throw Error(result.error||"Live audio authorization failed");
  return result;
 }
-async function startAudio(){
+async function startAudio({enableMic=false}={}){
  if(!window.LivekitClient)throw Error("Live audio library is unavailable on this network.");
  const grant=await authenticateRoom(),sdk=window.LivekitClient;
  const livekit=new sdk.Room({audioCaptureDefaults:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
@@ -318,35 +323,39 @@ async function startAudio(){
  });
  try{
   await livekit.connect(grant.server_url,grant.participant_token);
-  await livekit.localParticipant.setMicrophoneEnabled(false);
+  const shouldEnable=enableMic&&["host","speaker"].includes(grant.role);
+  try{await livekit.localParticipant.setMicrophoneEnabled(shouldEnable)}
+  catch(error){if(!shouldEnable)throw error;audioStatus("Mic permission denied; you can keep listening and enable it later.")}
+  state.desiredMic=livekit.localParticipant.isMicrophoneEnabled===true;
  }catch(error){
   livekit.disconnect();
   throw error;
  }
  state.livekit=livekit;state.role=grant.role;
  $("spacePlayAudio").hidden=Boolean(livekit.canPlaybackAudio);
- audioStatus("Audio connected as "+grant.role+". Microphone is off.");
+ $("spaceMic").textContent=state.desiredMic?"🎙 Mute mic":"🎙 Turn on mic";
+ audioStatus("Audio connected as "+grant.role+". "+(state.desiredMic?"Microphone live.":"Microphone off; playback enabled."));
  configureControls();
 }
-async function connectJoinedRoom(){
+async function connectJoinedRoom({enableMic=false}={}){
  try{
-  await startAudio();return true;
+  await startAudio({enableMic});return true;
  }catch(error){
   if(state.livekit){const failed=state.livekit;state.livekit=null;failed.disconnect()}
   audioStatus("Could not connect audio: "+(error.message||"Unavailable")+". Use Reconnect to retry.");
   configureControls();return false;
  }
 }
-async function join(){
+async function join({enableMic=false}={}){
  if(!authRequired()||!state.roomId)return;
  try{
   state.role=success(await supabase.rpc("spaces_join",{p_room:state.roomId}));
   if(!state.role)throw Error("Room access was not granted.");
   state.joined=true;
   await refreshRoom();
-  const connected=await connectJoinedRoom();
+  const connected=await connectJoinedRoom({enableMic});
   startPolling();
-  alertStatus(connected?"Audio connected. Your microphone starts muted.":
+  alertStatus(connected?"Audio connected; remote playback enabled.":
    "Room joined, but audio did not connect. Use Reconnect to try again.",
    connected?"success":"error");
  }catch(error){alertStatus(error.message||"Unable to join.","error")}
@@ -379,14 +388,14 @@ async function leave(callRpc=true){
  $("spaceAudioElements").replaceChildren();$("spacePlayAudio").hidden=true;
  if(callRpc&&state.joined&&state.roomId&&state.user)
   await supabase.rpc("spaces_leave",{p_room:state.roomId}).catch(()=>{});
- state.joined=false;state.role="listener";configureControls();
+ state.joined=false;state.role="listener";state.desiredMic=false;configureControls();
 }
 async function goLive(){
  if(!state.roomId)return;
  if(!state.audioConfigured){alertStatus("Live audio is not configured. Schedule the room until audio is connected.","error");return;}
  try{const okay=success(await supabase.rpc("spaces_start",{p_room:state.roomId}));
   if(!okay)throw Error("Space cannot start yet or has already ended.");
-  await refreshRoom();await loadRooms();alertStatus("Your Space is live.","success");
+  await refreshRoom();await loadRooms();if(!state.joined)await join({enableMic:true});alertStatus("Your Space is live.","success");
  }catch(e){alertStatus(e.message||"Could not start.","error")}
 }
 async function providerControl(action,userId=null){
@@ -578,8 +587,9 @@ $("spaceReportForm").addEventListener("submit",async event=>{
 });
 $("spaceStart").addEventListener("click",goLive);
 $("spaceEnd").addEventListener("click",endRoom);
-$("spaceJoin").addEventListener("click",join);
+$("spaceJoin").addEventListener("click",()=>void join({enableMic:true}));
 $("spaceLeave").addEventListener("click",async()=>{await leave();alertStatus("Left the room.","success")});
+$("spacePopout").addEventListener("click",()=>{void leave().then(()=>alertStatus("Audio window opened. Tap Join there to keep listening while browsing."))});
 $("spacePlayAudio").addEventListener("click",async()=>{
  if(!state.livekit)return;
  try{await state.livekit.startAudio();$("spacePlayAudio").hidden=true;
@@ -592,6 +602,7 @@ $("spaceMic").addEventListener("click",async()=>{
  if(!state.livekit)return;
  try{const next=!state.livekit.localParticipant.isMicrophoneEnabled;
   await state.livekit.localParticipant.setMicrophoneEnabled(next);
+  state.desiredMic=next;
   $("spaceMic").textContent=next?"🎙 Mute mic":"🎙 Turn on mic";
   audioStatus(next?"Microphone live; other listeners can hear you.":"Microphone muted.");
  }catch(e){audioStatus("Unable to enable microphone: "+e.message)}
