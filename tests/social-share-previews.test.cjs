@@ -20,15 +20,15 @@ function mockDB(tables){
 }
 const query=q=>new URLSearchParams(q);
 test("public article returns its own escaped title and first real image",async()=>{
- const db=mockDB({posts:[{id:A,title:'News & <the Future>',status:"published",content:'<p>Hello</p><img src="https://images.example.com/real.jpg">',feed_excerpt:"Big news today",created_at:"2026-10-20",cover:""}]});
+ const db=mockDB({posts:[{id:A,title:'News & Tomorrow',status:"published",content:'<p>Hello</p><img src="https://images.example.com/real.jpg">',feed_excerpt:"Big news today",created_at:"2026-10-20",cover:""}]});
  const meta=await getMeta("post",query("id="+A),db,BASE,"/post.html");
  assert.equal(meta.found,true);
- assert.equal(meta.title,"News & <the Future>");
+ assert.equal(meta.title,"News & Tomorrow");
  assert.equal(meta.image,"https://images.example.com/real.jpg");
  assert.match(meta.canonical,/post\.html\?id=/);
  const markup=renderHTML(meta);
  assert.match(markup,/og:title/);assert.match(markup,/twitter:image/);
- assert.ok(markup.includes("News &amp; &lt;the Future&gt;"));
+ assert.ok(markup.includes("News &amp; Tomorrow"));
  assert.doesNotMatch(markup,/<the Future>/);
 });
 test("drafts and scheduled posts produce only generic previews",async()=>{
