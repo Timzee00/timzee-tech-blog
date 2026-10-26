@@ -51,11 +51,32 @@ test("mobile chat search and filters preserve tab counts",()=>{
  assert.ok(get("assets/js/chat-v2.js").includes('badge=$("groupsBadge")'));
  assert.ok(get("assets/js/chat-v2.js").includes('badge=$("blockedBadge")'));
 });
-test("reels provide a creator shortcut",()=>{
- const fs=require("node:fs"),path=require("node:path");
- const html=fs.readFileSync(path.resolve(__dirname,"../video.html"),"utf8");
- assert.ok(html.includes('class="reel-create-link"'));
- assert.ok(html.includes('href="videos.html#uploadSection"'));
+test("reels pin one shared header with an in-page video creator and remembered mute",()=>{
+ const html=file("video.html");
+ assert.ok(html.includes('class="reel-nav"'));
+ assert.ok(html.includes('id="reelHeaderBack"'));
+ assert.ok(html.includes('id="reelHeaderMute"'));
+ assert.ok(html.includes('class="reel-nav-create" id="reelOpenUpload"'));
+ assert.ok(html.includes('id="reelUploadDialog"'));
+ assert.ok(html.includes('id="reelUploadForm"'));
+ assert.ok(html.includes('uploadDialog.showModal()'));
+ assert.ok(html.includes('const result = await uploadVideo('));
+ assert.ok(html.includes('!result?.data?.id'));
+ assert.ok(html.includes('sessionStorage.setItem("timzee:reels-muted"'));
+ assert.equal((html.match(/class="reel-nav" /g)||[]).length,1);
+ assert.equal((html.match(/<div class="reel-topbar">/g)||[]).length,0);
+ assert.doesNotMatch(html,/reel-create-link/);
+});
+test("reel replies stay readable while keyboard opens and close restores playback",()=>{
+ const html=file("video.html");
+ assert.match(html,/drawerForm\.parentNode\.insertBefore\(bar, drawerForm\)/);
+ assert.match(html,/\.comment-reply-target\s*\{[\s\S]*?text-overflow: ellipsis/);
+ assert.match(html,/\.comment-drawer-form input\s*\{[\s\S]*?min-width: 0/);
+ assert.match(html,/\.comment-drawer-form > button\[type="submit"\]/);
+ assert.match(html,/state\.commentsOpenFor !== videoId/);
+ assert.match(html,/if \(document\.activeElement === drawerInput\) drawerInput\.blur\(\)/);
+ assert.match(html,/document\.documentElement\.style\.setProperty\("--reel-screen-height"/);
+ assert.match(html,/syncHeaderMute\(\)/);
 });
 
 test("video editor resets stale edits when a new file is chosen and seeks before recording",()=>{
