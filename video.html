@@ -25,15 +25,15 @@
 
       body.reel-mode {
         margin: 0;
-        height: 100vh;
+        height: var(--reel-screen-height, 100dvh);
         overflow: hidden;
         font-family: var(--font-body, "Sora", sans-serif);
       }
 
       .reel-scroller {
-        height: 100vh;
-        height: 100dvh;
+        height: var(--reel-screen-height, 100dvh);
         overflow-y: scroll;
+        overscroll-behavior-y: contain;
         scroll-snap-type: y mandatory;
         scrollbar-width: none;
       }
@@ -41,8 +41,7 @@
 
       .reel-item {
         position: relative;
-        height: 100vh;
-        height: 100dvh;
+        height: var(--reel-screen-height, 100dvh);
         scroll-snap-align: start;
         scroll-snap-stop: always;
         display: flex;
@@ -558,7 +557,7 @@
         .reel-item { justify-content: center; }
         .reel-video { max-width: 480px; left: 50%; transform: translateX(-50%); width: 480px; border-radius: 0; }
         .reel-vignette, .reel-bottom { max-width: 480px; left: 50%; transform: translateX(-50%); }
-        .reel-topbar { max-width: 480px; left: 50%; transform: translateX(-50%); right: auto; width: 480px; }
+        .reel-nav { max-width: 480px; left: 50%; transform: translateX(-50%); }
         .comment-drawer { max-width: 480px; left: 50%; transform: translate(-50%, 100%); }
         .comment-drawer.open { transform: translate(-50%, 0); }
       }
@@ -587,6 +586,131 @@
       .comment-like-btn:disabled{opacity:.55}
       .reel-tapzone{pointer-events:auto;touch-action:pan-y}
       .reel-back{min-width:44px;min-height:44px}
+
+      /* A SINGLE fixed header above snapping reels: comment/keyboard changes cannot move it. */
+      .reel-nav {
+        position: fixed;
+        top: max(12px, env(safe-area-inset-top));
+        left: 0;
+        right: 0;
+        z-index: 90;
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: clamp(4px, 1.6vw, 10px);
+        padding: 0 clamp(8px, 2vw, 18px);
+        pointer-events: none;
+      }
+      .reel-nav > *, .reel-nav button, .reel-nav a { pointer-events: auto; }
+      .reel-nav-actions { display:flex; align-items:center; gap:6px; }
+      .reel-nav .reel-feed-modes {
+        position: static;
+        inset: auto;
+        left: auto;
+        top: auto;
+        transform: none;
+        justify-self: center;
+        width: max-content;
+        max-width: 100%;
+        min-width: 0;
+        padding: 4px;
+      }
+      .reel-nav .reel-feed-modes button {
+        min-width: 0;
+        white-space: nowrap;
+        padding: 9px clamp(8px, 2.3vw, 15px);
+      }
+      .reel-nav .reel-mute { width:40px; height:40px; flex: 0 0 auto; }
+      .reel-nav-create {
+        position: relative;
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 1px solid rgba(255,255,255,.44);
+        border-radius: 50%;
+        color: white;
+        background: linear-gradient(140deg,#0b9489,#0ea5e9);
+        box-shadow: 0 4px 18px rgba(14,165,233,.35), inset 0 1px rgba(255,255,255,.28);
+        font: 700 25px/1 system-ui;
+        cursor: pointer;
+        transition: transform .18s ease, box-shadow .18s ease;
+      }
+      .reel-nav-create::after {
+        content:"";
+        position:absolute;
+        inset:-4px;
+        border:1px solid rgba(125,211,252,.24);
+        border-radius:inherit;
+        pointer-events:none;
+      }
+      .reel-nav-create:hover { box-shadow: 0 6px 22px rgba(14,165,233,.55); }
+      .reel-nav-create:active { transform:scale(.94); }
+      .reel-nav :is(button,a):focus-visible { outline:3px solid #7dd3fc; outline-offset:3px; }
+      @media (max-width:390px) {
+        .reel-nav { grid-template-columns: 40px minmax(0,1fr) auto; gap:4px; padding:0 7px; }
+        .reel-nav .reel-back { width:40px; height:40px; }
+        .reel-nav .reel-feed-modes button { font-size:12px; padding:9px 7px; }
+        .reel-nav-create, .reel-nav .reel-mute { width:36px; height:36px; min-height:36px; }
+        .reel-nav-actions { gap:4px; }
+      }
+      .reel-upload-dialog {
+        position: fixed;
+        width: min(94vw, 530px);
+        max-width: 530px;
+        max-height: min(88dvh, 850px);
+        margin:auto;
+        padding:0;
+        border:1px solid rgba(125,211,252,.35);
+        border-radius:22px;
+        background:#111c27;
+        color:#f8fafc;
+        color-scheme:dark;
+        box-shadow:0 24px 80px rgba(0,0,0,.7);
+        overflow:auto;
+        overscroll-behavior:contain;
+      }
+      .reel-upload-dialog::backdrop { background:rgba(0,0,0,.78); backdrop-filter:blur(5px); }
+      .reel-upload-head {
+        position:sticky; top:0; z-index:2;
+        display:flex; justify-content:space-between; align-items:center; gap:12px;
+        padding:16px 18px; background:#142632;
+        border-bottom:1px solid rgba(255,255,255,.14);
+      }
+      .reel-upload-head h2 { margin:0; font:750 19px/1.25 system-ui; }
+      .reel-upload-close {
+        flex:0 0 auto; width:40px; height:40px;
+        border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.08);
+        color:#fff; border-radius:50%; font-size:23px; cursor:pointer;
+      }
+      .reel-upload-form,.reel-upload-signin { display:grid; gap:13px; padding:18px; }
+      .reel-upload-form[hidden],.reel-upload-signin[hidden] { display:none; }
+      .reel-upload-form label { display:grid; gap:5px; font:600 13px/1.4 system-ui; }
+      .reel-upload-form :is(input:not([type="checkbox"]),textarea,select) {
+        box-sizing:border-box; width:100%; min-width:0; min-height:43px; padding:11px;
+        border:1px solid rgba(255,255,255,.25); background:#203241; color:#fff;
+        border-radius:11px; font:400 16px/1.3 system-ui;
+      }
+      .reel-upload-form input[type="file"] { max-width:100%; font-size:13px; }
+      .reel-upload-form textarea { resize:vertical; min-height:74px; }
+      .reel-upload-form :is(input,textarea,select):focus-visible,
+      .reel-upload-close:focus-visible { outline:3px solid #7dd3fc; outline-offset:2px; }
+      .reel-upload-checks { display:grid; gap:5px; }
+      .reel-upload-checks label { display:flex; gap:10px; align-items:center; padding:6px 0; }
+      .reel-upload-checks input { width:18px; height:18px; accent-color:#0d9488; }
+      .reel-upload-preview { display:block; width:100%; max-height:230px; border-radius:12px; background:#000; object-fit:contain; }
+      .reel-upload-preview[hidden] { display:none; }
+      .reel-upload-submit {
+        min-height:46px; border:0; border-radius:999px; background:var(--reel-gradient);
+        color:white; font:800 15px system-ui; cursor:pointer;
+      }
+      .reel-upload-submit:disabled { opacity:.6; cursor:wait; }
+      .reel-upload-status { margin:0; min-height:18px; overflow-wrap:anywhere; font-size:13px; }
+      .reel-upload-signin a { color:#99ecf7; font-weight:700; }
+      @media (prefers-reduced-motion:reduce) { .reel-nav-create { transition:none; } }
     </style>
   </head>
   <body class="reel-mode">
@@ -595,11 +719,17 @@
 
     <main id="main-content" aria-label="Timzee Reels">
       <h1 class="visually-hidden">Timzee Reels</h1>
-      <nav class="reel-feed-modes" aria-label="Video feed">
-        <button type="button" data-reel-mode="for-you" aria-pressed="true" class="active">For You</button>
-        <button type="button" data-reel-mode="following" aria-pressed="false">Following</button>
-      </nav>
-      <a class="reel-create-link" href="videos.html#uploadSection" aria-label="Create and upload a reel" title="Create reel">+</a>
+      <header class="reel-nav" aria-label="Reels controls">
+        <a class="reel-back" id="reelHeaderBack" href="videos.html" aria-label="Back to videos" title="Back">←</a>
+        <nav class="reel-feed-modes" aria-label="Video feed">
+          <button type="button" data-reel-mode="for-you" aria-pressed="true" class="active">For You</button>
+          <button type="button" data-reel-mode="following" aria-pressed="false">Following</button>
+        </nav>
+        <div class="reel-nav-actions">
+          <button type="button" class="reel-nav-create" id="reelOpenUpload" aria-haspopup="dialog" aria-controls="reelUploadDialog" aria-label="Create and upload a reel" title="Create a reel">+</button>
+          <button type="button" class="reel-mute" id="reelHeaderMute" aria-label="Toggle sound" title="Mute or unmute videos">🔊</button>
+        </div>
+      </header>
       <div id="reelRoot"></div>
     </main>
 
@@ -614,6 +744,38 @@
           <button id="reelEditorSave" type="submit">Save changes</button>
           <button id="reelEditorCancel" type="button">Cancel</button>
         </div>
+      </form>
+    </dialog>
+
+    <dialog class="reel-upload-dialog" id="reelUploadDialog" aria-labelledby="reelUploadTitle">
+      <div class="reel-upload-head">
+        <h2 id="reelUploadTitle">Create a reel <span aria-hidden="true">✦</span></h2>
+        <button type="button" class="reel-upload-close" id="reelUploadClose" aria-label="Close uploader">×</button>
+      </div>
+      <div class="reel-upload-signin" id="reelUploadSignin" hidden>
+        <p>Sign in to share your video with the Timzee community.</p>
+        <a id="reelUploadLogin" href="login.html">Sign in to upload</a>
+      </div>
+      <form id="reelUploadForm" class="reel-upload-form" novalidate>
+        <label>Choose your video <input id="reelUploadFile" type="file" accept="video/*,.mp4,.webm,.ogg,.mov" required></label>
+        <video id="reelUploadPreview" class="reel-upload-preview" muted playsinline controls preload="metadata" hidden aria-label="Selected video preview"></video>
+        <label>Video title <input id="reelUploadName" type="text" placeholder="Give your reel a title" maxlength="150" required></label>
+        <label>Caption <textarea id="reelUploadCaption" placeholder="What is your video about?" maxlength="3000" rows="3"></textarea></label>
+        <label>Category
+          <select id="reelUploadCategory">
+            <option value="tutorial">Tutorial</option><option value="demo">Demo</option>
+            <option value="review">Review</option><option value="news">News</option>
+            <option value="other" selected>Other</option>
+          </select>
+        </label>
+        <label>Hashtags (comma separated) <input id="reelUploadTags" type="text" placeholder="tech, funny, nigeria" maxlength="400"></label>
+        <label>Cover image (optional) <input id="reelUploadCover" type="file" accept="image/*"></label>
+        <div class="reel-upload-checks">
+          <label><input id="reelUploadComments" type="checkbox" checked> Allow comments</label>
+          <label><input id="reelUploadDownloads" type="checkbox" checked> Show download button</label>
+        </div>
+        <p role="status" aria-live="polite" id="reelUploadStatus" class="reel-upload-status"></p>
+        <button type="submit" id="reelUploadSubmit" class="reel-upload-submit">Publish reel</button>
       </form>
     </dialog>
     <div class="drawer-backdrop" id="drawerBackdrop"></div>
@@ -657,7 +819,9 @@
         commentOnVideo,
         getVideoComments,
         fetchVideoCommentPage,
-        incrementVideoView
+        incrementVideoView,
+        uploadVideo,
+        detectVideoDuration
       } from "./assets/js/videos-marketplace.js";
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
@@ -803,19 +967,13 @@
             <div class="reel-tapzone" aria-hidden="true"></div>
             <div class="reel-pause-flash" id="pauseflash-${index}">▶</div>
 
-            <div class="reel-topbar">
-              <a class="reel-back" href="videos.html" aria-label="Back to videos">←</a>
-              <div class="reel-wordmark">Timzee <span>Reels</span></div>
-              ${state.user?.id===video.user_id?'<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">✎ Edit</button>':''}
-              <button type="button" class="reel-mute" id="mute-${index}" aria-label="Toggle sound">🔊</button>
-            </div>
-
             <div class="reel-bottom">
               <div class="reel-meta">
                 <div class="reel-uploader">
                   <a class="reel-avatar-frame" href="profile.html?id=${encodeURIComponent(video.user_id || '')}" aria-label="View uploader profile">${avatarMarkup}</a>
                   <span class="reel-username">${uploaderMarkup}</span>
                   ${staff}
+                  ${state.user?.id===video.user_id?'<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">✎ Edit</button>':''}
                 </div>
                 <p class="reel-caption" id="caption-${index}">${renderSocialText(video.title || "")}${video.description ? " — " + renderSocialText(video.description) : ""}</p>
                 <button type="button" class="reel-caption-more" data-action="expand-caption" data-index="${index}" aria-expanded="false">More caption</button>
@@ -869,6 +1027,7 @@
       function playWithSoundFallback(vid, idx, { explicit = false } = {}) {
         if (!explicit && state.preferences.videos.autoplay === false) return;
         // Preserve the viewer's latest mute decision across every reel.
+        if (state.commentsOpenFor || document.getElementById("reelUploadDialog")?.open) return;
         vid.muted = state.sessionMuted;
         const attempt = vid.play();
         if (attempt && typeof attempt.catch === "function") {
@@ -879,10 +1038,7 @@
             state.sessionMuted = true;
             try { sessionStorage.setItem("timzee:reels-muted","true"); } catch {}
             document.querySelectorAll(".reel-video").forEach(item=>{item.muted=true;});
-            document.querySelectorAll(".reel-mute").forEach(button=>{
-              button.textContent="🔇";
-              button.setAttribute("aria-label","Unmute videos");
-            });
+            syncHeaderMute();
             vid.play().catch(() => {});
           });
         }
@@ -893,18 +1049,7 @@
         const scroller = document.getElementById("scroller");
         if (!scroller) return;
 
-        scroller.querySelectorAll(".reel-back").forEach(link=>{
-          link.addEventListener("click",event=>{
-            // Return to FYP, a profile or a shared feed if that is where the
-            // viewer arrived from; otherwise keep Videos as the safe fallback.
-            try{
-              const previous=document.referrer?new URL(document.referrer):null;
-              if(previous&&previous.origin===location.origin&&history.length>1){
-                event.preventDefault();history.back();
-              }
-            }catch{}
-          });
-        });
+        // Back is handled by the shared header, not by each reel.
         // Whole visual reel receives gestures, including the video above/below
         // its center. Ignore caption/controls/progress so those still work.
         const tapState=new Map();
@@ -932,24 +1077,7 @@
           });
         });
 
-        // Mute toggle
-        scroller.querySelectorAll(".reel-mute:not([data-reel-mute-wired])").forEach((btn) => {
-
-          btn.dataset.reelMuteWired="true";
-          btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const idx = btn.id.split("-")[1];
-            const vid = document.getElementById(`video-${idx}`);
-            if (!vid) return;
-            state.sessionMuted = !vid.muted;
-            try { sessionStorage.setItem("timzee:reels-muted",String(state.sessionMuted)); } catch {}
-            scroller.querySelectorAll(".reel-video").forEach(item => { item.muted = state.sessionMuted; });
-            scroller.querySelectorAll(".reel-mute").forEach(button => {
-              button.textContent = state.sessionMuted ? "🔇" : "🔊";
-              button.setAttribute("aria-label",state.sessionMuted?"Unmute videos":"Mute videos");
-            });
-          });
-        });
+        // Mute is handled by the shared header and applies to all clips.
 
         // Expand caption on tap
         scroller.querySelectorAll(".reel-caption:not([data-reel-caption-wired])").forEach((cap) => {
@@ -1219,7 +1347,7 @@
               }
             });
           },
-          { threshold: [0, 0.6, 1] }
+          { root: scroller, threshold: [0, 0.6, 1] }
         );
         scroller.querySelectorAll(".reel-item").forEach(el => {
           observer.observe(el);
