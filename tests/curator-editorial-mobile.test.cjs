@@ -147,3 +147,13 @@ test("curator function offers bounded provider correction while keeping approval
  assert.match(ui,/articleWords<450/);
  assert.match(ui,/status: "published"/);
 });
+
+test("editor source notes stay in the current editor when the article list rerenders",()=>{
+ const source=fs.readFileSync("assets/js/curator-ui.js","utf8");
+ assert.match(source,/this\.reportingNotes = new Map\(\)/);
+ assert.match(source,/this\.reportingNotes\.set\(id/);
+ assert.match(source,/this\.reportingNotes\.get\(post\.id\)/);
+ assert.match(source,/escapeHTML\(reportingNote\.text\)/);
+ assert.match(source,/escapeHTML\(reportingNote\.url\)/);
+ assert.match(source,/reportingNote\.checked\?"checked":""/);
+});
