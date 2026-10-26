@@ -20,6 +20,6 @@ export const config={
  path:["/post.html","/post","/video.html","/video","/listing.html","/listing",
  "/novel.html","/novel","/discussion.html","/discussion",
  "/profile.html","/profile","/stories.html","/stories"],
- method:["GET","HEAD"],
+ method:["GET"],
  onError:"bypass"
 };
