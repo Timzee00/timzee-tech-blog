@@ -1,0 +1,246 @@
+/* Blipmood homepage visual layer — isolated from all account, editorial and staff routes.
+   Existing runtime tokens and app controls remain canonical in variables.css. */
+body.blipmood-home {
+  --bm-navy: #101e24;
+  --bm-panel: #182a32;
+  --bm-raise: #213740;
+  --bm-teal: #69d3c1;
+  --bm-sky: #89bce9;
+  --bm-copy: #edf5f4;
+  --bm-muted: #adc0c5;
+  --bg: var(--bm-navy);
+  --bg-deep: #172b32;
+  --ink: var(--bm-copy);
+  --muted: var(--bm-muted);
+  --card: var(--bm-panel);
+  --card-solid: var(--bm-panel);
+  --accent: var(--bm-teal);
+  --accent-cool: var(--bm-sky);
+  --color-bg: var(--bm-navy);
+  --color-surface: var(--bm-panel);
+  --color-surface-muted: var(--bm-raise);
+  --color-text: var(--bm-copy);
+  --color-text-muted: var(--bm-muted);
+  --color-text-subtle: #adc0c5;
+  --color-primary: var(--bm-teal);
+  --color-primary-hover: #87e2d2;
+  --color-secondary: var(--bm-sky);
+  --color-text-on-primary: #102a27;
+  --color-border: rgba(137,188,233,.16);
+  --color-border-strong: rgba(137,188,233,.34);
+  --font-display: "Syne", "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+  overflow-x: clip;
+}
+body.blipmood-home::before {
+  content: ""; position: absolute; inset: 0 0 auto;
+  height: 810px; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 75% 55% at 88% 18%, rgba(35,104,162,.24), transparent 75%),
+              radial-gradient(ellipse 55% 45% at 4% 12%, rgba(105,211,193,.11), transparent 72%);
+}
+body.blipmood-home main, body.blipmood-home footer { position: relative; z-index: 1; }
+.blipmood-home a:focus-visible, .blipmood-home button:focus-visible { outline: 3px solid var(--bm-sky); outline-offset: 3px; }
+.blipmood-home .container { width: min(1160px, calc(100% - 32px)); padding-inline: 0; }
+
+/* Keep the canonical nav/theme/drawer scripts; only dress the existing shell. */
+.blipmood-home .site-header {
+  border-bottom: 1px solid rgba(137,188,233,.17);
+  background: color-mix(in srgb, var(--color-bg) 94%, transparent);
+}
+.blipmood-home .site-header .wrap { min-height: 78px; gap: 18px; }
+.blipmood-home .brand { gap: 0; min-width: 0; }
+.blipmood-home .brand #siteName { display: none !important; }
+.blipmood-home .brand .bm-brand-display {
+  display: inline-flex; gap: 8px; align-items: center; min-width: 0; white-space: nowrap;
+}
+.blipmood-home .bm-logo-icon { width: 44px; height: 44px; object-fit: contain; flex: 0 0 auto; }
+.blipmood-home .bm-wordmark {
+  color: var(--bm-copy); font: 800 27px/1 "Syne", "Space Grotesk", sans-serif;
+  letter-spacing: -.095em; white-space: nowrap;
+}
+.blipmood-home .bm-play-i {
+  position: relative; display: inline-block; width: .28em; height: .92em;
+  vertical-align: -.055em; margin: 0 .015em 0 .025em;
+}
+.blipmood-home .bm-play-i::before {
+  content: ""; position: absolute; width: .13em; height: .56em;
+  bottom: 0; left: .08em; background: currentColor; border-radius: .09em;
+}
+.blipmood-home .bm-play-i svg {
+  position: absolute; width: .35em; height: .32em; left: -.035em; top: -.035em; 
+  fill: var(--bm-teal); filter: drop-shadow(0 0 4px rgba(105,211,193,.28));
+}
+.blipmood-home .site-header .nav-pill a:hover,
+.blipmood-home .site-header .nav-more-toggle:hover { color: var(--color-primary); }
+.blipmood-home .menu-toggle { background: var(--color-surface); border-radius: 11px; }
+.blipmood-home .theme-control { color: var(--color-text); }
+
+/* Hero: visual emphasis is the chosen B/play/orbit mark, not invented social activity. */
+.blipmood-home .home-intro { padding: clamp(32px,5vw,70px) 0 32px; background: none; }
+.blipmood-home .bm-hero-split {
+  display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
+  align-items: center; column-gap: clamp(20px,4vw,72px); min-width: 0;
+}
+.blipmood-home .home-intro-copy { min-width: 0; z-index: 1; position: relative; }
+.blipmood-home .eyebrow { color: var(--bm-teal); font-size: 11px; letter-spacing: .17em; margin-bottom: 16px; }
+.blipmood-home .home-intro h1 {
+  max-width: none; margin: 0 0 18px;
+  font: 800 clamp(42px,5.6vw,76px)/1.05 "Syne", "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: -.065em; overflow-wrap: normal;
+}
+.blipmood-home .bm-mood-line {
+  color: var(--bm-teal);
+  background: linear-gradient(110deg, var(--bm-teal) 8%, var(--bm-sky) 92%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.blipmood-home .bm-hero-description { max-width: 44ch; font: 400 clamp(15px,1.65vw,18px)/1.75 var(--font-body); color: var(--color-text-muted); margin: 0 0 24px; }
+.blipmood-home .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+.blipmood-home .cta .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 14px;
+  min-height: 48px; padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 750;
+}
+.blipmood-home .cta .btn:first-child { background: var(--bm-teal); color: #102a27; border-color: transparent; box-shadow: 0 4px 22px rgba(105,211,193,.18); }
+.blipmood-home .cta .btn.ghost { color: var(--color-text); background: transparent; border: 1px solid var(--color-border-strong); }
+.blipmood-home .intro-note { margin: 19px 0 0; font-size: 12px; }
+.blipmood-home .bm-hero-art {
+  isolation: isolate; position: relative; min-width: 0; min-height: 320px;
+  display: grid; place-items: center;
+}
+.blipmood-home .bm-hero-art::before {
+  content: ""; position: absolute; z-index: -1; width: 87%; aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(35,104,162,.26) 0, rgba(105,211,193,.11) 35%, transparent 72%);
+}
+.blipmood-home .bm-hero-art img {
+  width: min(85%, 420px); height: auto; max-height: 390px; aspect-ratio: 1;
+  filter: drop-shadow(0 20px 35px rgba(35,104,162,.25));
+}
+.blipmood-home .bm-orbit-words {
+  position: absolute; right: 0; bottom: 0; display: grid; gap: 3px;
+  font: italic 750 clamp(13px,2vw,19px)/1.2 "Syne", sans-serif;
+  letter-spacing: .11em; text-transform: uppercase; color: var(--bm-teal);
+  transform: rotate(-9deg);
+}
+.blipmood-home .bm-orbit-words span:nth-child(2) { margin-left: 16px; color: var(--bm-sky); }
+.blipmood-home .bm-orbit-words span:nth-child(3) { margin-left: 30px; color: var(--bm-teal); }
+
+/* The same navigation destinations now resemble the reference's discovery board. */
+.blipmood-home .explore-panel {
+  margin: clamp(25px,4vw,46px) auto 0; padding: clamp(15px,3vw,28px);
+  background: color-mix(in srgb, var(--color-surface) 95%, var(--bm-sky) 5%);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 22px; box-shadow: 0 18px 45px rgba(3,17,24,.14);
+}
+.blipmood-home .explore-heading { padding: 2px 6px 14px; display: flex; align-items: center; }
+.blipmood-home .explore-heading .eyebrow { margin: 0; letter-spacing: .14em; }
+.blipmood-home .explore-heading .bm-explore-more { color: var(--bm-sky); font-size: 12px; font-weight: 700; }
+.blipmood-home .explore-panel > a {
+  display: grid; grid-template-columns: 26px 45px minmax(0,1fr) 31px;
+  align-items: center; gap: clamp(9px,2vw,22px);
+  padding: 14px 13px; min-height: 76px; margin-top: 4px;
+  background: color-mix(in srgb, var(--color-bg) 26%, var(--color-surface));
+  border: 1px solid var(--color-border); border-radius: 12px;
+  color: var(--color-text); transition: background .15s ease, border-color .15s ease;
+}
+.blipmood-home .explore-panel > a:hover { background: var(--color-surface-muted); border-color: var(--bm-teal); }
+.blipmood-home .explore-panel .explore-number { font-size: 11px; color: var(--color-text-muted); }
+.blipmood-home .bm-explore-icon { display: grid; place-items: center; color: var(--bm-teal); }
+.blipmood-home .bm-explore-icon svg { width: 30px; height: 30px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.blipmood-home .bm-explore-icon.bm-icon-blue { color: var(--bm-sky); }
+.blipmood-home .explore-panel strong { color: var(--color-text); font: 750 clamp(14px,1.5vw,17px)/1.3 var(--font-body); letter-spacing: -.02em; }
+.blipmood-home .explore-panel small { color: var(--color-text-muted); font: 400 12px/1.5 var(--font-body); margin-top: 3px; }
+.blipmood-home .bm-row-chevron { display: grid; place-items: center; height: 30px; border-radius: 8px; background: var(--color-surface-muted); color: var(--bm-sky); }
+.blipmood-home .explore-footer { padding: 18px 7px 3px; gap: 24px; font-size: 12px; }
+.blipmood-home .explore-footer a:hover { color: var(--bm-teal); }
+
+/* Real suggested profiles and existing backend follow/friend actions. */
+.blipmood-home #suggestedPeopleSection { margin-block: 26px 28px; min-width: 0; }
+.blipmood-home #suggestedPeopleSection .section-title { font-size: clamp(21px,2.3vw,29px); }
+.blipmood-home #suggestedPeopleSection .section-header-row { margin-bottom: 14px; }
+.blipmood-home .people-rail { display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 11px; scroll-snap-type: x proximity; overscroll-behavior-inline: contain; }
+.blipmood-home .people-card {
+  flex: 0 0 clamp(144px,24vw,188px); min-width: 0; scroll-snap-align: start; padding: 18px 13px;
+  border: 1px solid var(--color-border-strong); border-radius: 17px;
+  background: color-mix(in srgb, var(--color-surface) 90%, var(--bm-teal) 10%);
+}
+.blipmood-home .people-card-name { color: var(--color-text); }
+.blipmood-home .people-card-avatar .tz-avatar-verified { inline-size: 66px; block-size: 66px; }
+.blipmood-home .people-card .btn { min-height: 38px; width: 100%; background: var(--bm-teal); color: #102a27; border-radius: 9px; }
+
+/* Keep personalized reading and learning widgets data-driven. */
+.blipmood-home .tz-reader-home, .blipmood-home #latest, .blipmood-home #popular, .blipmood-home #popularTopics, .blipmood-home #categories { margin-top: 25px; }
+.blipmood-home .content-grid > *, .blipmood-home .post-card, .blipmood-home .side-card,
+.blipmood-home .board, .blipmood-home .tz-reader-home { min-width: 0; }
+.blipmood-home .side-card, .blipmood-home .board, .blipmood-home .tz-reader-home {
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 17px;
+}
+.blipmood-home .section-title { letter-spacing: -.035em; }
+.blipmood-home .footer { background: var(--color-surface); }
+@media (max-width: 960px) {
+  .blipmood-home .site-header .wrap { min-height: 66px; }
+  .blipmood-home .bottom-tab-bar {
+    border: 1px solid var(--color-border-strong); border-bottom: 0;
+    border-radius: 17px 17px 0 0;
+    background: color-mix(in srgb, var(--color-bg) 93%, var(--color-surface) 7%);
+    box-shadow: 0 -8px 30px rgba(3,15,20,.22);
+  }
+  .blipmood-home .bottom-tab.active {
+    background: var(--color-surface-muted); color: var(--bm-teal);
+    border-radius: 12px;
+  }
+  .blipmood-home .bottom-tab-icon svg { width: 21px; height: 21px; }
+}
+@media (max-width: 720px) {
+  .blipmood-home .bm-hero-split { grid-template-columns: minmax(0,1fr) minmax(0,.55fr); column-gap: 4px; }
+  .blipmood-home .bm-hero-art { min-height: 210px; align-self: stretch; }
+  .blipmood-home .bm-hero-art img { width: 100%; }
+  .blipmood-home .bm-orbit-words { display: none; }
+  .blipmood-home .home-intro { padding-top: 35px; }
+}
+@media (max-width: 500px) {
+  .blipmood-home .container { width: calc(100% - 28px); }
+  .blipmood-home .site-header .wrap { gap: 8px; }
+  .blipmood-home .bm-logo-icon { width: 34px; height: 34px; }
+  .blipmood-home .bm-wordmark { font-size: 20px; }
+  .blipmood-home .theme-control { font-size: 10px; }
+  .blipmood-home .menu-toggle { min-height: 36px; padding: 7px 9px; }
+  .blipmood-home .bm-hero-split { display: block; position: relative; }
+  .blipmood-home .home-intro-copy { position: relative; padding-top: 5px; }
+  .blipmood-home .home-intro h1 { position: relative; z-index: 2; font-size: clamp(37px,11vw,51px); max-width: 80%; margin-bottom: 14px; }
+  .blipmood-home .bm-hero-art {
+    position: absolute; right: 0; top: 30px; width: 39%; min-height: 0;
+    aspect-ratio: 1; z-index: 0; opacity: .7; pointer-events: none;
+  }
+  .blipmood-home .bm-hero-art img { width: 100%; filter: drop-shadow(0 8px 18px rgba(35,104,162,.3)); }
+  .blipmood-home .bm-hero-description { position: relative; max-width: 32ch; font-size: 14px; padding-right: 30px; }
+  .blipmood-home .home-intro { padding: 27px 0 22px; }
+  .blipmood-home .cta .btn { padding: 11px 15px; min-height: 44px; font-size: 12px; }
+  .blipmood-home .explore-panel { padding: 13px; margin-top: 20px; border-radius: 17px; }
+  .blipmood-home .explore-panel > a { grid-template-columns: 17px 31px minmax(0,1fr) 27px; gap: 8px; min-height: 71px; padding: 11px 7px; }
+  .blipmood-home .bm-explore-icon svg { width: 25px; height: 25px; }
+  .blipmood-home .explore-panel strong { font-size: 13px; }
+  .blipmood-home .explore-panel small { font-size: 11px; }
+  .blipmood-home .eyebrow { font-size: 9px; }
+  .blipmood-home .explore-footer { font-size: 11px; }
+}
+@media (max-width: 355px) {
+  .blipmood-home .bm-wordmark { font-size: 18px; }
+  .blipmood-home .bm-logo-icon { width: 30px; height: 30px; }
+  .blipmood-home .home-intro h1 { font-size: 34px; }
+  .blipmood-home .cta { gap: 7px; }
+}
+:root[data-theme="light"] body.blipmood-home {
+  --bm-navy: #f5f8f8; --bm-panel: #ffffff; --bm-raise: #eaf1f0;
+  --bm-teal: #076f64; --bm-sky: #2368a2;
+  --bm-copy: #172b32; --bm-muted: #536970;
+  --bg-deep: #eaf1f0; --color-primary-hover: #05675d;
+  --color-text-on-primary: #ffffff; --color-border: rgba(23,43,50,.12); --color-border-strong: rgba(23,43,50,.22);
+}
+:root[data-theme="light"] .blipmood-home .bm-wordmark { color: #172b32; }
+:root[data-theme="light"] .blipmood-home .cta .btn:first-child,
+:root[data-theme="light"] .blipmood-home .people-card .btn { color: #ffffff; }
+@media (prefers-reduced-motion: reduce) {
+  .blipmood-home *, .blipmood-home *::before, .blipmood-home *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

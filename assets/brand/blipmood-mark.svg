@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-labelledby="title desc">
+<title id="title">Blipmood</title><desc id="desc">Expressive B symbol with a play button, an orbit and community sparks.</desc>
+<defs>
+<linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#69d3c1"/><stop offset=".5" stop-color="#2a8fb3"/><stop offset="1" stop-color="#2368a2"/></linearGradient>
+<linearGradient id="orbit" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#69d3c1"/><stop offset="1" stop-color="#89bce9"/></linearGradient>
+<filter id="shine" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="9"/></filter>
+</defs>
+<ellipse cx="115" cy="118" rx="91" ry="79" fill="#2368a2" opacity=".17" filter="url(#shine)"/>
+<path d="M64 37c0-13 9-21 23-21h33c40 0 64 21 64 51 0 18-9 32-24 39 19 7 31 24 31 44 0 38-32 63-73 63H89c-15 0-25-10-25-26V37z" fill="url(#b)"/>
+<path d="M92 46h22c24 0 39 12 39 28s-14 28-39 28H92V46z" fill="#081b25" opacity=".88"/>
+<path d="M92 124h28c25 0 41 11 41 29s-16 30-41 30H92v-59z" fill="#081b25" opacity=".88"/>
+<path d="M47 162c19 37 77 50 139 13 15-9 28-21 37-33-3 22-23 49-46 64-52 35-106 27-130 5-14-12-19-30 0-49z" fill="url(#orbit)"/>
+<path d="M14 167c32-40 81-58 135-60 22-1 46 3 66 11-41-6-96 7-131 27-28 16-49 34-70 49-10-7-8-17 0-27z" fill="url(#orbit)" opacity=".93"/>
+<path d="M107 58a12 12 0 0 1 18-10l30 20a12 12 0 0 1 0 20l-30 20a12 12 0 0 1-18-10V58z" fill="#fff"/>
+<path d="M123 66v24l19-12-19-12z" fill="#155e83"/>
+<circle cx="39" cy="89" r="12" fill="#69d3c1"/>
+<path d="M192 32l-4 19M219 48l-14 15M225 82l-17 3" stroke="#89bce9" stroke-width="10" stroke-linecap="round"/>
+</svg>

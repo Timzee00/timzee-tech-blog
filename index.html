@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Timzee Tech Hub</title>
+    <title>Blipmood — Your world. Your mood. | Powered by Timzee Corp</title>
     <meta name="description" content="Timzee Tech Hub: a tech blog, live discussion forum, marketplace, video hub, and novel platform in one community — with an AI assistant built in.">
     <meta name="keywords" content="Timzee Tech Hub, tech blog, tech news, live discussion, tech forum, tech marketplace, tech videos, novels, AI assistant, developer community">
     <meta name="robots" content="index, follow">
-    <meta name="theme-color" content="#087f73">
+    <meta name="theme-color" content="#101e24">
     <link rel="canonical" href="https://timzee-tech-blog.netlify.app/">
     <meta property="og:site_name" content="Timzee Tech Hub">
     <meta property="og:type" content="website">
@@ -35,15 +35,23 @@
       }
     </script>
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/blipmood-home.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>
-  <body>
+  <body class="blipmood-home">
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
-        <a class="brand" href="index.html">
-          <span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span>
-          <span class="tagline" id="siteTagline">Tech news, live discussion, marketplace, videos, and novels — all in one community.</span>
+        <a class="brand" href="index.html" aria-label="Blipmood — Home">
+          <span class="bm-brand-display" aria-hidden="true">
+            <img class="bm-logo-icon" src="assets/brand/blipmood-mark.svg" width="44" height="44" alt="">
+            <span class="bm-wordmark">Bl<span class="bm-play-i"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M5 2 Q3 2 3 5 V17 Q3 20 6 20 L19 12 Q21 11 19 9 Z"/></svg></span>pmood</span>
+          </span>
+          <span class="logo" id="siteName" aria-hidden="true">Timzee <span>Tech</span> Hub</span>
+          <span class="tagline" id="siteTagline" hidden>Tech news, live discussion, marketplace, videos, and novels — all in one community.</span>
         </a>
         <nav class="nav-pill">
           <a href="discussion.html">Discussion</a>
@@ -75,22 +83,57 @@
     </header>
 
     <main id="main-content">
-      <section class="hero home-intro">
-        <div class="container home-intro-grid">
-          <div class="home-intro-copy">
-            <p class="eyebrow"><span aria-hidden="true"></span> The curious belong here</p>
-            <h1 id="heroTitle">Stay curious.<br>Build what’s next.</h1>
-            <p id="heroIntro">Fresh perspectives on tech. Conversations worth having. A community to explore it all with.</p>
-            <div class="cta"><a class="btn" href="#latest">Explore the latest <span aria-hidden="true">→</span></a><a class="btn ghost" href="discussion.html">Join a discussion</a></div>
-            <a class="intro-note" href="login.html?view=signup">Find your people. Create an account <span aria-hidden="true">→</span></a>
+      <section class="hero home-intro" aria-labelledby="bmHeroTitle">
+        <div class="container">
+          <div class="bm-hero-split">
+            <div class="home-intro-copy">
+              <p class="eyebrow"><span aria-hidden="true"></span> The curious belong here</p>
+              <h1 id="bmHeroTitle">Your world.<br><span class="bm-mood-line">Your mood.</span></h1>
+              <p class="bm-hero-description">Discover people, videos, ideas and stories from a community that creates, shares and belongs.</p>
+              <div class="cta">
+                <a class="btn" href="#latest">Explore <span aria-hidden="true">→</span></a>
+                <a class="btn ghost" href="login.html?view=signup">Join the community</a>
+              </div>
+              <a class="intro-note" href="login.html?view=signup">Find your people. Create an account <span aria-hidden="true">→</span></a>
+              <!-- Keep canonical settings targets so admin-managed copy still loads safely. -->
+              <span id="heroTitle" hidden>Stay curious. Build what’s next.</span>
+              <span id="heroIntro" hidden>Fresh perspectives on tech. Conversations worth having.</span>
+            </div>
+            <div class="bm-hero-art" aria-hidden="true">
+              <img src="assets/brand/blipmood-mark.svg" width="380" height="380" alt="" decoding="async">
+              <span class="bm-orbit-words"><span>Discover</span><span>Connect</span><span>Create</span></span>
+            </div>
           </div>
-          <nav class="explore-panel" aria-label="Explore Timzee">
-            <div class="explore-heading"><span class="eyebrow">Your next discovery</span><span class="explore-mark" aria-hidden="true">t.</span></div>
-            <a href="discussion.html"><span class="explore-number">01</span><span><strong>Exchange ideas</strong><small>Questions, perspectives, conversations</small></span><span aria-hidden="true">→</span></a>
-            <a href="marketplace.html"><span class="explore-number">02</span><span><strong>Find your next tool</strong><small>Tech & services from the community</small></span><span aria-hidden="true">→</span></a>
-            <a href="videos.html"><span class="explore-number">03</span><span><strong>See something new</strong><small>Videos from people who make things</small></span><span aria-hidden="true">→</span></a>
-            <a href="novels.html"><span class="explore-number">04</span><span><strong>Get lost in a story</strong><small>Original fiction, one chapter at a time</small></span><span aria-hidden="true">→</span></a>
-            <div class="explore-footer"><a href="stories.html">Community stories →</a><a href="ai-chat.html">Ask the assistant →</a></div>
+          <nav class="explore-panel" aria-label="Discover Blipmood">
+            <div class="explore-heading">
+              <span class="eyebrow"><span aria-hidden="true"></span> Your next discovery</span>
+              <a class="bm-explore-more" href="fyp.html">See all →</a>
+            </div>
+            <a href="fyp.html">
+              <span class="explore-number" aria-hidden="true">01</span>
+              <span class="bm-explore-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="12" cy="11" r="4"/><path d="M3 26v-2c0-5 4-8 9-8s9 3 9 8v2z"/><circle cx="24" cy="13" r="3"/><path d="M24 19c4 0 6 3 6 6v1h-6"/></svg></span>
+              <span><strong>Meet new people</strong><small>Find creators, friends and shared interests</small></span>
+              <span class="bm-row-chevron" aria-hidden="true">›</span>
+            </a>
+            <a href="video.html">
+              <span class="explore-number" aria-hidden="true">02</span>
+              <span class="bm-explore-icon bm-icon-blue"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12"/><path d="m13 10 9 6-9 6z"/></svg></span>
+              <span><strong>Explore amazing content</strong><small>Videos, stories and creative moments</small></span>
+              <span class="bm-row-chevron" aria-hidden="true">›</span>
+            </a>
+            <a href="discussion.html">
+              <span class="explore-number" aria-hidden="true">03</span>
+              <span class="bm-explore-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 26v-4c-4-2-6-5-6-10a12 12 0 0 1 24 0c0 5-2 8-6 10v4z"/><path d="M10 26h12m-10 4h8M12 14l4 4 4-4"/></svg></span>
+              <span><strong>Exchange ideas</strong><small>Questions, perspectives and conversations</small></span>
+              <span class="bm-row-chevron" aria-hidden="true">›</span>
+            </a>
+            <a href="novels.html">
+              <span class="explore-number" aria-hidden="true">04</span>
+              <span class="bm-explore-icon bm-icon-blue"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 8c-5-3-9-3-13-1v18c4-2 9-2 13 1 4-3 9-3 13-1V7c-4-2-8-2-13 1zM16 8v18"/></svg></span>
+              <span><strong>Get lost in a story</strong><small>Original fiction, one chapter at a time</small></span>
+              <span class="bm-row-chevron" aria-hidden="true">›</span>
+            </a>
+            <div class="explore-footer"><a href="marketplace.html">Explore marketplace →</a><a href="stories.html">Community stories →</a><a href="ai-chat.html">Ask the assistant →</a></div>
           </nav>
         </div>
       </section>
@@ -130,7 +173,7 @@
           </section>
         </div>
         <div class="tz-reader-home-empty" id="readerJourneyEmpty" hidden>
-          <p>Make Timzee your learning home. Follow a creator from any article, save what matters and return whenever you're ready.</p>
+          <p>Follow a creator, save what matters and pick up where you left off.</p>
           <div><a class="btn ghost sm" href="#latest">Discover articles</a>
           <a class="btn ghost sm" href="settings.html#interests">Choose your interests</a></div>
         </div>
@@ -139,7 +182,7 @@
       <section class="container" id="latest">
         <div class="content-grid">
           <div>
-            <h2 class="section-title">The latest from Timzee</h2>
+            <h2 class="section-title">Fresh from the community</h2>
             <nav class="nav-pill category-filter-pill" id="categoryNav" aria-label="Filter by category"></nav>
             <div class="filter-bar">
               <div class="filter-group">
