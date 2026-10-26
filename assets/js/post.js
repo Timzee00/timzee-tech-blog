@@ -98,16 +98,16 @@ function applyTheme(settings) {
 
 function updateMeta(post) {
   if (!post) return;
-  const title = post.title ? `${post.title} - Timzee Tech Hub` : "Post - Timzee Tech Hub";
+  const title = post.title ? `${post.title} - Blipmood` : "Post - Blipmood";
   document.title = title;
   const excerpt = clampText(stripHTML(stripEditorialScaffolding(post.content || "")), 160);
-  const description = excerpt || "Read the latest post on Timzee Tech Hub.";
+  const description = excerpt || "Read the latest post on Blipmood.";
   const base = SITE_URL || window.location.origin || "";
   const url = post.id ? `${base}/post.html?id=${post.id}` : `${base}/post.html`;
   const image = post.cover || FALLBACK_OG_IMAGE;
   const tagList = normalizeTags(post.tags).slice(0, 10);
   const keywords = [
-    "Timzee Tech Hub",
+    "Blipmood",
     "tech blog",
     "tech news",
     ...tagList
@@ -151,11 +151,11 @@ function updateMeta(post) {
       dateModified: post.updated_at || publishedAt,
       author: {
         "@type": "Person",
-        name: post.author_name || "Timzee Tech Hub"
+        name: post.author_name || "Blipmood"
       },
       publisher: {
         "@type": "Organization",
-        name: "Timzee Tech Hub",
+        name: "Blipmood",
         url: SITE_URL || base
       },
       mainEntityOfPage: {

@@ -1,9 +1,9 @@
-/* Timzee Tech Hub push worker: no tracking and no caching. */
+/* Blipmood push worker: no tracking and no caching. */
 "use strict";
 self.addEventListener("push",event=>{
   let message={};
   try{message=event.data?event.data.json():{}}catch{message={};}
-  const title="Timzee Tech Hub";
+  const title="Blipmood";
   const body=typeof message.body==="string"?message.body.slice(0,180):"You have new activity.";
   event.waitUntil(self.registration.showNotification(title,{
     body,tag:"timzee-activity",renotify:false,

@@ -709,7 +709,7 @@ async function shareThread(id){
  const url=new URL("discussion.html",location.href);
  url.searchParams.set("thread",id);
  try{
-  if(navigator.share)await navigator.share({title:"Timzee Tech Hub discussion",url:url.href});
+  if(navigator.share)await navigator.share({title:"Blipmood discussion",url:url.href});
   else{await navigator.clipboard.writeText(url.href);notify("Topic link copied.");}
  }catch(e){if(e.name!=="AbortError")notify("Unable to share this topic.",true);}
 }

@@ -260,7 +260,7 @@ exports.handler = async (event) => {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
-        ...(provider === "openrouter" ? { "X-OpenRouter-Title": "Timzee Tech Hub" } : {})
+        ...(provider === "openrouter" ? { "X-OpenRouter-Title": "Blipmood" } : {})
       },
       body: JSON.stringify(completionPayload)
     });

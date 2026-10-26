@@ -45,7 +45,7 @@ export async function maybeInviteReturningMember({user,supabase}){
   const text=document.createElement("div");
   const heading=document.createElement("h2");heading.textContent="Stay connected, on your terms";
   const description=document.createElement("p");
-  description.textContent="Want one friendly email if you stop visiting Timzee Tech Hub for 30 days? Only if you choose. Existing members are never enrolled automatically.";
+  description.textContent="Want one friendly email if you stop visiting Blipmood for 30 days? Only if you choose. Existing members are never enrolled automatically.";
   const feedback=document.createElement("p");feedback.className="member-invite-feedback";
   feedback.setAttribute("role","status");feedback.setAttribute("aria-live","polite");
   text.append(heading,description,feedback);

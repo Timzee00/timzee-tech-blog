@@ -9,7 +9,7 @@ const id="33333333-3333-4333-8333-333333333333";
 test("Timzee Corp-inspired email template escapes untrusted sender names and body",()=>{
  const payload=buildStaffReplyEmail({name:'<img src=x onerror=alert(1)>',
    message:'<script>alert("hello")</script>\nWe can help.',requestKind:"support"});
- assert.match(payload.htmlContent.replace(/<[^>]*>/g,""),/Timzee Tech Hub/);
+ assert.match(payload.htmlContent.replace(/<[^>]*>/g,""),/Blipmood/);
  assert.doesNotMatch(payload.htmlContent,/<script>|<img src=x/i);
  assert.match(payload.htmlContent,/&lt;script&gt;/);
  assert.doesNotMatch(payload.htmlContent,/onerror=alert\(1\)/);

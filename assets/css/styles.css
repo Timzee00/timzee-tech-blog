@@ -1,4 +1,4 @@
-/* Timzee Tech Hub stylesheet entry point */
+/* Blipmood shared stylesheet entry point */
 @import url("variables.css");
 @import url("base.css");
 @import url("navbar.css");
@@ -26,6 +26,7 @@
 @import url("verified-identity.css");
 @import url("reader-journey.css");
 @import url("feature-launches.css");
+@import url("blipmood-brand.css");
 
 html[data-reader-font="small"] .reader-content{font-size:.95rem;}
 html[data-reader-font="medium"] .reader-content{font-size:1.05rem;}

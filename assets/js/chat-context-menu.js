@@ -141,7 +141,7 @@ async function askAI(messageEl) {
   const media = messageEl.querySelector("img,video,audio,.message-file");
   const attachmentType = media ? (media.matches("img") ? "image" : media.matches("video") ? "video" : media.matches("audio") ? "audio" : "file") : "";
   const context = [
-    "I selected content from a Timzee Tech Hub chat.",
+    "I selected content from a Blipmood chat.",
     attachmentType ? `Attachment type: ${attachmentType}.` : "",
     text ? `Message from ${messageAuthor(messageEl)}:\n${text}` : "The selected content has no text message body."
   ].filter(Boolean).join("\n\n");

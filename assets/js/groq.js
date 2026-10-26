@@ -37,7 +37,7 @@ export function getModelsForProvider(provider = "groq") {
 }
 
 export const SYSTEM_PROMPTS = {
-  general: "You are a helpful AI assistant for Timzee Tech Hub. Provide clear, concise, and accurate responses.",
+  general: "You are a helpful AI assistant for Blipmood. Provide clear, concise, and accurate responses.",
   contentIdeas: "You are a content creation assistant. Generate creative ideas for blog posts, videos, and social media content related to technology.",
   codeHelper: "You are an expert programmer. Help users with coding questions, debugging, and best practices.",
   community: "You are a community manager. Help with community engagement strategies and moderation guidelines.",

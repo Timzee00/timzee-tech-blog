@@ -14,9 +14,9 @@ async function showDeviceAlert(note,userId){
  try{
   const reg=await registerDeviceAlertWorker();
   const url=safeSameOriginLink(note?.link_url||note?.link)||"/profile.html?tab=notifications";
-  await reg.showNotification("Timzee Tech notification",{
+  await reg.showNotification("Blipmood notification",{
    // The device may be locked or shared: never reveal private user messages.
-   body:"You have a new update. Open Timzee Tech to review it.",
+   body:"You have a new update. Open Blipmood to review it.",
    tag:"timzee-"+String(note?.id||"update").slice(0,80),
    icon:"/assets/img/avatar-placeholder.svg",data:{url}
   });
@@ -29,7 +29,7 @@ function setupDeviceAlertButton(userId){
  const redraw=()=>{
   const on=deviceAlertsEnabled(userId);
   button.textContent=on?"Disable device alerts":"Enable device alerts";
-  label.textContent=on?"Enabled while a Timzee Tech tab is open. Alerts with the browser fully closed are not yet supported.":
+  label.textContent=on?"Enabled while a Blipmood tab is open. Alerts with the browser fully closed are not yet supported.":
     "Allow browser notifications when a Timzee tab is in the background.";
  };
  button.onclick=async()=>{

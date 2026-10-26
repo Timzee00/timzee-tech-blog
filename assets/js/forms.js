@@ -35,7 +35,7 @@ function applySupportTools(settings) {
   const donationClose = document.getElementById("donationClose");
   const donationEnabled = settings?.donation?.enabled;
   if (donationBtn) donationBtn.style.display = donationEnabled ? "inline-flex" : "none";
-  if (donationTitle) donationTitle.textContent = settings?.donation?.title || "Support Timzee Tech Hub";
+  if (donationTitle) donationTitle.textContent = settings?.donation?.title || "Support Blipmood";
   if (donationDetails) donationDetails.textContent = settings?.donation?.details || "Thanks for supporting our community.";
   if (donationLink) {
     const url = settings?.donation?.url || "";

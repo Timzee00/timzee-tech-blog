@@ -376,7 +376,7 @@ function setupBottomTabBar(isLoggedIn) {
 }
 
 // Applies the admin-configurable site name/tagline everywhere the OLD
-// hardcoded "Timzee Tech Hub" text used to live, so renaming the site (e.g.
+// hardcoded "Blipmood" text used to live, so renaming the site (e.g.
 // before buying a new domain) is a single settings-panel edit instead of a
 // code change across 19+ pages. Falls back to leaving the original static
 // text alone if settings somehow fail to load.
@@ -408,8 +408,8 @@ function applySiteBranding(settings) {
     taglineEl.textContent = settings.tagline;
   }
 
-  if (document.title.includes("Timzee Tech Hub")) {
-    document.title = document.title.replace(/Timzee Tech Hub/g, settings.siteName);
+  if (document.title.includes("Blipmood")) {
+    document.title = document.title.replace(/Blipmood/g, settings.siteName);
   }
   const ogSiteName = document.querySelector('meta[property="og:site_name"]');
   if (ogSiteName) ogSiteName.setAttribute("content", settings.siteName);

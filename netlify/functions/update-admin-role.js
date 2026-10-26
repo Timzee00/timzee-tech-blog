@@ -76,7 +76,7 @@ exports.handler = async (event) => {
         : "Your admin access has changed";
     const roleBody = nextRole === "user"
       ? "Your admin access has been removed."
-      : `Your Timzee Tech Hub role is now ${nextRole}.`;
+      : `Your Blipmood role is now ${nextRole}.`;
     const notification = await supabase.rpc("emit_user_notification", {
       p_user_id: userId,
       p_type: "admin_role_changed",

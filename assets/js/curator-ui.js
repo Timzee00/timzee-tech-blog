@@ -568,7 +568,7 @@ class CuratorManager {
           ${post.image_url && trustedExternalUrl(post.image_url)?'<img class="curator-image-preview" loading="lazy" referrerpolicy="no-referrer" alt="Source image preview - rights not verified" src="'+escapeHTML(post.image_url)+'" style="max-width:180px;max-height:120px;object-fit:contain;">':""}
           <label>Approved image URLs<textarea data-curator-images="${post.id}" rows="3" class="field" placeholder="https://example.com/licensed-image.jpg">${escapeHTML(candidates.join("\n"))}</textarea></label>
           <label>Image credit and permission reference<input data-curator-image-credit="${post.id}" class="field" placeholder="Photographer / license / permission link"></label>
-          <label><input type="checkbox" data-curator-image-rights="${post.id}"> I verified permission to display these images on Timzee Tech Hub</label>
+          <label><input type="checkbox" data-curator-image-rights="${post.id}"> I verified permission to display these images on Blipmood</label>
         </details>
         <p class="curator-expand-feedback" data-curator-expand-feedback="${post.id}" role="status" aria-live="polite" hidden></p>
         <details class="curator-reporting-editor">

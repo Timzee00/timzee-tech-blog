@@ -31,7 +31,7 @@ function buildCard(post) {
         <div class="popular-meta"><span>${Number(post.like_count || 0)} likes</span><span>${Number(post.comment_count || 0)} replies</span><span>${Number(post.share_count || 0)} shares</span></div>
         <a href="post.html?id=${encodeURIComponent(post.id)}"><h3>${escapeHTML(post.title || "Untitled post")}</h3></a>
         <div class="popular-summary">${summary}</div>
-        <div class="popular-card-foot"><span>${escapeHTML(post.author_name || "Timzee Tech Hub")}</span><span>${timeAgo(post.publish_at || post.created_at)}</span></div>
+        <div class="popular-card-foot"><span>${escapeHTML(post.author_name || "Blipmood")}</span><span>${timeAgo(post.publish_at || post.created_at)}</span></div>
       </div>
     </article>`;
 }

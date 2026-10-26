@@ -2,18 +2,18 @@ const { createClient } = require("@supabase/supabase-js");
 const {createInactivityToken}=require("./_lib/email-opt-out-token.js");
 
 const templates = {
-  contact_received: { subject: "We received your message | Timzee Tech Hub", body: "Your message has reached our team." },
-  support_received: { subject: "Support request received | Timzee Tech Hub", body: "Your support request has been received. Our team will review it." },
-  advertising_received: { subject: "Advertising inquiry received | Timzee Tech Hub", body: "Thank you for your advertising inquiry. We'll review your request." },
-  message_digest: { subject: "Your unread messages | Timzee Tech Hub", body: "You have unread message notifications." },
-  mention_digest: { subject: "Mentions and replies | Timzee Tech Hub", body: "You have unread mentions or replies." },
-  marketplace_alerts: { subject: "Marketplace updates | Timzee Tech Hub", body: "You have unread marketplace notifications." },
-  community_digest: { subject: "Community updates | Timzee Tech Hub", body: "You have unread community notifications." },
-  support_status: { subject: "Support request update | Timzee Tech Hub", body: "The status of your support request has changed." },
-  advertising_status: { subject: "Advertising request update | Timzee Tech Hub", body: "Your advertising request has a new status." },
-  verification_status: { subject: "Verification application update | Timzee Tech Hub", body: "Your verification application has a new status." },
-  report_status: { subject: "Report review update | Timzee Tech Hub", body: "Your submitted report has a new status." },
-  inactivity_reminder: { subject: "A friendly check-in from Timzee Tech Hub", body: "It's been a while since your last visit. Your Timzee Tech Hub account is here whenever you're ready to return." }
+  contact_received: { subject: "We received your message | Blipmood", body: "Your message has reached our team." },
+  support_received: { subject: "Support request received | Blipmood", body: "Your support request has been received. Our team will review it." },
+  advertising_received: { subject: "Advertising inquiry received | Blipmood", body: "Thank you for your advertising inquiry. We'll review your request." },
+  message_digest: { subject: "Your unread messages | Blipmood", body: "You have unread message notifications." },
+  mention_digest: { subject: "Mentions and replies | Blipmood", body: "You have unread mentions or replies." },
+  marketplace_alerts: { subject: "Marketplace updates | Blipmood", body: "You have unread marketplace notifications." },
+  community_digest: { subject: "Community updates | Blipmood", body: "You have unread community notifications." },
+  support_status: { subject: "Support request update | Blipmood", body: "The status of your support request has changed." },
+  advertising_status: { subject: "Advertising request update | Blipmood", body: "Your advertising request has a new status." },
+  verification_status: { subject: "Verification application update | Blipmood", body: "Your verification application has a new status." },
+  report_status: { subject: "Report review update | Blipmood", body: "Your submitted report has a new status." },
+  inactivity_reminder: { subject: "A friendly check-in from Blipmood", body: "It's been a while since your last visit. Your Blipmood account is here whenever you're ready to return." }
 };
 function escapeHtml(s) {
   return String(s || "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -42,8 +42,8 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
       encodeURIComponent(createInactivityToken(job)) : null;
   const optOutText=unsubscribeUrl ? "Stop future check-in emails: "+unsubscribeUrl+"\n\n" : "";
   const optOutHtml=unsubscribeUrl ? `<p><a href="${unsubscribeUrl}">Stop these reminders without signing in</a></p>` : "";
-  const text=`${intro}\n\n${message}\n\n${referenceLine}${optional ? `Manage email preferences: ${settingsUrl}\n\n` : ""}${optOutText}Timzee Tech Hub`;
-  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><h2 style="color:#0f766e">Timzee Tech Hub</h2><p>${escapeHtml(intro)}</p><p>${escapeHtml(message)}</p>${optional ?
+  const text=`${intro}\n\n${message}\n\n${referenceLine}${optional ? `Manage email preferences: ${settingsUrl}\n\n` : ""}${optOutText}Blipmood`;
+  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#101e24;border-radius:12px"><img src="https://timzee-tech-blog.netlify.app/assets/brand/blipmood-mark.svg" width="42" height="42" alt="" style="width:42px;height:42px;vertical-align:middle"><strong style="font-size:25px;letter-spacing:-1px;color:#edf5f4">Blipmood</strong></div><p>${escapeHtml(intro)}</p><p>${escapeHtml(message)}</p>${optional ?
     `<p><a href="${settingsUrl}">Manage email preferences</a></p>` :
     `<p><strong>Reference:</strong> ${escapeHtml(reference)}</p>`}${optOutHtml}<hr><small>${optional?"You opted in to this optional email category. You can disable it in account settings.":"Transactional notification regarding your request."} Do not reply with passwords or sensitive details.</small></div>`;
   let res;
@@ -82,7 +82,7 @@ async function runEmailWorker(){
   const brevoKey=process.env.BREVO_API_KEY;
   if(process.env.EMAIL_DELIVERY_ENABLED !== "true") return {statusCode:200,body:"Email delivery paused"};
   const senderEmail=process.env.BREVO_SENDER_EMAIL;
-  const senderName=process.env.BREVO_SENDER_NAME||"Timzee Tech Hub";
+  const senderName=process.env.BREVO_SENDER_NAME||"Blipmood";
   if(!url||!serviceKey||!brevoKey||!senderEmail) {
     console.error("Email worker disabled: required server-only configuration missing");
     return {statusCode:503,body:"Email worker not configured"};

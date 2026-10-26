@@ -18,7 +18,7 @@ async function boot() {
   if (preferences.ai?.assistantContext === false) return;
   const input = document.getElementById("aiChatInput");
   if (!input || input.value) return;
-  const prefix = "Use this selected context from Timzee Tech Hub and help me understand it:\n\n";
+  const prefix = "Use this selected context from Blipmood and help me understand it:\n\n";
   input.value = context.startsWith(prefix) ? context : `${prefix}${context}`;
   input.dispatchEvent(new Event('input', { bubbles: true }));
   input.focus();

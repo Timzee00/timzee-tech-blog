@@ -76,7 +76,7 @@ export function suggestRoundupIds(rows,topic,{limit=6}={}){
 
 export function socialCaption(title,url,topic="news"){
   const link=trustedExternalUrl(url);if(!link)throw Error("A public URL is required.");
-  return plainText(title).slice(0,160)+"\n\nRead this "+plainText(topic).slice(0,40)+" update on Timzee Tech Hub, with sources and context:\n"+link;
+  return plainText(title).slice(0,160)+"\n\nRead this "+plainText(topic).slice(0,40)+" update on Blipmood, with sources and context:\n"+link;
 }
 
 

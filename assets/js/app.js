@@ -246,7 +246,7 @@ function buildPostCard(post, compact = false) {
   const excerptText = clampText(stripHTML(stripEditorialScaffolding(post.feed_excerpt || post.content || "")), 140);
   const excerpt = compact ? "" : `<div class="post-card-excerpt">${escapeHTML(excerptText)}</div>`;
   const pin = post.pinned ? `<span class="chip">Pinned</span>` : "";
-  const authorName = post.author_name || "Timzee Tech Hub";
+  const authorName = post.author_name || "Blipmood";
   const initial = authorName.trim().charAt(0).toUpperCase() || "T";
 
   return `
@@ -512,7 +512,7 @@ function setupPostActionButtons() {
       if (navigator.share) {
         try {
           await navigator.share({
-            title: post?.title || "Timzee Tech Hub",
+            title: post?.title || "Blipmood",
             text: "Check this out",
             url: shareUrl
           });

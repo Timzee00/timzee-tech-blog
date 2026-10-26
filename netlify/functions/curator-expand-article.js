@@ -102,7 +102,7 @@ exports.handler=async(event)=>{
   try{
     const res=await fetch(endpoint,{
       method:"POST",signal:AbortSignal.timeout(22000),
-      headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",...(provider==="openrouter"?{"X-OpenRouter-Title":"Timzee Tech Hub Editorial"}:{})},
+      headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",...(provider==="openrouter"?{"X-OpenRouter-Title":"Blipmood Editorial"}:{})},
       body:JSON.stringify({model,temperature:0.2,max_tokens:mode==="translate"?1400:3800,messages:[{role:"system",content:system},{role:"user",content:user}]})
     });
     if(!res.ok){
@@ -121,7 +121,7 @@ exports.handler=async(event)=>{
         try{
           const repair=await fetch(endpoint,{
             method:"POST",signal:AbortSignal.timeout(16000),
-            headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",...(provider==="openrouter"?{"X-OpenRouter-Title":"Timzee Tech Hub Editorial"}:{})},
+            headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",...(provider==="openrouter"?{"X-OpenRouter-Title":"Blipmood Editorial"}:{})},
             body:JSON.stringify({
               model,temperature:0,max_tokens:1400,
               messages:[{role:"system",content:system+" Return only a single JSON object with headline and excerpt strings. Do not invent or add facts."},
@@ -167,7 +167,7 @@ exports.handler=async(event)=>{
       try {
         const repair=await fetch(endpoint,{
           method:"POST",signal:AbortSignal.timeout(20000),
-          headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",...(provider==="openrouter"?{"X-OpenRouter-Title":"Timzee Tech Hub Editorial"}:{})},
+          headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json",...(provider==="openrouter"?{"X-OpenRouter-Title":"Blipmood Editorial"}:{})},
           body:JSON.stringify(repairRequest)
         });
         if(!repair.ok)return respond(422,{error:"The AI draft was incomplete and the correction service failed. The original brief was preserved.",reason:"MODEL_REPAIR_REJECTED",initialIssue:String(initialError.message).slice(0,180)});

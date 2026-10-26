@@ -47,11 +47,11 @@ exports.handler=async event=>{
       method:"POST",signal:AbortSignal.timeout(9000),
       headers:{"api-key":brevo,"content-type":"application/json","accept":"application/json"},
       body:JSON.stringify({
-        sender:{email:from,name:process.env.BREVO_SENDER_NAME||"Timzee Tech Hub"},
+        sender:{email:from,name:process.env.BREVO_SENDER_NAME||"Blipmood"},
         to:[{email:recipient}],subject,
         textContent:brand.textContent,
         htmlContent:brand.htmlContent,
-        replyTo:{email:process.env.BREVO_REPLY_TO_EMAIL||from,name:process.env.BREVO_SENDER_NAME||"Timzee Tech Hub"},
+        replyTo:{email:process.env.BREVO_REPLY_TO_EMAIL||from,name:process.env.BREVO_SENDER_NAME||"Blipmood"},
         headers:{idempotencyKey:clientId}
       })
     });

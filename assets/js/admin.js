@@ -1629,7 +1629,7 @@ function inspectRequest(kind,id){
       const address=document.createElement("p");address.textContent="To: "+item.email;
       const subjectLabel=document.createElement("label");subjectLabel.textContent="Subject";
       const subject=document.createElement("input");subject.type="text";subject.required=true;subject.maxLength=180;
-      subject.value="Re: Timzee Tech Hub "+kind+" request";
+      subject.value="Re: Blipmood "+kind+" request";
       subject.style.cssText="display:block;width:100%;font:inherit;padding:10px";
       subjectLabel.append(subject);
       const bodyLabel=document.createElement("label");bodyLabel.textContent="Your reply";
@@ -1674,7 +1674,7 @@ function inspectRequest(kind,id){
       form.append(check);
       form.addEventListener("submit",async event=>{
         event.preventDefault();if(!form.reportValidity())return;
-        if(!window.confirm("Send this email through Timzee Tech Hub to the original requester's address?"))return;
+        if(!window.confirm("Send this email through Blipmood to the original requester's address?"))return;
         send.disabled=true;send.textContent="Submitting…";status.textContent="Submitting your reply securely…";
         try{
           const result=await submitStaffReply({

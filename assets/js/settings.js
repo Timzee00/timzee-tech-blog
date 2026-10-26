@@ -3,11 +3,11 @@ import { supabase } from "./supabase.js";
 const SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
 export const DEFAULT_SETTINGS = {
-  siteName: "Timzee Tech Hub",
-  tagline: "Tech news, live discussion, marketplace, videos, and novels — all in one community.",
-  heroTitle: "Stay curious. Build what’s next.",
+  siteName: "Blipmood",
+  tagline: "Your world. Your mood. Discover, connect and create.",
+  heroTitle: "Your world. Your mood.",
   heroIntro:
-    "Fresh perspectives on tech. Conversations worth having. A community to explore it all with.",
+    "Discover people, videos, ideas and stories from a community that creates, shares and belongs.",
   rules: "Respect each other, share sources, and keep posts useful. No spam or hate speech.",
   themeAccent: "#0f766e",
   features: {
@@ -16,11 +16,11 @@ export const DEFAULT_SETTINGS = {
   },
   support: {
     whatsappNumber: "",
-    whatsappMessage: "Hi Timzee Tech Hub, I need help."
+    whatsappMessage: "Hi Blipmood, I need help."
   },
   donation: {
     enabled: false,
-    title: "Support Timzee Tech Hub",
+    title: "Support Blipmood",
     details: "",
     url: ""
   },

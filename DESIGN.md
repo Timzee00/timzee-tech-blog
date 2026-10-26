@@ -132,14 +132,18 @@ both the operating-system reduced-motion setting and the user's saved preference
 
 ## Blipmood rollout guardrail (approved October 26, 2026)
 
-This first visual pass changes the **homepage presentation only**. Existing user
+The initial visual pass changed the homepage only. The **approved second pass** extends
+Blipmood naming, marks and email sender display branding across public/staff UI
+without changing authentication IDs, database table names, site URLs, sender addresses,
+or Timzee Corp's parent-company credit. Existing user
 profiles, Supabase authentication, moderation, feeds, post IDs, staff screens,
 legal pages, notification templates, and the admin-managed `siteName`/`heroTitle`
 settings retain their contracts. In the homepage, `#siteName`, `#heroTitle`
 and `#heroIntro` remain in DOM for backward compatibility, but the new visible
 brand artwork/copy is intentionally separate from the legacy site-settings text.
-Do not change other routes' legal/transactional identity until trademark and
-domain clearance, content migration, and release acceptance are complete.
+Public-facing product titles and notification labels may now say Blipmood; legal
+publisher ownership remains Timzee Corp. Complete trademark and domain clearance
+before migrating domains or formal registered-entity details.
 
 Homepage-only token mapping:
 - `--bm-navy` → existing dark `#101e24` (`--bg` dark).
@@ -155,3 +159,9 @@ The existing `nav.js` owns all six mobile destinations and the drawer; the
 homepage stylesheet must not add a second sticky bar or change route handling.
 Member suggestions, ranking, content lists, and weekly learning goal remain
 server-/session-driven: do not put fictional users or progress into markup.
+
+All public header/footer logo instances originate from `assets/js/site-shell.js`
+with shared visual styling in `assets/css/blipmood-brand.css`. All static page
+HTML gets built-time name/favicon normalization via `scripts/inject-site-shell.mjs`.
+Transactional template copy lives in server-side Netlify workers; verified sender
+email address must not be changed merely to alter its display name.
