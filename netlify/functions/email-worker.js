@@ -43,7 +43,7 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
   const optOutText=unsubscribeUrl ? "Stop future check-in emails: "+unsubscribeUrl+"\n\n" : "";
   const optOutHtml=unsubscribeUrl ? `<p><a href="${unsubscribeUrl}">Stop these reminders without signing in</a></p>` : "";
   const text=`${intro}\n\n${message}\n\n${referenceLine}${optional ? `Manage email preferences: ${settingsUrl}\n\n` : ""}${optOutText}Blipmood`;
-  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#101e24;border-radius:12px"><img src="https://timzee-tech-blog.netlify.app/assets/brand/blipmood-mark.svg" width="42" height="42" alt="" style="width:42px;height:42px;vertical-align:middle"><strong style="font-size:25px;letter-spacing:-1px;color:#edf5f4">Blipmood</strong></div><p>${escapeHtml(intro)}</p><p>${escapeHtml(message)}</p>${optional ?
+  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#101e24;border-radius:12px"><img src="https://timzee-tech-blog.netlify.app/assets/brand/blipmood-wordmark-dark.png" width="230" height="76" alt="Blipmood" style="width:230px;max-width:100%;height:auto;display:block"></div><p>${escapeHtml(intro)}</p><p>${escapeHtml(message)}</p>${optional ?
     `<p><a href="${settingsUrl}">Manage email preferences</a></p>` :
     `<p><strong>Reference:</strong> ${escapeHtml(reference)}</p>`}${optOutHtml}<hr><small>${optional?"You opted in to this optional email category. You can disable it in account settings.":"Transactional notification regarding your request."} Do not reply with passwords or sensitive details.</small></div>`;
   let res;
@@ -82,7 +82,7 @@ async function runEmailWorker(){
   const brevoKey=process.env.BREVO_API_KEY;
   if(process.env.EMAIL_DELIVERY_ENABLED !== "true") return {statusCode:200,body:"Email delivery paused"};
   const senderEmail=process.env.BREVO_SENDER_EMAIL;
-  const senderName=process.env.BREVO_SENDER_NAME||"Blipmood";
+  const senderName="Blipmood"; // Always present the product name; the verified sender email remains unchanged.
   if(!url||!serviceKey||!brevoKey||!senderEmail) {
     console.error("Email worker disabled: required server-only configuration missing");
     return {statusCode:503,body:"Email worker not configured"};

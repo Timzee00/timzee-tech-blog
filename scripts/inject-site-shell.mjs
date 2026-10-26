@@ -14,7 +14,11 @@ export function injectSiteShell(html) {
   html = replaceLegacyBrandText(html);
   if (/<\/head\s*>/i.test(html) && !/rel=["']icon["']/i.test(html)) {
     html = html.replace(/<\/head\s*>/i,
-      '  <link rel="icon" type="image/svg+xml" href="/assets/brand/blipmood-mark.svg">\n</head>');
+      '  <link rel="icon" type="image/png" href="https://d2ol7oe51mr4n9.cloudfront.net/user_3JR5g6OD2PPsWciJ9XxM8Ue05wO/cb2e26bb-2d48-471d-80fc-67d8ffc1b06b.png">\n</head>');
+  }
+  if (/<\/head\s*>/i.test(html) && !/rel=["']apple-touch-icon["']/i.test(html)) {
+    html = html.replace(/<\/head\s*>/i,
+      '  <link rel="apple-touch-icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_3JR5g6OD2PPsWciJ9XxM8Ue05wO/cb2e26bb-2d48-471d-80fc-67d8ffc1b06b.png">\n</head>');
   }
   if (!publicChrome.test(html) || alreadyLoaded.test(html) || !/<\/body\s*>/i.test(html)) return html;
   return html.replace(/<\/body\s*>/i, '    <script type="module" src="/assets/js/site-shell.js"></script>\n  </body>');

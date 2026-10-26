@@ -55,23 +55,7 @@ body.blipmood-home main, body.blipmood-home footer { position: relative; z-index
 .blipmood-home .brand .bm-brand-display {
   display: inline-flex; gap: 8px; align-items: center; min-width: 0; white-space: nowrap;
 }
-.blipmood-home .bm-logo-icon { width: 44px; height: 44px; object-fit: contain; flex: 0 0 auto; }
-.blipmood-home .bm-wordmark {
-  color: var(--bm-copy); font: 800 27px/1 "Syne", "Space Grotesk", sans-serif;
-  letter-spacing: -.095em; white-space: nowrap;
-}
-.blipmood-home .bm-play-i {
-  position: relative; display: inline-block; width: .28em; height: .92em;
-  vertical-align: -.055em; margin: 0 .015em 0 .025em;
-}
-.blipmood-home .bm-play-i::before {
-  content: ""; position: absolute; width: .13em; height: .56em;
-  bottom: 0; left: .08em; background: currentColor; border-radius: .09em;
-}
-.blipmood-home .bm-play-i svg {
-  position: absolute; width: .35em; height: .32em; left: -.035em; top: -.035em; 
-  fill: var(--bm-teal); filter: drop-shadow(0 0 4px rgba(105,211,193,.28));
-}
+.blipmood-home .brand .bm-wordmark-image {width:clamp(164px,16vw,220px);height:auto;max-height:65px;object-fit:contain;}
 .blipmood-home .site-header .nav-pill a:hover,
 .blipmood-home .site-header .nav-more-toggle:hover { color: var(--color-primary); }
 .blipmood-home .menu-toggle { background: var(--color-surface); border-radius: 11px; }
@@ -202,8 +186,8 @@ body.blipmood-home main, body.blipmood-home footer { position: relative; z-index
 @media (max-width: 500px) {
   .blipmood-home .container { width: calc(100% - 28px); }
   .blipmood-home .site-header .wrap { gap: 8px; }
-  .blipmood-home .bm-logo-icon { width: 34px; height: 34px; }
-  .blipmood-home .bm-wordmark { font-size: 20px; }
+  
+  .blipmood-home .brand .bm-wordmark-image {width:155px;}
   .blipmood-home .theme-control { font-size: 10px; }
   .blipmood-home .menu-toggle { min-height: 36px; padding: 7px 9px; }
   .blipmood-home .bm-hero-split { display: block; position: relative; }
@@ -226,8 +210,8 @@ body.blipmood-home main, body.blipmood-home footer { position: relative; z-index
   .blipmood-home .explore-footer { font-size: 11px; }
 }
 @media (max-width: 355px) {
-  .blipmood-home .bm-wordmark { font-size: 18px; }
-  .blipmood-home .bm-logo-icon { width: 30px; height: 30px; }
+  .blipmood-home .brand .bm-wordmark-image {width:128px;}
+  
   .blipmood-home .home-intro h1 { font-size: 34px; }
   .blipmood-home .cta { gap: 7px; }
 }

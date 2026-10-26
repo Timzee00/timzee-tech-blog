@@ -30,34 +30,49 @@ function ensureProductNavigation(){
   addLink("launches.html", "Coming Soon");
   addLink("settings.html", "Settings");
 }
+// Approved raster artwork: play-button 'i', expressive double-'oo', brush underline.
+// The build downloads and checksum-verifies these into first-party /assets/brand URLs.
+const BRAND_IMAGES = {
+  wordmark: {light:"https://d2ol7oe51mr4n9.cloudfront.net/user_3JR5g6OD2PPsWciJ9XxM8Ue05wO/809f2766-cefa-4133-9be0-a9e34a79ea67.png",dark:"https://d2ol7oe51mr4n9.cloudfront.net/user_3JR5g6OD2PPsWciJ9XxM8Ue05wO/1edfccf6-fdc1-409c-b9c5-162b23657600.png"},
+  emblem: {light:"https://d2ol7oe51mr4n9.cloudfront.net/user_3JR5g6OD2PPsWciJ9XxM8Ue05wO/cb2e26bb-2d48-471d-80fc-67d8ffc1b06b.png",dark:"https://d2ol7oe51mr4n9.cloudfront.net/user_3JR5g6OD2PPsWciJ9XxM8Ue05wO/fc802f03-1c6f-4c85-ab4c-a31f4a6b2981.png"}
+};
+function currentBrandTheme() {return document.documentElement.dataset.theme === "light" ? "light" : "dark";}
+function synchronizeBrandImages() {
+  const theme=currentBrandTheme();
+  document.querySelectorAll("img[data-bm-logo]").forEach(img => {
+    const kind=img.dataset.bmLogo;
+    if(!Object.hasOwn(BRAND_IMAGES,kind))return;
+    const src=BRAND_IMAGES[kind][theme];
+    if(img.getAttribute("src")!==src)img.setAttribute("src",src);
+  });
+}
 function createBlipmoodWordmark() {
-  // Construct the same app mark and play-in-i lettering for every public header/footer.
-  // This does not replace data-backed navigation, auth or settings controls.
-  const wrap = document.createElement("span");
-  wrap.className = "bm-brand-display";
-  wrap.setAttribute("aria-hidden", "true");
-  wrap.innerHTML = '<img class="bm-logo-icon" src="/assets/brand/blipmood-mark.svg" width="44" height="44" alt="" decoding="async">' +
-    '<span class="bm-wordmark">Bl<span class="bm-play-i"><svg viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M5 2 Q3 2 3 5 V17 Q3 20 6 20 L19 12 Q21 11 19 9 Z"/></svg></span>pmood</span>';
+  const wrap=document.createElement("span");
+  wrap.className="bm-brand-display";
+  wrap.setAttribute("aria-hidden","true");
+  const img=document.createElement("img");
+  img.className="bm-wordmark-image";
+  img.dataset.bmLogo="wordmark";
+  img.src=BRAND_IMAGES.wordmark[currentBrandTheme()];
+  img.alt=""; img.width=210; img.height=70; img.decoding="async";
+  wrap.appendChild(img);
   return wrap;
 }
 function ensureBlipmoodHeader() {
-  const headerBrand = document.querySelector(".site-header a.brand");
-  if (!headerBrand) return;
-  if (!headerBrand.querySelector(".bm-brand-display")) headerBrand.prepend(createBlipmoodWordmark());
-  headerBrand.setAttribute("aria-label", "Blipmood — Home");
-  headerBrand.querySelector("#siteName")?.setAttribute("aria-hidden", "true");
+  const headerBrand=document.querySelector(".site-header a.brand");
+  if(!headerBrand)return;
+  if(!headerBrand.querySelector(".bm-brand-display"))headerBrand.prepend(createBlipmoodWordmark());
+  headerBrand.setAttribute("aria-label","Blipmood — Home");
+  headerBrand.querySelector("#siteName")?.setAttribute("aria-hidden","true");
+  synchronizeBrandImages();
 }
-function updateFooterBrand(name) {
-  const wordmark = document.querySelector(".footer-wordmark");
-  if (!wordmark) return;
-  const productName = String(name || "Blipmood").trim();
-  wordmark.setAttribute("aria-label", productName + " — Home");
-  if (productName === "Blipmood") wordmark.replaceChildren(createBlipmoodWordmark());
-  else wordmark.replaceChildren(document.createTextNode(productName));
+function updateFooterBrand() {
+  const wordmark=document.querySelector(".footer-wordmark");
+  if(!wordmark)return;
+  wordmark.setAttribute("aria-label","Blipmood — Home");
+  wordmark.replaceChildren(createBlipmoodWordmark());
 }
-document.addEventListener("timzee:branding-updated", event => {
-  if (event.detail?.siteName) updateFooterBrand(event.detail.siteName);
-});
+document.addEventListener("timzee:branding-updated", () => updateFooterBrand());
 
 export function ensureSiteFooter() {
   const footer = document.querySelector("footer.footer");
@@ -127,4 +142,4 @@ export function ensureSiteFooter() {
 }
 async function loadPageEnhancements(){const path=currentSitePath();const imports=[import("./experience-preferences.js"),import("./launch-context.mjs")];if(path==="discussion.html")imports.push(import("./discussion-discovery.js"));if(path==="chat.html")imports.push(import("./chat-context-menu.js"));if(path==="ai-chat.html")imports.push(import("./ai-context.js"));if(imports.length)await Promise.allSettled(imports);}
 function scheduleIdle(task){if(typeof window.requestIdleCallback==="function")window.requestIdleCallback(task,{timeout:900});else window.setTimeout(task,220);}
-if(typeof window!=="undefined"){const start=()=>{ensureBlipmoodHeader();ensureProductNavigation();ensureSiteFooter();void import("./privacy-consent.js");scheduleIdle(()=>void loadPageEnhancements());};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();}
+if(typeof window!=="undefined"){const start=()=>{ensureBlipmoodHeader();ensureProductNavigation();ensureSiteFooter();synchronizeBrandImages();new MutationObserver(synchronizeBrandImages).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});void import("./privacy-consent.js");scheduleIdle(()=>void loadPageEnhancements());};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();}

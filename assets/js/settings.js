@@ -39,7 +39,7 @@ export const DEFAULT_SETTINGS = {
 function mapRowToSettings(row) {
   if (!row) return DEFAULT_SETTINGS;
   return {
-    siteName: row.site_name ?? DEFAULT_SETTINGS.siteName,
+    siteName: DEFAULT_SETTINGS.siteName, // Public brand is Blipmood even if the saved row is old.
     tagline: row.tagline ?? DEFAULT_SETTINGS.tagline,
     heroTitle: row.hero_title ?? DEFAULT_SETTINGS.heroTitle,
     heroIntro: row.hero_intro ?? DEFAULT_SETTINGS.heroIntro,
@@ -79,7 +79,7 @@ function mapRowToSettings(row) {
 function mapSettingsToRow(settings) {
   return {
     id: SETTINGS_ID,
-    site_name: settings.siteName,
+    site_name: DEFAULT_SETTINGS.siteName, // Persist the approved public name.
     tagline: settings.tagline,
     hero_title: settings.heroTitle,
     hero_intro: settings.heroIntro,

@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, "..");
 const read = p => fs.readFileSync(path.join(root, p), "utf8");
 const home = read("index.html");
 const css = read("assets/css/blipmood-home.css");
-const icon = read("assets/brand/blipmood-mark.svg");
+const brandAssets = read("scripts/brand-assets.mjs");
 
 test("Blipmood homepage keeps every data-driven section and settings hook", () => {
   for (const id of [
@@ -22,9 +22,10 @@ test("Blipmood homepage keeps every data-driven section and settings hook", () =
 });
 test("Blipmood displays the approved identity with a play button on the i", () => {
   assert.match(home, /class="blipmood-home"/);
-  assert.match(home, /class="bm-play-i"/);
-  assert.match(home, /assets\/brand\/blipmood-mark\.svg/);
-  assert.match(icon, /<svg[\s\S]*<path/);
+  assert.match(home, /data-bm-logo="wordmark"/);
+  assert.match(home, /data-bm-logo="emblem"/);
+  assert.match(brandAssets, /blipmood-wordmark-dark\.png/);
+  assert.match(brandAssets, /blipmood-emblem-light\.png/);
   assert.match(home, /Your world\.[\s\S]*Your mood\./);
 });
 test("Navigation continues to point to real existing site routes", () => {

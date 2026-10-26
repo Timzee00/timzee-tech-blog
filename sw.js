@@ -6,7 +6,7 @@ self.addEventListener("push",event=>{
   const title="Blipmood";
   const body=typeof message.body==="string"?message.body.slice(0,180):"You have new activity.";
   event.waitUntil(self.registration.showNotification(title,{
-    body,tag:"timzee-activity",renotify:false,
+    body,tag:"blipmood-activity",icon:"/assets/brand/blipmood-emblem-light.png",badge:"/assets/brand/blipmood-emblem-light.png",renotify:false,
     data:{url:"/index.html"}
   }));
 });

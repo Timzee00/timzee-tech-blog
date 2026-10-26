@@ -6,6 +6,7 @@ import { resolve, dirname } from "node:path";
 import { build } from "esbuild";
 import { injectSiteShell } from "./inject-site-shell.mjs";
 import { previewIndexingHeaders } from "./preview-indexing.mjs";
+import {downloadBrandAssets,useLocalBrandAssetUrls} from "./brand-assets.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const output = resolve(root, "dist");
@@ -68,14 +69,26 @@ for (const file of files.filter(path => path.endsWith(".html"))) {
   const enhanced = injectSiteShell(original);
   if (enhanced !== original) await writeFile(file, enhanced);
 }
+// Include the exact user-approved artwork in the first-party published bundle.
+// Source media is checksum-pinned: never ship a truncated or tampered image.
+await downloadBrandAssets(output);
+// Replace the immutable media sources with first-party URLs after copying assets.
+// In source mode, remote URLs remain valid for local previews and link validation.
+for (const file of await filesIn(output)) {
+  if (!/\.(?:html|js|mjs|css)$/.test(file)) continue;
+  const before=await readFile(file,"utf8");
+  const after=useLocalBrandAssetUrls(before);
+  if(after!==before)await writeFile(file,after);
+}
+const publishedFiles=await filesIn(output);
 const hash = createHash("sha256");
-for (const file of files) hash.update(await readFile(file));
+for (const file of publishedFiles) hash.update(await readFile(file));
 const assetVersion = hash.digest("hex").slice(0, 16);
 // Old deployments marked stable URLs immutable for a year. Version every local
 // JS/CSS reference (including module and CSS imports) to escape those caches.
-for (const file of files.filter(path => /\.(?:html|js|mjs|css)$/.test(path))) {
+for (const file of publishedFiles.filter(path => /\.(?:html|js|mjs|css)$/.test(path))) {
   const contents = await readFile(file, "utf8");
-  const versioned = contents.replace(/(["'])([^"'\s<>]+\.(?:js|mjs|css))\1/g, (match, quote, path) => {
+  const versioned = contents.replace(/(["'])([^"'\s<>]+\.(?:js|mjs|css|png|svg|webp))\1/g, (match, quote, path) => {
     if (/^(?:[a-z]+:|\/\/)/i.test(path)) return match;
     const local = path.startsWith("/") ? resolve(output, `.${path}`) : resolve(dirname(file), path);
     if (!existsSync(local) && !existsSync(resolve(output, path))) return match;
