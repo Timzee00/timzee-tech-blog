@@ -30,7 +30,7 @@ function setupDeviceAlertButton(userId){
   const on=deviceAlertsEnabled(userId);
   button.textContent=on?"Disable device alerts":"Enable device alerts";
   label.textContent=on?"Enabled while a Blipmood tab is open. Alerts with the browser fully closed are not yet supported.":
-    "Allow browser notifications when a Timzee tab is in the background.";
+    "Allow browser notifications when a Blipmood tab is in the background.";
  };
  button.onclick=async()=>{
   if(deviceAlertsEnabled(userId)){

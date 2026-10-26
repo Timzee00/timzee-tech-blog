@@ -495,7 +495,8 @@ footer {
 }
 
 .notification-item {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--color-surface, var(--card));
+  color: var(--color-text, var(--ink));
   border-radius: 14px;
   padding: 12px 14px;
   border: 1px solid rgba(15, 118, 110, 0.12);
@@ -2121,7 +2122,8 @@ footer {
 }
 
 .auth-card {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--color-surface, var(--card));
+  color: var(--color-text, var(--ink));
   border-radius: 24px;
   padding: 24px;
   border: 1px solid rgba(15, 118, 110, 0.12);
@@ -2475,7 +2477,8 @@ footer {
   gap: 16px;
   padding: 18px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--color-surface, var(--card));
+  color: var(--color-text, var(--ink));
   border: 1px solid rgba(15, 118, 110, 0.12);
   box-shadow: var(--shadow-soft);
 }
