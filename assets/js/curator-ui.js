@@ -280,6 +280,9 @@ class CuratorManager {
         .curator-manager .curator-reporting-confirm {display:flex!important;gap:10px;align-items:flex-start;}
         .curator-manager .curator-reporting-confirm input {flex:0 0 auto;width:18px;height:18px;margin-top:3px;}
         .curator-manager .curator-reporting-hint {font-size:13px;color:var(--color-text-muted);line-height:1.55;margin:4px 0;}
+        .curator-manager .curator-expand-feedback:not([hidden]) {display:block;max-width:100%;min-width:0;margin:12px 0;padding:12px;background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border-strong);border-radius:10px;overflow-wrap:anywhere;line-height:1.5;font-size:14px;}
+        .curator-manager .curator-expand-feedback[data-state="error"] {border-color:var(--color-danger,#c25656);}
+        .curator-manager .curator-expand-feedback[data-state="success"] {border-color:var(--color-success,#238969);}
         /* The original 1fr/auto header could allocate almost every pixel to
            two stat cards and make "Content Curator Bot" a 2-character column. */
         .curator-manager,.curator-manager .tab-content,.curator-manager .post-card,
@@ -530,7 +533,10 @@ class CuratorManager {
       const dateText = post.published_at ? new Date(post.published_at).toLocaleDateString() : "Unknown date";
       const wordCount = String(post.content || "").replace(/<[^>]*>/g, " ").trim().split(/\s+/).filter(Boolean).length;
       const isSourceBrief=String(post.content||"").includes("Editorial status:");
-      const editorialStatus = isSourceBrief || wordCount < 450
+      const isWorkingDraft=!isSourceBrief && String(post.content||"").includes("curator-editorial-note") && wordCount < 450;
+      const editorialStatus=isWorkingDraft
+        ? "Working AI draft · "+wordCount+" words · Add checked reporting before publishing."
+        : isSourceBrief || wordCount < 450
         ? "Source brief — expand with evidence and fact-check before publishing."
         : "Article draft · " + wordCount + " words · Fact-check before publishing.";
       return `
@@ -551,9 +557,10 @@ class CuratorManager {
           <label>Image credit and permission reference<input data-curator-image-credit="${post.id}" class="field" placeholder="Photographer / license / permission link"></label>
           <label><input type="checkbox" data-curator-image-rights="${post.id}"> I verified permission to display these images on Timzee Tech Hub</label>
         </details>
+        <p class="curator-expand-feedback" data-curator-expand-feedback="${post.id}" role="status" aria-live="polite" hidden></p>
         <details class="curator-reporting-editor">
-          <summary>Additional verified reporting (for a longer AI draft)</summary>
-          <p class="curator-reporting-hint">A short RSS excerpt cannot justify a full-length article. Review an additional reliable source, then add specific facts here and supply its link. The AI will use your notes as unverified editor-provided material until you fact-check the final draft.</p>
+          <summary>Additional reporting and source context (for an AI draft)</summary>
+          <p class="curator-reporting-hint">A short RSS excerpt cannot justify a full article. Add checked facts in your own words with a source link. This can be the original full report or a separate source; only a separate source provides independent confirmation. Do not paste entire copyrighted articles. Review the AI draft before publishing.</p>
           <label>Source URL for your additional reporting
             <input type="url" class="field" data-curator-reporting-source="${post.id}" placeholder="https://official-source.example/report">
           </label>
@@ -807,6 +814,12 @@ class CuratorManager {
       }
     }
     const label=btn.textContent;
+    const feedback=this.container.querySelector('[data-curator-expand-feedback="'+curatorPostId+'"]');
+    const showFeedback=(message,state)=>{
+      if(!feedback)return;
+      feedback.hidden=false;feedback.dataset.state=state;feedback.textContent=message;
+    };
+    showFeedback("Checking facts and writing. Your original source brief stays safe until validation succeeds.","working");
     btn.disabled=true;btn.textContent="Writing draft…";
     try {
       const {data}=await supabase.auth.getSession();
@@ -817,14 +830,19 @@ class CuratorManager {
         body:JSON.stringify({id:curatorPostId,reporting,reportingUrl})
       });
       const payload=await res.json().catch(()=>({}));
-      if(!res.ok)throw new Error(payload.error||"Could not expand the article.");
+      if(!res.ok)throw new Error((payload.error||"Could not expand the article.")+
+        (payload.initialIssue?" Reason: "+payload.initialIssue:""));
       const warnings=payload.verificationNotes||[];
       const note=this.container.querySelector('[data-editorial-state="'+curatorPostId+'"]');
-      if(note)note.textContent="Expanded to "+payload.wordCount+" words. Fact-check before publication."+ (warnings.length ? " Check: "+warnings.slice(0,2).join("; ") : "");
-      window.appUI.toast("AI-assisted article saved as a draft. Verify each factual claim and source before publishing.",{tone:"success"});
+      if(note)note.textContent=(payload.needsMoreReporting?"Working AI draft":"Expanded AI draft")+" · "+payload.wordCount+" words. Fact-check before publishing."+(warnings.length?" Check: "+warnings.slice(0,2).join("; "):"");
+      showFeedback(payload.needsMoreReporting?"Working draft saved. Add checked reporting before publishing.":"Expanded article saved for editorial review.","success");
+      window.appUI.toast(payload.needsMoreReporting?"Working draft saved. Add more evidence before publishing.":"AI-assisted article saved for fact-checking.",{tone:"success"});
       await this.load();
+      this.previewCuratorPost(curatorPostId);
     } catch(error) {
-      window.appUI.toast(error?.message||"Editorial expansion failed. Add verified context and retry, or keep it as a source brief.",{tone:"error"});
+      const detail=error?.message||"The AI could not finish a structured draft. Your source brief remains available.";
+      showFeedback(detail,"error");
+      window.appUI.toast(detail,{tone:"error"});
     } finally {
       btn.disabled=false;btn.textContent=label;
     }
