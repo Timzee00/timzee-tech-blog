@@ -53,12 +53,16 @@ test("public video includes its own video metadata and poster, not the homepage"
  thumbnail_url:"https://images.example.com/poster.jpg",video_url:"https://cdn.example.com/clip.mp4"}]});
  const meta=await getMeta("video",query("id="+A),db,BASE,"/video.html");
  assert.equal(meta.title,"My original reel");
+ assert.equal(meta.image,"https://images.example.com/poster.jpg");
  const html=renderHTML(meta);
  assert.match(html,/og:video:type/);assert.match(html,/video\/mp4/);
  assert.match(html,/poster\.jpg/);assert.match(html,/clip\.mp4/);
 });
 test("URL security rejects malicious images and forged origins",()=>{
  assert.equal(validUrl("javascript:alert(1)",BASE),"");
+ assert.equal(validUrl("",BASE),"");
+ assert.equal(validUrl("   ",BASE),"");
+ assert.equal(validUrl(undefined,BASE),"");
  assert.equal(validUrl("https://localhost/admin",BASE),"");
  assert.equal(safeOrigin("https://evil.example.net",BASE),BASE);
  assert.equal(safeOrigin("https://main--timzee-tech-blog.netlify.app",BASE),"https://main--timzee-tech-blog.netlify.app");

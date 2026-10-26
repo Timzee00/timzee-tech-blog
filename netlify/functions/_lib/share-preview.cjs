@@ -14,7 +14,7 @@ function clean(value,max=230){
 }
 function esc(x){return String(x??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
 function validUrl(value,origin){
- if(typeof value!=="string"||value.length>2100)return "";
+ if(typeof value!=="string"||!value.trim()||value.length>2100)return "";
  try{const u=new URL(value.trim(),origin);
  if(u.protocol!=="https:"||!u.hostname||u.username||u.password||u.hostname==="localhost"||/^(?:127\.|10\.|192\.168\.|169\.254\.)/.test(u.hostname))return "";
  return u.href;}catch{return "";}
