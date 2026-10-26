@@ -436,6 +436,7 @@
       .comment-load-more:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 3px; }
       .comment-drawer-list {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
         padding: 10px 16px;
       }
@@ -468,47 +469,75 @@
         padding: 4px 0;
         cursor: pointer;
       }
+      /* The reply target is its own row ABOVE the composer, never a flex sibling of the input. */
       .comment-reply-indicator {
         display: flex;
+        flex: 0 0 auto;
+        min-width: 0;
         align-items: center;
         justify-content: space-between;
-        padding: 8px 16px;
-        font-size: 12.5px;
-        color: rgba(255,255,255,0.7);
+        gap: 8px;
+        padding: 7px 16px;
+        font-size: 13px;
+        color: rgba(255,255,255,0.78);
         background: rgba(255,255,255,0.06);
       }
+      .comment-reply-target {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       .comment-reply-indicator button {
-        background: none;
+        flex: 0 0 auto;
+        min-width: 36px;
+        min-height: 36px;
+        padding: 0;
+        background: transparent;
         border: none;
+        border-radius: 50%;
         color: #fff;
-        font-size: 16px;
+        font-size: 20px;
         cursor: pointer;
-        opacity: 0.7;
+      }
+      .comment-reply-indicator button:focus-visible {
+        outline: 2px solid #7dd3fc;
+        outline-offset: 2px;
       }
       .comment-drawer-form {
         display: flex;
+        align-items: center;
+        min-width: 0;
         gap: 8px;
         padding: 12px 16px max(12px, env(safe-area-inset-bottom)) 16px;
         border-top: 1px solid rgba(255,255,255,0.08);
       }
       .comment-drawer-form input {
-        flex: 1;
+        box-sizing: border-box;
+        flex: 1 1 0%;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
         background: rgba(255,255,255,0.08);
         border: 1px solid rgba(255,255,255,0.12);
         border-radius: 999px;
         padding: 10px 14px;
         color: #fff;
-        font-size: 13.5px;
+        font-size: 16px;
       }
       .comment-drawer-form input::placeholder { color: rgba(255,255,255,0.4); }
-      .comment-drawer-form button {
+      .comment-drawer-form > button[type="submit"] {
+        flex: 0 0 auto;
+        min-width: 72px;
+        min-height: 44px;
+        white-space: nowrap;
         background: var(--reel-gradient);
         border: none;
         color: #fff;
         border-radius: 999px;
         padding: 0 16px;
         font-weight: 700;
-        font-size: 13px;
+        font-size: 14px;
         cursor: pointer;
       }
       .drawer-backdrop {
@@ -1318,9 +1347,9 @@
           bar = document.createElement("div");
           bar.id = "commentReplyBar";
           bar.className = "comment-reply-indicator";
-          drawerForm.insertBefore(bar, drawerForm.firstChild);
+          drawerForm.parentNode.insertBefore(bar, drawerForm);
         }
-        bar.innerHTML = `Replying to <strong>${escapeHTML(replyingTo.name)}</strong> <button type="button" id="cancelCommentReply">&times;</button>`;
+        bar.innerHTML = `<span class="comment-reply-target">Replying to <strong>${escapeHTML(replyingTo.name)}</strong></span><button type="button" id="cancelCommentReply" aria-label="Cancel reply" title="Cancel reply">&times;</button>`;
         drawerInput.placeholder = `Reply to ${replyingTo.name}...`;
         document.getElementById("cancelCommentReply").addEventListener("click", () => {
           replyingTo = null;
@@ -1452,6 +1481,7 @@
         drawer.setAttribute("aria-hidden", "true");
         state.commentsOpenFor = null;
         replyingTo = null;
+        updateReplyIndicator();
         commentLoading = false;
         commentLoadMoreBtn.hidden = true;
       }
