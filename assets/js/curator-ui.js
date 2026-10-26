@@ -33,6 +33,8 @@ class CuratorManager {
     this.stats = null;
     this.currentUser = null;
     this.roundupIds = new Set();
+    // In-memory only: keep editor-provided context while changing draft previews.
+    this.reportingNotes = new Map();
   }
 
   async init(containerId) {
@@ -522,12 +524,23 @@ class CuratorManager {
 
   renderPosts() {
     const list = this.container.querySelector("#postsList");
+    // Re-rendering after AI expansion must not discard the editor's reporting.
+    list?.querySelectorAll("[data-curator-reporting]").forEach(field=>{
+      const id=field.dataset.curatorReporting;
+      if(!id)return;
+      const source=list.querySelector('[data-curator-reporting-source="'+id+'"]');
+      const confirm=list.querySelector('[data-curator-reporting-checked="'+id+'"]');
+      this.reportingNotes.set(id,{
+        text:field.value||"",url:source?.value||"",checked:confirm?.checked===true
+      });
+    });
     if (!this.posts.length) {
       list.innerHTML = "<div style='grid-column: 1/-1; text-align: center; padding: 40px; color: var(--color-text-muted);'>No pending articles</div>";
       return;
     }
 
     list.innerHTML = this.posts.map(post => {
+      const reportingNote=this.reportingNotes.get(post.id)||{text:"",url:"",checked:false};
       const candidates=[...String(post.content||"").matchAll(/data-curator-image-candidate="([^"]+)"/g)]
         .map(match=>{try{return decodeURIComponent(match[1]);}catch{return "";}}).filter(Boolean);
       const dateText = post.published_at ? new Date(post.published_at).toLocaleDateString() : "Unknown date";
@@ -562,12 +575,12 @@ class CuratorManager {
           <summary>Additional reporting and source context (for an AI draft)</summary>
           <p class="curator-reporting-hint">A short RSS excerpt cannot justify a full article. Add checked facts in your own words with a source link. This can be the original full report or a separate source; only a separate source provides independent confirmation. Do not paste entire copyrighted articles. Review the AI draft before publishing.</p>
           <label>Source URL for your additional reporting
-            <input type="url" class="field" data-curator-reporting-source="${post.id}" placeholder="https://official-source.example/report">
+            <input type="url" class="field" data-curator-reporting-source="${post.id}" placeholder="https://official-source.example/report" value="${escapeHTML(reportingNote.url)}">
           </label>
           <label>Evidence and context from that source
-            <textarea class="field" data-curator-reporting="${post.id}" rows="5" maxlength="4500" placeholder="Summarize checked facts, dates and relevant context in your own words. Do not copy full articles."></textarea>
+            <textarea class="field" data-curator-reporting="${post.id}" rows="5" maxlength="4500" placeholder="Summarize checked facts, dates and relevant context in your own words. Do not copy full articles.">${escapeHTML(reportingNote.text)}</textarea>
           </label>
-          <label class="curator-reporting-confirm"><input type="checkbox" data-curator-reporting-checked="${post.id}"> I reviewed this source and will fact-check the generated draft before publication.</label>
+          <label class="curator-reporting-confirm"><input type="checkbox" data-curator-reporting-checked="${post.id}" ${reportingNote.checked?"checked":""}> I reviewed this source and will fact-check the generated draft before publication.</label>
         </details>
         <div class="post-actions">
           <button class="btn btn-ghost" data-post-id="${post.id}" data-type="post-preview">Preview post</button>
