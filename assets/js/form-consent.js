@@ -1,7 +1,7 @@
 const CONSENT_TEXT = {
   contact: "I agree that Timzee Corp may use these details to respond to my request.",
   support: "I agree that Timzee Corp may use these details to provide support and troubleshoot my request.",
-  newsletter: "I agree to receive the Timzee Tech Hub newsletter and understand I can unsubscribe at any time.",
+  newsletter: "I agree to receive the Blipmood newsletter and understand I can unsubscribe at any time.",
   ads: "I agree that Timzee Corp may use these details to review and respond to this advertising application."
 };
 

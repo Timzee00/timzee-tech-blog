@@ -2,7 +2,8 @@
 // the parent-company credit (Timzee Corp). Public content and staff chrome
 // share the same visible product name; app-owned names remain unchanged.
 export function replaceLegacyBrandText(html) {
-  return html.replace(/Timzee Tech (?:Hub|Blog|Forum)\b/g, "Blipmood")
+  return html.replace(/Timzee\s*<span>\s*Tech\s*<\/span>\s*Hub/g, "Blipmood")
+    .replace(/Timzee Tech (?:Hub|Blog|Forum)\b/g, "Blipmood")
     .replace(/\bTimzee Tech\b/g, "Blipmood");
 }
 // Add the shared public chrome to built pages, not isolated staff workspaces.

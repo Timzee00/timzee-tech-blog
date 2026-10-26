@@ -19,6 +19,7 @@ test("all built HTML pages receive the Blipmood product name, but stable links a
   assert.equal((out.match(/site-shell\.js/g)||[]).length,1);
   assert.equal(injectSiteShell(out),out, "injection must be idempotent");
   assert.equal(replaceLegacyBrandText("Timzee Corp"), "Timzee Corp");
+  assert.equal(replaceLegacyBrandText('Timzee <span>Tech</span> Hub'), "Blipmood");
 });
 test("shared site header/footer use a single accessible mark and the approved play-in-i symbol", () => {
   const shell=read("assets/js/site-shell.js");

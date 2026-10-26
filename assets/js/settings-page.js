@@ -39,7 +39,7 @@ function mountExtraSettings(){
   const reading=document.createElement("section");
   reading.id="reading-privacy";reading.className="settings-card card";
   reading.innerHTML='<div class="settings-card-head"><div><span class="settings-kicker">Your reading space</span><h2>Reading history & continuity</h2></div></div>'+
-    '<p class="settings-help">Timzee saves an approximate article completion percentage privately to your account so you can resume across devices. It is not visible on public profiles, and is not used to inflate post view counts.</p>'+
+    '<p class="settings-help">Blipmood saves an approximate article completion percentage privately to your account so you can resume across devices. It is not visible on public profiles, and is not used to inflate post view counts.</p>'+
     '<div class="settings-stack">'+
     '<label class="toggle-row"><span><strong>Remember my reading progress</strong><small>Stop saving new reading progress anytime. Switching this off does not erase existing history.</small></span><input type="checkbox" data-path="privacy.rememberReading"></label>'+
     '<div class="setting-row"><div><strong>Erase my reading history</strong><small>Remove all recorded article positions from your account. Saved bookmarks remain unchanged.</small></div><button type="button" class="btn ghost sm" id="clearReadingHistoryBtn">Erase history</button></div>'+
