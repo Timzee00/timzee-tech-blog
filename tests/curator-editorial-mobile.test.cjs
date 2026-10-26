@@ -113,3 +113,37 @@ test("post deletion migration cascades comments without deleting data in the mig
   assert.match(sql,/foreign key \(post_id\) references public\.posts\(id\)\s+on delete cascade/i);
   assert.doesNotMatch(sql,/delete from public\.comments/i);
 });
+
+test("curator expansion explains failures and automatically previews saved drafts",()=>{
+ const source=fs.readFileSync("assets/js/curator-ui.js","utf8");
+ assert.match(source,/data-curator-expand-feedback/);
+ assert.match(source,/showFeedback\(detail,"error"\)/);
+ assert.match(source,/payload\.initialIssue/);
+ assert.match(source,/this\.previewCuratorPost\(curatorPostId\)/);
+ assert.match(source,/isWorkingDraft/);
+ assert.match(source,/Do not paste entire copyrighted articles/);
+});
+test("shorter source-backed model output remains an unpublished working draft",()=>{
+ const paragraph="The report describes a result but additional reporting would be needed to judge whether the tactical decisions caused the performance. ";
+ const input={
+  introduction:paragraph.repeat(3),conclusion:paragraph.repeat(3),
+  sections:Array.from({length:3},(_,i)=>({heading:"Match evidence "+i,paragraphs:[paragraph.repeat(6)]})),
+  takeaways:["The scoreline confirms an outcome but the underlying tactical causes require further independent evidence.","Attributing the result to one player would require detailed match analysis beyond the initial report."]
+ };
+ const url="https://news.example.org/report";
+ assert.throws(()=>normalizedArticle(input,url,"Publisher"),/structured article/);
+ const draft=normalizedArticle(input,url,"Publisher",{allowWorkingDraft:true,additionalSourceUrl:url});
+ assert.ok(draft.wordCount>=300&&draft.wordCount<450);
+ assert.equal(draft.needsMoreReporting,true);
+ assert.ok(draft.warnings.some(x=>/not an independent corroborating source/.test(x)));
+ assert.match(draft.content,/Editor-supplied context reference/);
+});
+test("curator function offers bounded provider correction while keeping approval threshold",()=>{
+ const api=fs.readFileSync("netlify/functions/curator-expand-article.js","utf8");
+ const ui=fs.readFileSync("assets/js/curator-ui.js","utf8");
+ assert.match(api,/allowWorkingDraft:true/);
+ assert.match(api,/MODEL_STRUCTURE_INCOMPLETE/);
+ assert.match(api,/needsMoreReporting/);
+ assert.match(ui,/articleWords<450/);
+ assert.match(ui,/status: "published"/);
+});
