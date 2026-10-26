@@ -25,15 +25,15 @@
 
       body.reel-mode {
         margin: 0;
-        height: 100vh;
+        height: var(--reel-screen-height, 100dvh);
         overflow: hidden;
         font-family: var(--font-body, "Sora", sans-serif);
       }
 
       .reel-scroller {
-        height: 100vh;
-        height: 100dvh;
+        height: var(--reel-screen-height, 100dvh);
         overflow-y: scroll;
+        overscroll-behavior-y: contain;
         scroll-snap-type: y mandatory;
         scrollbar-width: none;
       }
@@ -41,8 +41,7 @@
 
       .reel-item {
         position: relative;
-        height: 100vh;
-        height: 100dvh;
+        height: var(--reel-screen-height, 100dvh);
         scroll-snap-align: start;
         scroll-snap-stop: always;
         display: flex;
@@ -98,16 +97,6 @@
         transition: width 0.1s linear;
       }
 
-      .reel-topbar {
-        position: absolute;
-        top: max(14px, env(safe-area-inset-top));
-        left: 14px;
-        right: 14px;
-        z-index: 21;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
       .reel-back {
         width: 44px;
         height: 44px;
@@ -123,14 +112,6 @@
         text-decoration: none;
         cursor: pointer;
       }
-      .reel-wordmark {
-        color: #fff;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-        font-size: 15px;
-        opacity: 0.9;
-      }
-      .reel-wordmark span { color: var(--reel-warn); }
       .reel-mute {
         width: 38px;
         height: 38px;
@@ -436,6 +417,7 @@
       .comment-load-more:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 3px; }
       .comment-drawer-list {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
         padding: 10px 16px;
       }
@@ -468,47 +450,75 @@
         padding: 4px 0;
         cursor: pointer;
       }
+      /* The reply target is its own row ABOVE the composer, never a flex sibling of the input. */
       .comment-reply-indicator {
         display: flex;
+        flex: 0 0 auto;
+        min-width: 0;
         align-items: center;
         justify-content: space-between;
-        padding: 8px 16px;
-        font-size: 12.5px;
-        color: rgba(255,255,255,0.7);
+        gap: 8px;
+        padding: 7px 16px;
+        font-size: 13px;
+        color: rgba(255,255,255,0.78);
         background: rgba(255,255,255,0.06);
       }
+      .comment-reply-target {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       .comment-reply-indicator button {
-        background: none;
+        flex: 0 0 auto;
+        min-width: 36px;
+        min-height: 36px;
+        padding: 0;
+        background: transparent;
         border: none;
+        border-radius: 50%;
         color: #fff;
-        font-size: 16px;
+        font-size: 20px;
         cursor: pointer;
-        opacity: 0.7;
+      }
+      .comment-reply-indicator button:focus-visible {
+        outline: 2px solid #7dd3fc;
+        outline-offset: 2px;
       }
       .comment-drawer-form {
         display: flex;
+        align-items: center;
+        min-width: 0;
         gap: 8px;
         padding: 12px 16px max(12px, env(safe-area-inset-bottom)) 16px;
         border-top: 1px solid rgba(255,255,255,0.08);
       }
       .comment-drawer-form input {
-        flex: 1;
+        box-sizing: border-box;
+        flex: 1 1 0%;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
         background: rgba(255,255,255,0.08);
         border: 1px solid rgba(255,255,255,0.12);
         border-radius: 999px;
         padding: 10px 14px;
         color: #fff;
-        font-size: 13.5px;
+        font-size: 16px;
       }
       .comment-drawer-form input::placeholder { color: rgba(255,255,255,0.4); }
-      .comment-drawer-form button {
+      .comment-drawer-form > button[type="submit"] {
+        flex: 0 0 auto;
+        min-width: 72px;
+        min-height: 44px;
+        white-space: nowrap;
         background: var(--reel-gradient);
         border: none;
         color: #fff;
         border-radius: 999px;
         padding: 0 16px;
         font-weight: 700;
-        font-size: 13px;
+        font-size: 14px;
         cursor: pointer;
       }
       .drawer-backdrop {
@@ -529,13 +539,10 @@
         .reel-item { justify-content: center; }
         .reel-video { max-width: 480px; left: 50%; transform: translateX(-50%); width: 480px; border-radius: 0; }
         .reel-vignette, .reel-bottom { max-width: 480px; left: 50%; transform: translateX(-50%); }
-        .reel-topbar { max-width: 480px; left: 50%; transform: translateX(-50%); right: auto; width: 480px; }
+        .reel-nav { max-width: 480px; left: 50%; transform: translateX(-50%); }
         .comment-drawer { max-width: 480px; left: 50%; transform: translate(-50%, 100%); }
         .comment-drawer.open { transform: translate(-50%, 0); }
       }
-      .reel-create-link{position:fixed;top:calc(70px + env(safe-area-inset-top));right:clamp(12px,4vw,24px);z-index:95;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1px solid #ffffff70;background:#0f766e;color:white;font:800 27px/1 system-ui;text-decoration:none;box-shadow:0 4px 17px #0008}
-      .reel-create-link:focus-visible{outline:3px solid #7dd3fc;outline-offset:3px}
-      @media(max-width:480px){.reel-create-link{top:calc(65px + env(safe-area-inset-top));right:10px}}
       .reel-edit-caption{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:36px;padding:4px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.38);color:white;background:rgba(10,30,35,.78);font:750 12px system-ui;cursor:pointer}
       .reel-edit-caption:focus-visible{outline:3px solid #7dd3fc;outline-offset:2px}
       .reel-editor-dialog{border:1px solid #658e8b;border-radius:17px;width:min(92vw,460px);max-height:85dvh;overflow-y:auto;background:#10252b;color:white;padding:22px}
@@ -558,6 +565,131 @@
       .comment-like-btn:disabled{opacity:.55}
       .reel-tapzone{pointer-events:auto;touch-action:pan-y}
       .reel-back{min-width:44px;min-height:44px}
+
+      /* A SINGLE fixed header above snapping reels: comment/keyboard changes cannot move it. */
+      .reel-nav {
+        position: fixed;
+        top: max(12px, env(safe-area-inset-top));
+        left: 0;
+        right: 0;
+        z-index: 90;
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: clamp(4px, 1.6vw, 10px);
+        padding: 0 clamp(8px, 2vw, 18px);
+        pointer-events: none;
+      }
+      .reel-nav > *, .reel-nav button, .reel-nav a { pointer-events: auto; }
+      .reel-nav-actions { display:flex; align-items:center; gap:6px; }
+      .reel-nav .reel-feed-modes {
+        position: static;
+        inset: auto;
+        left: auto;
+        top: auto;
+        transform: none;
+        justify-self: center;
+        width: max-content;
+        max-width: 100%;
+        min-width: 0;
+        padding: 4px;
+      }
+      .reel-nav .reel-feed-modes button {
+        min-width: 0;
+        white-space: nowrap;
+        padding: 9px clamp(8px, 2.3vw, 15px);
+      }
+      .reel-nav .reel-mute { width:40px; height:40px; flex: 0 0 auto; }
+      .reel-nav-create {
+        position: relative;
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 1px solid rgba(255,255,255,.44);
+        border-radius: 50%;
+        color: white;
+        background: linear-gradient(140deg,#0b9489,#0ea5e9);
+        box-shadow: 0 4px 18px rgba(14,165,233,.35), inset 0 1px rgba(255,255,255,.28);
+        font: 700 25px/1 system-ui;
+        cursor: pointer;
+        transition: transform .18s ease, box-shadow .18s ease;
+      }
+      .reel-nav-create::after {
+        content:"";
+        position:absolute;
+        inset:-4px;
+        border:1px solid rgba(125,211,252,.24);
+        border-radius:inherit;
+        pointer-events:none;
+      }
+      .reel-nav-create:hover { box-shadow: 0 6px 22px rgba(14,165,233,.55); }
+      .reel-nav-create:active { transform:scale(.94); }
+      .reel-nav :is(button,a):focus-visible { outline:3px solid #7dd3fc; outline-offset:3px; }
+      @media (max-width:390px) {
+        .reel-nav { grid-template-columns: 40px minmax(0,1fr) auto; gap:4px; padding:0 7px; }
+        .reel-nav .reel-back { width:40px; height:40px; }
+        .reel-nav .reel-feed-modes button { font-size:12px; padding:9px 7px; }
+        .reel-nav-create, .reel-nav .reel-mute { width:36px; height:36px; min-height:36px; }
+        .reel-nav-actions { gap:4px; }
+      }
+      .reel-upload-dialog {
+        position: fixed;
+        width: min(94vw, 530px);
+        max-width: 530px;
+        max-height: min(88dvh, 850px);
+        margin:auto;
+        padding:0;
+        border:1px solid rgba(125,211,252,.35);
+        border-radius:22px;
+        background:#111c27;
+        color:#f8fafc;
+        color-scheme:dark;
+        box-shadow:0 24px 80px rgba(0,0,0,.7);
+        overflow:auto;
+        overscroll-behavior:contain;
+      }
+      .reel-upload-dialog::backdrop { background:rgba(0,0,0,.78); backdrop-filter:blur(5px); }
+      .reel-upload-head {
+        position:sticky; top:0; z-index:2;
+        display:flex; justify-content:space-between; align-items:center; gap:12px;
+        padding:16px 18px; background:#142632;
+        border-bottom:1px solid rgba(255,255,255,.14);
+      }
+      .reel-upload-head h2 { margin:0; font:750 19px/1.25 system-ui; }
+      .reel-upload-close {
+        flex:0 0 auto; width:40px; height:40px;
+        border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.08);
+        color:#fff; border-radius:50%; font-size:23px; cursor:pointer;
+      }
+      .reel-upload-form,.reel-upload-signin { display:grid; gap:13px; padding:18px; }
+      .reel-upload-form[hidden],.reel-upload-signin[hidden] { display:none; }
+      .reel-upload-form label { display:grid; gap:5px; font:600 13px/1.4 system-ui; }
+      .reel-upload-form :is(input:not([type="checkbox"]),textarea,select) {
+        box-sizing:border-box; width:100%; min-width:0; min-height:43px; padding:11px;
+        border:1px solid rgba(255,255,255,.25); background:#203241; color:#fff;
+        border-radius:11px; font:400 16px/1.3 system-ui;
+      }
+      .reel-upload-form input[type="file"] { max-width:100%; font-size:13px; }
+      .reel-upload-form textarea { resize:vertical; min-height:74px; }
+      .reel-upload-form :is(input,textarea,select):focus-visible,
+      .reel-upload-close:focus-visible { outline:3px solid #7dd3fc; outline-offset:2px; }
+      .reel-upload-checks { display:grid; gap:5px; }
+      .reel-upload-checks label { display:flex; gap:10px; align-items:center; padding:6px 0; }
+      .reel-upload-checks input { width:18px; height:18px; accent-color:#0d9488; }
+      .reel-upload-preview { display:block; width:100%; max-height:230px; border-radius:12px; background:#000; object-fit:contain; }
+      .reel-upload-preview[hidden] { display:none; }
+      .reel-upload-submit {
+        min-height:46px; border:0; border-radius:999px; background:var(--reel-gradient);
+        color:white; font:800 15px system-ui; cursor:pointer;
+      }
+      .reel-upload-submit:disabled { opacity:.6; cursor:wait; }
+      .reel-upload-status { margin:0; min-height:18px; overflow-wrap:anywhere; font-size:13px; }
+      .reel-upload-signin a { color:#99ecf7; font-weight:700; }
+      @media (prefers-reduced-motion:reduce) { .reel-nav-create { transition:none; } }
     </style>
   </head>
   <body class="reel-mode">
@@ -566,11 +698,17 @@
 
     <main id="main-content" aria-label="Timzee Reels">
       <h1 class="visually-hidden">Timzee Reels</h1>
-      <nav class="reel-feed-modes" aria-label="Video feed">
-        <button type="button" data-reel-mode="for-you" aria-pressed="true" class="active">For You</button>
-        <button type="button" data-reel-mode="following" aria-pressed="false">Following</button>
-      </nav>
-      <a class="reel-create-link" href="videos.html#uploadSection" aria-label="Create and upload a reel" title="Create reel">+</a>
+      <header class="reel-nav" aria-label="Reels controls">
+        <a class="reel-back" id="reelHeaderBack" href="videos.html" aria-label="Back to videos" title="Back">←</a>
+        <nav class="reel-feed-modes" aria-label="Video feed">
+          <button type="button" data-reel-mode="for-you" aria-pressed="true" class="active">For You</button>
+          <button type="button" data-reel-mode="following" aria-pressed="false">Following</button>
+        </nav>
+        <div class="reel-nav-actions">
+          <button type="button" class="reel-nav-create" id="reelOpenUpload" aria-haspopup="dialog" aria-controls="reelUploadDialog" aria-label="Create and upload a reel" title="Create a reel">+</button>
+          <button type="button" class="reel-mute" id="reelHeaderMute" aria-label="Toggle sound" title="Mute or unmute videos">🔊</button>
+        </div>
+      </header>
       <div id="reelRoot"></div>
     </main>
 
@@ -585,6 +723,38 @@
           <button id="reelEditorSave" type="submit">Save changes</button>
           <button id="reelEditorCancel" type="button">Cancel</button>
         </div>
+      </form>
+    </dialog>
+
+    <dialog class="reel-upload-dialog" id="reelUploadDialog" aria-labelledby="reelUploadTitle">
+      <div class="reel-upload-head">
+        <h2 id="reelUploadTitle">Create a reel <span aria-hidden="true">✦</span></h2>
+        <button type="button" class="reel-upload-close" id="reelUploadClose" aria-label="Close uploader">×</button>
+      </div>
+      <div class="reel-upload-signin" id="reelUploadSignin" hidden>
+        <p>Sign in to share your video with the Timzee community.</p>
+        <a id="reelUploadLogin" href="login.html">Sign in to upload</a>
+      </div>
+      <form id="reelUploadForm" class="reel-upload-form" novalidate>
+        <label>Choose your video <input id="reelUploadFile" type="file" accept="video/*,.mp4,.webm,.ogg,.mov" required></label>
+        <video id="reelUploadPreview" class="reel-upload-preview" muted playsinline controls preload="metadata" hidden aria-label="Selected video preview"></video>
+        <label>Video title <input id="reelUploadName" type="text" placeholder="Give your reel a title" maxlength="150" required></label>
+        <label>Caption <textarea id="reelUploadCaption" placeholder="What is your video about?" maxlength="3000" rows="3"></textarea></label>
+        <label>Category
+          <select id="reelUploadCategory">
+            <option value="tutorial">Tutorial</option><option value="demo">Demo</option>
+            <option value="review">Review</option><option value="news">News</option>
+            <option value="other" selected>Other</option>
+          </select>
+        </label>
+        <label>Hashtags (comma separated) <input id="reelUploadTags" type="text" placeholder="tech, funny, nigeria" maxlength="400"></label>
+        <label>Cover image (optional) <input id="reelUploadCover" type="file" accept="image/*"></label>
+        <div class="reel-upload-checks">
+          <label><input id="reelUploadComments" type="checkbox" checked> Allow comments</label>
+          <label><input id="reelUploadDownloads" type="checkbox" checked> Show download button</label>
+        </div>
+        <p role="status" aria-live="polite" id="reelUploadStatus" class="reel-upload-status"></p>
+        <button type="submit" id="reelUploadSubmit" class="reel-upload-submit">Publish reel</button>
       </form>
     </dialog>
     <div class="drawer-backdrop" id="drawerBackdrop"></div>
@@ -628,7 +798,9 @@
         commentOnVideo,
         getVideoComments,
         fetchVideoCommentPage,
-        incrementVideoView
+        incrementVideoView,
+        uploadVideo,
+        detectVideoDuration
       } from "./assets/js/videos-marketplace.js";
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
@@ -659,6 +831,234 @@
         likedCache: {},
         commentsOpenFor: null
       };
+
+
+      // Keep the reel feed at its pre-keyboard height while comments are open.
+      // Android browsers can otherwise retain a partial snap after the keyboard closes.
+      let reelHeight = 0;
+      let reelViewportTimer = null;
+      function syncReelViewport() {
+        if (state.commentsOpenFor || document.getElementById("reelUploadDialog").open) return;
+        if (document.activeElement?.matches?.("input,textarea,[contenteditable]")) return;
+        const height = Math.round(window.innerHeight || 0);
+        if (!height || height < 300) return;
+        // Skip a transient keyboard-sized viewport in portrait; the final resize
+        // event after keyboard dismissal will re-align the active reel.
+        if (reelHeight && height < reelHeight - 130 && window.matchMedia("(orientation: portrait)").matches) return;
+        document.documentElement.style.setProperty("--reel-screen-height", height + "px");
+        if (reelHeight !== height) {
+          reelHeight = height;
+          const scroller = document.getElementById("scroller");
+          if (scroller) scroller.scrollTop = state.activeIndex * scroller.clientHeight;
+        }
+      }
+      function scheduleReelViewportSync() {
+        clearTimeout(reelViewportTimer);
+        reelViewportTimer = setTimeout(syncReelViewport, 180);
+      }
+      window.addEventListener("resize", scheduleReelViewportSync, {passive:true});
+      window.visualViewport?.addEventListener("resize", scheduleReelViewportSync, {passive:true});
+      window.addEventListener("orientationchange", () => {
+        reelHeight = 0;
+        scheduleReelViewportSync();
+      }, {passive:true});
+      syncReelViewport();
+
+      const headerMute = document.getElementById("reelHeaderMute");
+      function syncHeaderMute() {
+        headerMute.textContent = state.sessionMuted ? "🔇" : "🔊";
+        headerMute.setAttribute("aria-label", state.sessionMuted ? "Unmute videos" : "Mute videos");
+        headerMute.setAttribute("aria-pressed", String(state.sessionMuted));
+      }
+      headerMute.addEventListener("click", () => {
+        state.sessionMuted = !state.sessionMuted;
+        try { sessionStorage.setItem("timzee:reels-muted", String(state.sessionMuted)); } catch {}
+        document.querySelectorAll(".reel-video").forEach(video => { video.muted = state.sessionMuted; });
+        syncHeaderMute();
+      });
+      document.getElementById("reelHeaderBack").addEventListener("click", event => {
+        try {
+          const previous = document.referrer ? new URL(document.referrer) : null;
+          if (previous && previous.origin === location.origin && history.length > 1) {
+            event.preventDefault();
+            history.back();
+          }
+        } catch {}
+      });
+
+      // The creator is a real inline uploader, sharing the existing Supabase
+      // uploadVideo() implementation with the full Videos page.
+      const uploadDialog = document.getElementById("reelUploadDialog");
+      const uploadForm = document.getElementById("reelUploadForm");
+      const uploadFile = document.getElementById("reelUploadFile");
+      const uploadPreview = document.getElementById("reelUploadPreview");
+      const uploadStatus = document.getElementById("reelUploadStatus");
+      const uploadSubmit = document.getElementById("reelUploadSubmit");
+      let uploadBusy = false;
+      let uploadPreviewUrl = null;
+      let resumeAfterUpload = false;
+      function releaseUploadPreview() {
+        uploadPreview.pause();
+        uploadPreview.removeAttribute("src");
+        uploadPreview.load();
+        uploadPreview.hidden = true;
+        if (uploadPreviewUrl) URL.revokeObjectURL(uploadPreviewUrl);
+        uploadPreviewUrl = null;
+      }
+      document.getElementById("reelOpenUpload").addEventListener("click", () => {
+        if (uploadDialog.open) return;
+        if (state.commentsOpenFor) {
+          resumeAfterComments = false;
+          closeComments();
+        }
+        // Don't replace a draft or change the selected reel when composing.
+        const playing = document.getElementById("video-" + state.activeIndex);
+        resumeAfterUpload = Boolean(playing && !playing.paused);
+        document.querySelectorAll(".reel-video").forEach(video => video.pause());
+        document.getElementById("reelUploadSignin").hidden = Boolean(state.user);
+        uploadForm.hidden = !state.user;
+        document.getElementById("reelUploadLogin").href =
+          "login.html?next=" + encodeURIComponent(location.href);
+        uploadDialog.showModal();
+        if (state.user) uploadFile.focus();
+      });
+      document.getElementById("reelUploadClose").addEventListener("click", () => {
+        if (!uploadBusy) uploadDialog.close();
+      });
+      uploadDialog.addEventListener("cancel", event => {
+        if (uploadBusy) event.preventDefault();
+      });
+      uploadDialog.addEventListener("close", () => {
+        releaseUploadPreview();
+        uploadStatus.textContent = "";
+        document.getElementById("reelOpenUpload").focus({preventScroll:true});
+        if (resumeAfterUpload) {
+          const active = document.getElementById("video-" + state.activeIndex);
+          if (active) playWithSoundFallback(active, state.activeIndex, {explicit:true});
+        }
+        resumeAfterUpload = false;
+        scheduleReelViewportSync();
+      });
+      uploadFile.addEventListener("change", () => {
+        releaseUploadPreview();
+        uploadStatus.textContent = "";
+        const file = uploadFile.files?.[0];
+        if (!file) return;
+        if (!file.size || !(file.type.startsWith("video/") || /\.(mp4|webm|ogg|mov)$/i.test(file.name))) {
+          uploadStatus.textContent = "Choose a valid non-empty video file.";
+          return;
+        }
+        uploadPreviewUrl = URL.createObjectURL(file);
+        uploadPreview.src = uploadPreviewUrl;
+        uploadPreview.hidden = false;
+        if (!document.getElementById("reelUploadName").value.trim()) {
+          document.getElementById("reelUploadName").value =
+            file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").slice(0, 150);
+        }
+      });
+
+      function captureReelCover(file) {
+        return new Promise(resolve => {
+          let url;
+          try { url = URL.createObjectURL(file); }
+          catch { resolve(null); return; }
+          const video = document.createElement("video");
+          video.muted = true;
+          video.playsInline = true;
+          video.preload = "metadata";
+          let settled = false;
+          const timer = setTimeout(() => finish(null), 6500);
+          function finish(result) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            video.removeAttribute("src");
+            video.load();
+            URL.revokeObjectURL(url);
+            resolve(result);
+          }
+          video.addEventListener("loadedmetadata", () => {
+            const time = Math.min(0.5, Math.max(0, (video.duration || 0) - 0.1));
+            try { video.currentTime = time; } catch { finish(null); }
+          }, {once:true});
+          video.addEventListener("seeked", () => {
+            try {
+              const canvas = document.createElement("canvas");
+              canvas.width = Math.max(1, video.videoWidth || 320);
+              canvas.height = Math.max(1, video.videoHeight || 180);
+              canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+              canvas.toBlob(blob => finish(blob ? new File([blob], "reel-cover.jpg", {type:"image/jpeg"}) : null), "image/jpeg", 0.8);
+            } catch { finish(null); }
+          }, {once:true});
+          video.addEventListener("error", () => finish(null), {once:true});
+          video.src = url;
+        });
+      }
+
+      uploadForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        if (uploadBusy || !state.user) return;
+        if (!uploadForm.reportValidity()) return;
+        const file = uploadFile.files?.[0];
+        if (!file?.size || !(file.type.startsWith("video/") || /\.(mp4|webm|ogg|mov)$/i.test(file.name))) {
+          uploadStatus.textContent = "Choose a valid non-empty video file.";
+          return;
+        }
+        const cover = document.getElementById("reelUploadCover").files?.[0] || null;
+        if (cover && (!cover.type.startsWith("image/") || cover.size > 10 * 1024 * 1024)) {
+          uploadStatus.textContent = "Cover must be an image under 10 MB.";
+          return;
+        }
+        const title = document.getElementById("reelUploadName").value.trim();
+        const description = document.getElementById("reelUploadCaption").value.trim();
+        if (!title || title.length > 150 || description.length > 3000) {
+          uploadStatus.textContent = "Enter a title (up to 150 characters) and a caption under 3000 characters.";
+          return;
+        }
+        const tags = [...new Set(document.getElementById("reelUploadTags").value
+          .split(/[\s,]+/).map(t => t.trim().replace(/^#/, "").toLowerCase())
+          .filter(t => /^[a-z0-9_]{1,32}$/.test(t)))].slice(0, 20);
+        uploadBusy = true;
+        uploadSubmit.disabled = true;
+        uploadSubmit.textContent = "Publishing…";
+        try {
+          uploadStatus.textContent = "Preparing video and cover…";
+          const [duration, thumbnail] = await Promise.all([
+            detectVideoDuration(file),
+            cover ? Promise.resolve(cover) : captureReelCover(file)
+          ]);
+          uploadStatus.textContent = "Uploading your reel… Keep this window open.";
+          const result = await uploadVideo(
+            state.user.id,
+            state.user.user_metadata?.display_name || state.user.email || "Member",
+            file, thumbnail,
+            {
+              title, description,
+              category: document.getElementById("reelUploadCategory").value,
+              tags,
+              duration,
+              allow_comments: document.getElementById("reelUploadComments").checked,
+              allow_download: document.getElementById("reelUploadDownloads").checked
+            }
+          );
+          if (result?.error || !result?.data?.id) {
+            throw new Error(typeof result?.error === "string" ? result.error :
+              (result?.error?.message || "The server did not confirm the upload."));
+          }
+          uploadStatus.textContent = "Reel published successfully!";
+          uploadForm.reset();
+          uploadDialog.close();
+          window.appUI?.toast?.("Your reel was published successfully!");
+          // Keep the viewer on the same reel rather than replacing the feed.
+        } catch (error) {
+          uploadStatus.textContent = "Upload failed: " + String(error?.message || "Please try again.");
+          console.warn("Reel upload failed:", error);
+        } finally {
+          uploadBusy = false;
+          uploadSubmit.disabled = false;
+          uploadSubmit.textContent = "Publish reel";
+        }
+      });
 
       const reelEditor=document.getElementById("reelEditor"),reelForm=document.getElementById("reelEditorForm");
       let editingReelId=null;
@@ -774,19 +1174,13 @@
             <div class="reel-tapzone" aria-hidden="true"></div>
             <div class="reel-pause-flash" id="pauseflash-${index}">▶</div>
 
-            <div class="reel-topbar">
-              <a class="reel-back" href="videos.html" aria-label="Back to videos">←</a>
-              <div class="reel-wordmark">Timzee <span>Reels</span></div>
-              ${state.user?.id===video.user_id?'<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">✎ Edit</button>':''}
-              <button type="button" class="reel-mute" id="mute-${index}" aria-label="Toggle sound">🔊</button>
-            </div>
-
             <div class="reel-bottom">
               <div class="reel-meta">
                 <div class="reel-uploader">
                   <a class="reel-avatar-frame" href="profile.html?id=${encodeURIComponent(video.user_id || '')}" aria-label="View uploader profile">${avatarMarkup}</a>
                   <span class="reel-username">${uploaderMarkup}</span>
                   ${staff}
+                  ${state.user?.id===video.user_id?'<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">✎ Edit</button>':''}
                 </div>
                 <p class="reel-caption" id="caption-${index}">${renderSocialText(video.title || "")}${video.description ? " — " + renderSocialText(video.description) : ""}</p>
                 <button type="button" class="reel-caption-more" data-action="expand-caption" data-index="${index}" aria-expanded="false">More caption</button>
@@ -840,6 +1234,7 @@
       function playWithSoundFallback(vid, idx, { explicit = false } = {}) {
         if (!explicit && state.preferences.videos.autoplay === false) return;
         // Preserve the viewer's latest mute decision across every reel.
+        if (state.commentsOpenFor || document.getElementById("reelUploadDialog")?.open) return;
         vid.muted = state.sessionMuted;
         const attempt = vid.play();
         if (attempt && typeof attempt.catch === "function") {
@@ -850,10 +1245,7 @@
             state.sessionMuted = true;
             try { sessionStorage.setItem("timzee:reels-muted","true"); } catch {}
             document.querySelectorAll(".reel-video").forEach(item=>{item.muted=true;});
-            document.querySelectorAll(".reel-mute").forEach(button=>{
-              button.textContent="🔇";
-              button.setAttribute("aria-label","Unmute videos");
-            });
+            syncHeaderMute();
             vid.play().catch(() => {});
           });
         }
@@ -864,18 +1256,7 @@
         const scroller = document.getElementById("scroller");
         if (!scroller) return;
 
-        scroller.querySelectorAll(".reel-back").forEach(link=>{
-          link.addEventListener("click",event=>{
-            // Return to FYP, a profile or a shared feed if that is where the
-            // viewer arrived from; otherwise keep Videos as the safe fallback.
-            try{
-              const previous=document.referrer?new URL(document.referrer):null;
-              if(previous&&previous.origin===location.origin&&history.length>1){
-                event.preventDefault();history.back();
-              }
-            }catch{}
-          });
-        });
+        // Back is handled by the shared header, not by each reel.
         // Whole visual reel receives gestures, including the video above/below
         // its center. Ignore caption/controls/progress so those still work.
         const tapState=new Map();
@@ -903,24 +1284,7 @@
           });
         });
 
-        // Mute toggle
-        scroller.querySelectorAll(".reel-mute:not([data-reel-mute-wired])").forEach((btn) => {
-
-          btn.dataset.reelMuteWired="true";
-          btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const idx = btn.id.split("-")[1];
-            const vid = document.getElementById(`video-${idx}`);
-            if (!vid) return;
-            state.sessionMuted = !vid.muted;
-            try { sessionStorage.setItem("timzee:reels-muted",String(state.sessionMuted)); } catch {}
-            scroller.querySelectorAll(".reel-video").forEach(item => { item.muted = state.sessionMuted; });
-            scroller.querySelectorAll(".reel-mute").forEach(button => {
-              button.textContent = state.sessionMuted ? "🔇" : "🔊";
-              button.setAttribute("aria-label",state.sessionMuted?"Unmute videos":"Mute videos");
-            });
-          });
-        });
+        // Mute is handled by the shared header and applies to all clips.
 
         // Expand caption on tap
         scroller.querySelectorAll(".reel-caption:not([data-reel-caption-wired])").forEach((cap) => {
@@ -1190,7 +1554,7 @@
               }
             });
           },
-          { threshold: [0, 0.6, 1] }
+          { root: scroller, threshold: [0, 0.6, 1] }
         );
         scroller.querySelectorAll(".reel-item").forEach(el => {
           observer.observe(el);
@@ -1318,9 +1682,9 @@
           bar = document.createElement("div");
           bar.id = "commentReplyBar";
           bar.className = "comment-reply-indicator";
-          drawerForm.insertBefore(bar, drawerForm.firstChild);
+          drawerForm.parentNode.insertBefore(bar, drawerForm);
         }
-        bar.innerHTML = `Replying to <strong>${escapeHTML(replyingTo.name)}</strong> <button type="button" id="cancelCommentReply">&times;</button>`;
+        bar.innerHTML = `<span class="comment-reply-target">Replying to <strong>${escapeHTML(replyingTo.name)}</strong></span><button type="button" id="cancelCommentReply" aria-label="Cancel reply" title="Cancel reply">&times;</button>`;
         drawerInput.placeholder = `Reply to ${replyingTo.name}...`;
         document.getElementById("cancelCommentReply").addEventListener("click", () => {
           replyingTo = null;
@@ -1414,7 +1778,15 @@
         }
       }
 
+      let resumeAfterComments = false;
       async function openComments(videoId) {
+        // Refreshing the list after posting must not erase the playback state
+        // captured when comments first opened.
+        if (state.commentsOpenFor !== videoId) {
+          const activeReel = document.getElementById("video-" + state.activeIndex);
+          resumeAfterComments = Boolean(activeReel && !activeReel.paused);
+          document.querySelectorAll(".reel-video").forEach(video => video.pause());
+        }
         state.commentsOpenFor = videoId;
         const video=state.videos.find(v=>v.id===videoId);
         const isOwner=Boolean(state.user&&video?.user_id===state.user.id);
@@ -1452,6 +1824,14 @@
         drawer.setAttribute("aria-hidden", "true");
         state.commentsOpenFor = null;
         replyingTo = null;
+        updateReplyIndicator();
+        if (document.activeElement === drawerInput) drawerInput.blur();
+        if (resumeAfterComments) {
+          const active = document.getElementById("video-" + state.activeIndex);
+          if (active) playWithSoundFallback(active, state.activeIndex, {explicit:true});
+        }
+        resumeAfterComments = false;
+        scheduleReelViewportSync();
         commentLoading = false;
         commentLoadMoreBtn.hidden = true;
       }
@@ -1562,6 +1942,7 @@
           const savedMute=sessionStorage.getItem("timzee:reels-muted");
           state.sessionMuted = savedMute === null ? state.preferences.videos.mutedByDefault === true : savedMute === "true";
         } catch { state.sessionMuted = state.preferences.videos.mutedByDefault === true; }
+        syncHeaderMute();
         if(state.mode==="for-you" && state.preferences.feed.showRecommendations===false){
           state.mode="following"; updateReelModeButtons();
         }
