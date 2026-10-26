@@ -97,16 +97,6 @@
         transition: width 0.1s linear;
       }
 
-      .reel-topbar {
-        position: absolute;
-        top: max(14px, env(safe-area-inset-top));
-        left: 14px;
-        right: 14px;
-        z-index: 21;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
       .reel-back {
         width: 44px;
         height: 44px;
@@ -122,14 +112,6 @@
         text-decoration: none;
         cursor: pointer;
       }
-      .reel-wordmark {
-        color: #fff;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-        font-size: 15px;
-        opacity: 0.9;
-      }
-      .reel-wordmark span { color: var(--reel-warn); }
       .reel-mute {
         width: 38px;
         height: 38px;
@@ -561,9 +543,6 @@
         .comment-drawer { max-width: 480px; left: 50%; transform: translate(-50%, 100%); }
         .comment-drawer.open { transform: translate(-50%, 0); }
       }
-      .reel-create-link{position:fixed;top:calc(70px + env(safe-area-inset-top));right:clamp(12px,4vw,24px);z-index:95;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1px solid #ffffff70;background:#0f766e;color:white;font:800 27px/1 system-ui;text-decoration:none;box-shadow:0 4px 17px #0008}
-      .reel-create-link:focus-visible{outline:3px solid #7dd3fc;outline-offset:3px}
-      @media(max-width:480px){.reel-create-link{top:calc(65px + env(safe-area-inset-top));right:10px}}
       .reel-edit-caption{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:36px;padding:4px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.38);color:white;background:rgba(10,30,35,.78);font:750 12px system-ui;cursor:pointer}
       .reel-edit-caption:focus-visible{outline:3px solid #7dd3fc;outline-offset:2px}
       .reel-editor-dialog{border:1px solid #658e8b;border-radius:17px;width:min(92vw,460px);max-height:85dvh;overflow-y:auto;background:#10252b;color:white;padding:22px}
@@ -928,6 +907,10 @@
       }
       document.getElementById("reelOpenUpload").addEventListener("click", () => {
         if (uploadDialog.open) return;
+        if (state.commentsOpenFor) {
+          resumeAfterComments = false;
+          closeComments();
+        }
         // Don't replace a draft or change the selected reel when composing.
         const playing = document.getElementById("video-" + state.activeIndex);
         resumeAfterUpload = Boolean(playing && !playing.paused);
@@ -1797,9 +1780,13 @@
 
       let resumeAfterComments = false;
       async function openComments(videoId) {
-        const activeReel = document.getElementById("video-" + state.activeIndex);
-        resumeAfterComments = Boolean(activeReel && !activeReel.paused);
-        document.querySelectorAll(".reel-video").forEach(video => video.pause());
+        // Refreshing the list after posting must not erase the playback state
+        // captured when comments first opened.
+        if (state.commentsOpenFor !== videoId) {
+          const activeReel = document.getElementById("video-" + state.activeIndex);
+          resumeAfterComments = Boolean(activeReel && !activeReel.paused);
+          document.querySelectorAll(".reel-video").forEach(video => video.pause());
+        }
         state.commentsOpenFor = videoId;
         const video=state.videos.find(v=>v.id===videoId);
         const isOwner=Boolean(state.user&&video?.user_id===state.user.id);
