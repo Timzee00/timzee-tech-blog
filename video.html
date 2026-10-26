@@ -853,6 +853,230 @@
         commentsOpenFor: null
       };
 
+
+      // Keep the reel feed at its pre-keyboard height while comments are open.
+      // Android browsers can otherwise retain a partial snap after the keyboard closes.
+      let reelHeight = 0;
+      let reelViewportTimer = null;
+      function syncReelViewport() {
+        if (state.commentsOpenFor || document.getElementById("reelUploadDialog").open) return;
+        if (document.activeElement?.matches?.("input,textarea,[contenteditable]")) return;
+        const height = Math.round(window.innerHeight || 0);
+        if (!height || height < 300) return;
+        // Skip a transient keyboard-sized viewport in portrait; the final resize
+        // event after keyboard dismissal will re-align the active reel.
+        if (reelHeight && height < reelHeight - 130 && window.matchMedia("(orientation: portrait)").matches) return;
+        document.documentElement.style.setProperty("--reel-screen-height", height + "px");
+        if (reelHeight !== height) {
+          reelHeight = height;
+          const scroller = document.getElementById("scroller");
+          if (scroller) scroller.scrollTop = state.activeIndex * scroller.clientHeight;
+        }
+      }
+      function scheduleReelViewportSync() {
+        clearTimeout(reelViewportTimer);
+        reelViewportTimer = setTimeout(syncReelViewport, 180);
+      }
+      window.addEventListener("resize", scheduleReelViewportSync, {passive:true});
+      window.visualViewport?.addEventListener("resize", scheduleReelViewportSync, {passive:true});
+      window.addEventListener("orientationchange", () => {
+        reelHeight = 0;
+        scheduleReelViewportSync();
+      }, {passive:true});
+      syncReelViewport();
+
+      const headerMute = document.getElementById("reelHeaderMute");
+      function syncHeaderMute() {
+        headerMute.textContent = state.sessionMuted ? "🔇" : "🔊";
+        headerMute.setAttribute("aria-label", state.sessionMuted ? "Unmute videos" : "Mute videos");
+        headerMute.setAttribute("aria-pressed", String(state.sessionMuted));
+      }
+      headerMute.addEventListener("click", () => {
+        state.sessionMuted = !state.sessionMuted;
+        try { sessionStorage.setItem("timzee:reels-muted", String(state.sessionMuted)); } catch {}
+        document.querySelectorAll(".reel-video").forEach(video => { video.muted = state.sessionMuted; });
+        syncHeaderMute();
+      });
+      document.getElementById("reelHeaderBack").addEventListener("click", event => {
+        try {
+          const previous = document.referrer ? new URL(document.referrer) : null;
+          if (previous && previous.origin === location.origin && history.length > 1) {
+            event.preventDefault();
+            history.back();
+          }
+        } catch {}
+      });
+
+      // The creator is a real inline uploader, sharing the existing Supabase
+      // uploadVideo() implementation with the full Videos page.
+      const uploadDialog = document.getElementById("reelUploadDialog");
+      const uploadForm = document.getElementById("reelUploadForm");
+      const uploadFile = document.getElementById("reelUploadFile");
+      const uploadPreview = document.getElementById("reelUploadPreview");
+      const uploadStatus = document.getElementById("reelUploadStatus");
+      const uploadSubmit = document.getElementById("reelUploadSubmit");
+      let uploadBusy = false;
+      let uploadPreviewUrl = null;
+      let resumeAfterUpload = false;
+      function releaseUploadPreview() {
+        uploadPreview.pause();
+        uploadPreview.removeAttribute("src");
+        uploadPreview.load();
+        uploadPreview.hidden = true;
+        if (uploadPreviewUrl) URL.revokeObjectURL(uploadPreviewUrl);
+        uploadPreviewUrl = null;
+      }
+      document.getElementById("reelOpenUpload").addEventListener("click", () => {
+        if (uploadDialog.open) return;
+        // Don't replace a draft or change the selected reel when composing.
+        const playing = document.getElementById("video-" + state.activeIndex);
+        resumeAfterUpload = Boolean(playing && !playing.paused);
+        document.querySelectorAll(".reel-video").forEach(video => video.pause());
+        document.getElementById("reelUploadSignin").hidden = Boolean(state.user);
+        uploadForm.hidden = !state.user;
+        document.getElementById("reelUploadLogin").href =
+          "login.html?next=" + encodeURIComponent(location.href);
+        uploadDialog.showModal();
+        if (state.user) uploadFile.focus();
+      });
+      document.getElementById("reelUploadClose").addEventListener("click", () => {
+        if (!uploadBusy) uploadDialog.close();
+      });
+      uploadDialog.addEventListener("cancel", event => {
+        if (uploadBusy) event.preventDefault();
+      });
+      uploadDialog.addEventListener("close", () => {
+        releaseUploadPreview();
+        uploadStatus.textContent = "";
+        document.getElementById("reelOpenUpload").focus({preventScroll:true});
+        if (resumeAfterUpload) {
+          const active = document.getElementById("video-" + state.activeIndex);
+          if (active) playWithSoundFallback(active, state.activeIndex, {explicit:true});
+        }
+        resumeAfterUpload = false;
+        scheduleReelViewportSync();
+      });
+      uploadFile.addEventListener("change", () => {
+        releaseUploadPreview();
+        uploadStatus.textContent = "";
+        const file = uploadFile.files?.[0];
+        if (!file) return;
+        if (!file.size || !(file.type.startsWith("video/") || /\.(mp4|webm|ogg|mov)$/i.test(file.name))) {
+          uploadStatus.textContent = "Choose a valid non-empty video file.";
+          return;
+        }
+        uploadPreviewUrl = URL.createObjectURL(file);
+        uploadPreview.src = uploadPreviewUrl;
+        uploadPreview.hidden = false;
+        if (!document.getElementById("reelUploadName").value.trim()) {
+          document.getElementById("reelUploadName").value =
+            file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").slice(0, 150);
+        }
+      });
+
+      function captureReelCover(file) {
+        return new Promise(resolve => {
+          let url;
+          try { url = URL.createObjectURL(file); }
+          catch { resolve(null); return; }
+          const video = document.createElement("video");
+          video.muted = true;
+          video.playsInline = true;
+          video.preload = "metadata";
+          let settled = false;
+          const timer = setTimeout(() => finish(null), 6500);
+          function finish(result) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            video.removeAttribute("src");
+            video.load();
+            URL.revokeObjectURL(url);
+            resolve(result);
+          }
+          video.addEventListener("loadedmetadata", () => {
+            const time = Math.min(0.5, Math.max(0, (video.duration || 0) - 0.1));
+            try { video.currentTime = time; } catch { finish(null); }
+          }, {once:true});
+          video.addEventListener("seeked", () => {
+            try {
+              const canvas = document.createElement("canvas");
+              canvas.width = Math.max(1, video.videoWidth || 320);
+              canvas.height = Math.max(1, video.videoHeight || 180);
+              canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+              canvas.toBlob(blob => finish(blob ? new File([blob], "reel-cover.jpg", {type:"image/jpeg"}) : null), "image/jpeg", 0.8);
+            } catch { finish(null); }
+          }, {once:true});
+          video.addEventListener("error", () => finish(null), {once:true});
+          video.src = url;
+        });
+      }
+
+      uploadForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        if (uploadBusy || !state.user) return;
+        if (!uploadForm.reportValidity()) return;
+        const file = uploadFile.files?.[0];
+        if (!file?.size || !(file.type.startsWith("video/") || /\.(mp4|webm|ogg|mov)$/i.test(file.name))) {
+          uploadStatus.textContent = "Choose a valid non-empty video file.";
+          return;
+        }
+        const cover = document.getElementById("reelUploadCover").files?.[0] || null;
+        if (cover && (!cover.type.startsWith("image/") || cover.size > 10 * 1024 * 1024)) {
+          uploadStatus.textContent = "Cover must be an image under 10 MB.";
+          return;
+        }
+        const title = document.getElementById("reelUploadName").value.trim();
+        const description = document.getElementById("reelUploadCaption").value.trim();
+        if (!title || title.length > 150 || description.length > 3000) {
+          uploadStatus.textContent = "Enter a title (up to 150 characters) and a caption under 3000 characters.";
+          return;
+        }
+        const tags = [...new Set(document.getElementById("reelUploadTags").value
+          .split(/[\s,]+/).map(t => t.trim().replace(/^#/, "").toLowerCase())
+          .filter(t => /^[a-z0-9_]{1,32}$/.test(t)))].slice(0, 20);
+        uploadBusy = true;
+        uploadSubmit.disabled = true;
+        uploadSubmit.textContent = "Publishing…";
+        try {
+          uploadStatus.textContent = "Preparing video and cover…";
+          const [duration, thumbnail] = await Promise.all([
+            detectVideoDuration(file),
+            cover ? Promise.resolve(cover) : captureReelCover(file)
+          ]);
+          uploadStatus.textContent = "Uploading your reel… Keep this window open.";
+          const result = await uploadVideo(
+            state.user.id,
+            state.user.user_metadata?.display_name || state.user.email || "Member",
+            file, thumbnail,
+            {
+              title, description,
+              category: document.getElementById("reelUploadCategory").value,
+              tags,
+              duration,
+              allow_comments: document.getElementById("reelUploadComments").checked,
+              allow_download: document.getElementById("reelUploadDownloads").checked
+            }
+          );
+          if (result?.error || !result?.data?.id) {
+            throw new Error(typeof result?.error === "string" ? result.error :
+              (result?.error?.message || "The server did not confirm the upload."));
+          }
+          uploadStatus.textContent = "Reel published successfully!";
+          uploadForm.reset();
+          uploadDialog.close();
+          window.appUI?.toast?.("Your reel was published successfully!");
+          // Keep the viewer on the same reel rather than replacing the feed.
+        } catch (error) {
+          uploadStatus.textContent = "Upload failed: " + String(error?.message || "Please try again.");
+          console.warn("Reel upload failed:", error);
+        } finally {
+          uploadBusy = false;
+          uploadSubmit.disabled = false;
+          uploadSubmit.textContent = "Publish reel";
+        }
+      });
+
       const reelEditor=document.getElementById("reelEditor"),reelForm=document.getElementById("reelEditorForm");
       let editingReelId=null;
       document.getElementById("reelEditorCancel").addEventListener("click",()=>reelEditor.close());
@@ -1571,7 +1795,11 @@
         }
       }
 
+      let resumeAfterComments = false;
       async function openComments(videoId) {
+        const activeReel = document.getElementById("video-" + state.activeIndex);
+        resumeAfterComments = Boolean(activeReel && !activeReel.paused);
+        document.querySelectorAll(".reel-video").forEach(video => video.pause());
         state.commentsOpenFor = videoId;
         const video=state.videos.find(v=>v.id===videoId);
         const isOwner=Boolean(state.user&&video?.user_id===state.user.id);
@@ -1610,6 +1838,13 @@
         state.commentsOpenFor = null;
         replyingTo = null;
         updateReplyIndicator();
+        if (document.activeElement === drawerInput) drawerInput.blur();
+        if (resumeAfterComments) {
+          const active = document.getElementById("video-" + state.activeIndex);
+          if (active) playWithSoundFallback(active, state.activeIndex, {explicit:true});
+        }
+        resumeAfterComments = false;
+        scheduleReelViewportSync();
         commentLoading = false;
         commentLoadMoreBtn.hidden = true;
       }
@@ -1720,6 +1955,7 @@
           const savedMute=sessionStorage.getItem("timzee:reels-muted");
           state.sessionMuted = savedMute === null ? state.preferences.videos.mutedByDefault === true : savedMute === "true";
         } catch { state.sessionMuted = state.preferences.videos.mutedByDefault === true; }
+        syncHeaderMute();
         if(state.mode==="for-you" && state.preferences.feed.showRecommendations===false){
           state.mode="following"; updateReelModeButtons();
         }
