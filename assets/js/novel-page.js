@@ -385,7 +385,7 @@ function setupEventListeners() {
     const shareUrl = `${window.location.origin}/novel.html?id=${encodeURIComponent(novelId)}`;
     const payload = {
       title: state.novel?.title || "Novel",
-      text: state.novel?.synopsis || "Check out this novel on Timzee Tech Hub.",
+      text: state.novel?.synopsis || "Check out this novel on Blipmood.",
       url: shareUrl
     };
     try {

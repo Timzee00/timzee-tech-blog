@@ -649,15 +649,6 @@ function setupShare(post) {
   const basePath = window.location.href.split("?")[0];
   const shareUrl = `${origin ? origin + window.location.pathname : basePath}?id=${post.id}`;
 
-  const requireLogin = () => {
-    if (!state.user) {
-      window.appUI.toast("Please log in to share posts.");
-      window.location.href = `login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-      return false;
-    }
-    return true;
-  };
-
   const recordShare = async (channel) => {
     if (!state.user) return;
     await supabase.from("post_shares").insert({
@@ -671,12 +662,12 @@ function setupShare(post) {
 
   if (shareBtn) {
     shareBtn.addEventListener("click", async () => {
-      if (!requireLogin()) return;
+      // Public articles may be shared by anyone; analytics remain user-scoped.
       if (navigator.share) {
         try {
           await navigator.share({
             title: post.title,
-            text: "Check this out",
+            text: post.feed_excerpt || "Read this on Blipmood",
             url: shareUrl
           });
           await recordShare("share");
@@ -694,7 +685,7 @@ function setupShare(post) {
 
   if (copyBtn) {
     copyBtn.addEventListener("click", async () => {
-      if (!requireLogin()) return;
+      // Public articles may be shared by anyone; analytics remain user-scoped.
       try {
         await navigator.clipboard.writeText(shareUrl);
         copyBtn.textContent = "Copied";

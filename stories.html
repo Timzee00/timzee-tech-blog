@@ -255,8 +255,15 @@
 
         const params = new URLSearchParams(window.location.search);
         const targetUser = params.get("user");
-        if (targetUser) {
-          const index = state.groups.findIndex((group) => group.userId === targetUser);
+        const targetStory = params.get("story");
+        if (targetStory) {
+          const groupIndex = state.groups.findIndex(group => group.stories.some(item => item.id === targetStory));
+          if (groupIndex >= 0) {
+            const storyIndex = state.groups[groupIndex].stories.findIndex(item => item.id === targetStory);
+            openViewer(groupIndex, storyIndex);
+          }
+        } else if (targetUser) {
+          const index = state.groups.findIndex(group => group.userId === targetUser);
           if (index >= 0) openViewer(index);
         }
 
@@ -372,10 +379,10 @@
         else document.getElementById("createStatusAction")?.focus();
       }
 
-      function openViewer(groupIndex) {
+      function openViewer(groupIndex, storyIndex = 0) {
         if (document.getElementById("storyViewer").hidden) viewerOpener = document.activeElement;
         state.activeGroupIndex = groupIndex;
-        state.activeStoryIndex = 0;
+        state.activeStoryIndex = Math.max(0,storyIndex);
         const viewer = document.getElementById("storyViewer");
         viewer.hidden = false;
         viewer.setAttribute("aria-hidden", "false");

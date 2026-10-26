@@ -119,12 +119,12 @@ export async function showStoryInteractions(story,user,container,{onReshare=()=>
  });
  menu.addEventListener('click',async event=>{
   const button=event.target.closest('button[data-action]');if(!button)return;
-  const action=button.dataset.action,shareLink=`${location.origin}/stories.html?user=${encodeURIComponent(story.user_id)}`;
+  const action=button.dataset.action,shareLink=`${location.origin}/stories.html?user=${encodeURIComponent(story.user_id)}&story=${encodeURIComponent(story.id)}`;
   try{
    if(action==='like'){await toggle('story_likes',story.id,user?.id,liked);await reloadLikes();}
    if(action==='save'){await toggle('story_saves',story.id,user?.id,saved);await reloadLikes();}
    if(action==='share'){
-    if(navigator.share)await navigator.share({title:'Timzee Status',url:shareLink});
+    if(navigator.share)await navigator.share({title:'Blipmood story',url:shareLink});
     else {await navigator.clipboard.writeText(shareLink);note('Status link copied.');}
    }
    if(action==='reshare'){

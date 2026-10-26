@@ -18,7 +18,7 @@ function walk(directory) {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) { walk(path); continue; }
     const code = readFileSync(path, "utf8");
-    if (/\.(?:js|mjs|cjs)$/.test(path)) check(path, code, path.startsWith("assets/") || path.endsWith(".mjs"));
+    if (/\.(?:js|mjs|cjs)$/.test(path)) check(path, code, path.startsWith("assets/") || path.startsWith("netlify/edge-functions/") || path.endsWith(".mjs"));
     if (path.endsWith(".html")) {
       let index = 0;
       for (const [, attributes, body] of code.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {

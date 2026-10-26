@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { build } from "esbuild";
 import { injectSiteShell } from "./inject-site-shell.mjs";
+import { injectSocialDefaults } from "./inject-social-meta.mjs";
 import { previewIndexingHeaders } from "./preview-indexing.mjs";
 import {downloadBrandAssets,useLocalBrandAssetUrls} from "./brand-assets.mjs";
 
@@ -66,7 +67,8 @@ if (previewHeaders) {
 // Staff workspaces have separate layouts and are intentionally excluded.
 for (const file of files.filter(path => path.endsWith(".html"))) {
   const original = await readFile(file, "utf8");
-  const enhanced = injectSiteShell(original);
+  const chrome = injectSiteShell(original);
+  const enhanced = injectSocialDefaults(chrome, file.slice(output.length+1));
   if (enhanced !== original) await writeFile(file, enhanced);
 }
 // Include the exact user-approved artwork in the first-party published bundle.

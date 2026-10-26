@@ -1400,15 +1400,31 @@
           btn.addEventListener("click", async (e) => {
             e.stopPropagation();
             const videoId = btn.dataset.id;
-            const url = `${window.location.origin}${window.location.pathname}?id=${videoId}`;
+            const url = `${window.location.origin}${window.location.pathname}?id=${encodeURIComponent(videoId)}`;
+            const video = state.videos.find(item => item.id === videoId);
+            const label = btn.querySelector(".reel-chip-count");
             try {
-              await navigator.clipboard.writeText(url);
-              btn.querySelector(".reel-chip-count").textContent = "Copied!";
-              setTimeout(() => {
-                btn.querySelector(".reel-chip-count").textContent = "Share";
-              }, 1500);
+              if (navigator.share) {
+                await navigator.share({
+                  title: video?.title || "Blipmood video",
+                  text: video?.description || "Watch this on Blipmood",
+                  url
+                });
+              } else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(url);
+                if (label) {
+                  label.textContent = "Copied!";
+                  setTimeout(() => { if(label.isConnected)label.textContent = "Share"; },1500);
+                }
+              } else {
+                await window.appUI.prompt("Copy this link:", url);
+              }
             } catch (err) {
-              await window.appUI.prompt("Copy this link:", url);
+              if (err?.name === "AbortError") return;
+              if (navigator.clipboard?.writeText) {
+                try { await navigator.clipboard.writeText(url); if(label)label.textContent="Copied!"; }
+                catch { await window.appUI.prompt("Copy this link:", url); }
+              } else await window.appUI.prompt("Copy this link:", url);
             }
           });
         });
