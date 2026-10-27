@@ -23,7 +23,7 @@ function clearSpacePresence(){
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const tabs=["live","upcoming","mine","here"];
 const q=new URLSearchParams(location.search);
-const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),desiredMic:false,audioConfigured:false,capabilityChecked:false,roomsRequestId:0,joining:false,micPermissionError:"",refreshingSpeaking:false,lastSpeakerUpgradeAt:0};
+const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),desiredMic:false,audioConfigured:false,capabilityChecked:false,roomsRequestId:0,joining:false,micPermissionError:"",refreshingSpeaking:false,lastSpeakerUpgradeAt:0,micPreparedAt:0};
 const el=(tag,text="",className="")=>{const item=document.createElement(tag);item.textContent=String(text);if(className)item.className=className;return item};
 const alertStatus=(message,tone="neutral")=>{const s=$("spacesStatus");s.textContent=message;s.dataset.tone=tone};
 const audioStatus=message=>$("spaceAudioStatus").textContent=message;
@@ -47,6 +47,7 @@ async function prepareMicrophone(){
   });
   stream.getTracks().forEach(track=>track.stop());
   state.micPermissionError="";
+  state.micPreparedAt=Date.now();
   return true;
  }catch(error){
   state.micPermissionError=error?.name==="NotAllowedError"||error?.name==="PermissionDeniedError"
@@ -456,7 +457,8 @@ async function join({enableMic=false}={}){
  try{
   // Permission belongs to the user and browser; request during the Join action.
   if(enableMic&&(state.user?.id===state.room?.owner_id||
-   state.room?.speaking_mode==="open"||state.role==="speaker")&&!state.micPermissionError){
+   state.room?.speaking_mode==="open"||state.role==="speaker")&&
+   !state.micPermissionError&&Date.now()-state.micPreparedAt>45000){
    await prepareMicrophone();
   }
   state.role=success(await supabase.rpc("spaces_join",{p_room:state.roomId}));
