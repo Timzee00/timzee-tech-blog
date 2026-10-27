@@ -442,6 +442,10 @@ async function startAudio({enableMic=false}={}){
  livekit.on(sdk.RoomEvent.Disconnected,()=>{
   if(state.livekit!==livekit)return;
   state.livekit=null;
+  state.activeSpeakerIds.clear();
+  $("activeSpeakerAvatar").classList.remove("speaking");
+  $("activeSpeaker").textContent="Audio disconnected";
+  renderPeople();
   $("spaceAudioElements").replaceChildren();
   configureControls();
   audioStatus("Audio disconnected. Use Reconnect to restore playback or microphone.");
