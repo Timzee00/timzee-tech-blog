@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#087f73">
-  <meta name="description" content="Explore Timzee technology communities: discover forums, share questions and guides, and discuss what matters.">
-  <title>Communities & Forums · Timzee Tech Hub</title>
+  <meta name="description" content="Explore Blipmood communities: discover forums, share questions and guides, and discuss what matters.">
+  <title>Communities & Forums | Blipmood</title>
   <link rel="canonical" href="https://blipmood.netlify.app/discussion.html">
   <link rel="stylesheet" href="assets/css/styles.css">
   <link rel="stylesheet" href="assets/css/community-forum.css">
@@ -15,7 +15,7 @@
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
     <div class="container wrap">
-      <a class="brand" href="index.html"><span class="logo">Timzee <span>Tech</span> Hub</span><span class="tagline">Community knowledge, real conversations.</span></a>
+      <a class="brand" href="index.html"><span class="logo">Blipmood</span><span class="tagline">Your world. Your mood.</span></a>
       <nav class="nav-pill" aria-label="Main navigation">
         <a href="discussion.html" aria-current="page">Communities</a>
         <a href="my-tech.html">My Tech</a>
@@ -30,7 +30,7 @@
   </header>
   <main id="main-content" class="forum-page container">
     <section class="forum-intro">
-      <div><p class="forum-eyebrow">TIMZEE COMMUNITIES</p><h1>Find your people.<br><span>Go deeper into tech.</span></h1>
+      <div><p class="forum-eyebrow">BLIPMOOD COMMUNITIES</p><h1>Find your people.<br><span>Go deeper into tech.</span></h1>
         <p>Join dedicated communities, start a topic, share what you know, and learn from useful answers.</p></div>
       <div class="forum-hero-actions">
         <button id="createThreadButton" class="forum-button primary" type="button">+ New topic</button>
@@ -109,7 +109,7 @@
           <div class="forum-guide-row"><span>03</span><p>Post useful replies and vote thoughtfully</p></div>
         </section>
         <section class="forum-panel"><h2>Suggested communities</h2><div id="forumSuggestions" class="forum-suggestions"></div></section>
-        <section class="forum-panel forum-conduct"><h2>Community standards</h2><p>No impersonation, harassment, scam links, unwanted ads, or misleading official claims.</p><a href="support.html">Report a problem ↗</a></section>
+        <section class="forum-panel forum-conduct"><h2>Community standards</h2><p>Everyone follows the Blipmood Content Policy. Individual communities may set additional rules, never exceptions.</p><a href="content-policy.html">Read the Content Policy</a> · <a href="support.html">Report a problem</a></section>
       </aside>
     </div>
   </main>
@@ -122,6 +122,8 @@
       <label>Description<textarea name="description" maxlength="700" minlength="20" rows="4" required placeholder="What is this community for?"></textarea></label>
       <label>Privacy<select name="visibility"><option value="public">Public · Anyone can read</option><option value="restricted">Restricted · Listed, members read and post</option><option value="private">Private · Unlisted, invitation / approval</option></select></label>
       <label>Who can post?<select name="posting_policy"><option value="everyone">Everyone with an account</option><option value="members">Community members</option><option value="staff">Moderators only</option></select></label>
+       <label>Additional community rules (optional; one per line, up to 10)<textarea name="rules" rows="4" maxlength="1500" placeholder="Stay on topic&#10;Be constructive&#10;No unrelated promotions"></textarea></label>
+       <p class="forum-muted">Community rules must follow the <a href="content-policy.html" target="_blank" rel="noopener">Blipmood Content Policy</a>. They cannot permit platform-prohibited behaviour.</p>
       <p id="forumCommunityFormError" class="forum-form-error" role="alert"></p>
       <button type="submit" class="forum-button primary">Create community</button>
     </form>
@@ -130,6 +132,8 @@
     <form id="forumThreadForm" class="forum-form">
       <div class="forum-modal-head"><h2 id="forumThreadDialogTitle">Start a topic</h2><button type="button" data-close-forum-dialog aria-label="Close">×</button></div>
       <label>Community<select id="forumThreadCommunity" name="community_id" required></select></label>
+       <section id="forumThreadRulesPreview" class="forum-thread-rules-preview" aria-live="polite" aria-label="Rules of the selected community"></section>
+       <label class="forum-rule-acknowledgement"><input type="checkbox" id="forumThreadRulesAcknowledged" required> I have read this community\u2019s rules and the <a href="content-policy.html" target="_blank" rel="noopener">Blipmood Content Policy</a>.</label>
       <label>Optional topic flair<input name="flair" maxlength="28" placeholder="e.g. Help Needed, Tutorial, Showcase"></label>
       <label>Post type<select name="kind"><option value="discussion">Discussion</option><option value="question">Question</option><option value="guide">Guide / tutorial</option><option value="news">Tech news</option><option value="showcase">Project showcase</option></select></label>
       <label>Title<input name="title" maxlength="180" minlength="5" required placeholder="Write a clear, specific title"></label>
@@ -169,6 +173,14 @@
     <div class="forum-form">
       <div class="forum-modal-head"><h2 id="forumModerationTitle">Community moderation</h2><button type="button" data-close-forum-dialog aria-label="Close">×</button></div>
       <p>Review member reports, remove harmful topics, lock conversations or assign trusted moderators.</p>
+      <form id="forumRulesForm" class="forum-community-rules-editor">
+        <h3>Additional community rules</h3>
+        <p class="forum-muted">One rule per line, up to 10 rules and 1,500 characters. These must not conflict with the <a href="content-policy.html" target="_blank" rel="noopener">Blipmood Content Policy</a>. Changes are recorded for accountability.</p>
+        <label for="forumRulesEditor">Edit this community\u2019s rules</label>
+        <textarea id="forumRulesEditor" name="rules" rows="5" maxlength="1500" placeholder="One rule per line"></textarea>
+        <p id="forumRulesError" class="forum-form-error" role="alert"></p>
+        <button type="submit" class="forum-button secondary">Save community rules</button>
+      </form>
       <h3>Automated review queue</h3><div id="forumAutomaticQueue" class="forum-mod-queue" aria-live="polite"></div>
       <h3>Pending membership requests</h3><div id="forumJoinQueue" class="forum-mod-queue" aria-live="polite"></div>
       <h3>Additional spam signals</h3><div id="forumAutoSignals" class="forum-mod-queue" aria-live="polite"></div>
@@ -176,7 +188,7 @@
       <h3>Community members</h3><div id="forumModeratorMembers" class="forum-mod-members"></div>
     </div>
   </dialog>
-  <footer class="footer"><div class="container"><div class="footer-links"><a href="support.html">Support</a><a href="contact.html">Contact</a><a href="newsletter.html">Newsletter</a><a href="index.html">Home</a></div></div></footer>
+  <footer class="footer"><div class="container"><div class="footer-links"><a href="support.html">Support</a><a href="content-policy.html">Content Policy</a><a href="contact.html">Contact</a><a href="newsletter.html">Newsletter</a><a href="index.html">Home</a></div></div></footer>
   <script type="module" src="assets/js/community-forum.mjs"></script>
 </body>
 </html>
