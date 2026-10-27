@@ -236,13 +236,14 @@
         <dialog class="chat-modal-overlay" id="chatSettingsModal" aria-labelledby="chatSettingsTitle">
           <div class="chat-modal compact" aria-labelledby="chatSettingsTitle">
             <div class="chat-modal-head"><div><span class="chat-page-kicker">Preferences</span><h2 id="chatSettingsTitle">Chat settings</h2></div><button class="chat-icon-btn" data-close-modal="chatSettingsModal" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
-            <p id="chatSettingsStatus" role="status" aria-live="polite">Changes save automatically.</p>
-            <div class="chat-settings-list">
+            <p id="chatSettingsStatus" role="status" aria-live="polite">Changes save automatically.</p> <br>
+            <div class="chat-settings-list"> <br>
               <label class="chat-setting-row"><span><strong>Message notifications</strong><small>Keep new-message alerts visible.</small></span><input type="checkbox" data-chat-setting="notifications"></label>
               <label class="chat-setting-row"><span><strong>Enter to send</strong><small>Use Enter to send and Shift+Enter for a new line.</small></span><input type="checkbox" data-chat-setting="enterToSend"></label>
               <label class="chat-setting-row"><span><strong>Compact messages</strong><small>Reduce bubble spacing for busy conversations.</small></span><input type="checkbox" data-chat-setting="compact"></label>
               <div class="chat-appearance-options">
                 <label>Message text size<select id="chatTextSize">
+                  <option value="0.5">Very Small</option>
                   <option value="0.875">Small</option>
                   <option value="1">Normal</option>
                   <option value="1.125">Large</option>
