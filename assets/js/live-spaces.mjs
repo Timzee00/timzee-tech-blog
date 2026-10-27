@@ -71,6 +71,7 @@ async function loadAudioCapabilities(){
    $("spacesTiming").value="later";
    $("spacesDateField").hidden=false;
   }
+  updateSpaceForm();
  }
  return state.audioConfigured;
 }
@@ -177,7 +178,16 @@ async function loadWorkspaces(){
  for(const ws of result.data||[]){const option=el("option",ws.name+" · "+ws.kind);option.value=ws.id;select.append(option)}
  const id=q.get("workspace");if(validId(id)&&[...select.options].some(o=>o.value===id))select.value=id;
 }
-function showCreate(show){$("spacesCreate").hidden=!show;if(show){$("spacesCreate").scrollIntoView({behavior:"smooth",block:"start"});$("spacesCreateForm").elements.title.focus()}}
+function updateSpaceForm(){
+ const immediate=$("spacesTiming").value==="now";
+ $("spacesDateField").hidden=immediate;
+ $("spacesRequestField").hidden=$("spacesSpeakingMode").value!=="request";
+ $("spacesSubmit").textContent=immediate?"Create & go live 🎙":"Schedule Space";
+}
+function showCreate(show){
+ $("spacesCreate").hidden=!show;updateSpaceForm();
+ if(show){$("spacesCreate").scrollIntoView({behavior:"smooth",block:"start"});$("spacesCreateForm").elements.title.focus()}
+}
 async function createRoom(event){
  event.preventDefault();if(!authRequired()||state.busy)return;
  const form=event.currentTarget,f=Object.fromEntries(new FormData(form).entries());
@@ -206,7 +216,7 @@ async function createRoom(event){
    if(!started)throw Error("Room created but could not go live. Open it to start when eligible.");
   }
   form.reset();showCreate(false);await loadRooms();await openRoom(room.id,{enableMic:f.timing==="now"});
-  alertStatus(f.timing==="now"?"Your live Space is open; host audio is connecting.":"Space scheduled. Audio must be configured before going live.","success");
+  alertStatus(f.timing==="now"?"Your live Space is open. Your mic starts automatically after browser permission.":"Space scheduled. You will go live when you enter at its start time.","success");
  }catch(e){alertStatus(e.message||"Could not create Space.","error")}
  finally{state.busy=false;$("spacesSubmit").disabled=false}
 }
@@ -284,6 +294,10 @@ function configureControls(){
   room?.speaking_mode==="open"?"Join once and your mic activates after permission.":
   "Join to listen; ask the host before speaking.";
  $("spaceJoin").textContent=host?"🎙 Reconnect as host":"🎙 Join live";
+ $("spaceStageHint").textContent=state.joined?
+   (state.role==="listener"?"You're in the audience. Enjoy the conversation.":
+     liveMic?"Your voice is on air":"Your mic is muted"):
+   room?.status==="scheduled"?"This Space hasn't started yet.":"Join to listen and take part.";
  $("spaceAsk").hidden=!state.joined||state.role!=="listener"||!room?.allow_requests;
  // Hosts also need a recovery path when their audio connection drops.
  const reconnect=$("spaceReconnect");
@@ -623,7 +637,7 @@ async function init(){
  await loadAudioCapabilities();
  state.user=await getCurrentUser().catch(()=>null);
  if(!state.user)alertStatus("You can browse public rooms. Sign in to speak or host.");
- else {alertStatus(state.audioConfigured?"Explore or create a Space. Microphone starts muted.":"You can schedule Spaces, but live audio is not configured yet.");await loadWorkspaces()}
+ else {alertStatus(state.audioConfigured?"Explore or create a live Space. Your mic starts automatically in open-mic rooms.":"You can schedule Spaces, but live audio is not configured yet.");await loadWorkspaces()}
  const linkedPost=q.get("post"),linkedCommunity=q.get("community");
  await loadRelatedChoices();
  const linkedProject=q.get("project");
@@ -653,7 +667,8 @@ async function init(){
 }
 $("spacesCreateToggle").addEventListener("click",()=>{if(authRequired())showCreate(true)});
 $("spacesCancel").addEventListener("click",()=>showCreate(false));
-$("spacesTiming").addEventListener("change",event=>{$("spacesDateField").hidden=event.target.value!=="later"});
+$("spacesTiming").addEventListener("change",updateSpaceForm);
+$("spacesSpeakingMode").addEventListener("change",updateSpaceForm);
 $("spacesCreateForm").addEventListener("submit",createRoom);
 $("spacesRefresh").addEventListener("click",()=>void loadRooms());
 document.querySelectorAll("[data-space-tab]").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.spaceTab)));
@@ -697,7 +712,7 @@ $("spacePopout").addEventListener("click",()=>{
 $("spacePlayAudio").addEventListener("click",async()=>{
  if(!state.livekit)return;
  try{await state.livekit.startAudio();$("spacePlayAudio").hidden=true;
-  audioStatus("Playback enabled. Your microphone remains muted until you switch it on.")}
+  audioStatus(state.desiredMic?"Playback enabled. Your microphone is live.":"Playback enabled. Your mic is muted or you are listening.")}
  catch(e){audioStatus("Sound could not start: "+e.message)}
 });
 $("spaceAsk").addEventListener("click",requestMic);
@@ -707,7 +722,8 @@ $("spaceMic").addEventListener("click",async()=>{
  try{const next=!state.livekit.localParticipant.isMicrophoneEnabled;
   await state.livekit.localParticipant.setMicrophoneEnabled(next);
   state.desiredMic=next;
-  $("spaceMic").textContent=next?"🎙 Mute mic":"🎙 Turn on mic";
+  if(next)state.micPermissionError="";
+  configureControls();
   audioStatus(next?"Microphone live; other listeners can hear you.":"Microphone muted.");
  }catch(e){audioStatus("Unable to enable microphone: "+e.message)}
 });
