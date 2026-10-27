@@ -40,6 +40,50 @@ const button=(text,onclick)=>{const b=el("button",text,"btn ghost sm");b.type="b
 const dateLabel=value=>{const date=new Date(value);return Number.isFinite(date.getTime())?date.toLocaleString():"Unscheduled"};
 const roomExpired=room=>room?.status==="live"&&Number.isFinite(Date.parse(room.starts_at))&&
  Date.now()>=Date.parse(room.starts_at)+Math.max(1,Number(room.max_duration_minutes)||30)*60000;
+// Use the server's actual start time; interval ticks are only for repainting.
+// Wall-clock math corrects itself after tab suspension, reload and reconnect.
+function spaceClockAt(room,now=Date.now()){
+ const startedAt=Date.parse(room?.starts_at||"");
+ if(room?.status!=="live"||!Number.isFinite(startedAt))return null;
+ const limitMs=Math.max(1,Number(room.max_duration_minutes)||30)*60000;
+ return {
+  elapsedSeconds:Math.max(0,Math.floor((now-startedAt)/1000)),
+  remainingSeconds:Math.max(0,Math.ceil((startedAt+limitMs-now)/1000)),
+  expired:now>=startedAt+limitMs
+ };
+}
+function formatSpaceClock(totalSeconds){
+ const seconds=Math.max(0,Math.floor(Number(totalSeconds)||0));
+ const hours=Math.floor(seconds/3600),minutes=Math.floor(seconds%3600/60),remainder=seconds%60;
+ const two=value=>String(value).padStart(2,"0");
+ return hours?hours+":"+two(minutes)+":"+two(remainder):two(Math.floor(seconds/60))+":"+two(remainder);
+}
+let spaceClockTicker=null,spaceClockExpired=null;
+function stopSpaceClock(){
+ if(spaceClockTicker!==null){clearInterval(spaceClockTicker);spaceClockTicker=null}
+ spaceClockExpired=null;
+ $("spaceClock").hidden=true;
+}
+function updateSpaceClock(){
+ const clock=spaceClockAt(state.room),wrapper=$("spaceClock");
+ if(!clock){wrapper.hidden=true;spaceClockExpired=null;return}
+ wrapper.hidden=false;
+ $("spaceElapsed").textContent=formatSpaceClock(clock.elapsedSeconds);
+ $("spaceRemaining").textContent=formatSpaceClock(clock.remainingSeconds);
+ $("spaceElapsed").setAttribute("datetime","PT"+clock.elapsedSeconds+"S");
+ $("spaceRemaining").setAttribute("datetime","PT"+clock.remainingSeconds+"S");
+ wrapper.classList.toggle("time-up",clock.expired);
+ if(clock.expired!==spaceClockExpired){
+  spaceClockExpired=clock.expired;
+  $("spaceLiveBadge").textContent=clock.expired?"TIME LIMIT REACHED":"● LIVE";
+  if(clock.expired)configureControls();
+ }
+}
+function startSpaceClock(){
+ if(spaceClockTicker!==null)clearInterval(spaceClockTicker);
+ spaceClockTicker=setInterval(updateSpaceClock,1000);
+ updateSpaceClock();
+}
 // Request microphone permission on the user's Create/Join action. The browser
 // always controls the initial prompt; never silently bypass it.
 async function prepareMicrophone(){
@@ -230,6 +274,8 @@ async function createRoom(event){
 async function openRoom(id,{enableMic=false,joinImmediately=false}={}){
  if(!validId(id))return;
  await leave();
+ stopSpaceClock();
+ state.room=null;
  state.participants=[];
  state.activeSpeakerIds.clear();
  showIdleStage();
@@ -260,17 +306,17 @@ async function refreshRoom(){
   .select("id,owner_id,workspace_id,post_id,community_id,title,description,visibility,status,starts_at,capacity,max_duration_minutes,allow_requests,speaking_mode")
   .eq("id",state.roomId).maybeSingle();
  if(result.error){alertStatus(result.error.message,"error");return}
- if(!result.data){state.room=null;$("spaceTitle").textContent="Private Space";
+ if(!result.data){state.room=null;stopSpaceClock();$("spaceTitle").textContent="Private Space";
   $("spaceDescription").textContent="Sign in and use Join to enter a valid link-only or invitation-only room.";
   configureControls();return;
  }
- state.room=result.data;renderDetail();await loadPeople();
+ state.room=result.data;renderDetail();startSpaceClock();await loadPeople();
 }
 function renderDetail(){
  const r=state.room;if(!r)return;
  $("spaceTitle").textContent=r.title;
  $("spaceDescription").textContent=r.description||"Live technology conversation";
- $("spaceLiveBadge").textContent=roomExpired(r)?"TIME ENDED":r.status==="live"?"● LIVE":r.status==="scheduled"?"◷ UPCOMING":"ENDED";
+ $("spaceLiveBadge").textContent=roomExpired(r)?"TIME LIMIT REACHED":r.status==="live"?"● LIVE":r.status==="scheduled"?"◷ UPCOMING":"ENDED";
  $("spaceLiveBadge").classList.toggle("space-upcoming-badge",r.status!=="live");
  $("spaceMeta").textContent=dateLabel(r.starts_at)+" · "+r.visibility+" · "+r.capacity+
  " seats · "+r.max_duration_minutes+" min max";
@@ -732,7 +778,7 @@ $("spacesCreateForm").addEventListener("submit",createRoom);
 $("spacesRefresh").addEventListener("click",()=>void loadRooms());
 document.querySelectorAll("[data-space-tab]").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.spaceTab)));
 $("spaceBack").addEventListener("click",async()=>{
- await leave();state.roomId=null;state.room=null;
+ await leave();stopSpaceClock();state.roomId=null;state.room=null;
  $("spaceDetail").hidden=true;$("spacesDiscovery").hidden=false;
  history.replaceState({},"","spaces.html");await loadRooms();
 });
@@ -830,5 +876,11 @@ window.addEventListener("storage",event=>{
   }
  }
 });
-window.addEventListener("pagehide",()=>{stopPolling();clearSpacePresence();if(state.livekit)state.livekit.disconnect()});
+window.addEventListener("visibilitychange",()=>{
+ if(!document.hidden&&state.roomId)updateSpaceClock();
+});
+window.addEventListener("pageshow",()=>{
+ if(state.roomId)updateSpaceClock();
+});
+window.addEventListener("pagehide",()=>{stopSpaceClock();stopPolling();clearSpacePresence();if(state.livekit)state.livekit.disconnect()});
 init().catch(e=>alertStatus(e.message||"Could not load Live Spaces.","error"));

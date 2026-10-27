@@ -59,6 +59,17 @@
 <div class="space-topbar">
   <button type="button" class="btn ghost sm" id="spaceBack">← All Spaces</button>
   <div class="space-top-actions"><span id="spaceLiveBadge" class="space-live-badge">LIVE</span>
+   <div class="space-live-clock" id="spaceClock" role="group" aria-label="Space timing" hidden>
+    <div class="space-clock-elapsed"><span class="space-clock-pulse" aria-hidden="true"></span>
+     <span class="space-clock-label">LIVE FOR</span>
+     <time id="spaceElapsed" role="timer" aria-label="Elapsed live time" datetime="PT0S">00:00</time>
+    </div>
+    <span class="space-clock-divider" aria-hidden="true"></span>
+    <div class="space-clock-remaining">
+     <span class="space-clock-label">TIME LEFT</span>
+     <time id="spaceRemaining" role="timer" aria-label="Time remaining" datetime="PT0S">30:00</time>
+    </div>
+   </div>
    <button id="spaceShare" type="button" class="btn ghost sm">↗ Share</button>
    <button id="spaceReport" type="button" class="btn ghost sm" hidden>Report</button></div>
  </div>
