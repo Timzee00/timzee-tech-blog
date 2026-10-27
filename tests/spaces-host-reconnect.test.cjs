@@ -52,11 +52,11 @@ test("Space reconnects with the member's previous microphone preference",()=>{
  assert.ok(ui.includes("connectJoinedRoom({enableMic:restoreMic})"));
 });
 
-test("Space popouts auto-join, with the microphone active for permitted hosts and speakers",()=>{
+test("Space popouts auto-join listeners muted while hosts keep their live microphone",()=>{
  const page=fs.readFileSync("spaces.html","utf8");
  assert.ok(source.includes('audioWindowRequested=q.get("mini")==="1"&&q.get("join")==="1"'));
  assert.ok(source.includes('hostIsLive||audioWindowRequested'));
  assert.ok(source.includes('"&mini=1&join=1"'));
- assert.ok(source.includes('await join({enableMic:true})'));
+ assert.ok(source.includes('await join({enableMic:!audioWindowRequested||hostIsLive})'));
  assert.ok(page.includes('joins automatically'));
 });
