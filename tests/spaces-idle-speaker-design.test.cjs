@@ -80,7 +80,7 @@ test("speaker replaces the idle art with a spotlight, visible name/avatar and wa
  assert.equal(featured.className,"space-person space-speaking-spotlight");
  assert.equal(featured.children[0].textContent,"● ON AIR");
  assert.ok(featured.children.some(child=>child.className==="space-person-avatar"));
- assert.ok(featured.children.some(child=>child.textContent==="Voice 2"));
+ assert.ok(featured.children.some(child=>child.innerHTML==="Voice 2"));
  const wave=featured.children.find(child=>child.className==="space-speaking-wave");
  assert.equal(wave.attrs["aria-hidden"],"true");
  assert.equal(wave.children.length,5);
