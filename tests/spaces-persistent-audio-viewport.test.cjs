@@ -29,7 +29,7 @@ test("three distinct, labeled, live-updating groups have unique element IDs",()=
 
 test("active speakers, other speakers and listeners are exclusive categories",()=>{
  const begin=source.indexOf("function renderPeople(){");
- const end=source.indexOf("function setSpeaking(",begin);
+ const end=source.indexOf("async function authenticateRoom(",begin);
  assert.ok(begin>0&&end>begin);
  const containers=new Map();
  const $=id=>{
@@ -40,7 +40,7 @@ test("active speakers, other speakers and listeners are exclusive categories",()
   return containers.get(id);
  };
  function el(tag,text="",className=""){
-  return {tag,textContent:text,className,children:[],append(...args){this.children.push(...args)}};
+  return {tag,textContent:text,className,children:[],setAttribute(){},append(...args){this.children.push(...args)}};
  }
  const participants=[
   {user_id:"u1",role:"host"},{user_id:"u2",role:"speaker"},
@@ -100,7 +100,7 @@ test("viewport widths and compact audio window have bounded styles",()=>{
  assert.match(style,/space-session-layout\{grid-template-columns:minmax\(0,1fr\)/);
  assert.match(style,/\.spaces-shell\{max-width:100%;width:100%;padding-inline:10px\}/);
  assert.match(style,/\.space-people-panel \.space-people\{grid-template-columns:repeat\(auto-fill,minmax\(min\(100%,96px\),1fr\)\)/);
- assert.match(style,/\.space-popout-mode \.speaker-stage/);
+ assert.match(style,/\.space-popout-mode \.space-people/);
  assert.match(style,/@media\(max-width:350px\)/);
  assert.match(style,/@media\(prefers-reduced-motion:reduce\)/);
  const js=source.replace(/^import[\s\S]*?from\s+"[^"]+";\s*$/gm,"");

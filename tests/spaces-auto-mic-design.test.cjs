@@ -10,7 +10,7 @@ const sql=read("supabase/migrations/20261027204500_spaces_open_mic_rooms.sql");
 const compat=read("supabase/migrations/20261027205000_spaces_open_mic_opt_in_backcompat.sql");
 
 test("Spaces 2.0 has a responsive stage, clear consent, accessible mic toggle and audience",()=>{
- for(const id of ["spaceActionDock","spaceRoleNotice","spaceJoinHint","spaceStageHint","activeSpeakerAvatar",
+ for(const id of ["spaceActionDock","spaceRoleNotice","spaceJoinHint","spacesActiveSpeakers","spaceActiveCount",
   "spacesSpeakers","spacesListeners","spaceMic","spaceJoin","spacesSpeakingMode","spacesRequestField"]){
   assert.match(html,new RegExp('id="'+id+'"'));
  }
