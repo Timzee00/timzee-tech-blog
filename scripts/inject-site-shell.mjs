@@ -11,13 +11,13 @@ export function replaceLegacyBrandText(html) {
 // Keep the parent-company credit elsewhere; it is not a second product wordmark.
 const BLIPMOOD_WORDMARK='https://d2ol7oe51mr4n9.cloudfront.net/user_3JR5g6OD2PPsWciJ9XxM8Ue05wO/1edfccf6-fdc1-409c-b9c5-162b23657600.png';
 export function normalizePublicHeaderLogo(html) {
- return html.replace(/<header\\b([^>]*\\bclass=["'][^"']*\\bsite-header\\b[^"']*["'][^>]*)>([\\s\\S]*?)<\\/header>/gi,
+ return html.replace(/<header\b([^>]*\bclass=["'][^"']*\bsite-header\b[^"']*["'][^>]*)>([\s\S]*?)<\/header>/gi,
   (full,attrs,inside)=>{
-   const normalized=inside.replace(/(<a\\b(?=[^>]*\\bclass=["'][^"']*\\bbrand\\b[^"']*["'])[^>]*>)[\\s\\S]*?(<\\/a>)/i,
+   const normalized=inside.replace(/(<a\b(?=[^>]*\bclass=["'][^"']*\bbrand\b[^"']*["'])[^>]*>)[\s\S]*?(<\/a>)/i,
     (a,opening,closing)=>{
      // An existing brand link may contain a plain .logo span, a hidden #siteName,
      // or even an old Timzee wordmark. Replace all of those, not the link itself.
-     if(!/\\baria-label=/i.test(opening))opening=opening.replace(/>$/, ' aria-label="Blipmood — Home">');
+     if(!/\baria-label=/i.test(opening))opening=opening.replace(/>$/, ' aria-label="Blipmood — Home">');
      const artwork='<span class="bm-brand-display" aria-hidden="true"><img class="bm-wordmark-image" data-bm-logo="wordmark" src="'+BLIPMOOD_WORDMARK+'" width="210" height="70" alt="" decoding="async"></span>';
      return opening+artwork+closing;
     });
