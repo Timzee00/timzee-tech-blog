@@ -134,11 +134,11 @@
 .space-control-context strong{font-size:.94rem;display:block;margin-bottom:2px}
 .space-control-context .studio-muted{font-size:.79rem;line-height:1.45}
 .space-connection-dot{background:#9ba6ae;box-shadow:0 0 0 4px #9ba6ae24}
-.space-action-dock[data-connected="true"] .space-connection-dot{background:#24ca93;box-shadow:0 0 0 5px #24ca9330}
+.space-action-dock.is-connected .space-connection-dot{background:#24ca93;box-shadow:0 0 0 5px #24ca9330}
 .space-controls{padding:15px 0 0;border:0;gap:9px;align-items:stretch}
 .space-controls .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:11px;min-height:45px;white-space:normal;font-size:.86rem;font-weight:760}
 .space-controls .space-mic-button{background:var(--color-surface-muted,#edf2f3);border:1px solid var(--color-border,#cedbdc);color:var(--color-text,#273642)}
-.space-controls .space-mic-button[data-live="true"]{background:#dcf9ea;border:1px solid #46b48a;color:#07593f}
+.space-controls .space-mic-button.is-live{background:#dcf9ea;border:1px solid #46b48a;color:#07593f}
 .space-controls .space-end-button{color:#bd3144;border-color:#f2b8c0}
 .space-audio-message{display:block;margin:11px 0 0;color:var(--color-text-muted,#62717f);font-size:.78rem;line-height:1.5}
 .space-popout-help{font-size:.78rem;color:var(--color-text-muted,#647983);line-height:1.6;margin:0}
