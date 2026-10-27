@@ -37,6 +37,22 @@ function setButtonBusy(button,busy){
 }
 function preferredDate(value){try{return timeAgo(value);}catch{return "Recently";}}
 function findCommunity(id){return state.communities.find(c=>c.id===id);}
+function ruleLines(value){
+ return String(value||"").split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+}
+function communityRulesHtml(value){
+ const lines=ruleLines(value);
+ return lines.length?"<ol class='forum-rules-list'>"+lines.map(line=>"<li>"+escape(line)+"</li>").join("")+"</ol>":
+  "<p class='forum-muted'>No extra rules yet. Blipmood's platform-wide Content Policy still applies.</p>";
+}
+function updateThreadRulesPreview(){
+ const preview=$("forumThreadRulesPreview");
+ if(!preview)return;
+ const community=findCommunity($("forumThreadCommunity")?.value);
+ preview.innerHTML="<strong>"+escape(community?.title||"Choose a community")+"</strong>"+
+  communityRulesHtml(community?.rules)+
+  "<p class='forum-muted'>These rules supplement the <a href='content-policy.html' target='_blank' rel='noopener'>Blipmood Content Policy</a>.</p>";
+}
 function showDialog(id){
  if(!mustLogin())return;
  const dialog=$(id);
@@ -46,6 +62,8 @@ function showDialog(id){
   $("forumThreadCommunity").innerHTML=options.map(c=>"<option value='"+escape(c.id)+"'>"+escape(c.title)+"</option>").join("");
   if(state.activeCommunity)$("forumThreadCommunity").value=state.activeCommunity.id;
   if(!options.length){notify("Create a community before posting a topic.",true);return;}
+  $("forumThreadRulesAcknowledged").checked=false;
+  updateThreadRulesPreview();
  }
  dialog.showModal();
 }
@@ -196,7 +214,7 @@ function enterFeed({mode="home",community=null,push=true,sort=null}={}){
   escape(community.icon_emoji||"💬")+"</span><div><span>"+escape(community.category)+
   " · "+Number(community.member_count||0)+" members</span><p>"+
   escape(community.description||"Join this community to discuss technology.")+"</p></div></div>"+
-  (community.rules?"<details><summary>Community rules</summary><p>"+escape(community.rules)+"</p></details>":"")+
+  "<section class=\'forum-rule-card\' aria-label=\'Community rules\'><h3>Community rules</h3>"+communityRulesHtml(community.rules)+"<p class=\'forum-muted\'>Community rules cannot override the <a href=\'content-policy.html\'>Blipmood Content Policy</a>.</p></section>"+
   (community.visibility!=="public"?"<p class='forum-privacy-label'>"+
    (community.visibility==="private"?"Private community":"Restricted: member-only discussions")+"</p>"+
    "<button type='button' class='forum-invite-copy' data-copy-invite='"+escape(community.id)+"'>Copy invite link</button>":"")+
@@ -741,6 +759,10 @@ async function openThread(id,{push=true}={}){
   escape(boardName)+"</button> / "+escape(data.kind)+"</p><h1>"+escape(data.title)+
   "</h1><p class='forum-thread-detail-meta'>By "+forumAuthor(data.author_id,data.author_name)+
   " · "+escape(preferredDate(data.created_at))+(data.flair?" · "+escape(data.flair):"")+(data.is_locked?" · Locked":"")+"</p>";
+ const currentBoard=state.activeCommunity?.id===data.community_id?state.activeCommunity:null;
+ $("forumThreadCommunityRules").innerHTML="<h3>Rules for "+escape(currentBoard?.title||"this community")+"</h3>"+
+   communityRulesHtml(currentBoard?.rules)+
+   "<p class='forum-muted'>The <a href='content-policy.html'>Blipmood Content Policy</a> always applies to replies.</p>";
  $("forumThreadBody").innerHTML=renderCommunityMarkdown(data.body||"");
  if(data.media_url)$("forumThreadBody").insertAdjacentHTML("beforeend",mediaHtml(data.media_url,data.media_type,"thread",data.id));
  const attachments=await supabase.from("community_thread_media")
@@ -878,13 +900,15 @@ async function createCommunity(event){
  const values=new FormData(form);
  const title=String(values.get("title")||"").trim();
  const description=String(values.get("description")||"").trim();
+ const rules=String(values.get("rules")||"").trim();
+ if(ruleLines(rules).length>10||rules.length>1500){$("forumCommunityFormError").textContent="Use no more than 10 rules and 1,500 characters.";return;}
  if(title.length<3||description.length<20){$("forumCommunityFormError").textContent="Add a meaningful name and description.";return;}
  setButtonBusy(button,true);$("forumCommunityFormError").textContent="";
  try{
   const id=crypto.randomUUID();
   const {data,error}=await supabase.from("discussion_topics").insert({
     id,title,description,category:String(values.get("category")||"Technology"),
-    posting_policy:String(values.get("posting_policy")||"everyone"),
+    posting_policy:String(values.get("posting_policy")||"everyone"),rules,
     visibility:String(values.get("visibility")||"public"),
     author_id:state.user.id,author_name:memberName(),
     created_at:new Date().toISOString(),updated_at:new Date().toISOString()
@@ -904,6 +928,7 @@ async function createThread(event){
  const values=new FormData(form);
  const communityId=String(values.get("community_id")||"");
  if(!validId(communityId)){$("forumThreadFormError").textContent="Choose a community.";return;}
+ if(!$("forumThreadRulesAcknowledged").checked){$("forumThreadFormError").textContent="Read and acknowledge the selected community rules before publishing.";return;}
  setButtonBusy(button,true);$("forumThreadFormError").textContent="";
  let uploaded=[],created=null;
  try{
@@ -1025,6 +1050,8 @@ async function openModerationWorkspace(){
  const board=state.activeCommunity;
  if(!board||!isCommunityStaff(board.id))return;
  $("forumModerationDialog").showModal();
+ $("forumRulesEditor").value=board.rules||"";
+ $("forumRulesError").textContent="";
  $("forumAutomaticQueue").textContent="Loading automatic review queue…";
  $("forumJoinQueue").textContent="Loading membership requests…";
  $("forumReportsQueue").textContent="Loading reports…";
@@ -1167,6 +1194,31 @@ async function banForumMember(userId){
  if(error){notify(error.message,true);return;}
  notify("Member banned from this community.");
 }
+async function saveCommunityRules(event){
+ event.preventDefault();
+ const board=state.activeCommunity;
+ if(!board||!isCommunityStaff(board.id)||!mustLogin())return;
+ const form=event.currentTarget,submit=form.querySelector('[type="submit"]');
+ const rules=String($("forumRulesEditor").value||"").trim();
+ const errorHost=$("forumRulesError");
+ if(rules.length>1500||ruleLines(rules).length>10){
+  errorHost.textContent="Use no more than 10 rules and 1,500 characters.";return;
+ }
+ setButtonBusy(submit,true);errorHost.textContent="";
+ try{
+  const {data,error}=await supabase.rpc("community_update_rules",{
+    p_community:board.id,p_rules:rules
+  });
+  if(error)throw error;
+  board.rules=String(data??rules);
+  const copy=findCommunity(board.id);
+  if(copy)copy.rules=board.rules;
+  enterFeed({mode:"community",community:board,push:false});
+  notify("Community rules saved. Your changes are recorded in the moderation history.");
+ }catch(error){
+  errorHost.textContent=error.message||"Unable to update rules. Please try again.";
+ }finally{setButtonBusy(submit,false);}
+}
 async function savePostingPolicy(){
  const community=state.activeCommunity;
  if(!community||state.memberRoles.get(community.id)!=="owner")return;
@@ -1285,6 +1337,8 @@ function bindEvents(){
  $("createThreadButton").addEventListener("click",()=>showDialog("forumThreadDialog"));
  $("createCommunityButton").addEventListener("click",()=>showDialog("forumCommunityDialog"));
  $("forumCommunityForm").addEventListener("submit",createCommunity);
+ $("forumRulesForm").addEventListener("submit",saveCommunityRules);
+ $("forumThreadCommunity").addEventListener("change",()=>{$("forumThreadRulesAcknowledged").checked=false;updateThreadRulesPreview();});
  $("forumInterestForm").addEventListener("submit",submitInterests);
  $("forumInterestButton").addEventListener("click",showInterestEditor);
  $("forumAddPollOption").addEventListener("click",()=>{
