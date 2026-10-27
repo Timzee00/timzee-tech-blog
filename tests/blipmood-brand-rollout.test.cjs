@@ -46,3 +46,32 @@ test("outgoing transactional and staff emails display Blipmood and preserve veri
  assert.match(reply,/BREVO_REPLY_TO_EMAIL/);
  assert.match(reply,/name:"Blipmood"/);
 });
+
+test("build renders exactly one branded PNG on all public headers, before JavaScript",async()=>{
+ const {injectSiteShell,normalizePublicHeaderLogo}=await import("../scripts/inject-site-shell.mjs");
+ const fixtures=[
+  '<!doctype html><html><head></head><body><header class="site-header"><a class="brand" href="index.html"><span class="logo">Blipmood</span><span class="tagline">My platform</span></a><nav class="nav-pill"></nav></header></body></html>',
+  '<!doctype html><html><head></head><body><header class="site-header"><a class="brand" href="index.html"><span class="logo" id="siteName">Timzee <span>Tech</span> Hub</span></a></header></body></html>',
+  '<!doctype html><html><head></head><body><header class="site-header"><a class="brand" href="index.html"><span class="bm-brand-display"><img class="bm-wordmark-image" src="original.png" alt=""></span><span id="siteName">Blipmood</span></a></header></body></html>'
+ ];
+ for(const original of fixtures){
+  const built=injectSiteShell(original);
+  const header=built.match(/<header[\s\S]*?<\/header>/)?.[0]||"";
+  assert.equal((header.match(/class="bm-brand-display"/g)||[]).length,1,"one wordmark wrapper");
+  assert.equal((header.match(/class="bm-wordmark-image"/g)||[]).length,1,"one PNG logo");
+  assert.doesNotMatch(header,/class="logo"/);
+  assert.doesNotMatch(header,/id="siteName"/);
+  assert.match(header,/aria-label="Blipmood — Home"/);
+  assert.equal(normalizePublicHeaderLogo(built),built,"canonicalization is repeatable");
+  assert.equal(injectSiteShell(built),built,"full injection remains idempotent");
+ }
+});
+test("runtime header deletes fallback text and preserves responsive reduced-motion CSS",()=>{
+ const js=read("assets/js/site-shell.js");
+ const css=read("assets/css/blipmood-brand.css");
+ assert.match(js,/headerBrand\.replaceChildren\(wordmark\)/);
+ assert.match(css,/\.brand:has\(> \.bm-brand-display\) > \.logo/);
+ assert.match(css,/@keyframes bm-wordmark-reveal/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+ assert.match(css,/@media\(max-width:380px\)/);
+});
