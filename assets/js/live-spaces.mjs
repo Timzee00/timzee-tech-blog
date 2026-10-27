@@ -2,13 +2,18 @@ import {supabase,getCurrentUser} from "./supabase.js";
 import {verifiedAvatar,verifiedName} from "./verified-identity.mjs";
 const $=id=>document.getElementById(id);
 const SPACE_PRESENCE_KEY="timzee:space-window-v1";
+const SPACE_COMMAND_KEY="timzee:space-command-v1";
+let handoffRequested=false;
+let handoffTimer=null;
+let lastRemoteCommand="";
 const POPUP_OWNER=typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():"";
 let presenceInterval=null;
 function publishSpacePresence(){
  if(q.get("mini")!=="1"||!state.joined||!state.livekit||!state.roomId)return;
  try{localStorage.setItem(SPACE_PRESENCE_KEY,JSON.stringify({
    roomId:state.roomId,title:String(state.room?.title||"Live Space").slice(0,100),
-   owner:POPUP_OWNER,seen:Date.now()
+   owner:POPUP_OWNER,seen:Date.now(),role:state.role,
+   micOn:state.livekit.localParticipant?.isMicrophoneEnabled===true,connected:true
  }))}catch{}
 }
 function clearSpacePresence(){
@@ -23,7 +28,7 @@ function clearSpacePresence(){
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const tabs=["live","upcoming","mine","here"];
 const q=new URLSearchParams(location.search);
-const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),desiredMic:false,audioConfigured:false,capabilityChecked:false,roomsRequestId:0,joining:false,micPermissionError:"",refreshingSpeaking:false,lastSpeakerUpgradeAt:0,micPreparedAt:0};
+const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),desiredMic:false,audioConfigured:false,capabilityChecked:false,roomsRequestId:0,joining:false,micPermissionError:"",refreshingSpeaking:false,lastSpeakerUpgradeAt:0,micPreparedAt:0,activeSpeakerIds:new Set()};
 const el=(tag,text="",className="")=>{const item=document.createElement(tag);item.textContent=String(text);if(className)item.className=className;return item};
 const alertStatus=(message,tone="neutral")=>{const s=$("spacesStatus");s.textContent=message;s.dataset.tone=tone};
 const audioStatus=message=>$("spaceAudioStatus").textContent=message;
@@ -322,6 +327,9 @@ async function loadPeople(){
   .in("id",ids).limit(50);
   if(!profiles.error)for(const p of profiles.data||[])state.profiles.set(p.id,p);
  }
+ renderPeople();
+}
+function renderPeople(){
  const render=(container,people)=>{
   container.replaceChildren();
   for(const p of people){
@@ -346,11 +354,22 @@ async function loadPeople(){
    container.append(row);
   }
  };
- render($("spacesSpeakers"),state.participants.filter(p=>p.role!=="listener"));
+ const eligible=state.participants.filter(p=>p.role!=="listener");
+ const active=eligible.filter(p=>state.activeSpeakerIds.has(p.user_id));
+ const ready=eligible.filter(p=>!state.activeSpeakerIds.has(p.user_id));
  const listeners=state.participants.filter(p=>p.role==="listener");
- render($("spacesListeners"),listeners);$("spaceListenerCount").textContent=String(listeners.length);
- const lead=state.participants.find(p=>p.role==="host")||state.participants.find(p=>p.role==="speaker");
- if(lead&&!state.livekit)setSpeaking(lead.user_id,false);
+ render($("spacesActiveSpeakers"),active);
+ render($("spacesSpeakers"),ready);
+ render($("spacesListeners"),listeners);
+ $("spaceActiveCount").textContent=active.length+" speaking";
+ $("spaceSpeakerCount").textContent=ready.length+" ready";
+ $("spaceListenerCount").textContent=String(listeners.length);
+ for(const [id,items,label] of [
+  ["spacesActiveSpeakers",active,"No one is talking right now."],
+  ["spacesSpeakers",ready,"No other speakers waiting."],
+  ["spacesListeners",listeners,"No listeners yet."]]){
+  if(!items.length)$(id).append(el("p",label,"space-empty-group"));
+ }
  // Server-approved listeners become active speakers without manually enabling mic.
  const self=state.participants.find(p=>p.user_id===state.user?.id);
  if(state.joined&&state.role==="listener"&&self?.role==="speaker"&&
@@ -391,8 +410,14 @@ async function startAudio({enableMic=false}={}){
  });
  livekit.on(sdk.RoomEvent.TrackUnsubscribed,track=>{for(const node of track.detach())node.remove()});
  livekit.on(sdk.RoomEvent.ActiveSpeakersChanged,speakers=>{
+  state.activeSpeakerIds=new Set(speakers.map(p=>String(p.identity||"").replace(/^u_/,"")).filter(validId));
   if(speakers.length)setSpeaking(speakers[0].identity,true);
-  else $("activeSpeakerAvatar").classList.remove("speaking");
+  else{
+   $("activeSpeakerAvatar").classList.remove("speaking");
+   $("activeSpeaker").textContent="Nobody speaking right now";
+   $("activeSpeakerAvatar").textContent="🎙";
+  }
+  renderPeople();
  });
  livekit.on(sdk.RoomEvent.DataReceived,(payload,participant,kind,topic)=>{
   if(topic!=="reactions"||payload.byteLength>128)return;
