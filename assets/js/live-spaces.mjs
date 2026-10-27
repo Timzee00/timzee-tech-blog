@@ -29,7 +29,7 @@ const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const tabs=["live","upcoming","mine","here"];
 const q=new URLSearchParams(location.search);
 if(q.get("mini")==="1")document.body.classList.add("space-popout-mode");
-const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),desiredMic:false,audioConfigured:false,capabilityChecked:false,roomsRequestId:0,joining:false,micPermissionError:"",refreshingSpeaking:false,lastSpeakerUpgradeAt:0,micPreparedAt:0,activeSpeakerIds:new Set()};
+const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),desiredMic:false,audioConfigured:false,capabilityChecked:false,roomsRequestId:0,joining:false,micPermissionError:"",refreshingSpeaking:false,lastSpeakerUpgradeAt:0,micPreparedAt:0,activeSpeakerIds:new Set(),speakingStatusHint:""};
 const el=(tag,text="",className="")=>{const item=document.createElement(tag);item.textContent=String(text);if(className)item.className=className;return item};
 const alertStatus=(message,tone="neutral")=>{const s=$("spacesStatus");s.textContent=message;s.dataset.tone=tone};
 const audioStatus=message=>$("spaceAudioStatus").textContent=message;
@@ -278,7 +278,8 @@ async function openRoom(id,{enableMic=false,joinImmediately=false}={}){
  state.room=null;
  state.participants=[];
  state.activeSpeakerIds.clear();
- showIdleStage();
+ state.speakingStatusHint="";
+ renderPeople();
  state.roomId=id;
  $("spacesDiscovery").hidden=true;$("spaceDetail").hidden=false;
  $("spaceTitle").textContent="Loading Space…";$("spaceSourceLinks").replaceChildren();
@@ -383,14 +384,23 @@ async function loadPeople(){
  renderPeople();
 }
 function renderPeople(){
- const render=(container,people)=>{
+ const render=(container,people,spotlight=false)=>{
   container.replaceChildren();
-  for(const p of people){
+  for(const [index,p] of people.entries()){
+   const isFeatured=spotlight&&index===0;
    const profile=state.profiles.get(p.user_id),name=profile?.display_name||profile?.username||"Member";
-   const row=el("div","","space-person"),avatar=el("span","","space-person-avatar"),who=el("strong");
-   avatar.innerHTML=verifiedAvatar(profile?.avatar_url,profile,{size:"lg",alt:name+" avatar"});
+   const row=el("div","",isFeatured?"space-person space-speaking-spotlight":"space-person");
+   const avatar=el("span","","space-person-avatar"),who=el("strong");
+   avatar.innerHTML=verifiedAvatar(profile?.avatar_url,profile,{size:isFeatured?"xl":"lg",alt:name+" avatar"});
    who.innerHTML=verifiedName(name,profile,{compact:true});
+   if(isFeatured)row.append(el("span","● ON AIR","space-speaking-live"));
    row.append(avatar,who,el("small",p.role));
+   if(isFeatured){
+    const wave=el("span","","space-speaking-wave");
+    wave.setAttribute("aria-hidden","true");
+    for(let i=0;i<5;i++)wave.append(el("i"));
+    row.append(wave);
+   }
    if(state.joined&&p.user_id!==state.user?.id){
     const muted=state.mutedUsers.has(p.user_id);
     row.append(button(muted?"Unmute here":"Mute for me",()=>{
@@ -411,7 +421,7 @@ function renderPeople(){
  const active=eligible.filter(p=>state.activeSpeakerIds.has(p.user_id));
  const ready=eligible.filter(p=>!state.activeSpeakerIds.has(p.user_id));
  const listeners=state.participants.filter(p=>p.role==="listener");
- render($("spacesActiveSpeakers"),active);
+ render($("spacesActiveSpeakers"),active,true);
  render($("spacesSpeakers"),ready);
  render($("spacesListeners"),listeners);
  $("spaceActiveCount").textContent=active.length+" speaking";
@@ -424,7 +434,7 @@ function renderPeople(){
   empty.append(
    art,
    el("strong","No active speaker","space-no-active-title"),
-   el("span","It's quiet for now. Someone will light up this stage when they start speaking.","space-no-active-description")
+   el("span",state.speakingStatusHint||"It's quiet for now. Someone will light up this stage when they start speaking.","space-no-active-description")
   );
   $("spacesActiveSpeakers").append(empty);
  }
@@ -440,25 +450,6 @@ function renderPeople(){
    state.lastSpeakerUpgradeAt=Date.now();state.refreshingSpeaking=true;
    void refreshSpeaking().finally(()=>{state.refreshingSpeaking=false});
  }
-}
-function showIdleStage(hint="When somebody starts talking, they will appear here."){
- const avatar=$("activeSpeakerAvatar");
- avatar.classList.remove("speaking");
- avatar.textContent="🎙";
- $("activeSpeaker").textContent="No active speaker";
- $("activeSpeakerLabel").textContent="STAGE IS QUIET";
- $("spaceStageHint").textContent=hint;
- document.querySelector(".speaker-stage")?.classList.add("is-idle");
-}
-function setSpeaking(participantId,active=true){
- const profile=state.profiles.get(String(participantId||"").replace(/^u_/,""));
- const name=profile?.display_name||profile?.username||"Speaker";
- $("activeSpeaker").textContent=name;
- $("activeSpeakerAvatar").innerHTML=verifiedAvatar(profile?.avatar_url,profile,{size:"xl",alt:name+" avatar"});
- $("activeSpeakerAvatar").classList.toggle("speaking",active);
- $("activeSpeakerLabel").textContent=active?"SPEAKING NOW":"ON STAGE";
- $("spaceStageHint").textContent=active?"Live voice activity":"Waiting for someone to speak";
- document.querySelector(".speaker-stage")?.classList.toggle("is-idle",!active);
 }
 async function authenticateRoom(){
  const session=success(await supabase.auth.getSession()).session;
@@ -486,8 +477,7 @@ async function startAudio({enableMic=false}={}){
  livekit.on(sdk.RoomEvent.TrackUnsubscribed,track=>{for(const node of track.detach())node.remove()});
  livekit.on(sdk.RoomEvent.ActiveSpeakersChanged,speakers=>{
   state.activeSpeakerIds=new Set(speakers.map(p=>String(p.identity||"").replace(/^u_/,"")).filter(validId));
-  if(speakers.length)setSpeaking(speakers[0].identity,true);
-  else showIdleStage();
+  state.speakingStatusHint="";
   renderPeople();
  });
  livekit.on(sdk.RoomEvent.DataReceived,(payload,participant,kind,topic)=>{
@@ -506,7 +496,7 @@ async function startAudio({enableMic=false}={}){
   if(state.livekit!==livekit)return;
   state.livekit=null;
   state.activeSpeakerIds.clear();
-  showIdleStage("Audio disconnected. Reconnect to hear this Space.");
+  state.speakingStatusHint="Audio disconnected. Reconnect to hear this Space.";
   renderPeople();
   $("spaceAudioElements").replaceChildren();
   configureControls();
@@ -602,6 +592,7 @@ async function leave(callRpc=true){
  }
  $("spaceAudioElements").replaceChildren();$("spacePlayAudio").hidden=true;
  state.activeSpeakerIds.clear();
+ state.speakingStatusHint="";
  handoffRequested=false;
  if(handoffTimer)clearTimeout(handoffTimer);
  if(callRpc&&state.joined&&state.roomId&&state.user)
