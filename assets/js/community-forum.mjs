@@ -759,6 +759,10 @@ async function openThread(id,{push=true}={}){
   escape(boardName)+"</button> / "+escape(data.kind)+"</p><h1>"+escape(data.title)+
   "</h1><p class='forum-thread-detail-meta'>By "+forumAuthor(data.author_id,data.author_name)+
   " · "+escape(preferredDate(data.created_at))+(data.flair?" · "+escape(data.flair):"")+(data.is_locked?" · Locked":"")+"</p>";
+ const currentBoard=state.activeCommunity?.id===data.community_id?state.activeCommunity:null;
+ $("forumThreadCommunityRules").innerHTML="<h3>Rules for "+escape(currentBoard?.title||"this community")+"</h3>"+
+   communityRulesHtml(currentBoard?.rules)+
+   "<p class='forum-muted'>The <a href='content-policy.html'>Blipmood Content Policy</a> always applies to replies.</p>";
  $("forumThreadBody").innerHTML=renderCommunityMarkdown(data.body||"");
  if(data.media_url)$("forumThreadBody").insertAdjacentHTML("beforeend",mediaHtml(data.media_url,data.media_type,"thread",data.id));
  const attachments=await supabase.from("community_thread_media")
