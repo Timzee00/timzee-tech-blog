@@ -232,6 +232,7 @@ async function openRoom(id,{enableMic=false,joinImmediately=false}={}){
  // A live Space host always enters their own room. Audio popouts with
  // explicit join intent connect automatically so visitors can browse freely.
  const hostIsLive=state.user?.id===state.room?.owner_id&&state.room?.status==="live";
+ // A separate listening popout stays muted unless its owner is the host.
  const audioWindowRequested=q.get("mini")==="1"&&q.get("join")==="1";
  // A scheduled Space opens on air automatically for the creator when it is due.
  if(state.user?.id===state.room?.owner_id&&state.room?.status==="scheduled"&&
@@ -239,7 +240,7 @@ async function openRoom(id,{enableMic=false,joinImmediately=false}={}){
   await goLive();return;
  }
  if((hostIsLive||audioWindowRequested||joinImmediately)&&state.room?.status==="live"&&
-    state.audioConfigured&&!roomExpired(state.room))await join({enableMic:true});
+    state.audioConfigured&&!roomExpired(state.room))await join({enableMic:!audioWindowRequested||hostIsLive});
 }
 async function refreshRoom(){
  if(!state.roomId)return;
