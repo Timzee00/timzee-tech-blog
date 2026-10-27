@@ -1,18 +1,29 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#102b34"><meta name="description" content="Host, discover, and join live technology conversations.">
+<meta name="theme-color" content="#081e29"><meta name="description" content="Host, discover, and join live technology conversations.">
 <title>Live Spaces · Blipmood</title>
 <link rel="stylesheet" href="assets/css/styles.css"><link rel="stylesheet" href="assets/css/spaces-workspaces.css"><link rel="stylesheet" href="assets/css/live-spaces.css">
 <script defer src="assets/js/theme-init.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/livekit-client@2.22.2/dist/livekit-client.umd.min.js" crossorigin="anonymous"></script>
 </head><body>
 <a class="skip-link" href="#spacesMain">Skip to live conversations</a>
-<header class="site-header"><div class="container wrap"><a class="brand" href="index.html"><span class="logo">Blip <span>mood</span> Hub</span></a>
+<header class="site-header"><div class="container wrap"><a class="brand" href="index.html"><span class="logo">Blip<span>mood</span></span></a>
 <nav class="nav-pill" aria-label="Main navigation"><a href="index.html">Home</a><a href="discussion.html">Communities</a><a href="creator-studio.html">Creator Studio</a><a href="team-workspaces.html">Organizations</a></nav>
 <div class="header-actions"><a class="btn ghost sm" href="profile.html">My profile</a></div></div></header>
 <main class="container spaces-shell" id="spacesMain">
-<section class="spaces-hero"><div><p class="studio-kicker">BLIP LIVE SPACES</p><h1>Ideas sound better together.</h1>
-<p>Join real conversations with creators, communities, and organizations. Listen first, ask to speak, or host your own room.</p></div>
-<button id="spacesCreateToggle" class="btn" type="button">＋ Start a Space</button></section>
+<section class="spaces-hero" aria-labelledby="spacesHeroTitle">
+ <div class="spaces-hero-copy">
+  <p class="spaces-eyebrow"><span class="spaces-signal" aria-hidden="true"></span> BLIPMOOD · LIVE AUDIO</p>
+  <h1 id="spacesHeroTitle">Real people.<br><span>Real conversations.</span></h1>
+  <p>Jump into a live conversation, meet interesting voices, or host a room of your own. Your mic is ready when you join an open-mic Space.</p>
+  <div class="spaces-hero-tags" aria-label="Space features"><span>✦ Live conversations</span><span>◉ Real-time audio</span><span>♧ Your community</span></div>
+ </div>
+ <div class="spaces-hero-cta">
+  <div class="spaces-hero-icon" aria-hidden="true">🎙</div>
+  <p>Have something to say?</p>
+  <button id="spacesCreateToggle" class="btn spaces-hero-button" type="button">＋ Create a Space</button>
+  <small>Host and go on air in one flow</small>
+ </div>
+</section>
 <p id="spacesStatus" class="space-status" role="status" aria-live="polite">Loading live conversations…</p>
 <section class="space-panel" id="spacesCreate" hidden aria-labelledby="spacesCreateHeading">
 <h2 id="spacesCreateHeading">Create a conversation</h2>
@@ -25,14 +36,18 @@
 <label>Max participants<select name="capacity"><option value="10">10</option><option value="25" selected>25</option><option value="50">50</option></select></label>
 <label>Duration<select name="duration"><option value="10">10 minutes</option><option value="30" selected>30 minutes</option><option value="60">60 minutes</option></select></label>
 <label>Host as workspace (optional)<select name="workspace_id" id="spacesWorkspace"><option value="">Personal account</option></select></label>
-<label>Allow listener speaking requests<select name="allow_requests"><option value="true">Yes</option><option value="false">No</option></select></label>
+<label class="span-all">Speaking permissions<select name="speaking_mode" id="spacesSpeakingMode">
+ <option value="open">Open mic · everyone can talk when they join</option>
+ <option value="request">Host-approved · listeners request the mic</option>
+ </select></label>
+ <label id="spacesRequestField" class="span-all" hidden>Allow listeners to request speaking access<select name="allow_requests"><option value="true">Yes</option><option value="false">No</option></select></label>
 <label class="span-all">Related published article (optional)<select name="post_id" id="spacesPostId"><option value="">No article linked</option></select></label>
 <label class="span-all">Related community (optional)<select name="community_id" id="spacesCommunityId"><option value="">No community linked</option></select></label>
-<div class="studio-action-row span-all"><button type="submit" class="btn" id="spacesSubmit">Create Space</button><button type="button" class="btn ghost" id="spacesCancel">Cancel</button></div>
-</form><p class="studio-muted">Audio is opt-in and microphones start muted. Public, link-only and invite-only rooms have different access controls. Live audio requires an active configured provider.</p>
+<div class="studio-action-row span-all"><button type="submit" class="btn" id="spacesSubmit">Create &amp; go live 🎙</button><button type="button" class="btn ghost" id="spacesCancel">Cancel</button></div>
+</form><p class="spaces-permission-tip"><span aria-hidden="true">🎙</span> <strong>Mic transparency:</strong> Creating or joining an open-mic Space means your microphone will turn on after you grant browser permission. You can mute or leave at any time. Host-approved rooms keep listeners muted until permitted to speak.</p>
 </section>
 <section id="spacesDiscovery" class="space-panel" aria-labelledby="spacesListTitle">
-<div class="spaces-heading"><h2 id="spacesListTitle">Discover Spaces</h2><button id="spacesRefresh" class="btn ghost sm" type="button">↻ Refresh</button></div>
+<div class="spaces-heading"><div><p class="spaces-section-kicker">FIND YOUR CONVERSATION</p><h2 id="spacesListTitle">Discover Spaces</h2></div><button id="spacesRefresh" class="btn ghost sm" type="button">↻ Refresh</button></div>
 <div class="spaces-tabs" role="tablist" aria-label="Space filters">
 <button class="active" role="tab" aria-selected="true" data-space-tab="live" type="button">Live</button>
 <button role="tab" aria-selected="false" data-space-tab="upcoming" type="button">Upcoming</button>
@@ -41,28 +56,60 @@
 <div id="spacesList" class="spaces-list" aria-live="polite"></div>
 </section>
 <section id="spaceDetail" class="space-panel space-detail" hidden aria-label="Selected audio room">
-<div class="space-topbar"><button type="button" class="btn ghost sm" id="spaceBack">← All Spaces</button>
-<span id="spaceLiveBadge" class="space-live-badge">LIVE</span>
-<button id="spaceShare" type="button" class="btn ghost sm">Share</button><button id="spaceReport" type="button" class="btn ghost sm" hidden>Report</button></div>
-<h2 id="spaceTitle">Space</h2><p id="spaceDescription" class="studio-muted"></p>
-<p id="spaceMeta" class="studio-muted"></p>
-<div id="spaceSourceLinks" class="studio-action-row"></div>
-<div class="speaker-stage"><p class="studio-kicker" id="activeSpeakerLabel">NOW SPEAKING</p>
-<div class="space-avatar-large" id="activeSpeakerAvatar" aria-hidden="true">🎙</div>
-<h3 id="activeSpeaker">Waiting for a speaker</h3></div>
-<h3>Host and speakers</h3><div id="spacesSpeakers" class="space-people"></div>
-<h3>Listeners <span id="spaceListenerCount">0</span></h3><div id="spacesListeners" class="space-people"></div>
-<div class="space-controls">
+<div class="space-topbar">
+  <button type="button" class="btn ghost sm" id="spaceBack">← All Spaces</button>
+  <div class="space-top-actions"><span id="spaceLiveBadge" class="space-live-badge">LIVE</span>
+   <button id="spaceShare" type="button" class="btn ghost sm">↗ Share</button>
+   <button id="spaceReport" type="button" class="btn ghost sm" hidden>Report</button></div>
+ </div>
+ <div class="space-room-heading">
+  <p class="spaces-section-kicker">YOUR LIVE CONVERSATION</p>
+  <h2 id="spaceTitle">Space</h2>
+  <p id="spaceDescription" class="studio-muted"></p>
+  <p id="spaceMeta" class="studio-muted"></p>
+  <div id="spaceSourceLinks" class="studio-action-row"></div>
+ </div>
+ <div class="space-session-layout">
+  <div class="space-stage-column">
+   <section class="speaker-stage" aria-label="On-air stage">
+    <div class="space-stage-top"><span class="space-stage-pill"><span aria-hidden="true"></span> ON AIR</span><span class="space-stage-frequency">BLIPMOOD / LIVE</span></div>
+    <div class="space-stage-content">
+     <div class="space-stage-avatar-wrap"><div class="space-avatar-large" id="activeSpeakerAvatar" aria-hidden="true">🎙</div><div class="space-waveform" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div>
+     <p class="studio-kicker" id="activeSpeakerLabel">NOW ON STAGE</p>
+     <h3 id="activeSpeaker">Waiting for a speaker</h3>
+     <p class="space-stage-hint" id="spaceStageHint">Connect to hear who's talking</p>
+    </div>
+    <div class="space-stage-footer"><span>● Spatial audio room</span><span>Speak freely. Listen thoughtfully.</span></div>
+   </section>
+   <section class="space-people-panel" aria-labelledby="spaceSpeakersTitle"><div class="space-panel-heading">
+    <h3 id="spaceSpeakersTitle">On stage</h3><span>Host &amp; speakers</span>
+   </div><div id="spacesSpeakers" class="space-people"></div></section>
+  </div>
+  <aside class="space-people-panel space-audience-panel" aria-labelledby="spaceAudienceTitle">
+   <div class="space-panel-heading"><h3 id="spaceAudienceTitle">Audience</h3><span id="spaceListenerCount">0</span></div>
+   <p class="studio-muted">Listening to the conversation</p>
+   <div id="spacesListeners" class="space-people"></div>
+  </aside>
+ </div>
+ <section class="space-action-dock" aria-label="Your room controls">
+  <div class="space-control-context">
+   <span class="space-connection-dot" aria-hidden="true"></span>
+   <div><strong id="spaceRoleNotice">Your place in this Space</strong>
+    <p id="spaceJoinHint" class="studio-muted">Join to hear the conversation.</p></div>
+  </div>
+  <div class="space-controls">
 <button id="spaceStart" class="btn" type="button" hidden>Go live</button>
-<button id="spaceJoin" class="btn" type="button">Join conversation</button>
-<button id="spaceMic" class="btn ghost" type="button" hidden>🎙 Turn on mic</button>
+<button id="spaceJoin" class="btn space-join-button" type="button">🎧 Join Space</button>
+<button id="spaceMic" class="btn space-mic-button" type="button" aria-pressed="false" hidden>🎙 Turn on mic</button>
 <button id="spaceAsk" class="btn ghost" type="button" hidden>✋ Ask to speak</button>
 <button id="spaceReconnect" class="btn ghost" type="button" hidden>↻ Refresh speaking access</button>
 <button id="spaceLeave" class="btn ghost" type="button" hidden>Leave</button><a class="btn ghost" id="spacePopout" href="#" target="timzee-space-audio" hidden aria-label="Continue audio while browsing">↗ Listen while browsing</a>
 <button id="spacePlayAudio" class="btn ghost" type="button" hidden>🔊 Enable sound</button>
-<button id="spaceEnd" class="btn ghost" type="button" hidden>End room</button>
-</div>
-<p id="spaceAudioStatus" class="studio-muted" role="status" aria-live="polite">Playback begins on joining. The microphone needs browser permission to speak.</p><p class="studio-muted">“Listen while browsing” opens a separate audio window and joins automatically. Keep that window open as you explore the site; your browser may still require a tap to enable sound.</p>
+<button id="spaceEnd" class="btn ghost space-end-button" type="button" hidden>End room</button>
+  </div>
+  <p id="spaceAudioStatus" class="space-audio-message" role="status" aria-live="polite">Join with one tap. Your microphone will activate automatically if you can speak and allow permission.</p>
+ </section>
+ <p class="space-popout-help">“Listen while browsing” opens a separate audio window and joins automatically. Keep it open as you explore; your browser may still require a tap for sound.</p>
 <div class="space-reactions" aria-label="Reactions"><button data-react="🔥" type="button">🔥</button><button data-react="😂" type="button">😂</button><button data-react="👏" type="button">👏</button><button data-react="🙌" type="button">🙌</button><button data-react="💯" type="button">💯</button><span id="reactionNotice" role="status" aria-live="polite"></span></div>
 <section id="spaceHostPanel" hidden><h3>Speaking requests</h3><div id="spaceRequests" class="studio-stack"></div>
 <h3>Invite a listener</h3><form id="spaceInviteForm" class="studio-form">
