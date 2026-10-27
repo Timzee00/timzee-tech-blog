@@ -245,7 +245,10 @@ async function openRoom(id,{enableMic=false,joinImmediately=false}={}){
   await goLive();return;
  }
  if((hostIsLive||audioWindowRequested||joinImmediately)&&state.room?.status==="live"&&
-    state.audioConfigured&&!roomExpired(state.room))await join({enableMic:!audioWindowRequested||hostIsLive});
+    state.audioConfigured&&!roomExpired(state.room)){
+   // Preserve the speaker's actual mute choice when moving to a separate window.
+   await join({enableMic:audioWindowRequested?q.get("speak")==="1":true});
+ }
 }
 async function refreshRoom(){
  if(!state.roomId)return;
@@ -283,8 +286,12 @@ function configureControls(){
  $("spaceLeave").hidden=!state.joined;
  const popout=$("spacePopout");
  popout.hidden=q.get("mini")==="1"||!state.user||!state.audioConfigured||
-  !room||room.status!=="live"||roomExpired(room);
- if(state.roomId)popout.href="spaces.html?room="+encodeURIComponent(state.roomId)+"&mini=1&join=1";
+  !state.joined||!state.livekit||!room||room.status!=="live"||roomExpired(room);
+ const isTalking=["host","speaker"].includes(state.role)&&
+   state.livekit?.localParticipant?.isMicrophoneEnabled===true;
+ if(state.roomId)popout.href="spaces.html?room="+encodeURIComponent(state.roomId)+
+   "&mini=1&join=1&speak="+(isTalking?"1":"0");
+ popout.textContent=isTalking?"🎙 Keep talking while browsing":"🎧 Keep listening while browsing";
  $("spaceReport").hidden=!state.joined;
  const mic=$("spaceMic"),liveMic=state.livekit?.localParticipant?.isMicrophoneEnabled===true;
  mic.hidden=!state.joined||!state.livekit||!["host","speaker"].includes(state.role);
@@ -527,6 +534,7 @@ async function leave(callRpc=true){
   existing.disconnect();
  }
  $("spaceAudioElements").replaceChildren();$("spacePlayAudio").hidden=true;
+ state.activeSpeakerIds.clear();
  if(callRpc&&state.joined&&state.roomId&&state.user)
   await supabase.rpc("spaces_leave",{p_room:state.roomId}).catch(()=>{});
  state.joined=false;state.role="listener";state.desiredMic=false;configureControls();
@@ -733,9 +741,17 @@ $("spaceEnd").addEventListener("click",endRoom);
 $("spaceJoin").addEventListener("click",()=>void join({enableMic:true}));
 $("spaceLeave").addEventListener("click",async()=>{await leave();alertStatus("Left the room.","success")});
 $("spacePopout").addEventListener("click",()=>{
- // Separate audio windows use their own server token. Stop this tab's
- // microphone to avoid echo or double audio when the new window joins.
- if(state.joined)void leave().then(()=>alertStatus("Continue in the separate audio window while browsing here.","success"));
+ // Let the real link open a persistent window. Handoff only after that window
+ // confirms a connected audio track. Do NOT revoke the shared DB membership.
+ if(!state.joined||!state.livekit)return;
+ handoffRequested=true;
+ if(handoffTimer)clearTimeout(handoffTimer);
+ audioStatus("Opening your persistent Space window. Keep it open while browsing.");
+ handoffTimer=setTimeout(()=>{
+  if(!handoffRequested)return;
+  handoffRequested=false;
+  audioStatus("The separate audio window has not connected. This page is still your Space; try again.");
+ },18000);
 });
 $("spacePlayAudio").addEventListener("click",async()=>{
  if(!state.livekit)return;
@@ -751,11 +767,45 @@ $("spaceMic").addEventListener("click",async()=>{
   await state.livekit.localParticipant.setMicrophoneEnabled(next);
   state.desiredMic=next;
   if(next)state.micPermissionError="";
+  publishSpacePresence();
   configureControls();
   audioStatus(next?"Microphone live; other listeners can hear you.":"Microphone muted.");
  }catch(e){audioStatus("Unable to enable microphone: "+e.message)}
 });
 document.querySelectorAll("[data-react]").forEach(b=>b.addEventListener("click",()=>void react(b.dataset.react)));
 $("spaceInviteForm").addEventListener("submit",inviteListener);
+// Cross-tab handoff and a small command channel for the site-wide mini player.
+window.addEventListener("storage",event=>{
+ if(event.key===SPACE_PRESENCE_KEY&&handoffRequested){
+  let info=null;try{info=JSON.parse(event.newValue||"null")}catch{}
+  if(info?.roomId===state.roomId&&info.owner!==POPUP_OWNER&&info.connected===true&&
+      Date.now()-info.seen<12000){
+   handoffRequested=false;if(handoffTimer)clearTimeout(handoffTimer);
+   void leave(false).then(()=>{
+    audioStatus("Your Space continues in the separate window. Browse Blipmood while talking.");
+    alertStatus("Your Space is still live. Use the floating controls while browsing.","success");
+   });
+  }
+ }
+ if(event.key===SPACE_COMMAND_KEY&&q.get("mini")==="1"){
+  let command=null;try{command=JSON.parse(event.newValue||"null")}catch{}
+  if(!command||command.owner!==POPUP_OWNER||command.roomId!==state.roomId||
+     Math.abs(Date.now()-command.at)>15000||command.id===lastRemoteCommand)return;
+  lastRemoteCommand=command.id;
+  if(command.action==="leave"&&state.joined){
+   void leave().then(()=>audioStatus("Left your Space. Close this audio window when ready."));
+  }else if(command.action==="toggle-mic"&&state.livekit&&["host","speaker"].includes(state.role)){
+   void (async()=>{
+    try{
+     const mic=state.livekit.localParticipant;
+     const next=!mic.isMicrophoneEnabled;
+     await mic.setMicrophoneEnabled(next);
+     state.desiredMic=next;publishSpacePresence();configureControls();
+     audioStatus(next?"Your mic is live.":"Your mic is muted.");
+    }catch(error){audioStatus("Could not switch microphone: "+(error?.message||"permission denied"))}
+   })();
+  }
+ }
+});
 window.addEventListener("pagehide",()=>{stopPolling();clearSpacePresence();if(state.livekit)state.livekit.disconnect()});
 init().catch(e=>alertStatus(e.message||"Could not load Live Spaces.","error"));
