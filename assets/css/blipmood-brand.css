@@ -48,3 +48,14 @@
 @media(prefers-reduced-motion:reduce){
  .site-header .brand .bm-wordmark-image{animation:none!important;transition:none!important;transform:none!important}
 }
+
+/* The image is the only brand in tight mobile headers: let the search,
+   Status and Menu controls retain their accessible touch targets. */
+@media(max-width:380px){
+ .site-header .brand{min-width:0;overflow:hidden}
+ .site-header .brand .bm-brand-display{min-width:0;flex:0 1 auto}
+ .site-header .brand .bm-wordmark-image{width:clamp(104px,31vw,120px);max-width:100%;height:auto}
+}
+@media(max-width:340px){
+ .site-header .brand .bm-wordmark-image{width:102px}
+}
