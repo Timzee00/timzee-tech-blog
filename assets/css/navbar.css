@@ -158,14 +158,29 @@
  .site-header .wrap>.menu-toggle{padding-inline:7px}
 }
 
-/* A persistent indicator for an audio window that owns a separate LiveKit session. */
-.site-space-audio-dock[hidden]{display:none!important}
-.site-space-audio-dock{position:fixed;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:75;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:2px;align-items:center;max-width:min(365px,calc(100vw - 24px));min-width:0;padding:11px 13px;border-radius:14px;background:var(--color-surface,#122d34);border:1px solid var(--color-border-strong,#80969c);color:var(--color-text,#fff);box-shadow:0 10px 32px #0004}
-.site-space-audio-dock strong{font-size:12px}
-.site-space-audio-dock span{font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.site-space-audio-dock a{grid-column:2;grid-row:1/3;min-height:44px;display:inline-flex;align-items:center;padding:6px 10px;background:var(--color-primary,#0f766e);color:white;border-radius:10px;font-size:12px;font-weight:750}
-.site-space-audio-dock a:focus-visible{outline:3px solid #7dd3fc;outline-offset:2px}
+/* Compact persistent voice controls, never allowed to widen the viewport. */
+.site-space-audio-dock[hidden],.site-space-audio-dock [hidden]{display:none!important}
+.site-space-audio-dock{
+ position:fixed;right:10px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:75;
+ display:grid;grid-template-columns:minmax(0,1fr);gap:4px;box-sizing:border-box;
+ width:min(365px,calc(100vw - 20px));max-width:calc(100vw - 20px);min-width:0;
+ padding:12px 13px;border-radius:16px;background:var(--color-surface,#102b33);
+ border:1px solid var(--color-border-strong,#80969c);color:var(--color-text,#f8ffff);
+ box-shadow:0 12px 38px #0006;overflow:hidden;overflow-wrap:anywhere;
+}
+.site-space-audio-dock .space-dock-title{display:block;font-weight:900;letter-spacing:.06em;font-size:.72rem;color:var(--color-primary,#0d937a)}
+.site-space-audio-dock .space-dock-name{font-size:.9rem;font-weight:750;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.site-space-audio-dock .space-dock-status{color:var(--color-text-muted,#c4e0db);font-size:.75rem;min-height:1.2em}
+.site-space-audio-dock .space-dock-actions{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.7fr);gap:6px;min-width:0;margin-top:4px}
+.site-space-audio-dock :is(button,a){display:inline-flex;align-items:center;justify-content:center;text-align:center;
+ min-height:42px;min-width:0;padding:8px 7px;border-radius:9px;border:1px solid var(--color-border,#9db3b0);
+ background:var(--color-surface-muted,#25424b);color:var(--color-text,#fff);font-weight:800;font-size:.74rem;
+ text-decoration:none;cursor:pointer;white-space:normal;overflow-wrap:anywhere;line-height:1.2}
+.site-space-audio-dock .space-dock-mic[aria-pressed="true"]{color:#083e31;background:#89f4cb;border-color:#50c09b}
+.site-space-audio-dock .space-dock-leave{color:#f47182;border-color:#e4a7b4}
+.site-space-audio-dock :is(button,a):focus-visible{outline:3px solid #65d7e7;outline-offset:2px}
 @media(min-width:961px){.site-space-audio-dock{bottom:18px}}
+@media(max-width:350px){.site-space-audio-dock{padding:10px}.site-space-audio-dock .space-dock-actions{gap:4px}.site-space-audio-dock :is(button,a){font-size:.69rem;padding:7px 4px}}
 
 /* Global search is independent of the mobile navigation drawer. */
 .site-global-search-button{display:none;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);border-radius:10px;width:44px;height:44px;align-items:center;justify-content:center;flex:0 0 44px;cursor:pointer}
