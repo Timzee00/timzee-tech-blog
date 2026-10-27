@@ -341,19 +341,35 @@ export async function createPostShare(payload) {
   return supabase.from("post_shares").insert(payload);
 }
 
-export async function incrementPostViews(postId, currentViews = 0) {
-  const next = currentViews + 1;
-  const result = await supabase
-    .from("posts")
-    .update({ views: next })
-    .eq("id", postId)
-    .select("views")
-    .single();
-  if (result.error) {
-    console.warn("View increment failed", result.error);
-    return currentViews;
+// A reader cannot directly UPDATE published article rows: that violates
+// the author/staff RLS policies and fails with 406. The server increments
+// atomically, counts each device once per UTC day and ignores unpublished IDs.
+const POST_VIEW_VISITOR_KEY = "blipmood:article-view-token:v1";
+function articleViewToken() {
+  try {
+    let token = localStorage.getItem(POST_VIEW_VISITOR_KEY);
+    if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(token || "")) {
+      token = crypto.randomUUID();
+      localStorage.setItem(POST_VIEW_VISITOR_KEY, token);
+    }
+    return token;
+  } catch {
+    // Browsers denying storage can still read articles normally.
+    return null;
   }
-  return result.data.views ?? next;
+}
+export async function incrementPostViews(postId, currentViews = 0) {
+  const token = articleViewToken();
+  if (!token) return null;
+  const { data, error } = await supabase.rpc("record_post_view", {
+    p_post_id: postId, p_visit_token: token
+  });
+  if (error) {
+    console.warn("Article view count unavailable", error);
+    return null;
+  }
+  return Number.isSafeInteger(Number(data)) && Number(data) >= 0
+    ? Number(data) : currentViews;
 }
 
 export async function searchPosts({ query = "", tags = [] } = {}) {

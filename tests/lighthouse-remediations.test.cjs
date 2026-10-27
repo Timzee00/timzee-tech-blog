@@ -1,0 +1,54 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const source=p=>fs.readFileSync(path.resolve(__dirname,'..',p),'utf8');
+test('reader uses atomic, RLS-safe article counting rather than direct row update',()=>{
+ const sql=source('supabase/migrations/20261027215654_repair_article_engagement_and_atomic_public_views.sql');
+ const client=source('assets/js/data.js'),article=source('assets/js/post.js');
+ assert.match(sql,/get_post_engagement\(p_post_ids uuid\[\]\)/);
+ assert.match(sql,/SECURITY INVOKER/);
+ assert.match(sql,/LIMIT 24/);
+ assert.match(sql,/record_post_view\(/);
+ assert.match(sql,/FOR UPDATE/);
+ assert.match(sql,/private\.post_view_dedupe/);
+ assert.match(sql,/GRANT EXECUTE ON FUNCTION public\.record_post_view\(uuid,uuid\) TO anon,authenticated/);
+ assert.match(sql,/p\.status='published'/);
+ assert.doesNotMatch(sql,/DISABLE ROW LEVEL SECURITY|DROP POLICY|DROP TRIGGER/i);
+ const fn=client.match(/export async function incrementPostViews\([\s\S]+?\n\}/)?.[0]||'';
+ assert.match(fn,/supabase\.rpc\("record_post_view"/);
+ assert.doesNotMatch(fn,/from\("posts"\)\.update/);
+ assert.match(article,/blipmood:viewed:/);
+});
+test('article reserves space for loading content and images and uses semantic heading',()=>{
+ const page=source('post.html'),post=source('assets/js/post.js'),css=source('assets/css/content-pages.css');
+ assert.match(page,/data-post-loading="true"/);
+ assert.match(page,/<h2>Key Takeaways<\/h2>/);
+ assert.match(post,/removeAttribute\("data-post-loading"\)/);
+ assert.match(post,/fetchpriority="high" loading="eager" decoding="async"/);
+ assert.match(post,/postBody\.querySelectorAll\("img"\)/);
+ assert.match(post,/width="960" height="540"/);
+ assert.match(css,/#post-app\[data-post-loading\] \.post-header/);
+ assert.match(css,/#postCover:not\(:empty\)/);
+ assert.match(css,/aspect-ratio:16\/9/);
+});
+test('video feed skeleton and media aspect ratios keep footer stable',()=>{
+ const html=source('videos.html'),css=source('assets/css/content-pages.css');
+ assert.match(html,/id="videosContainer" aria-busy="true"/);
+ assert.match(html,/class="video-grid video-grid-placeholder"/);
+ assert.match(html,/width="640" height="360" loading="lazy"/);
+ assert.match(css,/#videosContainer\[aria-busy="true"\]/);
+ assert.match(css,/#videosContainer \.video-placeholder-image/);
+});
+test('proper heading hierarchy, crawlable space dock and async brand font',()=>{
+ const discussion=source('discussion.html');
+ const dock=source('assets/js/space-mini-dock.mjs');
+ const index=source('index.html');
+ const build=source('scripts/build-site.mjs');
+ assert.match(discussion,/<h2>Community boards<\/h2>/);
+ assert.match(dock,/open\.href=ROOT/);
+ assert.match(index,/media="print" onload="this\.media='all'"/);
+ assert.match(index,/preload" href="\/assets\/brand\/blipmood-emblem-light\.png" as="image" fetchpriority="high"/);
+ assert.match(build,/node_modules\/dompurify\/dist\/purify\.es\.mjs/);
+ assert.match(build,/bundle: false, minify: true, format: "esm"/);
+});

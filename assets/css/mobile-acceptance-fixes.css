@@ -15,7 +15,7 @@
 .post-article .post-highlights,
 .post-article .author-profile-card { color: var(--color-text); }
 .post-article .post-highlights li { color: var(--color-text) !important; line-height: 1.65; }
-.post-article .post-highlights h3 { color: var(--color-text); }
+.post-article .post-highlights h2 { color: var(--color-text); }
 .post-article #postContent :where(p,li,h2,h3,h4,strong,em,blockquote,span) {
   color: var(--color-text) !important;
 }

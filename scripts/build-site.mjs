@@ -25,7 +25,14 @@ for (const directory of ["assets", "admin", "author", "moderator", "super"]) {
   await cp(resolve(root, directory), resolve(output, directory), { recursive: true });
 }
 await mkdir(resolve(output, "assets/vendor"), { recursive: true });
-await cp(resolve(root, "node_modules/dompurify/dist/purify.es.mjs"), resolve(output, "assets/vendor/purify.es.mjs"));
+// DOMPurify's distributed module is unminified. Ship an optimized ESM
+// build while preserving the separate license and its exported API.
+await build({
+  entryPoints: [resolve(root, "node_modules/dompurify/dist/purify.es.mjs")],
+  bundle: false, minify: true, format: "esm", platform: "browser",
+  target: "es2022", outfile: resolve(output, "assets/vendor/purify.es.mjs"),
+  legalComments: "none"
+});
 await cp(resolve(root, "node_modules/dompurify/LICENSE"), resolve(output, "assets/vendor/DOMPurify-LICENSE.txt"));
 await build({
   stdin: { contents: 'export { createClient } from "@supabase/supabase-js";', resolveDir: root },

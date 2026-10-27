@@ -40,7 +40,11 @@
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Let the hero render with system fonts while the optional brand font CSS
+         downloads. Google Fonts must never block the first paint. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@500;600;700;800&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@500;600;700;800&display=swap"></noscript>
+    <link rel="preload" href="/assets/brand/blipmood-emblem-light.png" as="image" fetchpriority="high">
     <link rel="stylesheet" href="assets/css/blipmood-home.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>

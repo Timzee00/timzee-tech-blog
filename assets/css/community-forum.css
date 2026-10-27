@@ -30,7 +30,7 @@
 .forum-nav-item:hover,.forum-nav-item.active{background:var(--color-surface-muted,#edf7f4)}
 .forum-nav-item.active{color:var(--color-primary,#087f73);font-weight:800}
 .forum-navigation hr{border:0;border-top:1px solid var(--color-border,#e0e5e9);margin:14px 0}
-.forum-search-label,.forum-list-heading h3{display:block;font-size:.75rem;font-weight:800;margin:10px 0}
+.forum-search-label,.forum-list-heading h2{display:block;font-size:.75rem;font-weight:800;margin:10px 0}
 #forumCommunitySearch,#forumThreadSearch{border:1px solid var(--color-border-strong,#b7c3c6);border-radius:10px;padding:10px 12px;width:100%;min-width:0;box-sizing:border-box;background:var(--color-surface,#fff);color:var(--color-text,#18232e)}
 .forum-category-filters{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 18px}
 .forum-category-filters button{background:var(--color-surface-muted,#f2f6f8);border:1px solid var(--color-border,#dfe5e9);border-radius:999px;color:inherit;padding:6px 9px;font-size:.69rem;font-weight:650}

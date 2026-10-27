@@ -155,8 +155,14 @@
         </div>
 
         <!-- Videos Grid -->
-        <div id="videosContainer">
-          <div class="callout">Loading videos...</div>
+        <div id="videosContainer" aria-busy="true">
+          <div class="video-grid video-grid-placeholder" aria-hidden="true">
+            <div class="video-placeholder"><div class="video-placeholder-image"></div><div class="video-placeholder-line"></div><div class="video-placeholder-line short"></div></div>
+            <div class="video-placeholder"><div class="video-placeholder-image"></div><div class="video-placeholder-line"></div><div class="video-placeholder-line short"></div></div>
+            <div class="video-placeholder"><div class="video-placeholder-image"></div><div class="video-placeholder-line"></div><div class="video-placeholder-line short"></div></div>
+            <div class="video-placeholder"><div class="video-placeholder-image"></div><div class="video-placeholder-line"></div><div class="video-placeholder-line short"></div></div>
+          </div>
+          <span class="sr-only" role="status">Loading videos…</span>
         </div>
 
         <!-- Load More -->
@@ -288,7 +294,7 @@
         container.innerHTML = `<div class="video-grid">${state.videos.map(v => `
           <a class="video-card" href="video.html?id=${encodeURIComponent(v.id)}">
             <div class="video-thumbnail">
-              ${v.thumbnail_url && isSafeUrl(v.thumbnail_url) ? `<img src="${escapeHTML(v.thumbnail_url)}" loading="lazy" alt="${escapeHTML(v.title || '')}">` : icon('videos')}
+              ${v.thumbnail_url && isSafeUrl(v.thumbnail_url) ? `<img src="${escapeHTML(v.thumbnail_url)}" width="640" height="360" loading="lazy" decoding="async" alt="${escapeHTML(v.title || '')}">` : icon('videos')}
               <div class="video-duration">${escapeHTML(String(v.duration || 0))}s</div>
             </div>
             <div class="video-info">

@@ -228,3 +228,5 @@ body.blipmood-home main, body.blipmood-home footer { position: relative; z-index
 @media (prefers-reduced-motion: reduce) {
   .blipmood-home *, .blipmood-home *::before, .blipmood-home *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+/* Brand font loads progressively; reserve headline line boxes through swap. */
+.blipmood-home .home-intro h1{line-height:1.05;min-width:0}

@@ -282,7 +282,7 @@ function renderPost(data, post) {
   if (cover) {
     cover.innerHTML =
       post.cover && isSafeUrl(post.cover)
-        ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}">`
+        ? `<img src="${escapeHTML(post.cover)}" alt="${escapeHTML(post.title || "Post cover")}" width="1200" height="900" fetchpriority="high" loading="eager" decoding="async">`
         : "";
   }
   for (const [id,action] of [["summarizePostAi","summarize"],["chatPostAi","chat"]]) {
@@ -299,6 +299,14 @@ function renderPost(data, post) {
   const postBody = document.getElementById("postContent");
   if (postBody) {
     postBody.innerHTML = normalizeHtml(stripEditorialScaffolding(post.content || ""));
+    // Preserve space for old editorial images that were uploaded without
+    // intrinsic dimensions; do not wait for image decoding to lay out text.
+    postBody.querySelectorAll("img").forEach(image => {
+      if (!image.hasAttribute("width")) image.width = 1200;
+      if (!image.hasAttribute("height")) image.height = 675;
+      image.loading = "lazy";
+      image.decoding = "async";
+    });
   }
 
   const gallery = document.getElementById("postGallery");
@@ -419,7 +427,7 @@ function renderGallery(mediaItems) {
       if (item.media_type === "video") {
         return `<figure class="post-gallery-item"><video controls playsinline preload="metadata" src="${url}"></video><figcaption>Video ${index + 1}</figcaption></figure>`;
       }
-      return `<figure class="post-gallery-item"><a href="${url}" target="_blank" rel="noopener noreferrer" aria-label="Open article image ${index + 1} in new tab"><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${url}" alt="Article image ${index + 1}"></a><figcaption>Image ${index + 1} · opens original file</figcaption></figure>`;
+      return `<figure class="post-gallery-item"><a href="${url}" target="_blank" rel="noopener noreferrer" aria-label="Open article image ${index + 1} in new tab"><img loading="lazy" decoding="async" width="960" height="540" referrerpolicy="no-referrer" src="${url}" alt="Article image ${index + 1}"></a><figcaption>Image ${index + 1} · opens original file</figcaption></figure>`;
     })
     .join("");
   gallery.querySelectorAll("img").forEach(image => image.addEventListener("error", () => {
@@ -434,11 +442,16 @@ function updateCounts(post) {
 }
 
 async function incrementViewIfNeeded(post) {
-  const viewKey = `techblog_viewed_${post.id}`;
-  if (localStorage.getItem(viewKey)) return;
+  // DB is authoritative and deduplicates once per browser token/UTC day.
+  const viewKey = `blipmood:viewed:${post.id}`;
+  try {
+    const lastSeen = Number(localStorage.getItem(viewKey)) || 0;
+    if (Date.now() - lastSeen < 24 * 60 * 60 * 1000) return;
+  } catch { /* Storage unavailable; the server still deduplicates. */ }
   const nextViews = await incrementPostViews(post.id, post.views || 0);
+  if (nextViews === null) return;
   post.views = nextViews;
-  localStorage.setItem(viewKey, "1");
+  try { localStorage.setItem(viewKey, String(Date.now())); } catch {}
   updateCounts(post);
 }
 
@@ -1084,6 +1097,7 @@ async function boot() {
     const postId=getQueryParam("id"),slug=getQueryParam("slug");
     const post=await fetchPostByIdOrSlug({id:postId,slug});
     if(!post){
+      document.getElementById("post-app")?.removeAttribute("data-post-loading");
       document.getElementById("postTitle").textContent="Post not found";
       document.getElementById("postContent").innerHTML=
         '<p>This post is unavailable or may have been removed.</p><a class="btn" href="/index.html">Explore the latest posts</a>';
@@ -1098,6 +1112,8 @@ async function boot() {
     // update that label without rebuilding the full HTML and its listeners.
     renderPost({categories:[]},post);
     renderTakeaways(post);
+    // All above-the-fold article pieces are now inserted in a single pass.
+    document.getElementById("post-app")?.removeAttribute("data-post-loading");
     setupReveal();
 
     const profilePromise=post.author_id
