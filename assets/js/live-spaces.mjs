@@ -28,6 +28,7 @@ function clearSpacePresence(){
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const tabs=["live","upcoming","mine","here"];
 const q=new URLSearchParams(location.search);
+if(q.get("mini")==="1")document.body.classList.add("space-popout-mode");
 const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),desiredMic:false,audioConfigured:false,capabilityChecked:false,roomsRequestId:0,joining:false,micPermissionError:"",refreshingSpeaking:false,lastSpeakerUpgradeAt:0,micPreparedAt:0,activeSpeakerIds:new Set()};
 const el=(tag,text="",className="")=>{const item=document.createElement(tag);item.textContent=String(text);if(className)item.className=className;return item};
 const alertStatus=(message,tone="neutral")=>{const s=$("spacesStatus");s.textContent=message;s.dataset.tone=tone};
@@ -535,6 +536,8 @@ async function leave(callRpc=true){
  }
  $("spaceAudioElements").replaceChildren();$("spacePlayAudio").hidden=true;
  state.activeSpeakerIds.clear();
+ handoffRequested=false;
+ if(handoffTimer)clearTimeout(handoffTimer);
  if(callRpc&&state.joined&&state.roomId&&state.user)
   await supabase.rpc("spaces_leave",{p_room:state.roomId}).catch(()=>{});
  state.joined=false;state.role="listener";state.desiredMic=false;configureControls();
