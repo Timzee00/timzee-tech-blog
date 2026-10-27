@@ -48,7 +48,7 @@ test('proper heading hierarchy, crawlable space dock and async brand font',()=>{
  assert.match(discussion,/<h2>Community boards<\/h2>/);
  assert.match(dock,/open\.href=ROOT/);
  assert.match(index,/media="print" onload="this\.media='all'"/);
- assert.match(index,/preload" href="\/assets\/brand\/blipmood-emblem-light\.png" as="image" fetchpriority="high"/);
+ assert.match(index,/<link rel="preload" href="https:\/\/[^"]+\.png" as="image" fetchpriority="high">/);
  assert.match(build,/node_modules\/dompurify\/dist\/purify\.es\.mjs/);
  assert.match(build,/bundle: false, minify: true, format: "esm"/);
 });
