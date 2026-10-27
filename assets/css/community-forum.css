@@ -248,3 +248,17 @@
 
 .forum-feed-controls[hidden]{display:none!important}
 .forum-ranking-reason{display:inline-flex;margin:2px 0 7px;font-size:.7rem;font-weight:750;color:var(--color-primary,#087f73);background:var(--color-surface-muted,#edf5f3);padding:5px 8px;border-radius:7px}
+
+/* Community rules are supplemental to the Blipmood-wide Content Policy. */
+.forum-rule-card,.forum-thread-rules-preview{margin:13px 0;padding:14px;border:1px solid var(--color-border,#d7e3e4);background:var(--color-surface-muted,#f2f8f6);border-radius:11px;overflow-wrap:anywhere}
+.forum-rule-card h3{margin:0 0 8px;font-size:.9rem}
+.forum-rules-list{margin:8px 0;padding-left:1.4rem;font-size:.83rem;line-height:1.65}
+.forum-rules-list li+li{margin-top:5px}
+.forum-rule-card a,.forum-thread-rules-preview a,.forum-community-rules-editor a{color:var(--color-primary,#087f73);text-decoration:underline;text-underline-offset:2px}
+.forum-thread-rules-preview>strong{display:block;margin-bottom:5px;font-size:.86rem}
+.forum-rule-acknowledgement{display:flex!important;gap:9px;align-items:flex-start;font-size:.83rem;line-height:1.5;padding:8px 0}
+.forum-rule-acknowledgement input[type=checkbox]{width:19px;height:19px;margin:2px 0 0;flex:0 0 19px;accent-color:var(--color-primary,#087f73)}
+.forum-community-rules-editor{border:1px solid var(--color-border,#d7e3e4);border-radius:12px;padding:16px;margin:12px 0 18px}
+.forum-community-rules-editor h3{margin:0 0 8px}
+.forum-community-rules-editor label{display:block;font-size:.82rem;font-weight:700;margin:10px 0 5px}
+.forum-community-rules-editor textarea{width:100%;max-width:100%;box-sizing:border-box;background:var(--color-surface,#fff);color:inherit;border:1px solid var(--color-border-strong,#a9bec1);border-radius:9px;padding:10px;resize:vertical;line-height:1.5}
