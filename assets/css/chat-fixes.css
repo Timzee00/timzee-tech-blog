@@ -268,3 +268,10 @@ html[data-chat-wallpaper="linen"] .chat-page .chat-message.received{color:#17272
  .chat-page .group-member-row .group-member-copy{flex-basis:calc(100% - 56px)}
  .chat-page .group-member-row :where(select,button){flex:1 1 105px}
 }
+
+/* Five chat filters: scroll within the tab strip, never the viewport. */
+.chat-page .chat-tabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;overscroll-behavior-x:contain}
+.chat-page .chat-tabs .chat-tab{flex:0 0 auto;min-width:88px;white-space:nowrap}
+.chat-page .chat-header-menu [data-chat-menu="clear"]{color:var(--color-text);font-weight:700}
+.chat-page .chat-list-row .chat-list-copy small{overflow-wrap:anywhere}
+@media(max-width:480px){.chat-page .chat-tabs .chat-tab{min-width:85px}}

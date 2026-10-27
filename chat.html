@@ -64,11 +64,13 @@
           <div class="chat-tabs" role="tablist" aria-label="Chat filters">
             <button class="chat-tab active" type="button" data-tab="all" role="tab" aria-selected="true">All</button>
             <button class="chat-tab" type="button" data-tab="groups" role="tab" aria-selected="false">Groups <span class="chat-tab-badge" id="groupsBadge" hidden>0</span></button>
+            <button class="chat-tab" type="button" data-tab="archived" role="tab" aria-selected="false">Archived <span class="chat-tab-badge" id="archivedBadge" hidden>0</span></button>
             <button class="chat-tab" type="button" data-tab="requests" role="tab" aria-selected="false">Requests <span class="chat-tab-badge" id="requestsBadge" hidden>0</span></button>
             <button class="chat-tab" type="button" data-tab="blocked" role="tab" aria-selected="false">Blocked <span class="chat-tab-badge" id="blockedBadge" hidden>0</span></button>
           </div>
           <div class="chat-tab-panel" data-panel="all"><div class="chat-list" id="friendList"></div></div>
           <div class="chat-tab-panel" data-panel="groups" hidden><div class="chat-list" id="groupList"></div></div>
+          <div class="chat-tab-panel" data-panel="archived" hidden><div class="chat-list" id="archivedList"></div></div>
           <div class="chat-tab-panel" data-panel="requests" hidden>
             <div class="chat-section-label">Received</div>
             <div class="chat-list" id="friendRequests"></div>
@@ -106,6 +108,8 @@
                   <button type="button" data-chat-menu="details">Conversation details</button>
                   <button type="button" data-chat-menu="media">Shared media</button>
                   <button type="button" data-chat-menu="mute">Mute notifications</button>
+                  <button type="button" data-chat-menu="archive">Archive and mute chat</button>
+                  <button type="button" data-chat-menu="clear">Clear chat for me</button>
                   <button type="button" data-chat-menu="pin">Pin chat</button>
                   <button type="button" data-chat-menu="settings">Chat settings</button>
                   <button type="button" data-chat-menu="starred">Starred messages</button>

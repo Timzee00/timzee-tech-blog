@@ -28,7 +28,7 @@ const state = {
   selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false, editing: null, editSaving: false, replyTo: null, reactions:new Map(), reactionBusy:new Set(),
   drafts: new Map(), previews: new Map(), peopleResults: [], peopleRequest: 0, messageVersions: new Map(), messageRevision: 0,
   user: null, verified:false, translations:new Map(), translationBusy:new Set(), starred:new Set(),forwardingMessageId:null,settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [], directPartners: [], staffDMAllowed: false, canCompose: true,
-  blockedProfiles: new Map(), groups: [], groupMembers: new Map(), messages: [], pinnedMessages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
+  blockedProfiles: new Map(), groups: [], groupMembers: new Map(), personalViews: new Map(), messages: [], pinnedMessages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
   searchTerm: "", peopleTerm: "", messageSearchTerm: "", mediaFile: null, mediaType: "", previewUrl: "",
   recorder: null, recorderStream: null, recorderChunks: [], recorderTimer: null, recorderStartedAt: 0, analyserFrame: 0, audioContext: null, analyser: null, recordingStarting: false, recordingRequestId: 0
 };
@@ -149,8 +149,9 @@ function openHeaderMenu() {
   const menu=$("chatHeaderMenu");
   if(!menu)return;
   menu.querySelector('[data-chat-menu="poll"]').hidden=!Boolean(state.activeGroupId);
-  menu.querySelectorAll('[data-chat-menu="mute"],[data-chat-menu="pin"]')
-    .forEach(item=>{item.hidden=!Boolean(state.activeGroupId);});
+  menu.querySelector('[data-chat-menu="pin"]').hidden=!Boolean(state.activeGroupId);
+  menu.querySelector('[data-chat-menu="mute"]').textContent=isCurrentChatMuted()?'Unmute notifications':'Mute notifications';
+  menu.querySelector('[data-chat-menu="archive"]').textContent=isArchived(state.activeThreadId)?'Unarchive chat':'Archive and mute chat';
   menu.hidden=false;
   $("chatMenuToggle")?.setAttribute("aria-expanded","true");
 }
@@ -158,6 +159,53 @@ function profileFor(id) { return state.friendProfiles.get(id) || state.blockedPr
 function threadForFriend(id) { return [state.user.id,id].sort().join("_"); }
 function activeGroup() { return state.groups.find((g)=>g.id===state.activeGroupId) || null; }
 function isOwnerOfActiveGroup() { return Boolean(state.activeGroupId && activeGroup()?.created_by===state.user?.id); }
+function viewFor(threadId){return state.personalViews.get(threadId)||null;}
+function isArchived(threadId){return viewFor(threadId)?.archived===true;}
+function isMuted(threadId){
+  const own=viewFor(threadId);
+  if(own)return own.muted===true||own.archived===true;
+  return Boolean(state.groups.find(group=>group.id===threadId)?.is_muted);
+}
+function isCurrentChatMuted(){return isMuted(state.activeThreadId);}
+async function setPersonalChatView({archived=null,muted=null,clear=false}={}){
+  const threadId=state.activeThreadId;
+  if(!threadId||!state.user?.id)throw Error('Open a conversation first.');
+  const {data,error}=await supabase.rpc('set_chat_personal_view',{
+    p_thread_id:threadId,p_archived:archived,
+    p_muted:muted===null&&!viewFor(threadId)&&activeGroup()?.is_muted===true?true:muted,
+    p_clear:clear
+  });
+  if(error)throw error;
+  if(!data||data.thread_id!==threadId)throw Error('Chat preferences could not be saved.');
+  state.personalViews.set(threadId,data);
+  if(clear){
+    // The SQL restrictive SELECT policy also hides previously cleared messages
+    // from direct queries and history pagination for this user alone.
+    state.messages=[];state.pinnedMessages=[];state.starred.clear();state.reactions.clear();
+    state.historyCursor=null;state.hasOlderMessages=false;
+    $("loadOlderMessages").hidden=true;
+    state.previews.delete(threadId);
+    renderPinnedMessages();renderMessages();renderInfoMedia();
+  }
+  renderFriends();renderGroups();
+  return data;
+}
+async function clearCurrentChat(){
+  const name=activeGroup()?.name||profileFor(state.activeFriendId)?.display_name||'this conversation';
+  if(!await window.appUI.confirm('Clear '+name+' only for your account? This hides all previous messages for you, not for the other person or group members. This cannot be undone.'))return;
+  await setPersonalChatView({clear:true});
+  window.siteToast?.('Chat cleared for you only. Other participants keep their history.',{type:'success'});
+}
+async function toggleCurrentArchive(){
+  const next=!isArchived(state.activeThreadId);
+  await setPersonalChatView({archived:next,muted:next?true:null});
+  window.siteToast?.(next?'Chat archived and notifications muted.':'Chat moved out of Archived. Notifications remain muted until you unmute them.',{type:'success'});
+  if(next){
+    leaveConversation();
+    document.querySelector('.chat-tab[data-tab="archived"]')?.click();
+  }
+}
+
 
 async function reportActiveConversation(){
   if(!state.user?.id)throw Error("Sign in to submit reports.");
@@ -179,6 +227,10 @@ async function loadProfiles(ids) {
   (result.data||[]).forEach((p)=>state.friendProfiles.set(p.id,p));
 }
 async function loadAllChatData() {
+  const saved=await supabase.from("chat_personal_views")
+    .select("thread_id,archived,muted,cleared_before,updated_at").eq("user_id",state.user.id);
+  if(saved.error)throw saved.error;
+  state.personalViews=new Map((saved.data||[]).map(view=>[view.thread_id,view]));
   const fr=await supabase.from("friendships").select("*").or(`requester_id.eq.${state.user.id},addressee_id.eq.${state.user.id}`); if(fr.error)throw fr.error;
   state.friendships=fr.data||[];
   state.requests=state.friendships.filter(r=>r.status==='pending'&&r.addressee_id===state.user.id);
@@ -196,9 +248,15 @@ async function loadAllChatData() {
   if(history.error)throw history.error;
   const blockedPairs=new Set(state.friendships.filter(f=>f.status==="blocked")
     .map(f=>f.requester_id===state.user.id?f.addressee_id:f.requester_id));
-  state.directPartners=[...new Set((history.data||[]).map(m=>
-    m.sender_id===state.user.id?m.recipient_id:m.sender_id))]
-    .filter(id=>id&&id!==state.user.id&&!blockedPairs.has(id));
+  // Preferences keep previously cleared or archived staff DMs discoverable
+  // even when their old message history is hidden by per-user RLS.
+  const savedPartners=[...state.personalViews.keys()]
+    .filter(id=>id.includes("_"))
+    .map(id=>id.split("_").find(part=>part!==state.user.id));
+  state.directPartners=[...new Set([
+    ...(history.data||[]).map(m=>m.sender_id===state.user.id?m.recipient_id:m.sender_id),
+    ...savedPartners
+  ])].filter(id=>id&&id!==state.user.id&&!blockedPairs.has(id));
   await loadProfiles([...state.friends,...state.directPartners,...state.requests.map(r=>r.requester_id),...state.sentRequests.map(r=>r.addressee_id),...state.blocked]);
   state.previews = await loadThreadPreviews([...new Set([...state.friends,...state.directPartners])].map(threadForFriend));
 }
@@ -212,13 +270,39 @@ function renderFriends() {
   const previewMap=state.previews;
   const rows=[...new Set([...state.friends,...state.directPartners])].map(friendId=>({friendId,profile:profileFor(friendId)||{},preview:previewMap.get(threadForFriend(friendId))||null}));
   const q=state.searchTerm.trim().toLowerCase();
-  const filtered=rows.filter(({profile})=>!q||[profile.display_name,profile.username,profile.email].some(v=>String(v||"").toLowerCase().includes(q))).sort((a,b)=>new Date(b.preview?.created_at||0)-new Date(a.preview?.created_at||0));
+  const filtered=rows.filter(({friendId,profile})=>!isArchived(threadForFriend(friendId))&&(!q||[profile.display_name,profile.username,profile.email].some(v=>String(v||"").toLowerCase().includes(q)))).sort((a,b)=>new Date(b.preview?.created_at||0)-new Date(a.preview?.created_at||0));
   target.innerHTML=filtered.length?filtered.map(({friendId,profile,preview})=>`<button class="chat-list-row ${friendId===state.activeFriendId?'active':''}" type="button" data-friend-id="${friendId}">${verifiedAvatar(profile.avatar_url||DEFAULT_AVATAR,profile,{size:"md"})}<span class="chat-list-copy"><strong>${verifiedName(profile.display_name||"Member",profile,{compact:true})}${["super","admin","moderator"].includes(profile.role)?' <span class="chat-staff-label">Staff</span>':''}</strong><small>${escapeHTML(preview?.body||(preview?.media_type?`Sent ${preview.media_type}`:'Start a conversation'))}</small></span><span class="chat-list-time">${preview?chatTimeAgo(preview.created_at):''}</span></button>`).join(''):`<div class="callout">${q?'No matching chats.':'No friends yet. Use Find people to connect.'}</div>`;
+  renderArchived();
 }
-function renderGroups() { const badge=$("groupsBadge");if(badge){badge.textContent=String(state.groups.length);badge.hidden=!state.groups.length;}
+function renderGroups() { const badge=$("groupsBadge");if(badge){badge.textContent=String(state.groups.filter(g=>!isArchived(g.id)).length);badge.hidden=!state.groups.some(g=>!isArchived(g.id));}
   const target=$("groupList"); if(!target)return; const q=state.searchTerm.trim().toLowerCase();
-  const groups=state.groups.filter(g=>!q||String(g.name||'').toLowerCase().includes(q)).sort((a,b)=>Number(b.is_pinned)-Number(a.is_pinned)||new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at));
+  const groups=state.groups.filter(g=>!isArchived(g.id)&&(!q||String(g.name||'').toLowerCase().includes(q))).sort((a,b)=>Number(b.is_pinned)-Number(a.is_pinned)||new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at));
   target.innerHTML=groups.length?groups.map(g=>`<button class="chat-list-row ${g.id===state.activeGroupId?'active':''}" type="button" data-group-id="${g.id}"><img class="chat-list-avatar" src="${escapeHTML(g.avatar_url||DEFAULT_GROUP_AVATAR)}" alt=""><span class="chat-list-copy"><strong>${escapeHTML(g.name||'Group')}</strong><small>${escapeHTML(g.description||'Group chat')}</small></span><span class="chat-list-time">${g.is_pinned?'Pinned':''}</span></button>`).join(''):`<div class="callout">No groups yet. Create one to get started.</div>`;
+  renderArchived();
+}
+
+function renderArchived(){
+  const target=$("archivedList"),badge=$("archivedBadge");
+  if(!target)return;
+  const q=state.searchTerm.trim().toLowerCase(),rows=[];
+  for(const friendId of new Set([...state.friends,...state.directPartners])){
+    const threadId=threadForFriend(friendId);
+    if(!isArchived(threadId))continue;
+    const p=profileFor(friendId)||{};
+    const label=p.display_name||p.username||'Member';
+    rows.push({id:friendId,kind:'friend',label,photo:p.avatar_url||DEFAULT_AVATAR,muted:isMuted(threadId)});
+  }
+  for(const group of state.groups){
+    if(!isArchived(group.id))continue;
+    rows.push({id:group.id,kind:'group',label:group.name||'Group',photo:group.avatar_url||DEFAULT_GROUP_AVATAR,muted:isMuted(group.id)});
+  }
+  if(badge){badge.textContent=String(rows.length);badge.hidden=!rows.length;}
+  const visible=rows.filter(row=>!q||row.label.toLowerCase().includes(q));
+  target.innerHTML=visible.length?visible.map(row=>
+    '<button class="chat-list-row" type="button" data-'+(row.kind==='group'?'group-id':'friend-id')+'="'+escapeHTML(row.id)+'">'+
+    '<img class="chat-list-avatar" src="'+escapeHTML(row.photo)+'" alt="">'+
+    '<span class="chat-list-copy"><strong>'+escapeHTML(row.label)+'</strong><small>'+ (row.muted?'Notifications muted':'Archived')+'</small></span></button>'
+  ).join(''):'<div class="callout">'+(q?'No matching archived chats.':'No archived conversations yet.')+'</div>';
 }
 function renderRequests() {
   const incoming=$("friendRequests"),outgoing=$("friendRequestsSent"),badge=$("requestsBadge"); if(badge){badge.textContent=String(state.requests.length);badge.hidden=!state.requests.length;}
@@ -1042,7 +1126,7 @@ const realtime = createChatRealtime(supabase, {
     await loadProfiles([message.sender_id]);
     if (threadId !== state.activeThreadId || selection !== state.selection) return;
     renderMessages({ preserveScroll: true });
-    if (event === 'INSERT' && !exists && message.sender_id !== state.user.id && state.settings.notifications && !activeGroup()?.is_muted) {
+    if (event === 'INSERT' && !exists && message.sender_id !== state.user.id && state.settings.notifications && !isCurrentChatMuted()) {
       window.siteToast?.(`${profileFor(message.sender_id)?.display_name || 'New message'}: ${message.body || 'Attachment'}`, { type: 'info', title: 'New message' });
     }
   }
@@ -1198,7 +1282,24 @@ async function editGroup(){
   updateHeaderForGroup(group);refreshInfoProfile();renderGroups();$("groupEditor").hidden=true;
 }
 async function editMemberTags(memberId){if(!isOwnerOfActiveGroup())return;const member=(state.groupMembers.get(state.activeGroupId)||[]).find(m=>m.id===memberId);if(!member)return;const raw=await window.appUI.prompt('Member tags for this group, separated by commas:',(member.tags||[]).join(', '));if(raw===null)return;const tags=[...new Set(raw.split(',').map(t=>t.trim()).filter(Boolean).slice(0,8))];const result=await supabase.from('chat_members').update({tags}).eq('id',memberId).eq('thread_id',state.activeGroupId);if(result.error)throw result.error;member.tags=tags;renderGroupMembers();}
-async function toggleChatMemberFlag(kind){const threadId=state.activeThreadId;if(!threadId)return;const existing=await supabase.from('chat_members').select('is_muted,is_pinned').eq('thread_id',threadId).eq('user_id',state.user.id).maybeSingle();if(existing.error)throw existing.error;if(!existing.data){window.siteToast?.('Pin and mute settings are currently available for group memberships.',{type:'info',title:'Chat'});return;}const key=kind==='mute'?'is_muted':'is_pinned';const next=!Boolean(existing.data[key]);const result=await supabase.from('chat_members').update({[key]:next}).eq('thread_id',threadId).eq('user_id',state.user.id);if(result.error)throw result.error;const group=activeGroup();if(group)group[key]=next;renderGroups();window.siteToast?.(`${kind==='mute'?'Notifications':'Chat'} ${next?'updated':'restored'}.`,{type:'info',title:'Chat'});}
+async function toggleChatMemberFlag(kind){
+  const threadId=state.activeThreadId;if(!threadId)return;
+  if(kind==='mute'){
+    const next=!isMuted(threadId);
+    await setPersonalChatView({muted:next});
+    window.siteToast?.(next?'Notifications muted for this conversation.':'Conversation notifications enabled.',{type:'success'});
+    return;
+  }
+  if(kind!=='pin'||!state.activeGroupId)return;
+  const existing=await supabase.from('chat_members').select('is_pinned').eq('thread_id',threadId).eq('user_id',state.user.id).maybeSingle();
+  if(existing.error)throw existing.error;
+  if(!existing.data)throw Error('Group membership required to pin a chat.');
+  const next=!Boolean(existing.data.is_pinned);
+  const result=await supabase.from('chat_members').update({is_pinned:next}).eq('thread_id',threadId).eq('user_id',state.user.id);
+  if(result.error)throw result.error;
+  const group=activeGroup();if(group)group.is_pinned=next;renderGroups();
+  window.siteToast?.(next?'Group pinned.':'Group unpinned.',{type:'success'});
+}
 function setupTabs(){const tabs=document.querySelectorAll('.chat-tab'),panels=document.querySelectorAll('.chat-tab-panel');tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(t=>{const a=t===tab;t.classList.toggle('active',a);t.setAttribute('aria-selected',String(a));});panels.forEach(p=>p.hidden=p.dataset.panel!==tab.dataset.tab);$("peopleSearchPanel").hidden=true;}));}
 function setupEvents(){
   $("loadOlderMessages")?.addEventListener("click", () => loadOlderMessages().catch(error => reportAppError(error, "Unable to load older messages")));
@@ -1223,6 +1324,12 @@ function setupEvents(){
   $("chatPinnedBar")?.addEventListener("click",e=>{const b=e.target.closest("[data-pinned-id]");if(b)void jumpToPinned(b.dataset.pinnedId).catch(err=>reportAppError(err,"Pinned message unavailable"));});
   $("chatSearch")?.addEventListener('input',async e=>{state.searchTerm=e.target.value||'';await renderFriends();renderGroups();}); bindSearch($("peopleSearch"), searchPeople);
   $("friendList")?.addEventListener('click',e=>{const r=e.target.closest('[data-friend-id]');if(r)selectFriend(r.dataset.friendId).catch(err=>reportAppError(err,'Chat open failed'));}); $("groupList")?.addEventListener('click',e=>{const r=e.target.closest('[data-group-id]');if(r)selectGroup(r.dataset.groupId).catch(err=>reportAppError(err,'Group open failed'));});
+  $("archivedList")?.addEventListener('click',e=>{
+    const friend=e.target.closest('[data-friend-id]')?.dataset.friendId;
+    const group=e.target.closest('[data-group-id]')?.dataset.groupId;
+    if(friend)void selectFriend(friend).catch(error=>reportAppError(error,'Archived chat unavailable'));
+    if(group)void selectGroup(group).catch(error=>reportAppError(error,'Archived group unavailable'));
+  });
   $("friendRequests")?.addEventListener('click',handleRequests); $("friendRequestsSent")?.addEventListener('click',handleRequests);
   $("blockedList")?.addEventListener('click',async e=>{const b=e.target.closest('[data-unblock]');if(!b)return;const row=state.friendships.find(r=>r.status==='blocked'&&r.blocked_by===state.user.id&&(r.requester_id===b.dataset.unblock||r.addressee_id===b.dataset.unblock));if(row)await supabase.from('friendships').delete().eq('id',row.id);await loadAllChatData();renderBlocked();await renderFriends();});
   $("peopleResults")?.addEventListener('click', async event => {
@@ -1320,7 +1427,10 @@ function setupEvents(){
     else await openPollComposer('group',state.activeGroupId,
       async()=>{await refreshRecent(state.activeThreadId);});
   }
-  if(a==='mute'||a==='pin')await toggleChatMemberFlag(a);if(a==='report')await reportActiveConversation().catch(error=>reportAppError(error,'Could not submit report'));});
+  if(a==='mute'||a==='pin')await toggleChatMemberFlag(a).catch(error=>reportAppError(error,'Could not change chat preference'));
+  if(a==='archive')await toggleCurrentArchive().catch(error=>reportAppError(error,'Could not archive chat'));
+  if(a==='clear')await clearCurrentChat().catch(error=>reportAppError(error,'Could not clear chat'));
+  if(a==='report')await reportActiveConversation().catch(error=>reportAppError(error,'Could not submit report'));});
   document.querySelectorAll('[data-close-modal]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.closeModal))); document.querySelectorAll('[data-chat-setting]').forEach(i=>i.addEventListener('change',()=>{state.settings[i.dataset.chatSetting]=i.checked;saveSettings();}));
   $("peopleSearchToggle")?.addEventListener('click',()=>{$("peopleSearchPanel").hidden=!$("peopleSearchPanel").hidden;if(!$("peopleSearchPanel").hidden){$("peopleSearch").focus();renderPeopleResults();}}); $("newGroupBtn")?.addEventListener('click',()=>{renderGroupPicker();openModal('friendPickerModal');}); $("friendPickerClose")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCancel")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCreate")?.addEventListener('click',()=>createGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Create group'})));
   $("groupMemberSearch")?.addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#groupMemberPicker .chat-picker-row').forEach(r=>r.hidden=!r.innerText.toLowerCase().includes(q));}); $("editGroupBtn")?.addEventListener('click',()=>{const g=activeGroup();if(g){$("groupAvatarPreview").src=g.avatar_url||DEFAULT_GROUP_AVATAR;$("groupNameInput").value=g.name||'';$("groupDescriptionInput").value=g.description||'';$("groupEditor").hidden=false;}}); $("groupAvatarInput")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)$("groupAvatarPreview").src=URL.createObjectURL(f);}); $("cancelGroupBtn")?.addEventListener('click',()=>{$("groupEditor").hidden=true;}); $("saveGroupBtn")?.addEventListener('click',()=>editGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Group settings'}))); $("infoGroupMembers")?.addEventListener('click',e=>{
