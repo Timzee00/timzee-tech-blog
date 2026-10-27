@@ -32,5 +32,5 @@ test("a separate audio window broadcasts presence to a site-wide dock",()=>{
  assert.match(ui,/publishSpacePresence/);
  assert.match(ui,/clearSpacePresence/);
  assert.match(shell,/space-mini-dock\.mjs/);
- assert.match(src,/target="timzee-space-audio"/);
+ assert.match(src,/open\.target="timzee-space-audio"/);
 });
