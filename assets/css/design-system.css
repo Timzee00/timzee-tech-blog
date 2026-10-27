@@ -346,3 +346,13 @@ html[data-theme="dark"][data-high-contrast="true"]{
 html[data-high-contrast="true"] :where(a,button,input,textarea,select):focus-visible{
   outline:3px solid var(--color-secondary)!important;outline-offset:3px;
 }
+
+/* Mobile consent: short, clear copy with distinct policy and preference links. */
+@media(max-width:700px){
+ #timzee-consent-banner .timzee-consent-card{padding:12px 14px!important;gap:8px!important}
+ #timzee-consent-banner .timzee-consent-copy{font-size:.79rem;line-height:1.4}
+ #timzee-consent-banner .timzee-consent-copy strong{margin-bottom:3px}
+ #timzee-consent-banner .timzee-consent-links{margin-top:5px;gap:2px 11px}
+ #timzee-consent-banner .timzee-consent-actions{gap:8px}
+ #timzee-consent-banner .timzee-consent-actions button{min-height:44px;font-size:.78rem}
+}

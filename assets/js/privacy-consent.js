@@ -18,6 +18,10 @@ function injectStyles() {
     #${BANNER_ID}.is-visible{display:block}
     .timzee-consent-card{max-width:980px;margin:0 auto;padding:18px 20px;border:1px solid var(--color-border-strong,rgba(15,23,42,.16));border-radius:14px;background:var(--color-surface,#fff);color:var(--color-text,#131417);box-shadow:0 16px 40px rgba(15,23,42,.18);display:flex;gap:20px;align-items:flex-end;justify-content:space-between}
     .timzee-consent-copy{min-width:0;font-size:.9rem;line-height:1.55}.timzee-consent-copy strong{display:block;margin-bottom:5px}.timzee-consent-copy a{text-decoration:underline}
+    .timzee-consent-copy p{margin:0;font-size:inherit;line-height:1.45}
+    .timzee-consent-links{display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;margin-top:8px}
+    .timzee-consent-links a,.timzee-consent-links button{white-space:normal;font-size:.78rem;min-height:30px;display:inline-flex;align-items:center}
+
     .timzee-consent-actions{display:flex;gap:8px;flex:0 0 auto;flex-wrap:wrap}.timzee-consent-actions button{border:1px solid var(--color-border-strong,rgba(15,23,42,.16));background:transparent;color:var(--color-text,#131417);padding:9px 13px;border-radius:10px;font:600 .84rem var(--font-body,system-ui);cursor:pointer;white-space:nowrap}.timzee-consent-actions button[data-consent="accept"]{background:var(--color-primary,#0f766e);color:#fff;border-color:transparent}
     .timzee-consent-manage{display:inline-block;margin:8px 0 0;padding:0;border:0;background:none;font:600 .78rem var(--font-body,system-ui);text-decoration:underline;cursor:pointer;color:inherit}
     #${MODAL_ID}{width:min(560px,calc(100vw - 28px));max-height:90dvh;padding:0;border:0;border-radius:18px;background:var(--color-surface);color:var(--color-text)}#${MODAL_ID}::backdrop{background:rgba(15,23,42,.55)}
@@ -130,7 +134,7 @@ function renderBanner(force = false) {
   }
   banner.innerHTML = `
     <div class="timzee-consent-card">
-      <div class="timzee-consent-copy"><strong>Privacy & cookies</strong>We use essential storage for login, security and core features. Optional preference and measurement cookies are enabled only after you choose to accept them. <a href="/privacy.html">Privacy Policy</a> · <a href="/cookies.html">Cookie Policy</a><button type="button" class="timzee-consent-manage" data-consent="manage">Manage choices</button></div>
+      <div class="timzee-consent-copy"><strong>Privacy & cookies</strong><p>Essential storage keeps login and security working. Optional preferences and measurement stay off unless you accept.</p><div class="timzee-consent-links"><a href="/privacy.html">Privacy Policy</a><a href="/cookies.html">Cookie Policy</a><button type="button" class="timzee-consent-manage" data-consent="manage">Manage choices</button></div></div>
       <div class="timzee-consent-actions"><button type="button" data-consent="decline">Reject optional</button><button type="button" data-consent="accept">Accept optional cookies</button></div>
     </div>`;
   if (force || !readConsent()) requestAnimationFrame(() => banner.classList.add("is-visible"));

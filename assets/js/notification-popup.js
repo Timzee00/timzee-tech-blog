@@ -185,7 +185,16 @@ function installStyles() {
         flex-direction: column;
         gap: 10px;
       }
-      .site-announcement-actions { width: 100%; justify-content: flex-end; }
+      .site-announcement-banner {
+        flex-direction:row;align-items:flex-start;gap:8px;
+        max-height:min(136px,24dvh);padding:9px 11px;
+      }
+      .site-announcement-content{flex:1 1 auto;min-width:0}
+      .site-announcement-label{display:none}
+      .site-announcement-title{font-size:.83rem;line-height:1.25}
+      .site-announcement-body{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;font-size:.75rem;line-height:1.4}
+      .site-announcement-actions{width:auto;flex:0 0 auto;flex-direction:column;align-items:flex-end;gap:1px}
+      .site-announcement-link,.site-announcement-dismiss{font-size:.74rem;padding:3px 5px;min-height:36px;white-space:nowrap}
     }
   `;
   document.head.appendChild(style);
