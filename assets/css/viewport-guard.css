@@ -14,6 +14,10 @@ main, .page-shell, .container, .site-header, .site-header .wrap, .footer {
   max-width: 100%;
 }
 main, .page-shell { overflow-x: clip; }
+/* Media and long titles must shrink within narrow cards rather than overflow. */
+:where(.post-card, .ad-card, .discussion-discovery-card, .forum-card, .forum-community-item) { min-width: 0; }
+:where(.post-card, .ad-card, .discussion-discovery-card) :where(img,video) { max-width: 100%; height: auto; }
+:where(.post-card, .discussion-discovery-card) :where(h2,h3,strong) { overflow-wrap: anywhere; }
 :where(.content-grid, .hero-grid, .feature-grid, .post-layout, .profile-grid,
   .settings-layout, .forum-layout, .discussion-shell, .marketplace-grid,
   .chat-shell, .chat-layout, .admin-panel, .admin-panel-split,

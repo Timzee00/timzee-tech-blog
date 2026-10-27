@@ -31,6 +31,10 @@
   .brand .logo { font-size: 21px; }
 }
 @media (max-width: 960px) {
+  /* Desktop nav/actions are moved into the drawer by nav.js. Hide them
+     before that happens, so the header never briefly expands to 300px+. */
+  .site-header .wrap > .nav-pill,
+  .site-header .wrap > .header-actions { display: none; }
   .site-header .wrap { min-height: 68px; flex-wrap: nowrap; gap: 16px; }
   .brand { flex: 1; min-width: 0; }
   .brand .logo { font-size: 18px; }

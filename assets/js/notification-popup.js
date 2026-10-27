@@ -80,7 +80,9 @@ function renderAnnouncementBanner(announcement) {
 
   actions.append(viewLink, dismiss);
   banner.append(content, actions);
-  document.body.prepend(banner);
+  // A late network response must not push the entire page down on mobile.
+  // Render as a dismissible, independently scrollable overlay.
+  document.body.append(banner);
 }
 
 async function refreshAnnouncementBanner({ announceNew = false } = {}) {
@@ -142,14 +144,21 @@ function installStyles() {
   style.id = "site-notification-popup-style";
   style.textContent = `
     .site-announcement-banner {
-      position: relative;
-      z-index: 1000;
+      position: fixed;
+      top: calc(var(--site-header-height, 74px) + 12px);
+      right: 16px;
+      left: auto;
+      z-index: 98000;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 18px;
-      width: min(1120px, calc(100% - 28px));
-      margin: 12px auto 0;
+      gap: 12px;
+      box-sizing: border-box;
+      width: min(440px, calc(100vw - 32px));
+      max-height: min(270px, 38dvh);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      margin: 0;
       padding: 12px 14px 12px 16px;
       border: 1px solid rgba(37,99,235,.24);
       border-radius: 14px;
@@ -162,10 +171,20 @@ function installStyles() {
     .site-announcement-title { overflow-wrap: anywhere; }
     .site-announcement-body { color: var(--muted, #626a78); overflow-wrap: anywhere; }
     .site-announcement-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
-    .site-announcement-link, .site-announcement-dismiss { font: inherit; font-weight: 700; color: inherit; background: transparent; border: 0; cursor: pointer; text-decoration: none; }
+    .site-announcement-link, .site-announcement-dismiss { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 7px 9px; font: inherit; font-weight: 700; color: inherit; background: transparent; border: 0; border-radius: 9px; cursor: pointer; text-decoration: none; }
     .site-announcement-link:hover, .site-announcement-dismiss:hover, .site-announcement-link:focus-visible, .site-announcement-dismiss:focus-visible { text-decoration: underline; }
     @media (max-width: 700px) {
-      .site-announcement-banner { align-items: flex-start; flex-direction: column; gap: 10px; }
+      .site-announcement-banner {
+        position: fixed;
+        top: calc(var(--site-header-height, 74px) + 8px);
+        left: 12px;
+        right: 12px;
+        width: calc(100vw - 24px);
+        max-height: min(230px, 33dvh);
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+      }
       .site-announcement-actions { width: 100%; justify-content: flex-end; }
     }
   `;

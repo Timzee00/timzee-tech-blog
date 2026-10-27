@@ -8,3 +8,12 @@
 @media (max-width:1100px){.discussion-discovery-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:900px){.discussion-discovery-head{align-items:flex-start;flex-direction:column}.discussion-discovery-head .btn{width:auto}.discussion-shell .discussion-sidebar,.discussion-shell .discussion-chat{border-radius:13px}}
 @media (max-width:640px){.discussion-discovery{padding:17px;border-radius:13px}.discussion-discovery-grid{grid-template-columns:1fr}.discussion-shell .message-list{padding:12px}.discussion-shell .comment-form{padding:12px}.discussion-discovery-head h1{font-size:1.5rem}}
+
+/* Phone/tablet discovery stays inside its own scroll region. */
+@media (max-width: 900px) {
+  .discussion-discovery, .discussion-discovery-head, .discussion-sidebar, .discussion-chat { min-width: 0; max-width: 100%; }
+  .discussion-discovery-head > * { min-width: 0; max-width: 100%; }
+  .discussion-discovery-tabs { max-width: 100%; overscroll-behavior-inline: contain; }
+  .discussion-discovery-card { min-width: 0; overflow-wrap: anywhere; }
+  .discussion-shell :where(button,input,select,textarea) { max-width: 100%; }
+}

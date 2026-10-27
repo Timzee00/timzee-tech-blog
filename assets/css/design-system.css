@@ -133,7 +133,21 @@ label { font-weight: 600; font-size: 14px; }
 .app-toast strong { display: block; font-size: 14px; margin-bottom: 4px; }
 .toast-close { min-height: 32px; width: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; font-size: 22px; cursor: pointer; }
 .site-connectivity-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 110000; padding: 12px; background: var(--color-text); color: var(--color-bg); text-align: center; font-size: 13px; }
-#timzee-consent-banner { position: relative !important; inset: auto !important; margin: 12px auto !important; width: min(980px, calc(100% - 32px)) !important; z-index: var(--z-overlay, 90) !important; }
+/* Cookie notice is intentionally out of flow. Inserting a relative banner after
+   first paint used to move the entire page by 240px+ (CLS regression). */
+#timzee-consent-banner {
+  position: fixed !important;
+  top: auto !important; left: 16px !important; right: 16px !important;
+  bottom: 16px !important;
+  box-sizing: border-box;
+  width: auto !important;
+  max-width: min(980px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0 auto !important;
+  z-index: 100000 !important;
+}
 .timzee-consent-card { padding: 18px 24px !important; box-shadow: var(--elevation-3) !important; }
 #timzee-cookie-settings-modal { z-index: 110001 !important; }
 .timzee-cookie-modal-card { max-height: 85dvh; overflow-y: auto; }
@@ -150,9 +164,18 @@ label { font-weight: 600; font-size: 14px; }
   .content-grid { grid-template-columns: minmax(0, 1fr) 250px; gap: 24px; }
   .auth-layout { gap: 32px; }
   .app-toast-root { bottom: calc(80px + env(safe-area-inset-bottom)); right: 16px; }
-  /* The notice is inserted after the header on narrow screens: it must
-     consume space, not float over chat, login, or the mobile tab bar. */
-  #timzee-consent-banner { position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; margin: 12px auto !important; width: min(980px, calc(100% - 32px)) !important; }
+  /* Bottom-sheet notice sits above the six-tab dock, never enlarging the
+     page header or pushing the feed down during hydration. */
+  #timzee-consent-banner {
+    position: fixed !important;
+    top: auto !important; left: 12px !important; right: 12px !important;
+    bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 104px - env(safe-area-inset-bottom));
+    margin: 0 auto !important;
+    z-index: 100000 !important;
+  }
 }
 @media (max-width: 700px) {
   .container { width: calc(100% - 32px); padding: 0; }

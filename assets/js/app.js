@@ -263,18 +263,18 @@ function buildPostCard(post, compact = false) {
       ${excerpt}
       <div class="tag-list">${tags}</div>
       <div class="post-icon-row">
-        <button class="post-icon-btn${liked ? " active" : ""}" data-action="like" data-id="${post.id}" data-like-button="${post.id}" aria-label="Like">
-          <span class="post-icon">${liked ? "&#10084;" : "&#9825;"}</span>
+        <button class="post-icon-btn${liked ? " active" : ""}" data-action="like" data-id="${post.id}" data-like-button="${post.id}" aria-label="${liked ? "Unlike" : "Like"} ${likeCount} likes">
+          <span class="post-icon" aria-hidden="true">${liked ? "&#10084;" : "&#9825;"}</span>
           <span data-like-count-inline="${post.id}">${likeCount}</span>
         </button>
-        <a class="post-icon-btn" data-action="comment" href="post.html?id=${post.id}#comments" aria-label="Comments">
-          <span class="post-icon">&#128172;</span>${commentCount}
+        <a class="post-icon-btn" data-action="comment" href="post.html?id=${post.id}#comments" aria-label="${commentCount} comments">
+          <span class="post-icon" aria-hidden="true">&#128172;</span>${commentCount}
         </a>
         <button class="post-icon-btn" data-action="share" data-id="${post.id}" aria-label="Share">
-          <span class="post-icon">&#8663;</span>Share
+          <span class="post-icon" aria-hidden="true">&#8663;</span>Share
         </button>
-        <span class="post-icon-btn post-icon-views" aria-label="Views">
-          <span class="post-icon">&#128065;</span>${post.views || 0}
+        <span class="post-icon-btn post-icon-views" aria-label="${post.views || 0} views">
+          <span class="post-icon" aria-hidden="true">&#128065;</span>${post.views || 0}
         </span>
       </div>
     </article>
@@ -807,7 +807,7 @@ function isAdActive(ad) {
 
 function buildAdCard(ad) {
   if (!ad) return "";
-  const image = ad.image_url && isSafeUrl(ad.image_url) ? `<img src="${escapeHTML(ad.image_url)}" alt="${escapeHTML(ad.title || "Ad image")}">` : "";
+  const image = ad.image_url && isSafeUrl(ad.image_url) ? `<img src="${escapeHTML(ad.image_url)}" alt="${escapeHTML(ad.title || "Ad image")}" loading="lazy" decoding="async" fetchpriority="low">` : "";
   const safeLink = isSafeUrl(ad.link_url) ? escapeHTML(ad.link_url) : "#";
   return `
     <div class="ad-card">

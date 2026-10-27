@@ -14,7 +14,7 @@ function injectStyles() {
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-    #${BANNER_ID}{position:fixed;left:16px;right:16px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:100000;display:none}
+    #${BANNER_ID}{box-sizing:border-box;position:fixed;left:16px;right:16px;bottom:16px;z-index:100000;display:none;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain}
     #${BANNER_ID}.is-visible{display:block}
     .timzee-consent-card{max-width:980px;margin:0 auto;padding:18px 20px;border:1px solid var(--color-border-strong,rgba(15,23,42,.16));border-radius:14px;background:var(--color-surface,#fff);color:var(--color-text,#131417);box-shadow:0 16px 40px rgba(15,23,42,.18);display:flex;gap:20px;align-items:flex-end;justify-content:space-between}
     .timzee-consent-copy{min-width:0;font-size:.9rem;line-height:1.55}.timzee-consent-copy strong{display:block;margin-bottom:5px}.timzee-consent-copy a{text-decoration:underline}
@@ -27,7 +27,7 @@ function injectStyles() {
     .timzee-cookie-option{display:flex;gap:11px;align-items:flex-start;padding:12px;border:1px solid var(--color-border,rgba(15,23,42,.1));border-radius:12px;margin-top:9px}
     .timzee-cookie-option input{margin-top:3px}.timzee-cookie-option strong{display:block;font-size:.86rem}.timzee-cookie-option small{display:block;margin-top:2px;color:var(--color-text-muted,#667085);line-height:1.4}
     .timzee-cookie-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap}.timzee-cookie-modal-actions button{padding:9px 13px;border-radius:10px;border:1px solid var(--color-border-strong,rgba(15,23,42,.16));background:transparent;font:600 .82rem var(--font-body,system-ui);cursor:pointer}.timzee-cookie-modal-actions .primary{background:var(--color-primary,#0f766e);color:#fff;border-color:transparent}
-    @media (max-width:960px){#${BANNER_ID}{position:relative;left:auto;right:auto;bottom:auto;width:calc(100% - 20px);margin:12px auto;z-index:1000;clear:both}.timzee-consent-card{align-items:stretch;flex-direction:column;gap:12px}.timzee-consent-actions{width:100%}.timzee-consent-actions button{flex:1;min-width:0}}
+    @media (max-width:960px){#${BANNER_ID}{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));width:auto;max-width:calc(100vw - 24px);max-height:calc(100dvh - 104px - env(safe-area-inset-bottom));margin:0;z-index:100000}.timzee-consent-card{align-items:stretch;flex-direction:column;gap:12px;padding:14px 15px}.timzee-consent-actions{width:100%}.timzee-consent-actions button{flex:1 1 125px;min-width:0;min-height:44px;white-space:normal}}
   `;
   document.head.appendChild(style);
 }
@@ -115,11 +115,10 @@ function renderBanner(force = false) {
     banner.id = BANNER_ID;
     banner.setAttribute("role", "region");
     banner.setAttribute("aria-label", "Privacy and cookie notice");
-    // On phones the notice occupies real document space instead of covering
-    // the chat sign-in button, other content, or the bottom navigation.
-    const header = document.querySelector(".site-header");
-    if (header) header.insertAdjacentElement("afterend", banner);
-    else document.body.prepend(banner);
+    // The banner is a bottom sheet above mobile navigation; inserting it into
+    // normal flow after page render caused severe layout shifts on every route.
+    // Its bounded scroller lets users reach the dismiss buttons on small phones.
+    document.body.append(banner);
     banner.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-consent]");
       if (!button) return;
