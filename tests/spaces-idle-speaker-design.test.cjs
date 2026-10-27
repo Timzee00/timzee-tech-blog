@@ -9,8 +9,8 @@ const css=read("assets/css/live-spaces.css");
 
 function simulatePeople(activeIds=[]){
  const begin=source.indexOf("function renderPeople(){");
- const end=source.indexOf("function showIdleStage(",begin);
- assert.ok(begin>=0&&end>begin,"Rendering block must remain available");
+ const end=source.indexOf("async function authenticateRoom(",begin);
+ assert.ok(begin>=0&&end>begin,"Live speaker rendering block must exist");
  const elements=new Map();
  const $=id=>{
   if(!elements.has(id))elements.set(id,{
@@ -21,7 +21,8 @@ function simulatePeople(activeIds=[]){
   return elements.get(id);
  };
  const el=(tag,text="",className="")=>({
-  tag,textContent:text,className,children:[],
+  tag,textContent:text,className,children:[],attrs:{},
+  setAttribute(name,value){this.attrs[name]=value},
   append(...nodes){this.children.push(...nodes)}
  });
  const participants=[
@@ -30,19 +31,31 @@ function simulatePeople(activeIds=[]){
   {user_id:"u3",role:"listener"}
  ];
  const state={
-  participants,activeSpeakerIds:new Set(activeIds),
+  participants,activeSpeakerIds:new Set(activeIds),speakingStatusHint:"",
   profiles:new Map(participants.map((p,i)=>[p.user_id,{display_name:"Voice "+(i+1)}])),
   joined:false,user:null,room:null,mutedUsers:new Set()
  };
  const fn=vm.runInNewContext(
   "(function(d){const {state,$,el,verifiedAvatar,verifiedName}=d;"+
-   source.slice(begin,end)+";return renderPeople;})",
+    source.slice(begin,end)+";return renderPeople;})",
   {},{timeout:1500}
  )({state,$,el,verifiedAvatar:()=>"<avatar>",verifiedName:n=>n});
  return {fn,$,state};
 }
 
-test("empty Speaking now section shows illustrated No active speaker state",()=>{
+test("only the preferred lower panel remains; the upper green stage is removed",()=>{
+ assert.match(page,/class="space-people-panel space-active-panel"/);
+ assert.match(page,/id="spacesActiveSpeakers"/);
+ assert.doesNotMatch(page,/class="speaker-stage/);
+ assert.doesNotMatch(page,/id="activeSpeakerAvatar"/);
+ assert.doesNotMatch(page,/id="activeSpeakerLabel"/);
+ assert.doesNotMatch(page,/id="spaceStageHint"/);
+ assert.doesNotMatch(source,/showIdleStage|setSpeaking|document\.querySelector\("\.speaker-stage"/);
+ assert.match(page,/id="spacesSpeakers"/);
+ assert.match(page,/id="spacesListeners"/);
+});
+
+test("silence shows one beautiful No active speaker panel, not two",()=>{
  const {fn,$}=simulatePeople();
  fn();
  const items=$("spacesActiveSpeakers").children;
@@ -52,73 +65,64 @@ test("empty Speaking now section shows illustrated No active speaker state",()=>
   ["space-no-active-icon","space-no-active-title","space-no-active-description"]);
  assert.equal(items[0].children[1].textContent,"No active speaker");
  assert.equal($("spaceActiveCount").textContent,"0 speaking");
- assert.equal($("spacesSpeakers").children.length,2,"ready speakers remain visible");
+ assert.equal($("spacesSpeakers").children.length,2);
  assert.equal($("spacesListeners").children.length,1);
 });
 
-test("idle art vanishes as soon as a real speaker becomes active and returns on silence",()=>{
+test("speaker replaces the idle art with a spotlight, visible name/avatar and waveform",()=>{
  const {fn,$,state}=simulatePeople();
  fn();
- assert.equal($("spacesActiveSpeakers").children[0].className,"space-no-active-speaker");
  state.activeSpeakerIds.add("u2");
  fn();
- assert.equal($("spacesActiveSpeakers").children.length,1);
- assert.equal($("spacesActiveSpeakers").children[0].className,"space-person");
+ const active=$("spacesActiveSpeakers").children;
+ assert.equal(active.length,1);
+ const featured=active[0];
+ assert.equal(featured.className,"space-person space-speaking-spotlight");
+ assert.equal(featured.children[0].textContent,"● ON AIR");
+ assert.ok(featured.children.some(child=>child.className==="space-person-avatar"));
+ assert.ok(featured.children.some(child=>child.textContent==="Voice 2"));
+ const wave=featured.children.find(child=>child.className==="space-speaking-wave");
+ assert.equal(wave.attrs["aria-hidden"],"true");
+ assert.equal(wave.children.length,5);
  assert.equal($("spaceActiveCount").textContent,"1 speaking");
  assert.equal($("spacesSpeakers").children.length,1);
  state.activeSpeakerIds.clear();
  fn();
+ assert.equal($("spacesActiveSpeakers").children.length,1);
  assert.equal($("spacesActiveSpeakers").children[0].className,"space-no-active-speaker");
 });
 
-test("stage is idle on first render, goes live on speaking event, returns on silence",()=>{
- assert.match(page,/class="speaker-stage is-idle"/);
- assert.match(page,/id="activeSpeaker">No active speaker/);
- assert.match(source,/sdk\.RoomEvent\.ActiveSpeakersChanged/);
- assert.match(source,/if\(speakers\.length\)setSpeaking\(speakers\[0\]\.identity,true\);/);
- assert.match(source,/else showIdleStage\(\);/);
- assert.match(source,/state\.activeSpeakerIds\.clear\(\);\s*showIdleStage\("Audio disconnected/);
- const start=source.indexOf("function showIdleStage(");
- const end=source.indexOf("async function authenticateRoom(",start);
- const nodes=new Map();
- const $=id=>{
-  if(!nodes.has(id))nodes.set(id,{
-   textContent:"",innerHTML:"",classList:{
-    values:new Set(),remove(n){this.values.delete(n)},
-    add(n){this.values.add(n)},
-    toggle(n,v){v?this.values.add(n):this.values.delete(n)}
-   }
-  });
-  return nodes.get(id);
- };
- const stage={classList:{values:new Set(),add(n){this.values.add(n)},
-  toggle(n,v){v?this.values.add(n):this.values.delete(n)}}};
- const fakeDoc={querySelector:()=>stage};
- const fn=vm.runInNewContext(
-  "(function(d){const {$,state,document,verifiedAvatar}=d;"+
-  source.slice(start,end)+";return {showIdleStage,setSpeaking};})",
-  {},{timeout:1500}
- )({$,state:{profiles:new Map([["person",{display_name:"On mic"}]])},
-  document:fakeDoc,verifiedAvatar:()=>"<avatar>"});
- fn.showIdleStage();
- assert.equal($("activeSpeaker").textContent,"No active speaker");
- assert.equal($("activeSpeakerLabel").textContent,"STAGE IS QUIET");
- assert.ok(stage.classList.values.has("is-idle"));
- fn.setSpeaking("person",true);
- assert.equal($("activeSpeaker").textContent,"On mic");
- assert.equal($("activeSpeakerLabel").textContent,"SPEAKING NOW");
- assert.ok(!stage.classList.values.has("is-idle"));
- fn.showIdleStage();
- assert.equal($("activeSpeaker").textContent,"No active speaker");
+test("multiple talking participants remain in Speaking now; no duplicate focus card",()=>{
+ const {fn,$,state}=simulatePeople(["u1","u2"]);
+ fn();
+ const active=$("spacesActiveSpeakers").children;
+ assert.equal(active.length,2);
+ assert.equal(active.filter(node=>node.className.includes("space-speaking-spotlight")).length,1);
+ assert.equal($("spaceActiveCount").textContent,"2 speaking");
+ assert.equal($("spacesSpeakers").children.length,1,"only listener stays outside speaker sections");
+ assert.equal($("spacesListeners").children.length,1);
+ state.speakingStatusHint="Audio disconnected. Reconnect to hear this Space.";
+ state.activeSpeakerIds.clear();
+ fn();
+ assert.match($("spacesActiveSpeakers").children[0].children[2].textContent,/Audio disconnected/);
 });
 
-test("idle design is bounded in mobile viewport and respects reduced motion",()=>{
+test("live audio signal updates only the unified panel and keeps other controls",()=>{
+ assert.match(source,/sdk\.RoomEvent\.ActiveSpeakersChanged/);
+ assert.match(source,/state\.activeSpeakerIds=new Set\(speakers\.map/);
+ assert.match(source,/state\.speakingStatusHint="";\s*renderPeople\(\)/);
+ assert.match(source,/state\.speakingStatusHint="Audio disconnected\. Reconnect to hear this Space\."/);
+ assert.match(source,/row\.append\(button\(muted\?"Unmute here":"Mute for me"/);
+ assert.match(source,/row\.append\(button\("Remove"/);
+ assert.match(source,/verifiedAvatar\(profile\?\.avatar_url,profile,\{size:isFeatured\?"xl":"lg"/);
+});
+
+test("unified panel retains the preferred backdrop, viewport bounds and reduced motion",()=>{
  assert.match(css,/\.space-active-panel \.space-no-active-speaker\{/);
- assert.match(css,/width:100%;max-width:100%;min-width:0;min-height:194px/);
- assert.match(css,/background:\s*radial-gradient/);
- assert.match(css,/overflow:hidden;text-align:center/);
- assert.match(css,/\.speaker-stage\.is-idle \.space-waveform i\{animation:none/);
+ assert.match(css,/\.space-active-panel \.space-speaking-spotlight\{/);
+ assert.match(css,/width:100%;max-width:100%;min-width:0;min-height:205px/);
+ assert.match(css,/\.space-speaking-wave i/);
  assert.match(css,/@media\(max-width:400px\)/);
- assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\s*\.space-no-active-icon\{animation:none\}/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\.space-speaking-wave i\{animation:none/);
  assert.doesNotThrow(()=>new Function(source.replace(/^import[\s\S]*?from\s+"[^"]+";\s*$/gm,"")));
 });
