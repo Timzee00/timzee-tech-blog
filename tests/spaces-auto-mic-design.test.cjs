@@ -42,7 +42,7 @@ test("new room mode is chosen explicitly and legacy clients cannot accidentally 
 test("creator auto-joins own live Space, while listeners cannot escalate without server permission",()=>{
  assert.match(ui,/hostIsLive\|\|audioWindowRequested\|\|joinImmediately/);
  assert.match(ui,/Date\.now\(\)>=Date\.parse\(state\.room\.starts_at\)/);
- assert.match(ui,/await join\(\{enableMic:!audioWindowRequested\|\|hostIsLive\}\)/);
+ assert.match(ui,/await join\(\{enableMic:audioWindowRequested\?q\.get\("speak"\)==="1":true\}\)/);
  assert.match(ui,/await supabase\.rpc\("spaces_join"/);
  assert.match(ui,/\["host","speaker"\]\.includes\(grant\.role\)/);
  assert.match(ui,/state\.role==="listener"&&self\?\.role==="speaker"/);
