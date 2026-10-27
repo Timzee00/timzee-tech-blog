@@ -56,7 +56,7 @@ test("Space popouts auto-join listeners muted while hosts keep their live microp
  const page=fs.readFileSync("spaces.html","utf8");
  assert.ok(source.includes('audioWindowRequested=q.get("mini")==="1"&&q.get("join")==="1"'));
  assert.ok(source.includes('hostIsLive||audioWindowRequested'));
- assert.ok(source.includes('"&mini=1&join=1"'));
- assert.ok(source.includes('await join({enableMic:!audioWindowRequested||hostIsLive})'));
- assert.ok(page.includes('joins automatically'));
+ assert.ok(source.includes('"&mini=1&join=1&speak="'));
+ assert.ok(source.includes('await join({enableMic:audioWindowRequested?q.get("speak")==="1":true})'));
+ assert.ok(page.includes('Keep audio while browsing'));
 });

@@ -81,12 +81,19 @@
     </div>
     <div class="space-stage-footer"><span>● Spatial audio room</span><span>Speak freely. Listen thoughtfully.</span></div>
    </section>
+   <section class="space-people-panel space-active-panel" aria-labelledby="spaceActiveTitle">
+    <div class="space-panel-heading"><h3 id="spaceActiveTitle"><span class="space-talking-dot" aria-hidden="true"></span> Speaking now</h3>
+    <span id="spaceActiveCount">0 active</span></div>
+    <p class="space-panel-description">People currently talking · live voice activity</p>
+    <div id="spacesActiveSpeakers" class="space-people" aria-live="off"></div>
+   </section>
    <section class="space-people-panel" aria-labelledby="spaceSpeakersTitle"><div class="space-panel-heading">
-    <h3 id="spaceSpeakersTitle">On stage</h3><span>Host &amp; speakers</span>
-   </div><div id="spacesSpeakers" class="space-people"></div></section>
+    <h3 id="spaceSpeakersTitle">Other speakers</h3><span id="spaceSpeakerCount">0 ready</span>
+   </div><p class="space-panel-description">Host and approved speakers who are not currently talking</p>
+   <div id="spacesSpeakers" class="space-people"></div></section>
   </div>
   <aside class="space-people-panel space-audience-panel" aria-labelledby="spaceAudienceTitle">
-   <div class="space-panel-heading"><h3 id="spaceAudienceTitle">Audience</h3><span id="spaceListenerCount">0</span></div>
+   <div class="space-panel-heading"><h3 id="spaceAudienceTitle">Listeners</h3><span id="spaceListenerCount">0</span></div>
    <p class="studio-muted">Listening to the conversation</p>
    <div id="spacesListeners" class="space-people"></div>
   </aside>
@@ -103,13 +110,13 @@
 <button id="spaceMic" class="btn space-mic-button" type="button" aria-pressed="false" hidden>🎙 Turn on mic</button>
 <button id="spaceAsk" class="btn ghost" type="button" hidden>✋ Ask to speak</button>
 <button id="spaceReconnect" class="btn ghost" type="button" hidden>↻ Refresh speaking access</button>
-<button id="spaceLeave" class="btn ghost" type="button" hidden>Leave</button><a class="btn ghost" id="spacePopout" href="#" target="timzee-space-audio" hidden aria-label="Continue audio while browsing">↗ Listen while browsing</a>
+<button id="spaceLeave" class="btn ghost" type="button" hidden>Leave</button><a class="btn ghost" id="spacePopout" href="#" target="timzee-space-audio" hidden aria-label="Keep Space audio in a separate window while browsing">↗ Keep audio while browsing</a>
 <button id="spacePlayAudio" class="btn ghost" type="button" hidden>🔊 Enable sound</button>
 <button id="spaceEnd" class="btn ghost space-end-button" type="button" hidden>End room</button>
   </div>
   <p id="spaceAudioStatus" class="space-audio-message" role="status" aria-live="polite">Join with one tap. Your microphone will activate automatically if you can speak and allow permission.</p>
  </section>
- <p class="space-popout-help">“Listen while browsing” opens a separate audio window and joins automatically. Keep it open as you explore; your browser may still require a tap for sound.</p>
+ <p class="space-popout-help">“Keep audio while browsing” opens a separate Space window that owns your audio connection. Once connected, you can navigate Blipmood in this tab and use the mini-player to mute or leave. Keep the audio window open; some mobile browsers may suspend background audio.</p>
 <div class="space-reactions" aria-label="Reactions"><button data-react="🔥" type="button">🔥</button><button data-react="😂" type="button">😂</button><button data-react="👏" type="button">👏</button><button data-react="🙌" type="button">🙌</button><button data-react="💯" type="button">💯</button><span id="reactionNotice" role="status" aria-live="polite"></span></div>
 <section id="spaceHostPanel" hidden><h3>Speaking requests</h3><div id="spaceRequests" class="studio-stack"></div>
 <h3>Invite a listener</h3><form id="spaceInviteForm" class="studio-form">
