@@ -62,7 +62,7 @@ const sitemap = read("sitemap.xml");
 const sitemapMatch = robots.match(/^Sitemap:\s*(\S+)\s*$/m);
 if (!sitemapMatch) fail("robots.txt must declare a sitemap.");
 if (!sitemapMatch[1].endsWith("/sitemap.xml")) fail("robots.txt must point to /sitemap.xml.");
-if (!sitemap.includes("<loc>https://timzee-tech-blog.netlify.app/</loc>")) fail("Static sitemap fallback is missing the homepage.");
+if (!sitemap.includes("<loc>https://blipmood.netlify.app/</loc>")) fail("Static sitemap fallback is missing the homepage.");
 
 for (const formId of ["contactForm","supportForm","newsletterForm","adsForm"]) {
   const page = formId === "contactForm" ? "contact.html" : formId === "supportForm" ? "support.html" : formId === "newsletterForm" ? "newsletter.html" : "ads.html";

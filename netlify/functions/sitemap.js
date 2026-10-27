@@ -1,6 +1,6 @@
 const { createClient } = require("@supabase/supabase-js");
 
-const SITE_URL = "https://timzee-tech-blog.netlify.app";
+const SITE_URL = "https://blipmood.netlify.app";
 
 function xmlEscape(value) {
   return String(value)

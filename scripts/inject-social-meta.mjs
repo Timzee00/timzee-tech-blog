@@ -1,8 +1,8 @@
 // Build-time social cards for *section* links. Content-specific /...?id= links
 // receive server-rendered OG values from the crawler-only Edge Function.
-export const BRAND_IMAGE="https://timzee-tech-blog.netlify.app/assets/brand/blipmood-social-card.png";
+export const BRAND_IMAGE="https://blipmood.netlify.app/assets/brand/blipmood-social-card.png";
 const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-export function injectSocialDefaults(html,fileName,origin="https://timzee-tech-blog.netlify.app"){
+export function injectSocialDefaults(html,fileName,origin="https://blipmood.netlify.app"){
  if(!/<head\b[^>]*>[\s\S]*<\/head>/i.test(html)||!/<\/title>/i.test(html))return html;
  if(!/^[a-z0-9-]+\.html$/i.test(fileName))return html; // not staff/private screens
  const title=(html.match(/<title>([\s\S]*?)<\/title>/i)||[])[1]?.replace(/<[^>]+>/g,"").trim()||"Blipmood";

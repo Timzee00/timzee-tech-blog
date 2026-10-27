@@ -2,7 +2,7 @@ const test=require("node:test");
 const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const {getMeta,renderHTML,safeOrigin,validUrl,ROUTES}=require("../netlify/functions/_lib/share-preview.cjs");
-const BASE="https://timzee-tech-blog.netlify.app";
+const BASE="https://blipmood.netlify.app";
 const A="0ca1d374-4335-4f07-bdd3-973d429e3016";
 const B="0ca1d374-4335-4f07-bdd3-973d429e3017";
 function mockDB(tables){
@@ -65,7 +65,7 @@ test("URL security rejects malicious images and forged origins",()=>{
  assert.equal(validUrl(undefined,BASE),"");
  assert.equal(validUrl("https://localhost/admin",BASE),"");
  assert.equal(safeOrigin("https://evil.example.net",BASE),BASE);
- assert.equal(safeOrigin("https://main--timzee-tech-blog.netlify.app",BASE),"https://main--timzee-tech-blog.netlify.app");
+ assert.equal(safeOrigin("https://main--blipmood.netlify.app",BASE),"https://main--blipmood.netlify.app");
 });
 test("the edge function handles only preview crawlers and leaves human visits untouched",async()=>{
  const {default:edge,config}=await import("../netlify/edge-functions/social-preview.js");

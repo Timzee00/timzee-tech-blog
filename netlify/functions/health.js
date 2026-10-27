@@ -20,7 +20,7 @@ exports.handler = async () => {
   if (!supabaseUrl || !serviceRoleKey) {
     return jsonResponse(503, {
       status: "degraded",
-      service: "timzee-tech-blog",
+      service: "blipmood",
       reason: "database configuration missing"
     });
   }
@@ -49,7 +49,7 @@ exports.handler = async () => {
 
     return jsonResponse(status === "ok" ? 200 : 503, {
       status,
-      service: "timzee-tech-blog",
+      service: "blipmood",
       version: process.env.COMMIT_REF || "unknown",
       deploy_id: process.env.DEPLOY_ID || null,
       database: dbOk ? "ok" : "error",
@@ -63,7 +63,7 @@ exports.handler = async () => {
     console.error("Health check failed:", error);
     return jsonResponse(503, {
       status: "degraded",
-      service: "timzee-tech-blog",
+      service: "blipmood",
       version: process.env.COMMIT_REF || "unknown",
       database: "error",
       automation: "unknown",

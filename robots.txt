@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://timzee-tech-blog.netlify.app/sitemap.xml
+Sitemap: https://blipmood.netlify.app/sitemap.xml

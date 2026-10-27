@@ -8,13 +8,13 @@ const read=p=>fs.readFileSync(path.join(root,p),"utf8");
 test("published pages use Blipmood while old URLs and parent company remain intact",async()=>{
  const {injectSiteShell,replaceLegacyBrandText}=await import("../scripts/inject-site-shell.mjs");
  const fixture='<!doctype html><html><head><title>Timzee Tech Hub</title></head><body>'+
-   '<header class="site-header"><a href="https://timzee-tech-blog.netlify.app/">Timzee Tech Blog</a></header>'+
+   '<header class="site-header"><a href="https://blipmood.netlify.app/">Timzee Tech Blog</a></header>'+
    '<footer class="footer">Timzee Tech Forum · Powered by Timzee Corp</footer></body></html>';
  const built=injectSiteShell(fixture);
  assert.doesNotMatch(built,/Timzee Tech (Hub|Blog|Forum)/);
  assert.match(built,/<title>Blipmood<\/title>/);
  assert.match(built,/Blipmood · Powered by Timzee Corp/);
- assert.match(built,/https:\/\/timzee-tech-blog\.netlify\.app\//);
+ assert.match(built,/https:\/\/blipmood\.netlify\.app\//);
  assert.match(built,/apple-touch-icon/);
  assert.match(built,/cb2e26bb-2d48-471d-80fc-67d8ffc1b06b\.png/);
  assert.equal((built.match(/site-shell\.js/g)||[]).length,1);

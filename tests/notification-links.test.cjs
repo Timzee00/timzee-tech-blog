@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const modulePromise = import("../assets/js/notification-links.mjs");
-const origin = "https://timzee-tech-blog.netlify.app";
+const origin = "https://blipmood.netlify.app";
 test("normalizes safe in-app links for notifications", async () => {
   const { safeNotificationPath } = await modulePromise;
   assert.equal(safeNotificationPath("post.html?id=123", origin), "/post.html?id=123");

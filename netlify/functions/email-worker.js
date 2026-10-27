@@ -36,14 +36,14 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
     `${template.body} ${digestCount} unread update${digestCount===1?"":"s"} in the last 24 hours. Sign in to review them.` :
     isWorkflow ? `${template.body} Current status: ${state||"updated"}.` : template.body;
   const referenceLine=optional?"":`Reference: ${reference}\n\n`;
-  const settingsUrl="https://timzee-tech-blog.netlify.app/settings.html#email";
+  const settingsUrl="https://blipmood.netlify.app/settings.html#email";
   const unsubscribeUrl=isInactivity ?
-    "https://timzee-tech-blog.netlify.app/unsubscribe.html?token="+
+    "https://blipmood.netlify.app/unsubscribe.html?token="+
       encodeURIComponent(createInactivityToken(job)) : null;
   const optOutText=unsubscribeUrl ? "Stop future check-in emails: "+unsubscribeUrl+"\n\n" : "";
   const optOutHtml=unsubscribeUrl ? `<p><a href="${unsubscribeUrl}">Stop these reminders without signing in</a></p>` : "";
   const text=`${intro}\n\n${message}\n\n${referenceLine}${optional ? `Manage email preferences: ${settingsUrl}\n\n` : ""}${optOutText}Blipmood`;
-  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#101e24;border-radius:12px"><img src="https://timzee-tech-blog.netlify.app/assets/brand/blipmood-wordmark-dark.png" width="230" height="76" alt="Blipmood" style="width:230px;max-width:100%;height:auto;display:block"></div><p>${escapeHtml(intro)}</p><p>${escapeHtml(message)}</p>${optional ?
+  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#101e24;border-radius:12px"><img src="https://blipmood.netlify.app/assets/brand/blipmood-wordmark-dark.png" width="230" height="76" alt="Blipmood" style="width:230px;max-width:100%;height:auto;display:block"></div><p>${escapeHtml(intro)}</p><p>${escapeHtml(message)}</p>${optional ?
     `<p><a href="${settingsUrl}">Manage email preferences</a></p>` :
     `<p><strong>Reference:</strong> ${escapeHtml(reference)}</p>`}${optOutHtml}<hr><small>${optional?"You opted in to this optional email category. You can disable it in account settings.":"Transactional notification regarding your request."} Do not reply with passwords or sensitive details.</small></div>`;
   let res;

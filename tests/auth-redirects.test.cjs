@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const run = "https://deploy-preview-4--timzee-tech-blog.netlify.app";
-const prod = "https://timzee-tech-blog.netlify.app";
+const run = "https://deploy-preview-4--blipmood.netlify.app";
+const prod = "https://blipmood.netlify.app";
 const mod = import("../assets/js/auth-redirects.mjs");
 
 test("OAuth callbacks remain on the initiating preview origin", async () => {

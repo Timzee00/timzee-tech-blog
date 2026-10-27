@@ -8,7 +8,7 @@ import "./privacy-consent.js";
 const SUPABASE_URL = "https://duvbcwwprkzzyzikmcol.supabase.co";
 // Publishable key: safe for browser clients. Never put the service/secret key here.
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_otXKj1pYtPToX6Dp4oq19g_Aid-WkkC";
-export const SITE_URL = "https://timzee-tech-blog.netlify.app";
+export const SITE_URL = "https://blipmood.netlify.app";
 
 const PROFILE_PUBLIC_COLUMNS = [
   "id", "display_name", "username", "avatar_url", "cover_url", "bio", "headline",

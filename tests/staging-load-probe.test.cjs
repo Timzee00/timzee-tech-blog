@@ -3,10 +3,10 @@ const assert = require("node:assert/strict");
 const mod = import("../scripts/staging-load-probe.mjs");
 test("rejects production, external and credentialed URLs",async () => {
   const { stagingOrigin } = await mod;
-  assert.throws(() => stagingOrigin("https://timzee-tech-blog.netlify.app"), /Refusing/);
+  assert.throws(() => stagingOrigin("https://blipmood.netlify.app"), /Refusing/);
   assert.throws(() => stagingOrigin("https://example.com"), /Refusing/);
-  assert.throws(() => stagingOrigin("https://someone:secret@deploy-preview-4--timzee-tech-blog.netlify.app/"), /origin/);
-  assert.equal(stagingOrigin("https://deploy-preview-4--timzee-tech-blog.netlify.app/"), "https://deploy-preview-4--timzee-tech-blog.netlify.app");
+  assert.throws(() => stagingOrigin("https://someone:secret@deploy-preview-4--blipmood.netlify.app/"), /origin/);
+  assert.equal(stagingOrigin("https://deploy-preview-4--blipmood.netlify.app/"), "https://deploy-preview-4--blipmood.netlify.app");
 });
 test("limits concurrency and number of requests before staged tests",async () => {
   const { boundedWorkload } = await mod;

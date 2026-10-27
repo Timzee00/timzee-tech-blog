@@ -14,7 +14,7 @@ function buildStaffReplyEmail({message,name="there",requestKind="contact"}){
  const htmlContent='<!doctype html><html lang="en"><head><meta charset="UTF-8"></head>'+
  '<body style="margin:0;padding:24px 12px;background:#edf4f3;color:#172e31;font-family:Arial,Helvetica,sans-serif">'+
  '<table role="presentation" style="border-collapse:collapse;max-width:640px;width:100%;margin:0 auto;background:#fff;border:1px solid #cddcda;border-radius:16px">'+
- '<tr><td style="padding:24px;background:#113b3a;color:#fff;border-radius:16px 16px 0 0"><div style="font-weight:700;font-size:21px"><img src="https://timzee-tech-blog.netlify.app/assets/brand/blipmood-wordmark-dark.png" width="230" height="76" alt="Blipmood" style="width:230px;max-width:100%;height:auto;vertical-align:middle"></div>'+
+ '<tr><td style="padding:24px;background:#113b3a;color:#fff;border-radius:16px 16px 0 0"><div style="font-weight:700;font-size:21px"><img src="https://blipmood.netlify.app/assets/brand/blipmood-wordmark-dark.png" width="230" height="76" alt="Blipmood" style="width:230px;max-width:100%;height:auto;vertical-align:middle"></div>'+
  '<div style="font-size:12px;margin-top:7px">TEAM SUPPORT &amp; COMMUNITY</div></td></tr>'+
  '<tr><td style="padding:30px 25px"><h1 style="font-size:21px;line-height:1.4;margin:0 0 18px">A reply from our team</h1>'+
  '<p style="font-size:15px;line-height:1.7">Hello '+safeName+',</p>'+

@@ -19,10 +19,10 @@ function validUrl(value,origin){
  if(u.protocol!=="https:"||!u.hostname||u.username||u.password||u.hostname==="localhost"||/^(?:127\.|10\.|192\.168\.|169\.254\.)/.test(u.hostname))return "";
  return u.href;}catch{return "";}
 }
-function safeOrigin(input,production="https://timzee-tech-blog.netlify.app"){
+function safeOrigin(input,production="https://blipmood.netlify.app"){
  try{const u=new URL(input),known=new URL(production).origin;
  if(u.protocol!=="https:"||u.username||u.password)return known;
- if(u.origin===known||/^(?:[a-z0-9-]+--)?timzee-tech-blog\.netlify\.app$/i.test(u.hostname))return u.origin;
+ if(u.origin===known||/^(?:[a-z0-9-]+--)?blipmood\.netlify\.app$/i.test(u.hostname))return u.origin;
  return known;}catch{return production;}
 }
 function getId(params,key){const id=params.get(key)||"";return UUID.test(id)?id:null;}

@@ -767,7 +767,7 @@
         document.getElementById("superPostStatus").addEventListener("change",()=>{adminPager.postPage=1;void loadPosts();});
         document.getElementById("copyMemberReturnInvite")?.addEventListener("click",async()=>{
           const status=document.getElementById("memberReturnInviteStatus");
-          const message="We've refreshed Timzee Tech Hub with discussions, tech articles and community features. Come see what's new: https://timzee-tech-blog.netlify.app/";
+          const message="We've refreshed Blipmood with discussions, tech articles and community features. Come see what's new: https://blipmood.netlify.app/";
           try{
             await navigator.clipboard.writeText(message);
             status.textContent="Invitation copied. Share it only through channels where you have permission to contact recipients.";

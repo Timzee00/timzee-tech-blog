@@ -1,7 +1,7 @@
 "use strict";
 const {createClient}=require("@supabase/supabase-js");
 const {ROUTES,getMeta,renderHTML,safeOrigin,fallback}=require("./_lib/share-preview.cjs");
-const BASE="https://timzee-tech-blog.netlify.app";
+const BASE="https://blipmood.netlify.app";
 exports.handler=async function(event){
  if(event.httpMethod!=="GET"&&event.httpMethod!=="HEAD")return {statusCode:405,headers:{Allow:"GET, HEAD"},body:""};
  const args=event.queryStringParameters||{};

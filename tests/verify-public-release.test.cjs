@@ -14,8 +14,8 @@ test("preview gate requires HTTP noindex AND crawling disallowed", async () => {
   assert.equal(checkPreviewIndexing(headers, "User-agent: *\nDisallow: /\n"), "");
   assert.match(checkPreviewIndexing(headers, "User-agent: *\nAllow: /\n"), /robots/);
   assert.match(checkPreviewIndexing(new Headers(), "Disallow: /"), /X-Robots-Tag/);
-  assert.equal(isPreviewHostname("deploy-preview-4--timzee-tech-blog.netlify.app"), true);
-  assert.equal(isPreviewHostname("timzee-tech-blog.netlify.app"), false);
+  assert.equal(isPreviewHostname("deploy-preview-4--blipmood.netlify.app"), true);
+  assert.equal(isPreviewHostname("blipmood.netlify.app"), false);
 });
 
 

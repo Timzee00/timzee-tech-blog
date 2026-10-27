@@ -9,7 +9,7 @@ export function stagingOrigin(raw) {
   if (url.username || url.password || url.search || url.hash || url.pathname !== "/") throw Error("Supply only the staging origin");
   const local = url.protocol === "http:" && ["localhost","127.0.0.1"].includes(url.hostname);
   const preview = url.protocol === "https:" &&
-    /^(?:deploy-preview-\d+|[a-z0-9][a-z0-9-]*)--timzee-tech-blog\.netlify\.app$/i.test(url.hostname);
+    /^(?:deploy-preview-\d+|[a-z0-9][a-z0-9-]*)--blipmood\.netlify\.app$/i.test(url.hostname);
   if (!local && !preview) throw Error("Refusing to load-test production or unapproved hosts. Use an isolated staging preview.");
   return url.origin;
 }
