@@ -40,7 +40,7 @@ test("active speakers, other speakers and listeners are exclusive categories",()
   return containers.get(id);
  };
  function el(tag,text="",className=""){
-  return {tag,textContent:text,className,children:[],append(...args){this.children.push(...args)}};
+  return {tag,textContent:text,className,children:[],setAttribute(){},append(...args){this.children.push(...args)}};
  }
  const participants=[
   {user_id:"u1",role:"host"},{user_id:"u2",role:"speaker"},
