@@ -61,9 +61,12 @@ function createBlipmoodWordmark() {
 function ensureBlipmoodHeader() {
   const headerBrand=document.querySelector(".site-header a.brand");
   if(!headerBrand)return;
-  if(!headerBrand.querySelector(".bm-brand-display"))headerBrand.prepend(createBlipmoodWordmark());
+  // Source templates still contain fallback .logo spans. Prepending the PNG
+  // left both the custom wordmark and ordinary text visible on pages without
+  // #siteName (e.g. Spaces). Keep exactly one brand child on every route.
+  const wordmark=headerBrand.querySelector(":scope > .bm-brand-display")||createBlipmoodWordmark();
+  headerBrand.replaceChildren(wordmark);
   headerBrand.setAttribute("aria-label","Blipmood — Home");
-  headerBrand.querySelector("#siteName")?.setAttribute("aria-hidden","true");
   synchronizeBrandImages();
 }
 function updateFooterBrand() {
