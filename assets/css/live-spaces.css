@@ -192,3 +192,20 @@
  .space-control-context .studio-muted{line-height:1.35}
  .space-people-panel{padding:11px}
 }
+
+/* Audio owners in a separate window get a focused, compact control surface. */
+.space-popout-mode .spaces-hero,.space-popout-mode #spacesDiscovery,.space-popout-mode #spacesCreate,
+.space-popout-mode #spacesStatus{display:none!important}
+.space-popout-mode .spaces-shell{width:100%;max-width:730px;padding:10px 12px 50px}
+.space-popout-mode .space-detail{width:100%;gap:12px}
+.space-popout-mode .space-session-layout{display:grid;grid-template-columns:minmax(0,1fr)}
+.space-popout-mode .speaker-stage{min-height:215px;padding:16px}
+.space-popout-mode .space-stage-footer{display:none}
+.space-popout-mode .space-stage-avatar-wrap{min-height:100px}
+.space-popout-mode .space-avatar-large{height:90px;width:90px}
+.space-popout-mode .space-avatar-large .tz-avatar-verified{inline-size:84px;block-size:84px}
+.space-popout-mode .space-audience-panel{min-height:0}
+.space-popout-mode .space-people-panel{padding:12px}
+.space-popout-mode .space-action-dock{position:sticky;bottom:max(8px,env(safe-area-inset-bottom));z-index:8}
+.space-popout-mode .spaces-shell .space-panel{padding:15px}
+@media(max-width:450px){.space-popout-mode .space-room-heading h2{font-size:1.32rem!important}.space-popout-mode .speaker-stage{min-height:180px}.space-popout-mode .space-people{max-height:155px}}
