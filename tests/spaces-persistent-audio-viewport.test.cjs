@@ -100,7 +100,7 @@ test("viewport widths and compact audio window have bounded styles",()=>{
  assert.match(style,/space-session-layout\{grid-template-columns:minmax\(0,1fr\)/);
  assert.match(style,/\.spaces-shell\{max-width:100%;width:100%;padding-inline:10px\}/);
  assert.match(style,/\.space-people-panel \.space-people\{grid-template-columns:repeat\(auto-fill,minmax\(min\(100%,96px\),1fr\)\)/);
- assert.match(style,/\.space-popout-mode \.speaker-stage/);
+ assert.match(style,/\.space-popout-mode \.space-people/);
  assert.match(style,/@media\(max-width:350px\)/);
  assert.match(style,/@media\(prefers-reduced-motion:reduce\)/);
  const js=source.replace(/^import[\s\S]*?from\s+"[^"]+";\s*$/gm,"");
