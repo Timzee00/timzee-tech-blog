@@ -1,8 +1,11 @@
 /* Blipmood is a single visual identity on every route.
    The actual wordmark PNG, not simulated font glyphs, includes the play-dot
    and the expressive double-o smile selected in the approved sketch. */
-.site-header .brand:has(.bm-brand-display) #siteName,
-.site-header .brand:has(.bm-brand-display) #siteTagline {display:none!important}
+/* Hide any legacy plain-text brand beside an already-present PNG, including
+   routes that omit #siteName/#siteTagline. JS then removes the duplicate node. */
+.site-header .brand:has(> .bm-brand-display) > :not(.bm-brand-display),
+.site-header .brand:has(> .bm-brand-display) > .logo,
+.site-header .brand:has(> .bm-brand-display) > .tagline {display:none!important}
 .site-header .brand .bm-brand-display,.footer-wordmark .bm-brand-display {
  display:inline-flex;align-items:center;min-width:0;max-width:100%;
 }
@@ -26,4 +29,22 @@
 }
 @media(prefers-reduced-motion:reduce){
  .bm-wordmark-image{animation:none!important;transition:none!important}
+}
+
+/* Light, free, PNG-preserving motion: a single entrance and a subtle hover.
+   Never animate continuously in the header or reduce logo legibility. */
+.site-header .brand .bm-wordmark-image{
+ transform-origin:center left;
+ animation:bm-wordmark-reveal .65s cubic-bezier(.21,.72,.28,1) both;
+}
+@keyframes bm-wordmark-reveal{
+ from{opacity:.25;transform:translateY(4px) scale(.985)}
+ to{opacity:1;transform:translateY(0) scale(1)}
+}
+@media(hover:hover) and (pointer:fine){
+ .site-header .brand .bm-wordmark-image{transition:filter .22s ease,transform .22s ease}
+ .site-header .brand:hover .bm-wordmark-image{filter:drop-shadow(0 0 7px #52d4bf5c);transform:translateY(-1px)}
+}
+@media(prefers-reduced-motion:reduce){
+ .site-header .brand .bm-wordmark-image{animation:none!important;transition:none!important;transform:none!important}
 }
