@@ -247,3 +247,24 @@ html[data-chat-wallpaper="linen"] .chat-page .chat-message.received{color:#17272
  .chat-page .chat-sidebar .chat-tab{display:flex;align-items:center;justify-content:center;min-width:0;min-height:44px;gap:7px;padding:8px 10px;white-space:nowrap;font-size:clamp(12px,3.2vw,14px);overflow:hidden;text-overflow:ellipsis}
  .chat-page .chat-sidebar .chat-tab-badge{flex:0 0 auto;min-width:20px;height:20px;padding:0 5px;line-height:20px}
 }
+
+/* Group membership actions: full-width mobile controls with no clipped staff
+   buttons, separate from message composer and account moderation. */
+.chat-page .chat-group-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:10px 0}
+.chat-page .chat-group-actions .btn{min-height:40px;white-space:normal;min-width:0}
+.chat-page #groupRestrictionNotice:not([hidden]){border:1px solid var(--color-border-strong);border-radius:10px;padding:10px 12px;background:var(--color-surface-muted);color:var(--color-text);font-size:.82rem;line-height:1.45;overflow-wrap:anywhere}
+.chat-page .group-add-inline{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:12px 0}
+.chat-page .group-add-inline .input{width:100%;min-width:0;max-width:100%;min-height:44px}
+.chat-page .group-add-inline button{min-height:44px}
+.chat-page .group-member-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid var(--color-border);padding:10px 0}
+.chat-page .group-member-row .group-member-copy{flex:1 1 125px;min-width:105px}
+.chat-page .group-member-row .group-member-copy strong{white-space:normal;overflow-wrap:anywhere}
+.chat-page .group-member-row :where(button,select){min-height:40px;max-width:100%}
+@media(max-width:620px){
+ .chat-page .group-add-inline{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .chat-page .group-add-inline :where(input,select){grid-column:1/-1}
+ .chat-page .group-add-inline button{width:100%}
+ .chat-page .chat-group-actions .btn{flex:1 1 130px}
+ .chat-page .group-member-row .group-member-copy{flex-basis:calc(100% - 56px)}
+ .chat-page .group-member-row :where(select,button){flex:1 1 105px}
+}

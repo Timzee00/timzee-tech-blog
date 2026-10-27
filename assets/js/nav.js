@@ -80,6 +80,33 @@ function setupMobileMenu() {
     toggle.innerHTML = "<span class=\"menu-icon\"></span><span>Menu</span>";
     wrap.insertBefore(toggle, menu);
   }
+  // One universal search control in the header, never inside the drawer.
+  // Keep the original homepage search input for the existing search engine.
+  if (!wrap.querySelector(".site-global-search-button")) {
+    const searchButton=document.createElement("button");
+    searchButton.type="button";
+    searchButton.className="site-global-search-button";
+    searchButton.setAttribute("aria-label","Search Blipmood");
+    searchButton.setAttribute("aria-expanded","false");
+    searchButton.title="Search Blipmood";
+    searchButton.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" width="22" height="22"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>';
+    const form=document.createElement("form");
+    form.className="site-global-search-form";
+    form.action="/index.html";
+    form.method="get";
+    form.hidden=true;
+    form.innerHTML='<label for="siteGlobalSearchInput">Search Blipmood</label><input id="siteGlobalSearchInput" type="search" name="search" placeholder="Search news, stories, people and topics" required autocomplete="off"><button type="submit">Search</button><button type="button" class="site-global-search-close" aria-label="Close search">×</button>';
+    document.body.append(form);
+    wrap.insertBefore(searchButton,toggle);
+    const setSearchOpen=open=>{
+      form.hidden=!open;
+      searchButton.setAttribute("aria-expanded",String(open));
+      if(open)form.querySelector("input")?.focus();
+    };
+    searchButton.addEventListener("click",()=>setSearchOpen(form.hidden));
+    form.querySelector(".site-global-search-close").addEventListener("click",()=>setSearchOpen(false));
+    form.addEventListener("keydown",event=>{if(event.key==="Escape")setSearchOpen(false);});
+  }
   // Make a key social action visible without requiring members to find it
   // inside a mobile drawer. Theme remains available in the menu.
   if (!wrap.querySelector(".site-status-quick-link")) {

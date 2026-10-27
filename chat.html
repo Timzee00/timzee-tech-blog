@@ -184,6 +184,12 @@
                 <label><input type="checkbox" id="groupAdminsOnly"> Admins only can send messages</label>
                 <label><input type="checkbox" id="groupAllowMedia" checked> Allow media messages</label>
                 <label><input type="checkbox" id="groupAllowPolls" checked> Allow group polls</label>
+                <label><input type="checkbox" id="groupAllowMembersAdd"> Let members add people</label>
+                <label><input type="checkbox" id="groupAllowModeratorsAdd"> Let moderators add people</label>
+                <label><input type="checkbox" id="groupAllowAdminAdd" checked> Let admins add people</label>
+                <label><input type="checkbox" id="groupAllowInviteLinks" checked> Allow invite links</label>
+                <label><input type="checkbox" id="groupAllowAdminInvites" checked> Let admins create invite links</label>
+                <label id="groupAllowAdminSettingsLabel"><input type="checkbox" id="groupAllowAdminSettings"> Allow admins to edit group settings and details</label>
                 <label>Slow mode<select id="groupSlowMode">
                   <option value="0">Off</option><option value="15">15 seconds</option>
                   <option value="30">30 seconds</option><option value="60">1 minute</option>
@@ -194,7 +200,17 @@
                 <button type="button" class="btn" id="saveGroupPermissions">Save group permissions</button>
               </div>
             </section>
-            <section class="chat-info-section" id="groupMembersSection" hidden>
+            <section class="chat-info-section" id="groupMembershipControls" hidden>
+  <div class="chat-info-section-head"><h3>Membership and invitations</h3></div>
+  <div class="chat-group-actions">
+    <button type="button" class="btn ghost sm" id="groupLeaveBtn">Leave group</button>
+    <button type="button" class="btn ghost sm" id="groupAddMembersBtn" hidden>Add people</button>
+    <button type="button" class="btn ghost sm" id="groupShareInviteBtn" hidden>Create / rotate invite link</button>
+    <button type="button" class="btn ghost sm" id="groupUnbanBtn" hidden>Allow removed member back</button>
+  </div>
+  <p class="chat-group-help" id="groupRestrictionNotice" role="status" hidden></p>
+</section>
+<section class="chat-info-section" id="groupMembersSection" hidden>
               <div class="chat-info-section-head"><h3>Members</h3><span class="chat-member-count" id="groupMemberCount">0</span></div>
               <div class="chat-member-list" id="infoGroupMembers"></div>
             </section>

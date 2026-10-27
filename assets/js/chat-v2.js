@@ -34,6 +34,8 @@ const state = {
 };
 
 const $ = (id) => document.getElementById(id);
+let groupRestrictionTimer=null;
+let previousGroupRestrictionMode=null;
 // Postgres direct_messages.created_at is UTC timestamp WITHOUT TIME ZONE.
 // PostgREST returns a timezone-less string, which JS otherwise treats as local.
 function asUtcTimestamp(input){
@@ -498,14 +500,15 @@ function renderGroupMembers(){
   if(!target||!section||!state.activeGroupId)return;
   const members=state.groupMembers.get(state.activeGroupId)||[];
   section.hidden=false;$("groupMemberCount").textContent=String(members.length);
+  updateGroupControlVisibility();
   const owner=isOwnerOfActiveGroup();
   const me=members.find(m=>m.user_id===state.user?.id);
-  const canModerate=owner||['admin','moderator'].includes(me?.role);
+  const canModerate=owner||me?.role==='admin';
   target.innerHTML=members.map(m=>{
     const p=profileFor(m.user_id)||{},tags=Array.isArray(m.tags)?m.tags:[];
     const role=String(m.role||'member');
-    const editable=owner&&m.user_id!==state.user.id;
-    const removable=canModerate&&m.user_id!==state.user.id&&role!=='owner'&&(owner||role!=='admin');
+    const editable=canModerate&&role!=='owner'&&(owner||m.user_id!==state.user.id);
+    const removable=canModerate&&m.user_id!==state.user.id&&role!=='owner';
     return `<div class="group-member-row">
       ${verifiedAvatar(p.avatar_url||DEFAULT_AVATAR,p,{size:"md"})}
       <div class="group-member-copy">
@@ -516,6 +519,7 @@ function renderGroupMembers(){
       ${editable?`<select data-group-role="${m.user_id}" aria-label="Group role for ${escapeHTML(p.display_name||'Member')}">
         ${['member','moderator','admin'].map(r=>`<option value="${r}" ${r===role?'selected':''}>${r}</option>`).join('')}
         </select>`:''}
+      ${canModerate&&role!=='owner'&&m.user_id!==state.user.id?`<button class="btn ghost sm" type="button" data-group-suspend="${m.user_id}" data-hidden="false" aria-label="Suspend member from posting">Read-only</button><button class="btn ghost sm" type="button" data-group-suspend="${m.user_id}" data-hidden="true" aria-label="Hide group from suspended member">Hide</button><button class="btn ghost sm" type="button" data-group-lift="${m.user_id}">Lift</button>`:''}
       ${removable?`<button class="btn ghost sm" type="button" data-group-remove="${m.user_id}">Remove</button>`:''}
     </div>`;
   }).join('');
@@ -565,17 +569,178 @@ async function autoTranslateVisibleMessages(){
       await translateChatMessage(m.id,{automatic:true});
   }
 }
+
+function groupMemberRole(){
+  if(!state.activeGroupId)return null;
+  if(isOwnerOfActiveGroup())return 'owner';
+  return (state.groupMembers.get(state.activeGroupId)||[]).find(m=>m.user_id===state.user?.id)?.role||null;
+}
+function updateGroupControlVisibility(){
+  const g=activeGroup(),panel=$("groupMembershipControls");if(!panel)return;
+  panel.hidden=!g;if(!g)return;
+  const role=groupMemberRole(),settings=g.settings||{},owner=role==='owner';
+  const mayAdd=owner||(role==='admin'&&settings.allow_admin_add_members!==false)||
+    (role==='moderator'&&settings.allow_moderators_add_members===true)||
+    (role==='member'&&settings.allow_members_add_members===true);
+  $("groupAddMembersBtn").hidden=!mayAdd;
+  $("groupShareInviteBtn").hidden=settings.allow_invite_links===false||
+    !(owner||(role==='admin'&&settings.allow_admin_invite_links!==false));
+  $("groupLeaveBtn").hidden=owner;
+  $("groupUnbanBtn").hidden=!(owner||role==='admin');
+  const mayEdit=owner||(role==='admin'&&settings.allow_admin_manage_settings===true);
+  $("groupPermissionsPanel").hidden=!mayEdit;
+  $("groupAllowAdminSettingsLabel").hidden=!owner;
+  $("editGroupBtn").hidden=!mayEdit;
+  const avatarEditor=document.querySelector("#groupEditor .group-avatar-upload");
+  if(avatarEditor)avatarEditor.hidden=!owner;
+}
+async function groupAccessStatus(){
+  const group=activeGroup();if(!group)return null;
+  const groupId=group.id;
+  const {data,error}=await supabase.rpc('chat_group_restriction_status',{p_group:groupId});
+  if(error)throw error;
+  if(state.activeGroupId!==groupId)return null;
+  const row=(data||[]).find(x=>x.user_id===state.user?.id);
+  const message=$("groupRestrictionNotice");
+  if(message){
+    message.hidden=!row;
+    message.textContent=row?
+      (row.mode==='hidden'?'Group content is temporarily restricted':'You can read this group but cannot participate')+
+        ' until '+new Date(row.expires_at).toLocaleString():'';
+  }
+  const previous=previousGroupRestrictionMode;
+  previousGroupRestrictionMode=row?.mode||null;
+  if(row){
+    state.canCompose=false;updateComposer();
+    if(row.mode==='hidden'&&previous!=='hidden'){
+      state.messages=[];state.pinnedMessages=[];renderPinnedMessages();
+      $("chatMessages").textContent='Group messages are hidden during your suspension.';
+      $("infoMediaGrid").textContent='Shared media is unavailable during your suspension.';
+      void realtime.stop();
+    }
+  }else if(previous){
+    state.canCompose=true;updateComposer();
+    if(previous==='hidden'){void selectGroup(groupId).catch(e=>reportAppError(e,'Unable to refresh group access'));}
+  }
+  if(groupRestrictionTimer)clearTimeout(groupRestrictionTimer);
+  // Refresh if staff lifts the restriction early or when the expiry arrives.
+  // Database RLS remains authoritative between checks.
+  const remaining=row?new Date(row.expires_at).getTime()-Date.now():30000;
+  const delay=Math.max(1500,Math.min(30000,Number.isFinite(remaining)?remaining+400:30000));
+  groupRestrictionTimer=setTimeout(()=>{
+    if(state.activeGroupId===groupId)void groupAccessStatus().catch(e=>reportAppError(e,'Group restrictions could not be refreshed'));
+  },delay);
+  return row?.mode||null;
+}
+async function leaveCurrentGroup(){
+  const g=activeGroup();if(!g||isOwnerOfActiveGroup())return;
+  if(!await window.appUI.confirm('Leave '+(g.name||'this group')+'?'))return;
+  const {error}=await supabase.rpc('leave_chat_group',{p_group:g.id});if(error)throw error;
+  $("chatInfoPanel")?.close();state.groupMembers.delete(g.id);
+  state.groups=state.groups.filter(x=>x.id!==g.id);
+  await loadAllChatData();renderGroups();leaveConversation();
+  window.siteToast?.('You left the group.',{type:'success'});
+}
+async function addPeopleToGroup(){
+  const g=activeGroup();if(!g)return;
+  const existing=new Set((state.groupMembers.get(g.id)||[]).map(x=>x.user_id));
+  const candidates=state.friends.filter(id=>!existing.has(id));
+async function lookupGroupPerson(rawName){
+  const handle=String(rawName||'').trim().replace(/^@/,'');
+  if(!/^[a-zA-Z0-9_.-]{2,40}$/.test(handle))throw Error('Enter a valid username.');
+  const exact=handle.replace(/[\\%_]/g,character=>'\\'+character);
+  const {data,error}=await supabase.from('public_profiles')
+    .select('id,username').ilike('username',exact).limit(10);
+  if(error)throw error;
+  const match=(data||[]).find(p=>String(p.username||'').toLowerCase()===handle.toLowerCase());
+  if(!match)throw Error('No member has this exact username.');
+  return match.id;
+}
+async function unbanGroupMember(){
+  if(!activeGroup())return;
+  const raw=await window.appUI.prompt('Enter the removed member’s @username to allow them to rejoin:','');
+  if(raw===null)return;
+  const person=await lookupGroupPerson(raw);
+  if(person===activeGroup().created_by)throw Error('The group owner cannot be banned.');
+  const {error}=await supabase.rpc('unban_chat_group_member',{p_group:state.activeGroupId,p_member:person});
+  if(error)throw error;
+  window.siteToast?.('Member can now be added or invited again.',{type:'success'});
+}
+  const wrapper=document.createElement('div');wrapper.className='group-add-inline';
+  const select=document.createElement('select');select.className='input';select.setAttribute('aria-label','Choose a friend to add');
+  for(const id of candidates){
+    const opt=document.createElement('option');opt.value=id;opt.textContent=profileFor(id)?.display_name||profileFor(id)?.username||'Friend';select.add(opt);
+  }
+  const username=document.createElement('input');username.className='input';username.type='search';
+  username.maxLength=40;username.placeholder='Or add someone by @username';
+  username.setAttribute('aria-label','Member username');
+  const submit=document.createElement('button');submit.type='button';submit.className='btn sm';submit.textContent='Add person';
+  const cancel=document.createElement('button');cancel.type='button';cancel.className='btn ghost sm';cancel.textContent='Cancel';
+  if(candidates.length)wrapper.append(select);
+  wrapper.append(username,submit,cancel);$("groupMembershipControls").append(wrapper);
+  cancel.onclick=()=>wrapper.remove();
+  submit.onclick=async()=>{
+    submit.disabled=true;
+    try{
+      let person=select.value;
+      const handle=username.value.trim();
+      if(handle)person=await lookupGroupPerson(handle);
+      if(!person)throw Error('Choose a friend or enter a username.');
+      const {error}=await supabase.rpc('add_group_chat_member',{p_group:g.id,p_user:person});
+      if(error)throw error;
+      wrapper.remove();await loadGroupMembers(g.id);
+      window.siteToast?.('Member added.',{type:'success'});
+    }catch(error){submit.disabled=false;reportAppError(error,'Unable to add member');}
+  };
+}
+async function shareGroupInvite(){
+  const g=activeGroup();if(!g)return;
+  const {data,error}=await supabase.rpc('generate_chat_group_invite',{p_group:g.id});
+  if(error)throw error;
+  const link=new URL('chat.html',location.origin);link.searchParams.set('join',String(data));
+  try{await navigator.clipboard.writeText(link.href);window.siteToast?.('Group invitation copied.',{type:'success'});}
+  catch{await window.appUI.prompt('Copy this invitation link:',link.href);}
+}
+async function suspendMember(id,hidden=false){
+  if(!id||id===activeGroup()?.created_by)return;
+  const duration=await window.appUI.prompt('Suspend for how many minutes? Example: 60, 1440, 10080','60');
+  if(duration===null)return;const minutes=Number(duration);
+  if(!Number.isInteger(minutes)||minutes<1||minutes>525600)throw Error('Choose 1 to 525600 minutes.');
+  const {error}=await supabase.rpc('suspend_chat_group_member',{p_group:state.activeGroupId,p_member:id,p_minutes:minutes,p_hidden:hidden});
+  if(error)throw error;window.siteToast?.('Suspension applied.',{type:'success'});
+}
+async function liftMemberRestriction(id){
+  const {error}=await supabase.rpc('lift_chat_group_suspension',{p_group:state.activeGroupId,p_member:id});
+  if(error)throw error;window.siteToast?.('Restrictions lifted.',{type:'success'});
+}
+async function joinFromInvitation(token){
+  if(!/^[0-9a-f]{64}$/.test(token))throw Error('Invalid invite link.');
+  if(!state.user){location.href='login.html?next='+encodeURIComponent('chat.html?join='+token);return;}
+  const {data,error}=await supabase.rpc('join_chat_group_by_invite',{p_token:token});
+  if(error)throw error;
+  history.replaceState({},'',location.pathname+'?group='+encodeURIComponent(String(data)));
+  await loadAllChatData();renderGroups();
+  if(data&&state.groups.some(g=>g.id===data))await selectGroup(data);
+  window.siteToast?.('Joined the group.',{type:'success'});
+}
+
 async function saveGroupPermissions(){
-  const group=activeGroup();if(!group||!isOwnerOfActiveGroup())return;
-  const settings={...(group.settings||{}),
+  const group=activeGroup(),owner=isOwnerOfActiveGroup();
+  if(!group||!(owner||(groupMemberRole()==='admin'&&group.settings?.allow_admin_manage_settings===true)))return;
+  const settings={
     only_admins_post:$("groupAdminsOnly").checked,
     allow_media:$("groupAllowMedia").checked,
     allow_polls:$("groupAllowPolls").checked,
-    slow_mode_seconds:Number($("groupSlowMode").value)||0};
-  const {error}=await supabase.from("chat_threads").update({settings,updated_at:new Date().toISOString()})
-    .eq("id",group.id).eq("created_by",state.user.id);
+    slow_mode_seconds:Number($("groupSlowMode").value)||0,
+    allow_members_add_members:$("groupAllowMembersAdd").checked,
+    allow_moderators_add_members:$("groupAllowModeratorsAdd").checked,
+    allow_admin_add_members:$("groupAllowAdminAdd").checked,
+    allow_invite_links:$("groupAllowInviteLinks").checked,
+    allow_admin_invite_links:$("groupAllowAdminInvites").checked};
+  if(owner)settings.allow_admin_manage_settings=$("groupAllowAdminSettings").checked;
+  const {data,error}=await supabase.rpc('update_chat_group_settings',{p_group:group.id,p_patch:settings});
   if(error)throw error;
-  group.settings=settings;
+  group.settings={...(group.settings||{}),...(data||{})};
   window.siteToast?.("Group permissions saved.",{type:"success"});
 }
 /* Chat header and contact pop-out use the same server-approved frame classes
@@ -602,7 +767,14 @@ function updateHeaderForGroup(g){
     $("groupAllowMedia").checked=settings.allow_media!==false;
     $("groupAllowPolls").checked=settings.allow_polls!==false;
     $("groupSlowMode").value=String(settings.slow_mode_seconds||0);
+    $("groupAllowMembersAdd").checked=settings.allow_members_add_members===true;
+    $("groupAllowModeratorsAdd").checked=settings.allow_moderators_add_members===true;
+    $("groupAllowAdminAdd").checked=settings.allow_admin_add_members!==false;
+    $("groupAllowInviteLinks").checked=settings.allow_invite_links!==false;
+    $("groupAllowAdminInvites").checked=settings.allow_admin_invite_links!==false;
+    $("groupAllowAdminSettings").checked=settings.allow_admin_manage_settings===true;
   }
+  updateGroupControlVisibility();
   $("chatAvatar").src=g.avatar_url||DEFAULT_GROUP_AVATAR;refreshChatAvatarFrames(null);$("chatName").textContent=g.name||'Group';$("directInfoActions").hidden=true;$("groupInfoSection").hidden=false;$("groupMembersSection").hidden=false;$("infoPanelTitle").textContent='Group details';}
 function refreshInfoProfile() {
   const group = activeGroup(), profile = profileFor(state.activeFriendId) || {};
@@ -610,7 +782,8 @@ function refreshInfoProfile() {
   refreshChatAvatarFrames(group?null:profile);
   $("infoName").textContent = group ? group.name || 'Group' : profile.display_name || 'Member';
   $("infoStatus").textContent = group ? group.description || 'Group conversation' : profile.username ? `@${profile.username}` : 'Private conversation';
-  $("editGroupBtn").hidden = !isOwnerOfActiveGroup();
+  const owner=isOwnerOfActiveGroup();
+  $("editGroupBtn").hidden=!(owner||(groupMemberRole()==='admin'&&group?.settings?.allow_admin_manage_settings===true));
 }
 function openConversationDetails() {
   if (!state.activeThreadId || state.loadingThread) return;
@@ -746,8 +919,10 @@ async function selectConversation({ friendId = '', groupId = '' }) {
   }
   const group = groupId ? state.groups.find(item => item.id === groupId) : null;
   if (groupId && !group) return;
+  if(groupRestrictionTimer)clearTimeout(groupRestrictionTimer);
+  previousGroupRestrictionMode=null;
   closeEditPanel(); cancelReply(); rememberDraft(); stopRecording(false); clearMediaPreview(); closeAttachMenu(); chatEnhancements.deactivate();
-  state.pinnedMessages=[];state.starred.clear();state.reactions.clear();renderPinnedMessages();
+  state.messages=[];state.pinnedMessages=[];state.starred.clear();state.reactions.clear();renderPinnedMessages();
   const selection = ++state.selection;
   void realtime.stop();
   state.activeFriendId = friendId; state.activeGroupId = groupId; state.canCompose=true;
@@ -764,6 +939,22 @@ async function selectConversation({ friendId = '', groupId = '' }) {
   $("chatMessages").innerHTML = '<div class="chat-no-messages" role="status">Loading conversation…</div>';
   setView('chat'); setHeaderStatus('Loading…');
   try {
+    if(group){
+      await loadGroupMembers(threadId);
+      let restriction;
+      try{restriction=await groupAccessStatus();}
+      catch(error){
+        state.canCompose=false;state.loadingThread=false;updateComposer();
+        $("chatMessages").textContent='Unable to verify group permissions. Try reopening this group.';
+        reportAppError(error,'Group access unavailable');return;
+      }
+      if(selection!==state.selection)return;
+      if(restriction==='hidden'){
+        state.canCompose=false;state.loadingThread=false;updateComposer();
+        $("chatMessages").textContent='Your access to group messages is temporarily suspended. The group will become visible when the restriction expires or an admin lifts it.';
+        return;
+      }
+    }
     await loadMessages(threadId, selection);
     if (selection !== state.selection) return;
     await loadPinnedMessages(threadId);
@@ -772,7 +963,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
     if (selection !== state.selection) return;
     renderMessages({preserveScroll:true});
     void refreshReactions(threadId).catch(error=>console.warn("Chat reactions unavailable:",error));
-    if (group) await loadGroupMembers(threadId);
+    if (group)updateGroupControlVisibility();
     if (selection !== state.selection) return;
     state.loadingThread = false; updateComposer();
     void chatEnhancements.activate(state.user.id,threadId,friendId).then(()=>{
@@ -795,6 +986,8 @@ const selectFriend = id => selectConversation({ friendId: id });
 const selectGroup = id => selectConversation({ groupId: id });
 function leaveConversation() {
   closeEditPanel(); cancelReply(); rememberDraft(); ++state.selection; void realtime.stop(); chatEnhancements.deactivate();
+  if(groupRestrictionTimer)clearTimeout(groupRestrictionTimer);
+  groupRestrictionTimer=null;previousGroupRestrictionMode=null;
   state.activeThreadId = state.activeFriendId = state.activeGroupId = '';
   state.messages = [];state.pinnedMessages=[];state.starred.clear();state.reactions.clear();renderPinnedMessages(); state.loadingThread = false; updateComposer(); setView('list');
 }
@@ -984,7 +1177,26 @@ function openModal(id){const dialog=$(id);if(!dialog)return;dialog.showModal();d
 function closeModal(id){$(id)?.close();document.body.classList.remove('modal-open');}
 function renderGroupPicker(){const target=$("groupMemberPicker");if(!target)return;target.innerHTML=state.friends.map(id=>{const p=profileFor(id)||{};return `<label class="chat-picker-row"><input type="checkbox" value="${id}">${verifiedAvatar(p.avatar_url||DEFAULT_AVATAR,p,{size:"sm",alt:""})}<span><strong>${escapeHTML(p.display_name||'Member')}</strong><small>${escapeHTML(p.username||'')}</small></span></label>`}).join('');$("groupPickerEmpty").hidden=state.friends.length!==0;}
 async function createGroup(){const name=($("newGroupName").value||'').trim();const selected=[...document.querySelectorAll('#groupMemberPicker input:checked')].map(i=>i.value);if(!name)throw new Error('Enter a group name.');if(!selected.length)throw new Error('Choose at least one friend.');const id=crypto.randomUUID(),now=new Date().toISOString();const thread=await supabase.from('chat_threads').insert({id,name,is_group:true,created_by:state.user.id,created_at:now,updated_at:now,settings:{}}).select().single();if(thread.error)throw thread.error;const members=[...new Set([state.user.id,...selected])].map(user_id=>({id:crypto.randomUUID(),thread_id:id,user_id,role:user_id===state.user.id?'owner':'member',joined_at:now,tags:[]}));const result=await supabase.from('chat_members').insert(members);if(result.error){await supabase.from('chat_threads').delete().eq('id',id);throw result.error;}closeModal('friendPickerModal');await loadAllChatData();renderGroups();await selectGroup(id);}
-async function editGroup(){const group=activeGroup();if(!group||!isOwnerOfActiveGroup())return;const patch={name:($("groupNameInput").value||'').trim().slice(0,80),description:($("groupDescriptionInput").value||'').trim().slice(0,300),updated_at:new Date().toISOString()};if(!patch.name)throw new Error('Group name is required.');if($("groupAvatarInput")?.files?.[0])patch.avatar_url=await uploadMedia($("groupAvatarInput").files[0],`group-avatars/${state.user.id}`);const result=await supabase.from('chat_threads').update(patch).eq('id',group.id).eq('created_by',state.user.id);if(result.error)throw result.error;Object.assign(group,patch);updateHeaderForGroup(group);refreshInfoProfile();renderGroups();$("groupEditor").hidden=true;}
+async function editGroup(){
+  const group=activeGroup(),owner=isOwnerOfActiveGroup();
+  if(!group||!(owner||(groupMemberRole()==='admin'&&group.settings?.allow_admin_manage_settings===true)))return;
+  const name=($("groupNameInput").value||'').trim().slice(0,80);
+  const description=($("groupDescriptionInput").value||'').trim().slice(0,300);
+  if(!name)throw Error('Group name is required.');
+  let avatarUrl=null;
+  if(owner&&$("groupAvatarInput")?.files?.[0])
+    avatarUrl=await uploadMedia($("groupAvatarInput").files[0],`group-avatars/${state.user.id}`);
+  const change=await supabase.rpc('update_chat_group_details',{p_group:group.id,p_name:name,p_description:description});
+  if(change.error)throw change.error;
+  if(avatarUrl){
+    const imageUpdate=await supabase.from('chat_threads').update({avatar_url:avatarUrl})
+      .eq('id',group.id).eq('created_by',state.user.id);
+    if(imageUpdate.error)throw imageUpdate.error;
+    group.avatar_url=avatarUrl;
+  }
+  group.name=name;group.description=description;
+  updateHeaderForGroup(group);refreshInfoProfile();renderGroups();$("groupEditor").hidden=true;
+}
 async function editMemberTags(memberId){if(!isOwnerOfActiveGroup())return;const member=(state.groupMembers.get(state.activeGroupId)||[]).find(m=>m.id===memberId);if(!member)return;const raw=await window.appUI.prompt('Member tags for this group, separated by commas:',(member.tags||[]).join(', '));if(raw===null)return;const tags=[...new Set(raw.split(',').map(t=>t.trim()).filter(Boolean).slice(0,8))];const result=await supabase.from('chat_members').update({tags}).eq('id',memberId).eq('thread_id',state.activeGroupId);if(result.error)throw result.error;member.tags=tags;renderGroupMembers();}
 async function toggleChatMemberFlag(kind){const threadId=state.activeThreadId;if(!threadId)return;const existing=await supabase.from('chat_members').select('is_muted,is_pinned').eq('thread_id',threadId).eq('user_id',state.user.id).maybeSingle();if(existing.error)throw existing.error;if(!existing.data){window.siteToast?.('Pin and mute settings are currently available for group memberships.',{type:'info',title:'Chat'});return;}const key=kind==='mute'?'is_muted':'is_pinned';const next=!Boolean(existing.data[key]);const result=await supabase.from('chat_members').update({[key]:next}).eq('thread_id',threadId).eq('user_id',state.user.id);if(result.error)throw result.error;const group=activeGroup();if(group)group[key]=next;renderGroups();window.siteToast?.(`${kind==='mute'?'Notifications':'Chat'} ${next?'updated':'restored'}.`,{type:'info',title:'Chat'});}
 function setupTabs(){const tabs=document.querySelectorAll('.chat-tab'),panels=document.querySelectorAll('.chat-tab-panel');tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(t=>{const a=t===tab;t.classList.toggle('active',a);t.setAttribute('aria-selected',String(a));});panels.forEach(p=>p.hidden=p.dataset.panel!==tab.dataset.tab);$("peopleSearchPanel").hidden=true;}));}
@@ -1002,6 +1214,10 @@ function setupEvents(){
     const id=e.target.closest('[data-starred-jump]')?.dataset.starredJump;
     if(id){closeModal('chatStarredModal');void jumpToPinned(id).catch(err=>reportAppError(err,'Saved message unavailable'));}
   });
+  $("groupLeaveBtn")?.addEventListener('click',()=>void leaveCurrentGroup().catch(e=>reportAppError(e,'Unable to leave group')));
+  $("groupAddMembersBtn")?.addEventListener('click',()=>void addPeopleToGroup().catch(e=>reportAppError(e,'Unable to add people')));
+  $("groupShareInviteBtn")?.addEventListener('click',()=>void shareGroupInvite().catch(e=>reportAppError(e,'Invite link unavailable')));
+  $("groupUnbanBtn")?.addEventListener('click',()=>void unbanGroupMember().catch(e=>reportAppError(e,'Unable to unban member')));
   $("saveGroupPermissions")?.addEventListener("click",()=>void saveGroupPermissions()
     .catch(error=>reportAppError(error,"Unable to save group permissions")));
   $("chatPinnedBar")?.addEventListener("click",e=>{const b=e.target.closest("[data-pinned-id]");if(b)void jumpToPinned(b.dataset.pinnedId).catch(err=>reportAppError(err,"Pinned message unavailable"));});
@@ -1108,6 +1324,10 @@ function setupEvents(){
   document.querySelectorAll('[data-close-modal]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.closeModal))); document.querySelectorAll('[data-chat-setting]').forEach(i=>i.addEventListener('change',()=>{state.settings[i.dataset.chatSetting]=i.checked;saveSettings();}));
   $("peopleSearchToggle")?.addEventListener('click',()=>{$("peopleSearchPanel").hidden=!$("peopleSearchPanel").hidden;if(!$("peopleSearchPanel").hidden){$("peopleSearch").focus();renderPeopleResults();}}); $("newGroupBtn")?.addEventListener('click',()=>{renderGroupPicker();openModal('friendPickerModal');}); $("friendPickerClose")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCancel")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCreate")?.addEventListener('click',()=>createGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Create group'})));
   $("groupMemberSearch")?.addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#groupMemberPicker .chat-picker-row').forEach(r=>r.hidden=!r.innerText.toLowerCase().includes(q));}); $("editGroupBtn")?.addEventListener('click',()=>{const g=activeGroup();if(g){$("groupAvatarPreview").src=g.avatar_url||DEFAULT_GROUP_AVATAR;$("groupNameInput").value=g.name||'';$("groupDescriptionInput").value=g.description||'';$("groupEditor").hidden=false;}}); $("groupAvatarInput")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)$("groupAvatarPreview").src=URL.createObjectURL(f);}); $("cancelGroupBtn")?.addEventListener('click',()=>{$("groupEditor").hidden=true;}); $("saveGroupBtn")?.addEventListener('click',()=>editGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Group settings'}))); $("infoGroupMembers")?.addEventListener('click',e=>{
+    const suspend=e.target.closest('[data-group-suspend]');
+    if(suspend)void suspendMember(suspend.dataset.groupSuspend,suspend.dataset.hidden==='true').catch(err=>reportAppError(err,'Unable to suspend member'));
+    const lift=e.target.closest('[data-group-lift]');
+    if(lift)void liftMemberRestriction(lift.dataset.groupLift).catch(err=>reportAppError(err,'Unable to lift restriction'));
     const b=e.target.closest('[data-edit-member-tags]');
     if(b)editMemberTags(b.dataset.editMemberTags).catch(err=>window.siteToast?.(err.message,{type:'error',title:'Member tag'}));
     const remove=e.target.closest('[data-group-remove]');
@@ -1164,7 +1384,7 @@ function setupEvents(){
 }
 async function handleRequests(e){const b=e.target.closest('button[data-request]');if(!b)return;const row=state.friendships.find(r=>r.id===b.dataset.id);if(!row)return;if(b.dataset.request==='accept'){const r=await supabase.from('friendships').update({status:'accepted',updated_at:new Date().toISOString()}).eq('id',row.id);if(r.error)throw r.error;}else{const r=await supabase.from('friendships').delete().eq('id',row.id);if(r.error)throw r.error;}await loadAllChatData();renderRequests();renderBlocked();await renderFriends();renderPeopleResults();}
 
-async function boot(){setupTabs();setupEvents();chatEnhancements.setup();setupChatVoicePlayers();state.settings=readSettings();applySettings();state.user=await getCurrentUserWithRole();if(!state.user){$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}const verifiedResult=await supabase.from('profiles')
+async function boot(){setupTabs();setupEvents();chatEnhancements.setup();setupChatVoicePlayers();state.settings=readSettings();applySettings();state.user=await getCurrentUserWithRole();if(!state.user){const invite=new URLSearchParams(location.search).get('join');if(invite&&/^[0-9a-f]{64}$/.test(invite)){location.replace('login.html?next='+encodeURIComponent('chat.html?join='+invite));return;}$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}const verifiedResult=await supabase.from('profiles')
     .select('is_verified,verification_tier,verification_expires_at').eq('id',state.user.id).maybeSingle();
     state.verified=Boolean(verifiedLevel(verifiedResult.data));
     document.body.dataset.chatVerified=String(state.verified);
@@ -1173,5 +1393,5 @@ async function boot(){setupTabs();setupEvents();chatEnhancements.setup();setupCh
     state.settings={...DEFAULT_SETTINGS,...preferences.chat};
     if(!state.verified)state.settings.autoTranslate=false;
     applySettings();
-    $("chatTranslateLanguage").value=state.settings.translateLanguage||'en';document.documentElement.dataset.groupTags=preferences.groups?.showMemberTags===false?"hidden":"visible";await loadAllChatData();const staffPermission=await supabase.rpc('can_start_staff_dm');state.staffDMAllowed=staffPermission.data===true&&!staffPermission.error;renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('user'))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
+    $("chatTranslateLanguage").value=state.settings.translateLanguage||'en';document.documentElement.dataset.groupTags=preferences.groups?.showMemberTags===false?"hidden":"visible";await loadAllChatData();const staffPermission=await supabase.rpc('can_start_staff_dm');state.staffDMAllowed=staffPermission.data===true&&!staffPermission.error;renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('join'))await joinFromInvitation(params.get('join')).catch(err=>reportAppError(err,'Unable to join group'));else if(params.get('user'))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
 boot().catch(err=>{reportAppError(err,'Chat initialization failed');if($("chatMessages"))$("chatMessages").innerHTML=`<div class="chat-no-messages">Unable to load chats right now. ${escapeHTML(err.message||'Please try again.')}</div>`;});

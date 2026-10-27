@@ -600,6 +600,9 @@ function setupSearch() {
   const input = document.getElementById("searchInput");
   if (!input) return;
   const run = bindSearch(input, value => { state.searchTerm = value.trim(); void performSearch(); });
+  const incoming=new URLSearchParams(location.search).get("search");
+  if(incoming){input.value=incoming.slice(0,160);state.searchTerm=input.value.trim();void performSearch();}
+
   document.getElementById("searchBtn")?.addEventListener("click", () => { run(); document.getElementById("latest")?.scrollIntoView({ behavior: "smooth" }); });
 }
 
