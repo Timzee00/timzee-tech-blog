@@ -29,7 +29,7 @@ test("three distinct, labeled, live-updating groups have unique element IDs",()=
 
 test("active speakers, other speakers and listeners are exclusive categories",()=>{
  const begin=source.indexOf("function renderPeople(){");
- const end=source.indexOf("function setSpeaking(",begin);
+ const end=source.indexOf("async function authenticateRoom(",begin);
  assert.ok(begin>0&&end>begin);
  const containers=new Map();
  const $=id=>{
