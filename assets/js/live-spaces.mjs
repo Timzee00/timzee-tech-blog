@@ -230,6 +230,9 @@ async function createRoom(event){
 async function openRoom(id,{enableMic=false,joinImmediately=false}={}){
  if(!validId(id))return;
  await leave();
+ state.participants=[];
+ state.activeSpeakerIds.clear();
+ showIdleStage();
  state.roomId=id;
  $("spacesDiscovery").hidden=true;$("spaceDetail").hidden=false;
  $("spaceTitle").textContent="Loading Space…";$("spaceSourceLinks").replaceChildren();
@@ -309,10 +312,6 @@ function configureControls(){
   room?.speaking_mode==="open"?"Join once and your mic activates after permission.":
   "Join to listen; ask the host before speaking.";
  $("spaceJoin").textContent=host?"🎙 Reconnect as host":"🎙 Join live";
- $("spaceStageHint").textContent=state.joined?
-   (state.role==="listener"?"You're in the audience. Enjoy the conversation.":
-     liveMic?"Your voice is on air":"Your mic is muted"):
-   room?.status==="scheduled"?"This Space hasn't started yet.":"Join to listen and take part.";
  $("spaceAsk").hidden=!state.joined||state.role!=="listener"||!room?.allow_requests;
  // Hosts also need a recovery path when their audio connection drops.
  const reconnect=$("spaceReconnect");
@@ -372,8 +371,18 @@ function renderPeople(){
  $("spaceActiveCount").textContent=active.length+" speaking";
  $("spaceSpeakerCount").textContent=ready.length+" ready";
  $("spaceListenerCount").textContent=String(listeners.length);
+ if(!active.length){
+  const empty=el("div","","space-no-active-speaker");
+  const art=el("span","🎙","space-no-active-icon");
+  art.setAttribute?.("aria-hidden","true");
+  empty.append(
+   art,
+   el("strong","No active speaker","space-no-active-title"),
+   el("span","It's quiet for now. Someone will light up this stage when they start speaking.","space-no-active-description")
+  );
+  $("spacesActiveSpeakers").append(empty);
+ }
  for(const [id,items,label] of [
-  ["spacesActiveSpeakers",active,"No one is talking right now."],
   ["spacesSpeakers",ready,"No other speakers waiting."],
   ["spacesListeners",listeners,"No listeners yet."]]){
   if(!items.length)$(id).append(el("p",label,"space-empty-group"));
@@ -386,12 +395,24 @@ function renderPeople(){
    void refreshSpeaking().finally(()=>{state.refreshingSpeaking=false});
  }
 }
+function showIdleStage(hint="When somebody starts talking, they will appear here."){
+ const avatar=$("activeSpeakerAvatar");
+ avatar.classList.remove("speaking");
+ avatar.textContent="🎙";
+ $("activeSpeaker").textContent="No active speaker";
+ $("activeSpeakerLabel").textContent="STAGE IS QUIET";
+ $("spaceStageHint").textContent=hint;
+ document.querySelector(".speaker-stage")?.classList.add("is-idle");
+}
 function setSpeaking(participantId,active=true){
  const profile=state.profiles.get(String(participantId||"").replace(/^u_/,""));
  const name=profile?.display_name||profile?.username||"Speaker";
  $("activeSpeaker").textContent=name;
  $("activeSpeakerAvatar").innerHTML=verifiedAvatar(profile?.avatar_url,profile,{size:"xl",alt:name+" avatar"});
  $("activeSpeakerAvatar").classList.toggle("speaking",active);
+ $("activeSpeakerLabel").textContent=active?"SPEAKING NOW":"ON STAGE";
+ $("spaceStageHint").textContent=active?"Live voice activity":"Waiting for someone to speak";
+ document.querySelector(".speaker-stage")?.classList.toggle("is-idle",!active);
 }
 async function authenticateRoom(){
  const session=success(await supabase.auth.getSession()).session;
@@ -420,11 +441,7 @@ async function startAudio({enableMic=false}={}){
  livekit.on(sdk.RoomEvent.ActiveSpeakersChanged,speakers=>{
   state.activeSpeakerIds=new Set(speakers.map(p=>String(p.identity||"").replace(/^u_/,"")).filter(validId));
   if(speakers.length)setSpeaking(speakers[0].identity,true);
-  else{
-   $("activeSpeakerAvatar").classList.remove("speaking");
-   $("activeSpeaker").textContent="Nobody speaking right now";
-   $("activeSpeakerAvatar").textContent="🎙";
-  }
+  else showIdleStage();
   renderPeople();
  });
  livekit.on(sdk.RoomEvent.DataReceived,(payload,participant,kind,topic)=>{
@@ -443,8 +460,7 @@ async function startAudio({enableMic=false}={}){
   if(state.livekit!==livekit)return;
   state.livekit=null;
   state.activeSpeakerIds.clear();
-  $("activeSpeakerAvatar").classList.remove("speaking");
-  $("activeSpeaker").textContent="Audio disconnected";
+  showIdleStage("Audio disconnected. Reconnect to hear this Space.");
   renderPeople();
   $("spaceAudioElements").replaceChildren();
   configureControls();
