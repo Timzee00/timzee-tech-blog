@@ -191,7 +191,7 @@ async function setPersonalChatView({archived=null,muted=null,clear=false}={}){
   return data;
 }
 async function clearCurrentChat(){
-  const name=activeGroup()?.name||profileFor(state.activeFriendId)?.display_name||'this conversation';
+  const name=activeGroup()?.name||profileFor(state.activeFriendId)?.username||'this conversation';
   if(!await window.appUI.confirm('Clear '+name+' only for your account? This hides all previous messages for you, not for the other person or group members. This cannot be undone.'))return;
   await setPersonalChatView({clear:true});
   window.siteToast?.('Chat cleared for you only. Other participants keep their history.',{type:'success'});
@@ -270,8 +270,8 @@ function renderFriends() {
   const previewMap=state.previews;
   const rows=[...new Set([...state.friends,...state.directPartners])].map(friendId=>({friendId,profile:profileFor(friendId)||{},preview:previewMap.get(threadForFriend(friendId))||null}));
   const q=state.searchTerm.trim().toLowerCase();
-  const filtered=rows.filter(({friendId,profile})=>!isArchived(threadForFriend(friendId))&&(!q||[profile.display_name,profile.username,profile.email].some(v=>String(v||"").toLowerCase().includes(q)))).sort((a,b)=>new Date(b.preview?.created_at||0)-new Date(a.preview?.created_at||0));
-  target.innerHTML=filtered.length?filtered.map(({friendId,profile,preview})=>`<button class="chat-list-row ${friendId===state.activeFriendId?'active':''}" type="button" data-friend-id="${friendId}">${verifiedAvatar(profile.avatar_url||DEFAULT_AVATAR,profile,{size:"md"})}<span class="chat-list-copy"><strong>${verifiedName(profile.display_name||"Member",profile,{compact:true})}${["super","admin","moderator"].includes(profile.role)?' <span class="chat-staff-label">Staff</span>':''}</strong><small>${escapeHTML(preview?.body||(preview?.media_type?`Sent ${preview.media_type}`:'Start a conversation'))}</small></span><span class="chat-list-time">${preview?chatTimeAgo(preview.created_at):''}</span></button>`).join(''):`<div class="callout">${q?'No matching chats.':'No friends yet. Use Find people to connect.'}</div>`;
+  const filtered=rows.filter(({friendId,profile})=>!isArchived(threadForFriend(friendId))&&(!q||[profile.username,profile.username,profile.email].some(v=>String(v||"").toLowerCase().includes(q)))).sort((a,b)=>new Date(b.preview?.created_at||0)-new Date(a.preview?.created_at||0));
+  target.innerHTML=filtered.length?filtered.map(({friendId,profile,preview})=>`<button class="chat-list-row ${friendId===state.activeFriendId?'active':''}" type="button" data-friend-id="${friendId}">${verifiedAvatar(profile.avatar_url||DEFAULT_AVATAR,profile,{size:"md"})}<span class="chat-list-copy"><strong>${verifiedName(profile.username||"Member",profile,{compact:true})}${["super","admin","moderator"].includes(profile.role)?' <span class="chat-staff-label">Staff</span>':''}</strong><small>${escapeHTML(preview?.body||(preview?.media_type?`Sent ${preview.media_type}`:'Start a conversation'))}</small></span><span class="chat-list-time">${preview?chatTimeAgo(preview.created_at):''}</span></button>`).join(''):`<div class="callout">${q?'No matching chats.':'No friends yet. Use Find people to connect.'}</div>`;
   renderArchived();
 }
 function renderGroups() { const badge=$("groupsBadge");if(badge){badge.textContent=String(state.groups.filter(g=>!isArchived(g.id)).length);badge.hidden=!state.groups.some(g=>!isArchived(g.id));}
@@ -289,7 +289,7 @@ function renderArchived(){
     const threadId=threadForFriend(friendId);
     if(!isArchived(threadId))continue;
     const p=profileFor(friendId)||{};
-    const label=p.display_name||p.username||'Member';
+    const label=p.username||p.username||'Member';
     rows.push({id:friendId,kind:'friend',label,photo:p.avatar_url||DEFAULT_AVATAR,muted:isMuted(threadId)});
   }
   for(const group of state.groups){
@@ -306,11 +306,11 @@ function renderArchived(){
 }
 function renderRequests() {
   const incoming=$("friendRequests"),outgoing=$("friendRequestsSent"),badge=$("requestsBadge"); if(badge){badge.textContent=String(state.requests.length);badge.hidden=!state.requests.length;}
-  const name=id=>verifiedName(profileFor(id)?.display_name||'Member',profileFor(id),{compact:true});
+  const name=id=>verifiedName(profileFor(id)?.username||'Member',profileFor(id),{compact:true});
   if(incoming)incoming.innerHTML=state.requests.length?state.requests.map(r=>`<div class="chat-request-row">${verifiedAvatar(profileFor(r.requester_id)?.avatar_url||DEFAULT_AVATAR,profileFor(r.requester_id),{size:"sm"})}<div><strong>${name(r.requester_id)}</strong><small>Friend request</small></div><div class="inline-actions"><button class="btn sm" data-request="accept" data-id="${r.id}">Accept</button><button class="btn ghost sm" data-request="decline" data-id="${r.id}">Decline</button></div></div>`).join(''):`<div class="callout">No incoming requests.</div>`;
   if(outgoing)outgoing.innerHTML=state.sentRequests.length?state.sentRequests.map(r=>`<div class="chat-request-row">${verifiedAvatar(profileFor(r.addressee_id)?.avatar_url||DEFAULT_AVATAR,profileFor(r.addressee_id),{size:"sm"})}<div><strong>${name(r.addressee_id)}</strong><small>Request sent</small></div><button class="btn ghost sm" data-request="cancel" data-id="${r.id}">Cancel</button></div>`).join(''):`<div class="callout">No outgoing requests.</div>`;
 }
-function renderBlocked() { const badge=$("blockedBadge");if(badge){badge.textContent=String(state.blocked.length);badge.hidden=!state.blocked.length;} const target=$("blockedList"); if(!target)return; target.innerHTML=state.blocked.length?state.blocked.map(id=>`<div class="chat-request-row">${verifiedAvatar(profileFor(id)?.avatar_url||DEFAULT_AVATAR,profileFor(id),{size:"sm",alt:""})}<div><strong>${escapeHTML(profileFor(id)?.display_name||'Member')}</strong><small>Blocked</small></div><button class="btn ghost sm" data-unblock="${id}">Unblock</button></div>`).join(''):`<div class="callout">No blocked users.</div>`; }
+function renderBlocked() { const badge=$("blockedBadge");if(badge){badge.textContent=String(state.blocked.length);badge.hidden=!state.blocked.length;} const target=$("blockedList"); if(!target)return; target.innerHTML=state.blocked.length?state.blocked.map(id=>`<div class="chat-request-row">${verifiedAvatar(profileFor(id)?.avatar_url||DEFAULT_AVATAR,profileFor(id),{size:"sm",alt:""})}<div><strong>${escapeHTML(profileFor(id)?.username||'Member')}</strong><small>Blocked</small></div><button class="btn ghost sm" data-unblock="${id}">Unblock</button></div>`).join(''):`<div class="callout">No blocked users.</div>`; }
 function renderPeopleResults() {
   const target=$("peopleResults"); if(!target)return;
   const q=state.peopleTerm.trim().toLowerCase();
@@ -334,7 +334,7 @@ function renderPeopleResults() {
          friend?'':p.allow_requests===false?'<span class="chip">Requests closed</span>':
            '<button class="btn ghost sm" data-people-action="request" data-id="'+p.id+'">Add friend</button>';
        return '<div class="chat-request-row">'+verifiedAvatar(p.avatar_url||DEFAULT_AVATAR,p,{size:"sm"})+
-         '<div><strong>'+verifiedName(p.display_name||p.username||"Member",p,{compact:true})+'</strong>'+
+         '<div><strong>'+verifiedName(p.username||p.username||"Member",p,{compact:true})+'</strong>'+
          '<small>'+escapeHTML(p.username||"")+'</small></div><div class="inline-actions">'+
          message+request+'</div></div>';
      }).join("")
@@ -411,7 +411,7 @@ function openForwardPicker(id){
   const target=$("chatForwardList");
   target.innerHTML=state.friends.map(friendId=>{
     const p=profileFor(friendId)||{};
-    return `<button class="chat-forward-choice" type="button" data-forward-friend="${friendId}">${escapeHTML(p.display_name||'Member')}</button>`;
+    return `<button class="chat-forward-choice" type="button" data-forward-friend="${friendId}">${escapeHTML(p.username||'Member')}</button>`;
   }).join('')+state.groups.map(g=>`<button class="chat-forward-choice" type="button" data-forward-group="${g.id}">Group · ${escapeHTML(g.name||'Group')}</button>`).join('')||
     '<div class="callout">No available conversations.</div>';
   openModal("chatForwardModal");
@@ -572,7 +572,7 @@ function renderMessages({ preserveScroll = false } = {}) { const target=$("chatM
  data-message-deleted="${deleted?'true':'false'}" data-can-pin="${canPin?'true':'false'}"
  data-message-created="${escapeHTML(asUtcTimestamp(m.created_at))}"
  data-message-pinned="${m.pinned_at?'true':'false'}" data-starred="${state.starred.has(m.id)?'true':'false'}"
- data-message-author="${escapeHTML(self?'You':p.display_name||'Member')}">${!self&&state.activeGroupId?`<a class="chat-message-author" href="profile.html?id=${encodeURIComponent(m.sender_id)}" title="View member profile">${verifiedName(p.display_name||'Member',p,{compact:true})}</a>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${state.starred.has(m.id)?'<span class="chat-star-indicator">★ Starred</span>':''}${m.forwarded_from?'<span class="chat-forwarded-indicator">↗ Forwarded</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}${deleted?'':reactionBadges(m)}${!deleted&&String(m.body||'').startsWith('📊 Poll:')?`<div class="chat-bubble-poll" data-chat-poll-id="${escapeHTML(m.id)}"></div>`:''}${state.translations.has(m.id+'::'+state.settings.translateLanguage)?`<div class="chat-message-translation">${escapeHTML(state.translations.get(m.id+'::'+state.settings.translateLanguage))}</div>`:''}<div class="chat-message-meta"><span>${chatTimeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop;
+ data-message-author="${escapeHTML(self?'You':p.username||'Member')}">${!self&&state.activeGroupId?`<a class="chat-message-author" href="profile.html?id=${encodeURIComponent(m.sender_id)}" title="View member profile">${verifiedName(p.username||'Member',p,{compact:true})}</a>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${state.starred.has(m.id)?'<span class="chat-star-indicator">★ Starred</span>':''}${m.forwarded_from?'<span class="chat-forwarded-indicator">↗ Forwarded</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}${deleted?'':reactionBadges(m)}${!deleted&&String(m.body||'').startsWith('📊 Poll:')?`<div class="chat-bubble-poll" data-chat-poll-id="${escapeHTML(m.id)}"></div>`:''}${state.translations.has(m.id+'::'+state.settings.translateLanguage)?`<div class="chat-message-translation">${escapeHTML(state.translations.get(m.id+'::'+state.settings.translateLanguage))}</div>`:''}<div class="chat-message-meta"><span>${chatTimeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop;
   target.querySelectorAll("[data-chat-poll-id]").forEach(host=>{
     void mountPoll(host,'chat',host.dataset.chatPollId);
   });
@@ -596,11 +596,11 @@ function renderGroupMembers(){
     return `<div class="group-member-row">
       ${verifiedAvatar(p.avatar_url||DEFAULT_AVATAR,p,{size:"md"})}
       <div class="group-member-copy">
-        <strong><a href="profile.html?id=${encodeURIComponent(m.user_id)}" title="View member profile">${verifiedName(p.display_name||'Member',p,{compact:true})}</a>${role!=='member'?' · '+escapeHTML(role):''}</strong>
+        <strong><a href="profile.html?id=${encodeURIComponent(m.user_id)}" title="View member profile">${verifiedName(p.username||'Member',p,{compact:true})}</a>${role!=='member'?' · '+escapeHTML(role):''}</strong>
         <div class="member-tag-list">${tags.map(tag=>`<span class="member-tag">${escapeHTML(tag)}</span>`).join('')||'<span class="member-tag muted">No tag</span>'}</div>
       </div>
       ${owner?`<button class="btn ghost sm" data-edit-member-tags="${m.id}" type="button">Tags</button>`:''}
-      ${editable?`<select data-group-role="${m.user_id}" aria-label="Group role for ${escapeHTML(p.display_name||'Member')}">
+      ${editable?`<select data-group-role="${m.user_id}" aria-label="Group role for ${escapeHTML(p.username||'Member')}">
         ${['member','moderator','admin'].map(r=>`<option value="${r}" ${r===role?'selected':''}>${r}</option>`).join('')}
         </select>`:''}
       ${canModerate&&role!=='owner'&&m.user_id!==state.user.id?`<button class="btn ghost sm" type="button" data-group-suspend="${m.user_id}" data-hidden="false" aria-label="Suspend member from posting">Read-only</button><button class="btn ghost sm" type="button" data-group-suspend="${m.user_id}" data-hidden="true" aria-label="Hide group from suspended member">Hide</button><button class="btn ghost sm" type="button" data-group-lift="${m.user_id}">Lift</button>`:''}
@@ -753,7 +753,7 @@ async function unbanGroupMember(){
   const wrapper=document.createElement('div');wrapper.className='group-add-inline';
   const select=document.createElement('select');select.className='input';select.setAttribute('aria-label','Choose a friend to add');
   for(const id of candidates){
-    const opt=document.createElement('option');opt.value=id;opt.textContent=profileFor(id)?.display_name||profileFor(id)?.username||'Friend';select.add(opt);
+    const opt=document.createElement('option');opt.value=id;opt.textContent=profileFor(id)?.username||profileFor(id)?.username||'Friend';select.add(opt);
   }
   const username=document.createElement('input');username.className='input';username.type='search';
   username.maxLength=40;username.placeholder='Or add someone by @username';
@@ -840,7 +840,7 @@ function refreshChatAvatarFrames(profile){
      (classes?" "+classes:"");
  }
 }
-function updateHeaderForFriend(id){const p=profileFor(id)||{};$("chatAvatar").src=p.avatar_url||DEFAULT_AVATAR;refreshChatAvatarFrames(p);$("chatName").innerHTML=verifiedName(p.display_name||'Member',p,{compact:true})+
+function updateHeaderForFriend(id){const p=profileFor(id)||{};$("chatAvatar").src=p.avatar_url||DEFAULT_AVATAR;refreshChatAvatarFrames(p);$("chatName").innerHTML=verifiedName(p.username||'Member',p,{compact:true})+
     (["super","admin","moderator"].includes(p.role)?" · Staff":"");$("chatProfileBtn").href=`profile.html?id=${encodeURIComponent(id)}`;$("directInfoActions").hidden=false;$("groupInfoSection").hidden=true;$("groupMembersSection").hidden=true;$("infoPanelTitle").textContent='Chat details';}
 function updateHeaderForGroup(g){
   const panel=$("groupPermissionsPanel");
@@ -864,7 +864,7 @@ function refreshInfoProfile() {
   const group = activeGroup(), profile = profileFor(state.activeFriendId) || {};
   $("infoAvatar").src = group ? group.avatar_url || DEFAULT_GROUP_AVATAR : profile.avatar_url || DEFAULT_AVATAR;
   refreshChatAvatarFrames(group?null:profile);
-  $("infoName").textContent = group ? group.name || 'Group' : profile.display_name || 'Member';
+  $("infoName").textContent = group ? group.name || 'Group' : profile.username || 'Member';
   $("infoStatus").textContent = group ? group.description || 'Group conversation' : profile.username ? `@${profile.username}` : 'Private conversation';
   const owner=isOwnerOfActiveGroup();
   $("editGroupBtn").hidden=!(owner||(groupMemberRole()==='admin'&&group?.settings?.allow_admin_manage_settings===true));
@@ -964,7 +964,7 @@ function startLinkedReply(messageId){
   if(!m||m.deleted_at){window.siteToast?.("This message can no longer be replied to.",{type:"info"});return;}
   state.replyTo={
     id:m.id,threadId:state.activeThreadId,
-    author:m.sender_id===state.user.id?"You":profileFor(m.sender_id)?.display_name||"Member",
+    author:m.sender_id===state.user.id?"You":profileFor(m.sender_id)?.username||"Member",
     excerpt:String(m.body||m.media_type||"Attachment").slice(0,150)
   };
   renderReplyPreview();
@@ -973,7 +973,7 @@ function startLinkedReply(messageId){
 function replyQuoteHtml(m,map){
   if(!m.reply_to)return "";
   const parent=map.get(m.reply_to);
-  const author=parent?(parent.sender_id===state.user.id?"You":profileFor(parent.sender_id)?.display_name||"Member"):"Message";
+  const author=parent?(parent.sender_id===state.user.id?"You":profileFor(parent.sender_id)?.username||"Member"):"Message";
   const excerpt=parent?(parent.deleted_at?"Message unsent":String(parent.body||parent.media_type||"Attachment")):"Tap to view original message";
   return `<button type="button" class="chat-message-reply-ref" data-replied-id="${escapeHTML(m.reply_to)}" aria-label="Jump to replied message">
     <strong>${escapeHTML(author)}</strong><span>${escapeHTML(excerpt.slice(0,140))}</span></button>`;
@@ -1127,7 +1127,7 @@ const realtime = createChatRealtime(supabase, {
     if (threadId !== state.activeThreadId || selection !== state.selection) return;
     renderMessages({ preserveScroll: true });
     if (event === 'INSERT' && !exists && message.sender_id !== state.user.id && state.settings.notifications && !isCurrentChatMuted()) {
-      window.siteToast?.(`${profileFor(message.sender_id)?.display_name || 'New message'}: ${message.body || 'Attachment'}`, { type: 'info', title: 'New message' });
+      window.siteToast?.(`${profileFor(message.sender_id)?.username || 'New message'}: ${message.body || 'Attachment'}`, { type: 'info', title: 'New message' });
     }
   }
 });
@@ -1259,7 +1259,7 @@ async function sendMessage() {
 }
 function openModal(id){const dialog=$(id);if(!dialog)return;dialog.showModal();document.body.classList.add('modal-open');dialog.addEventListener('close',()=>document.body.classList.remove('modal-open'),{once:true});}
 function closeModal(id){$(id)?.close();document.body.classList.remove('modal-open');}
-function renderGroupPicker(){const target=$("groupMemberPicker");if(!target)return;target.innerHTML=state.friends.map(id=>{const p=profileFor(id)||{};return `<label class="chat-picker-row"><input type="checkbox" value="${id}">${verifiedAvatar(p.avatar_url||DEFAULT_AVATAR,p,{size:"sm",alt:""})}<span><strong>${escapeHTML(p.display_name||'Member')}</strong><small>${escapeHTML(p.username||'')}</small></span></label>`}).join('');$("groupPickerEmpty").hidden=state.friends.length!==0;}
+function renderGroupPicker(){const target=$("groupMemberPicker");if(!target)return;target.innerHTML=state.friends.map(id=>{const p=profileFor(id)||{};return `<label class="chat-picker-row"><input type="checkbox" value="${id}">${verifiedAvatar(p.avatar_url||DEFAULT_AVATAR,p,{size:"sm",alt:""})}<span><strong>${escapeHTML(p.username||'Member')}</strong><small>${escapeHTML(p.username||'')}</small></span></label>`}).join('');$("groupPickerEmpty").hidden=state.friends.length!==0;}
 async function createGroup(){const name=($("newGroupName").value||'').trim();const selected=[...document.querySelectorAll('#groupMemberPicker input:checked')].map(i=>i.value);if(!name)throw new Error('Enter a group name.');if(!selected.length)throw new Error('Choose at least one friend.');const id=crypto.randomUUID(),now=new Date().toISOString();const thread=await supabase.from('chat_threads').insert({id,name,is_group:true,created_by:state.user.id,created_at:now,updated_at:now,settings:{}}).select().single();if(thread.error)throw thread.error;const members=[...new Set([state.user.id,...selected])].map(user_id=>({id:crypto.randomUUID(),thread_id:id,user_id,role:user_id===state.user.id?'owner':'member',joined_at:now,tags:[]}));const result=await supabase.from('chat_members').insert(members);if(result.error){await supabase.from('chat_threads').delete().eq('id',id);throw result.error;}closeModal('friendPickerModal');await loadAllChatData();renderGroups();await selectGroup(id);}
 async function editGroup(){
   const group=activeGroup(),owner=isOwnerOfActiveGroup();
