@@ -265,7 +265,7 @@
           const sellerResult = data.user_id
             ? await supabase
                 .from("public_profiles")
-                .select("id,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style,allow_messages,marketplace_whatsapp")
+                .select("id,display_name,username,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style,allow_messages,marketplace_whatsapp")
                 .eq("id", data.user_id)
                 .maybeSingle()
             : { data: null };
@@ -296,7 +296,7 @@
         document.getElementById("description").textContent = listing.description || "No description provided.";
         document.getElementById("viewCount").textContent = listing.view_count || 0;
 
-        const sellerName = (String(seller?.display_name || listing.seller_name || "Seller").replace(/<[^>]*>/g,"").replace(/[<>]/g,"").trim().slice(0,80)) || "Seller";
+        const sellerName = (String(seller?.username || "Seller").replace(/<[^>]*>/g,"").replace(/[<>]/g,"").trim().slice(0,80)) || "Seller";
         document.getElementById("sellerName").innerHTML = verifiedName(sellerName,seller,{compact:true});
         const sellerAvatarEl = document.getElementById("sellerAvatar");
         if (sellerAvatarEl) {
