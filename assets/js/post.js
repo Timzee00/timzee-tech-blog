@@ -20,7 +20,7 @@ import {
   createContentReport,
 } from "./data.js";
 import {fetchPostEngagement} from "./post-engagement.mjs";
-import {verifiedName,verifiedAvatar,verifiedCommentClass} from "./verified-identity.mjs";
+import {verifiedName,verifiedAvatar,verifiedCommentClass,publicIdentityName} from "./verified-identity.mjs";
 import { setupMentionInput, extractMentions, getMentionedUserIds } from "./mentions.js";
 import { uploadMedia } from "./media.js";
 import { fetchSettings } from "./settings.js";
@@ -204,7 +204,7 @@ function renderAuthActions() {
   if (state.user) {
     const label = document.createElement("span");
     label.className = "auth-meta";
-    label.textContent = getDisplayName(state.user);
+    label.textContent = state.user.user_metadata?.username || "Member";
     const profile = document.createElement("a");
     profile.className = "btn ghost";
     profile.href = `profile.html?id=${encodeURIComponent(state.user.id)}`;
@@ -249,7 +249,7 @@ function renderPost(data, post) {
     postDek.textContent = snippet;
   }
   document.getElementById("postMeta").innerHTML = `
-    <span>By ${escapeHTML(post.author_name || "Editor")}</span>
+    <span id="postPublicAuthor">By ${post.author_id ? "Member" : "Blipmood"}</span>
     <span>${formatDate(publishedAt)}</span>
     <span>${readingTime(post.content || "")}</span>
     <button type="button" class="btn ghost small" id="reportPostBtn">Report</button>
@@ -360,7 +360,7 @@ function renderAuthorMini(post) {
   const wrap = document.getElementById("authorMini");
   if (!wrap) return;
   const profile = state.authorProfile;
-  const name = profile?.display_name || post.author_name || "Editor";
+  const name = publicIdentityName(profile);
   const role = profile?.headline || "Contributor";
   // Identity is derived from the protected public profile, not post metadata.
   const badgeSet = buildAuthorBadges(profile);
@@ -385,7 +385,7 @@ function renderAuthorCard(post) {
   const card = document.getElementById("authorProfileCard");
   if (!card) return;
   const profile = state.authorProfile;
-  const name = profile?.display_name || post.author_name || "Editor";
+  const name = publicIdentityName(profile);
   const role = profile?.headline || "Contributor";
   // Shared identity renderer prevents cross-page badge mismatches.
   const badgeSet = buildAuthorBadges(profile);
@@ -495,7 +495,7 @@ function renderComments(comments) {
       const replyTarget = comment.reply_to ? byId.get(comment.reply_to) : null;
       const replySnippet = replyTarget
         ? `<div class="callout">Replying to ${escapeHTML(
-            replyTarget.author_name || "Member"
+            publicIdentityName(state.commentAuthors[replyTarget.author_id])
           )}: ${escapeHTML(clampText(stripHTML(replyTarget.body || ""), 90))}</div>`
         : "";
       const replyButton = mentionHandle
@@ -509,9 +509,9 @@ function renderComments(comments) {
           <div class="comment-meta"><span class="tz-comment-author">${comment.author_id ? verifiedAvatar(authorProfile?.avatar_url,authorProfile,{size:"sm",alt:""}) : ""}${
             comment.author_id
               ? `<a href="profile.html?id=${encodeURIComponent(comment.author_id)}">${verifiedName(
-                  comment.author_name || "Member",authorProfile,{compact:true}
+                  publicIdentityName(authorProfile),authorProfile,{compact:true}
                 )}</a>`
-              : verifiedName(comment.author_name || "Member",null,{compact:true})
+              : verifiedName("Member",null,{compact:true})
           }</span><span>${timeAgo(comment.created_at)}</span></div>
           ${replySnippet}
           <div>${safeBody}</div>
@@ -550,7 +550,7 @@ function bindCommentReplyButtons() {
         if (preview) {
           preview.classList.remove("hidden");
           preview.innerHTML = `
-            <span>Replying to ${escapeHTML(comment.author_name || "Member")}:</span>
+            <span>Replying to ${escapeHTML(publicIdentityName(state.commentAuthors[comment.author_id]))}:</span>
             <span>${escapeHTML(clampText(stripHTML(comment.body || ""), 90))}</span>
             <button type="button" class="btn ghost" id="cancelCommentReply">Cancel</button>
           `;
@@ -789,7 +789,7 @@ function setupCommentForm(post, comments) {
   }
 
   if (commentAs) {
-    commentAs.textContent = `Commenting as ${getDisplayName(state.user)}`;
+    commentAs.textContent = `Commenting as ${state.commentAuthors[state.user.id]?.username || state.user.user_metadata?.username || "Member"}`;
     commentAs.style.display = "block";
   }
 
@@ -842,7 +842,7 @@ function setupCommentForm(post, comments) {
         const newComment = {
           id: crypto.randomUUID(),
           post_id: post.id,
-          author_name: getDisplayName(state.user),
+          author_name: state.commentAuthors[state.user.id]?.username || state.user.user_metadata?.username || "Member",
           author_id: state.user.id,
           reply_to: commentReplyTo?.id || null,
           body: safeBody,
@@ -1161,6 +1161,8 @@ async function boot() {
     state.hasLiked=Boolean(user&&engagement?.likedPostIds?.includes(post.id));
     state.authorPostCount=Math.max(0,Number(authorCount?.count)||0);
     state.authorProfile=profileResult?.data||null;
+    const authorByline=document.getElementById("postPublicAuthor");
+    if(authorByline)authorByline.textContent="By "+(post.author_id?publicIdentityName(state.authorProfile):"Blipmood");
     state.comments=commentPage.items;
     state.commentCursor=commentPage.nextCursor;
     state.commentsHasMore=commentPage.hasMore;
