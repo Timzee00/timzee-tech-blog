@@ -22,7 +22,7 @@ function isPublishedAnnouncement(announcement, now = Date.now()) {
 function getAnnouncements() {
   return supabase
     .from("announcements")
-    .select("id,title,body,message,status,publish_at,created_at")
+    .select("id,title,body,message,banner_image_url,status,publish_at,created_at")
     .order("created_at", { ascending: false })
     .limit(12);
 }
@@ -30,6 +30,7 @@ function getAnnouncements() {
 function renderAnnouncementBanner(announcement) {
   // Retire an older announcement presentation when both site scripts load.
   document.getElementById("timzee-announcement-banner")?.remove();
+  document.getElementById("siteAnnouncementBackdrop")?.remove();
   const existing = document.getElementById("siteAnnouncementBanner");
   if (existing) existing.remove();
   displayedAnnouncementId = announcement?.id ? String(announcement.id) : null;
@@ -42,6 +43,9 @@ function renderAnnouncementBanner(announcement) {
   const banner = document.createElement("aside");
   banner.id = "siteAnnouncementBanner";
   banner.className = "site-announcement-banner";
+  const visual=typeof announcement.banner_image_url==="string"&&
+   /^https:\/\/[^\s<>"']{1,2048}$/i.test(announcement.banner_image_url);
+  if(visual)banner.classList.add("site-announcement-banner--visual");
   banner.setAttribute("role", "status");
 
   const content = document.createElement("div");
@@ -59,7 +63,15 @@ function renderAnnouncementBanner(announcement) {
   body.className = "site-announcement-body";
   body.textContent = getAnnouncementBody(announcement);
 
-  content.append(label, title, body);
+  if(visual){
+    const image=document.createElement("img");
+    image.className="site-announcement-art";
+    image.src=announcement.banner_image_url;
+    image.alt=title.textContent||"Blipmood announcement artwork";
+    image.loading="eager";
+    content.append(image);
+    if(getAnnouncementBody(announcement))content.append(label,title,body);
+  }else content.append(label,title,body);
 
   const actions = document.createElement("div");
   actions.className = "site-announcement-actions";
@@ -76,10 +88,20 @@ function renderAnnouncementBanner(announcement) {
   dismiss.addEventListener("click", () => {
     try { localStorage.setItem(BANNER_KEY, String(announcement.id)); } catch (_) { /* private mode */ }
     banner.remove();
+    document.getElementById("siteAnnouncementBackdrop")?.remove();
   });
 
   actions.append(viewLink, dismiss);
   banner.append(content, actions);
+  if(visual){
+    const backdrop=document.createElement("div");
+    backdrop.id="siteAnnouncementBackdrop";
+    backdrop.className="site-announcement-backdrop";
+    backdrop.addEventListener("click",()=>dismiss.click());
+    document.body.append(backdrop);
+    dismiss.textContent="✕";
+    dismiss.setAttribute("aria-label","Close graphic announcement");
+  }
   // A late network response must not push the entire page down on mobile.
   // Render as a dismissible, independently scrollable overlay.
   document.body.append(banner);
@@ -96,7 +118,7 @@ async function refreshAnnouncementBanner({ announceNew = false } = {}) {
     if (request !== announcementRequest) return; // Ignore older realtime responses.
     if (error) throw error;
     const now = Date.now();
-    const latest = (data || []).find((item) => isPublishedAnnouncement(item, now) && getAnnouncementBody(item));
+    const latest = (data || []).find((item) => isPublishedAnnouncement(item, now) && (getAnnouncementBody(item)||item.banner_image_url));
     const previousId = displayedAnnouncementId;
     renderAnnouncementBanner(latest || null);
     // Future/draft events should not repeat a toast about an older item.
@@ -173,6 +195,27 @@ function installStyles() {
     .site-announcement-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
     .site-announcement-link, .site-announcement-dismiss { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 7px 9px; font: inherit; font-weight: 700; color: inherit; background: transparent; border: 0; border-radius: 9px; cursor: pointer; text-decoration: none; }
     .site-announcement-link:hover, .site-announcement-dismiss:hover, .site-announcement-link:focus-visible, .site-announcement-dismiss:focus-visible { text-decoration: underline; }
+    .site-announcement-backdrop{position:fixed;inset:0;z-index:97999;background:rgba(3,7,22,.79);backdrop-filter:blur(10px)}
+    .site-announcement-banner.site-announcement-banner--visual{
+      top:50%;left:50%;right:auto;transform:translate(-50%,-50%);
+      width:min(1060px,calc(100vw - 28px));max-width:100%;max-height:calc(100dvh - 38px);
+      padding:0;display:block;overflow:auto;background:#090d27;border:1px solid #7c59ff;
+      border-radius:24px;box-shadow:0 0 45px #7045ff55,0 34px 85px #0009;
+      color:#fff;
+    }
+    .site-announcement-banner--visual .site-announcement-content{display:block;padding:0;min-width:0}
+    .site-announcement-banner--visual .site-announcement-art{display:block;width:100%;height:auto;max-width:100%;max-height:min(72dvh,710px);object-fit:contain}
+    .site-announcement-banner--visual .site-announcement-content:has(.site-announcement-body) .site-announcement-body{display:block;font-size:.83rem;line-height:1.5;padding:0 22px 12px;color:#cad8ff}
+    .site-announcement-banner--visual .site-announcement-content:has(.site-announcement-body) .site-announcement-title{display:block;padding:9px 22px 0;font-size:1rem}
+    .site-announcement-banner--visual .site-announcement-label{display:none}
+    .site-announcement-banner--visual .site-announcement-actions{position:sticky;bottom:0;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:9px;padding:12px 18px;background:#070c24ee;min-height:59px}
+    .site-announcement-banner--visual .site-announcement-link{min-height:42px;padding:9px 23px;border-radius:25px;font-weight:850;color:#fff;background:linear-gradient(110deg,#2468f1,#aa3edb);text-decoration:none}
+    .site-announcement-banner--visual .site-announcement-dismiss{position:absolute;top:5px;right:12px;min-width:39px;min-height:39px;border-radius:50%;color:#fff;background:#ffffff26;font-size:1.3rem}
+    @media(max-width:700px){.site-announcement-banner.site-announcement-banner--visual{top:50%;left:50%;right:auto;transform:translate(-50%,-50%);width:calc(100vw - 16px);max-height:calc(100dvh - 24px);padding:0;display:block;border-radius:17px}
+      .site-announcement-banner--visual .site-announcement-art{max-height:67dvh;object-fit:contain}
+      .site-announcement-banner--visual .site-announcement-actions{width:100%;flex-direction:row;align-items:center;gap:8px}
+      .site-announcement-banner--visual .site-announcement-dismiss{top:3px;right:7px}
+    }
     @media (max-width: 700px) {
       .site-announcement-banner {
         position: fixed;
