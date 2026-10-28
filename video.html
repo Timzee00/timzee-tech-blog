@@ -1867,7 +1867,7 @@
         if (userIds.length) {
           const profiles = await supabase
             .from("public_profiles")
-            .select("id, display_name, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style, is_staff_pick")
+            .select("id, username, display_name, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style, is_staff_pick")
             .in("id", userIds);
           const map = {};
           (profiles.data || []).forEach((p) => {
