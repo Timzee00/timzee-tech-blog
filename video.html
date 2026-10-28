@@ -831,7 +831,8 @@
         exhausted: false,
         activeIndex: 0,
         likedCache: {},
-        commentsOpenFor: null
+        commentsOpenFor: null,
+        viewAttempts: new Set()
       };
 
 
@@ -1176,7 +1177,7 @@
                 </button>
                 <div class="reel-chip">
                   <div class="reel-chip-icon" style="font-size:15px;">👁</div>
-                  <span class="reel-chip-count">${video.view_count ?? 0}</span>
+                  <span class="reel-chip-count" id="viewcount-${index}">${Math.max(0,Number(video.view_count)||0)}</span>
                 </div>
               </div>
             </div>
@@ -1546,10 +1547,31 @@
           const video=el.querySelector("video");
           if(video && !video.dataset.playViewWired) {
             video.dataset.playViewWired="true";
-            video.addEventListener("playing",() => {
-              // Only genuine playback events count, not just scrolling past.
-              void incrementVideoView(el.dataset.id).catch(()=>{});
-            },{once:true});
+            let watchTimer=null;
+            // Count a real visible watch, not a one-frame autoplay or rapid
+            // scroll. Postgres enforces one view per account/video/UTC day.
+            video.addEventListener("playing",()=>{
+              clearTimeout(watchTimer);
+              const videoId=el.dataset.id;
+              if(!state.user?.id||state.viewAttempts.has(videoId))return;
+              watchTimer=setTimeout(async()=>{
+                if(video.paused||!video.isConnected||
+                  document.visibilityState==="hidden"||
+                  state.activeIndex!==Number(el.dataset.index)||
+                  state.viewAttempts.has(videoId))return;
+                state.viewAttempts.add(videoId);
+                const credited=await incrementVideoView(videoId);
+                if(!credited)return;
+                const current=state.videos.find(v=>v.id===videoId);
+                if(!current)return;
+                current.view_count=Math.max(0,Number(current.view_count)||0)+1;
+                const index=state.videos.indexOf(current);
+                const counter=document.getElementById("viewcount-"+index);
+                if(counter)counter.textContent=String(current.view_count);
+              },2000);
+            });
+            video.addEventListener("pause",()=>clearTimeout(watchTimer));
+            video.addEventListener("ended",()=>clearTimeout(watchTimer));
           }
         });
 
