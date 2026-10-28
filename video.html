@@ -832,7 +832,8 @@
         activeIndex: 0,
         likedCache: {},
         commentsOpenFor: null,
-        viewAttempts: new Set()
+        viewAttempts: new Set(),
+        viewRetryAfter: new Map()
       };
 
 
@@ -1553,21 +1554,49 @@
             video.addEventListener("playing",()=>{
               clearTimeout(watchTimer);
               const videoId=el.dataset.id;
-              if(state.viewAttempts.has(videoId))return;
+              if(state.viewAttempts.has(videoId)||
+                 Date.now()<(state.viewRetryAfter.get(videoId)||0))return;
               watchTimer=setTimeout(async()=>{
                 if(video.paused||!video.isConnected||
                   document.visibilityState==="hidden"||
                   state.activeIndex!==Number(el.dataset.index)||
-                  state.viewAttempts.has(videoId))return;
+                  state.viewAttempts.has(videoId)||
+                  Date.now()<(state.viewRetryAfter.get(videoId)||0))return;
                 state.viewAttempts.add(videoId);
-                const credited=await incrementVideoView(videoId);
-                if(!credited)return;
-                const current=state.videos.find(v=>v.id===videoId);
-                if(!current)return;
-                current.view_count=Math.max(0,Number(current.view_count)||0)+1;
-                const index=state.videos.indexOf(current);
-                const counter=document.getElementById("viewcount-"+index);
-                if(counter)counter.textContent=String(current.view_count);
+                let credited=false;
+                try{
+                  credited=await incrementVideoView(videoId);
+                  const current=state.videos.find(v=>v.id===videoId);
+                  if(!current)return;
+                  if(credited){
+                    // Count only receipts confirmed by the server.
+                    current.view_count=Math.max(0,Number(current.view_count)||0)+1;
+                    const index=state.videos.indexOf(current);
+                    const counter=document.getElementById("viewcount-"+index);
+                    if(counter)counter.textContent=String(current.view_count);
+                  }else{
+                    // Duplicate or failed receipt: reconcile the real server
+                    // count and permit a later retry without request storms.
+                    state.viewRetryAfter.set(videoId,Date.now()+60000);
+                    try{
+                      const {data,error}=await supabase.rpc("reel_public_metadata",{p_video_ids:[videoId]});
+                      if(!error&&Array.isArray(data)){
+                        const stored=data.find(row=>row.video_id===videoId);
+                        if(stored&&Number.isFinite(Number(stored.view_count))){
+                          current.view_count=Math.max(0,Number(stored.view_count));
+                          const index=state.videos.indexOf(current);
+                          const counter=document.getElementById("viewcount-"+index);
+                          if(counter)counter.textContent=String(current.view_count);
+                        }
+                      }
+                    }catch(error){console.warn("Could not refresh reel count",error);}
+                  }
+                }catch(error){
+                  state.viewRetryAfter.set(videoId,Date.now()+60000);
+                  console.warn("View tracking unavailable; retry after cooldown",error);
+                }finally{
+                  if(!credited)state.viewAttempts.delete(videoId);
+                }
               },2000);
             });
             video.addEventListener("pause",()=>clearTimeout(watchTimer));
