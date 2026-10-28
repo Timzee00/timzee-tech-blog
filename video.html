@@ -810,7 +810,7 @@
       import {renderSocialText} from "./assets/js/social-rich-text.mjs";
       import {mountPoll,openPollComposer} from "./assets/js/content-polls.mjs";
       import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
-      import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap} from "./assets/js/verified-identity.mjs";
+      import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap,publicIdentityName} from "./assets/js/verified-identity.mjs";
 
       const root = document.getElementById("reelRoot");
       const params = new URLSearchParams(window.location.search);
@@ -1150,7 +1150,7 @@
 
       function itemTemplate(video, index) {
         const profile=video.uploader_profile||null;
-        const uploaderName = video.author_name || profile?.display_name || "Anonymous";
+        const uploaderName = publicIdentityName(profile,video.author_name||"Member");
         const avatarMarkup=verifiedAvatar(profile?.avatar_url,profile,{size:"sm",alt:""});
         const uploaderMarkup=verifiedName("@"+uploaderName,profile,{compact:true});
         const staff = video.uploader_staff_pick
@@ -1674,10 +1674,10 @@
             const nested = renderCommentTree(comments, c.id, depth + 1);
             return `
               <div class="comment-row ${verifiedCommentClass(commentProfiles.get(c.user_id))}" style="margin-left:${Math.min(depth, 4) * 16}px;" data-comment-id="${c.id}">
-                <a class="reel-comment-author" href="profile.html?id=${encodeURIComponent(c.user_id||'')}">${verifiedAvatar(commentProfiles.get(c.user_id)?.avatar_url,commentProfiles.get(c.user_id),{size:"sm",alt:""})}${verifiedName(c.author_name||"Anonymous",commentProfiles.get(c.user_id),{compact:true})}</a>
+                <a class="reel-comment-author" href="profile.html?id=${encodeURIComponent(c.user_id||'')}">${verifiedAvatar(commentProfiles.get(c.user_id)?.avatar_url,commentProfiles.get(c.user_id),{size:"sm",alt:""})}${verifiedName(publicIdentityName(commentProfiles.get(c.user_id),c.author_name),commentProfiles.get(c.user_id),{compact:true})}</a>
                 <p>${renderSocialText(c.body || "")}</p>
                 <div class="reel-comment-actions">
-                  <button class="comment-reply-btn" data-reply-id="${c.id}" data-reply-name="${escapeHTML(c.author_name || "Anonymous")}">Reply</button>
+                  <button class="comment-reply-btn" data-reply-id="${c.id}" data-reply-name="${escapeHTML(publicIdentityName(commentProfiles.get(c.user_id),c.author_name))}">Reply</button>
                   <button class="comment-like-btn" data-comment-like="${c.id}" aria-pressed="${c.viewer_liked===true}" aria-label="Like comment" type="button">${c.viewer_liked?"♥ Liked":"♡ Like"} <span>${Number(c.like_count||0)}</span></button>
                 </div>
                 ${nested}
@@ -1869,7 +1869,8 @@
           window.location.href = `login.html?next=${encodeURIComponent(window.location.href)}`;
           return;
         }
-        const authorName = state.user.user_metadata?.display_name || state.user.email;
+        const own=await supabase.from("public_profiles").select("username,display_name").eq("id",state.user.id).maybeSingle();
+        const authorName=publicIdentityName(own.data,state.user.user_metadata?.display_name||"Member");
         const result = await commentOnVideo(state.commentsOpenFor, state.user.id, authorName, body, replyingTo?.id || null);
         if (!result.error) {
           drawerInput.value = "";
