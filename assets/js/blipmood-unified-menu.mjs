@@ -32,7 +32,7 @@ function install(){
  if(document.getElementById("bmUnifiedRail"))return;
  const rail=document.createElement("aside");
  rail.id="bmUnifiedRail";rail.className="bm-unified-rail";
- rail.innerHTML='<a class="bm-rail-brand" href="/index.html">✦ <span>Blipmood</span></a>'+
+ rail.innerHTML='<a class="bm-rail-brand" href="/index.html" aria-label="Blipmood home"><img data-bm-logo="wordmark" src="https://d2ol7oe51mr4n9.cloudfront.net/user_3JR5g6OD2PPsWciJ9XxM8Ue05wO/1edfccf6-fdc1-409c-b9c5-162b23657600.png" width="190" height="63" alt="" decoding="async"></a>'+
   '<nav aria-label="Explore Blipmood">'+makeLinks()+'</nav>'+
   '<div class="bm-rail-bottom"><span>Made for real communities.</span></div>';
  document.body.prepend(rail);
@@ -52,8 +52,9 @@ css.textContent=`
  background:linear-gradient(170deg,#090e25,#12132a 62%,#071d29);border-right:1px solid #7886d02c;
  padding:18px 14px;display:none;flex-direction:column;min-height:0;color:#d5dbfa}
 .bm-unified-rail nav{min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:3px;scrollbar-width:thin}
-.bm-rail-brand{color:#f2e9ff;font-weight:900;text-decoration:none;font-size:1.33rem;display:flex;align-items:center;gap:9px;padding:7px 14px 24px}
-.bm-rail-brand:first-letter{color:#a078ff}
+.bm-rail-brand{display:flex;justify-content:center;align-items:center;height:68px;min-height:68px;padding:2px 6px 13px;text-decoration:none;box-sizing:border-box}
+.bm-rail-brand img{width:100%;max-width:194px;height:auto;max-height:64px;object-fit:contain}
+.bm-rail-brand:focus-visible{outline:3px solid #71e5f1;outline-offset:2px;border-radius:9px}
 .bm-rail-group{margin:4px 0 15px}.bm-rail-group h3{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
  color:#9a9fc9;font-weight:850;margin:8px 11px}
 .bm-rail-link{display:flex;align-items:center;gap:10px;min-height:43px;border-radius:12px;padding:9px 13px;
@@ -71,7 +72,10 @@ css.textContent=`
  .bm-has-unified-rail{padding-left:232px}
  .bm-unified-rail{display:flex}
  .bm-has-unified-rail .site-header{width:100%;max-width:100%}
- .bm-has-unified-rail .site-header .site-menu{max-width:calc(100% - 0px)}
+ .bm-has-unified-rail .site-header .brand{display:none!important}
+ .bm-has-unified-rail .site-header .nav-pill{display:none!important}
+ .bm-has-unified-rail .site-header .wrap{gap:12px}
+ .bm-has-unified-rail .site-header .site-menu{max-width:100%}
  .bm-has-unified-rail .bm-drawer-navigation{display:none}
 }
 @media(max-width:1189px){.bm-unified-rail{display:none!important}.bm-has-unified-rail{padding-left:0}}
