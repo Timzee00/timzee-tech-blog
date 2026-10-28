@@ -104,6 +104,9 @@ test("inline For You videos also record legitimate plays without counting a scro
  assert.match(fyp,/document\.visibilityState==="hidden"/);
  assert.match(fyp,/video\.paused\|\|!video\.isConnected/);
  assert.match(fyp,/incrementVideoView\(card\.dataset\.contentId\)/);
+ assert.match(fyp,/if\(credited\)viewAttempted=true/);
+ assert.match(fyp,/viewRetryAfter=Date\.now\(\)\+60000/);
+ assert.match(fyp,/viewInFlight=true/);
  assert.match(fyp,/\},2000\)/);
 });
 
