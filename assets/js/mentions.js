@@ -133,7 +133,7 @@ async function showMentionDropdown(field, searchTerm) {
     const img = document.createElement("img");
     const avatar = isSafeUrl(user.avatar_url) ? user.avatar_url : "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI4IiBmaWxsPSIjZTJlOGYwIi8+PC9zdmc+";
     img.src = avatar;
-    img.alt = String(user.display_name || user.username || "Member");
+    img.alt = String(user.username || "Member");
     img.className = "avatar avatar--xs";
     img.style.cssText = "border-radius: 50%; object-fit: cover;";
 
@@ -141,7 +141,7 @@ async function showMentionDropdown(field, searchTerm) {
     copy.style.cssText = "flex: 1; min-width: 0;";
     const name = document.createElement("div");
     name.style.cssText = "font-weight: 600; font-size: 13px;";
-    name.textContent = String(user.display_name || user.username || "Member");
+    name.textContent = String(user.username || "Member");
     const handle = document.createElement("div");
     handle.style.cssText = "font-size: 12px; color: #999;";
     handle.textContent = `@${user.username || ""}`;
