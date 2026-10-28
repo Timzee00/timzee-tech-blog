@@ -11,13 +11,14 @@ button?.addEventListener("click",async()=>{
  try{
   const session=await getSession();
   if(!session?.access_token)throw Error("Sign in with an authorized staff account.");
-  const isAnnouncement=$("aiDraftTarget").value==="announcement";
+  const target=$("aiDraftTarget").value;
+  const isAnnouncement=target==="announcement";
   const tone=$("aiDraftTone").value;
   const response=await fetch("/.netlify/functions/llm-proxy",{
    method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
    body:JSON.stringify({
     provider:"groq",model:"openai/gpt-oss-20b",temperature:.65,max_tokens:1100,
-    systemPrompt:"You are Blipmood's careful staff writing assistant. Write accurate, accessible, original copy for a community platform. Do not invent announcements, business claims, dates, stats or platform features not provided by the staff user. Never reveal private user data. Output plain text with the first line as an effective short headline, then a blank line, then the draft body. Tone: "+tone+". Target: "+(isAnnouncement?"brief public announcement":"well structured blog article")+". The staff will review before anything is published.",
+    systemPrompt:"You are Blipmood's careful staff writing assistant. Write accurate, accessible, original copy for a community platform. Do not invent announcements, business claims, dates, stats or platform features not provided by the staff user. Never reveal private user data. Output plain text with the first line as an effective short headline, then a blank line, then the draft body. Tone: "+tone+". Target: "+(target==="help"?"practical administrative guidance and recommendations":isAnnouncement?"brief public announcement":"well structured blog article")+". The staff will review before anything is published.",
     messages:[{role:"user",content:topic}]
    })
   });
@@ -35,6 +36,11 @@ apply?.addEventListener("click",()=>{
  const [heading,...rest]=draft.split(/\r?\n/);
  const headline=heading.replace(/^#+\s*/,"").slice(0,120);
  const body=rest.join("\n").trim()||headline;
+ if($("aiDraftTarget").value==="help"){
+  if(navigator.clipboard?.writeText){void navigator.clipboard.writeText(draft).then(()=>feedback("Admin guidance copied. Review and apply it manually.")).catch(()=>feedback("Select and copy the guidance above."));}
+  else feedback("Select and copy the admin guidance above. No account changes were made.");
+  return;
+ }
  if($("aiDraftTarget").value==="announcement"){
   $("announcementTitle").value=headline;
   $("announcementMessage").value=body;
@@ -50,3 +56,5 @@ apply?.addEventListener("click",()=>{
  }
  feedback("Draft inserted for human review. Review details and press the regular Publish button when ready.");
 });
+
+$("aiDraftAnnouncementShortcut")?.addEventListener("click",()=>{$("aiDraftTarget").value="announcement";document.querySelector('[data-tab="compose"]')?.click();$("aiDraftPrompt")?.focus();});
