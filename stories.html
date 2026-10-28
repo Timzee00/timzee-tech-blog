@@ -313,7 +313,7 @@
         state.groups.forEach((group, index) => {
           const profile = group.profile;
           const isOwn = state.user && group.userId === state.user.id;
-          const name = isOwn ? "You" : profile?.display_name || "Member";
+          const name = isOwn ? "You" : profile?.username || "Member";
           const el = document.createElement("button");
           el.type = "button";
           el.className = "story-avatar";
@@ -490,7 +490,7 @@
         document.getElementById("viewerAvatar").src = isSafeUrl(profile?.avatar_url)
           ? profile.avatar_url
           : DEFAULT_AVATAR;
-        document.getElementById("viewerName").textContent = (profile?.display_name || "Member")+
+        document.getElementById("viewerName").textContent = (profile?.username || "Member")+
           (profile?.is_verified?" ✓ Verified":"");
         document.getElementById("viewerTime").textContent = timeAgo(story.created_at);
         document.getElementById("viewerCaption").textContent = story.caption || "";
