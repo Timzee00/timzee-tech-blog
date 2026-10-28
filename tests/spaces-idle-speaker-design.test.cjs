@@ -32,7 +32,7 @@ function simulatePeople(activeIds=[]){
  ];
  const state={
   participants,activeSpeakerIds:new Set(activeIds),speakingStatusHint:"",
-  profiles:new Map(participants.map((p,i)=>[p.user_id,{display_name:"Voice "+(i+1)}])),
+  profiles:new Map(participants.map((p,i)=>[p.user_id,{display_name:"Voice "+(i+1),username:"voice"+(i+1)}])),
   joined:false,user:null,room:null,mutedUsers:new Set()
  };
  const fn=vm.runInNewContext(
@@ -80,7 +80,7 @@ test("speaker replaces the idle art with a spotlight, visible name/avatar and wa
  assert.equal(featured.className,"space-person space-speaking-spotlight");
  assert.equal(featured.children[0].textContent,"● ON AIR");
  assert.ok(featured.children.some(child=>child.className==="space-person-avatar"));
- assert.ok(featured.children.some(child=>child.innerHTML==="Voice 2"));
+ assert.ok(featured.children.some(child=>child.innerHTML==="voice2"),"Public username should be shown instead of display name");
  const wave=featured.children.find(child=>child.className==="space-speaking-wave");
  assert.equal(wave.attrs["aria-hidden"],"true");
  assert.equal(wave.children.length,5);
