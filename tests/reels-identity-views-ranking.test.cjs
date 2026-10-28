@@ -94,6 +94,16 @@ test("views require genuine visible playback and display updated server-accepted
  assert.match(videoHtml,/id="viewcount-\$\{index\}"/);
 });
 
+test("inline For You videos also record legitimate plays without counting a scroll past",()=>{
+ const fyp=read("assets/js/fyp.js");
+ assert.match(fyp,/import \{incrementVideoView\} from "\.\/videos-marketplace\.js"/);
+ assert.match(fyp,/video\.addEventListener\("playing",/);
+ assert.match(fyp,/document\.visibilityState==="hidden"/);
+ assert.match(fyp,/video\.paused\|\|!video\.isConnected/);
+ assert.match(fyp,/incrementVideoView\(card\.dataset\.contentId\)/);
+ assert.match(fyp,/\},2000\)/);
+});
+
 test("view counting uses an RLS-isolated atomic deduplicated database function",()=>{
  assert.match(viewSql,/SECURITY DEFINER/);
  assert.match(viewSql,/SET search_path=''/);
