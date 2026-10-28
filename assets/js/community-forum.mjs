@@ -927,18 +927,22 @@ async function createThread(event){
  const form=event.currentTarget,button=form.querySelector("[type=submit]");
  const values=new FormData(form);
  const communityId=String(values.get("community_id")||"");
+ const files=[...(form.querySelector("[name=media]")?.files||[])];
+ const rawTitle=String(values.get("title")||"").trim();
+ const finalTitle=rawTitle||(files.length?"Media shared with the community":"");
+ if(!finalTitle){$("forumThreadFormError").textContent="Add a title or choose a photo/video.";return;}
+ if(rawTitle&&rawTitle.length<5){$("forumThreadFormError").textContent="Topic titles must have at least 5 characters.";return;}
  if(!validId(communityId)){$("forumThreadFormError").textContent="Choose a community.";return;}
  if(!$("forumThreadRulesAcknowledged").checked){$("forumThreadFormError").textContent="Read and acknowledge the selected community rules before publishing.";return;}
  setButtonBusy(button,true);$("forumThreadFormError").textContent="";
  let uploaded=[],created=null;
  try{
-  const files=[...(form.querySelector("[name=media]")?.files||[])];
   uploaded=await uploadForumGallery(files,communityId);
   const first=uploaded[0];
   const {data,error}=await supabase.from("community_threads").insert({
     community_id:communityId,author_id:state.user.id,author_name:memberName(),
     media_url:first?.url||null,media_type:first?.type||null,
-    title:String(values.get("title")||"").trim(),
+    title:finalTitle,
     body:String(values.get("body")||"").trim(),
     kind:String(values.get("kind")||"discussion"),
     flair:String(values.get("flair")||"").trim()||null
