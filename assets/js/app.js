@@ -780,7 +780,7 @@ function renderLeaderboard() {
   list.innerHTML = state.leaderboard
     .map((profile) => {
       const name = profile.display_name || profile.username || "Member";
-      const defaultAvatar = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+      const defaultAvatar = "/assets/img/avatar-placeholder.svg";
       const avatar = isSafeUrl(profile.avatar_url) ? profile.avatar_url : defaultAvatar;
       const points = profile.annual_score ?? 0;
       const level = profile.level || deriveLevel(profile.points || 0).label;
