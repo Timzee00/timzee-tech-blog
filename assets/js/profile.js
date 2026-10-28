@@ -1141,7 +1141,7 @@ function setupProfileEditor() {
     form.setAttribute("aria-busy","true");
     const saveButton=form.querySelector('button[type="submit"]');
     const originalLabel=saveButton?.textContent||"Save Profile";
-    if(saveButton){saveButton.disabled=true;saveButton.textContent="Updating profile…";}
+    if(saveButton){saveButton.disabled=true;saveButton.textContent="Updating profile…";saveButton.setAttribute("aria-disabled","true");}
     if(status){status.textContent="Updating profile…";status.style.display="block";status.setAttribute("role","status");}
     try {
     const displayName = document.getElementById("editDisplayName").value.trim();
