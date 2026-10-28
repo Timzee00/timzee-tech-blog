@@ -6,7 +6,16 @@
     <title>Listing - Blipmood</title>
     <link rel="stylesheet" href="assets/css/styles.css">
     <script defer src="assets/js/theme-init.js"></script>
-  </head>
+  <style>
+.seller-contact-options[hidden]{display:none!important}
+.seller-contact-options{margin:16px 0;padding:20px;border:1px solid #43bca58a;border-radius:16px;background:var(--color-surface,#142e38);box-sizing:border-box;max-width:100%}
+.seller-contact-options h3{margin:0 0 8px}
+.seller-contact-options p{font-size:.88rem;color:var(--color-text-muted,#d0e2e4)}
+.seller-contact-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.seller-contact-actions button{min-height:48px;min-width:0;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:440px){.seller-contact-actions{grid-template-columns:1fr}}
+</style>
+</head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
@@ -109,7 +118,13 @@
             <p class="description-text" id="description"></p>
           </div>
 
-          <div id="contactSellerFeedback" role="status" aria-live="polite" class="market-contact-feedback" hidden></div>
+          <section id="sellerContactOptions" class="seller-contact-options" hidden aria-label="Choose how to message this seller">
+ <h3>Message this seller</h3><p>Choose the best way to contact the seller.</p>
+ <div class="seller-contact-actions">
+  <button class="btn" id="contactOnSite" type="button">💬 Message on Blipmood</button>
+  <button class="btn ghost" id="contactOnWhatsapp" type="button">◉ Message on WhatsApp</button>
+ </div>
+</section><div id="contactSellerFeedback" role="status" aria-live="polite" class="market-contact-feedback" hidden></div>
           <div id="inquiryContainer" class="inquiry-section" style="display: none;">
             <h3>Interested? Send an Inquiry</h3>
             <form novalidate id="inquiryForm" class="inquiry-form">
@@ -390,63 +405,50 @@
       }
 
       function setupEventListeners() {
-        document.getElementById("contactBtn").addEventListener("click", async () => {
-          const sellerId = state.listing?.user_id;
-          const feedback=document.getElementById("contactSellerFeedback");
-          const messageUser=(text)=>{
-            if(feedback){feedback.hidden=false;feedback.textContent=text;feedback.scrollIntoView({behavior:"smooth",block:"nearest"});}
-          };
-          if(!state.listing){messageUser("Listing is still loading. Please try again.");return;}
-          if (!state.user) {
-            messageUser("Sign in to send an inquiry to this seller.");
+        const options=document.getElementById("sellerContactOptions");
+        const feedback=document.getElementById("contactSellerFeedback");
+        const messageUser=text=>{if(feedback){feedback.hidden=false;feedback.textContent=text;}};
+        document.getElementById("contactBtn").addEventListener("click",()=>{
+          if(!state.listing){messageUser("Listing is still loading.");return;}
+          options.hidden=false;
+          const digits=String(state.sellerProfile?.marketplace_whatsapp||"").replace(/\D/g,"");
+          const wa=document.getElementById("contactOnWhatsapp");
+          wa.disabled=digits.length<8||digits.length>15;
+          wa.title=wa.disabled?"Seller has not published a WhatsApp number.":"Contact seller on WhatsApp";
+          options.scrollIntoView({behavior:"smooth",block:"center"});
+          document.getElementById("contactOnSite").focus({preventScroll:true});
+          messageUser("Choose Blipmood messaging or WhatsApp.");
+        });
+        document.getElementById("contactOnWhatsapp").addEventListener("click",()=>{
+          const digits=String(state.sellerProfile?.marketplace_whatsapp||"").replace(/\D/g,"");
+          if(digits.length<8||digits.length>15){messageUser("WhatsApp contact is not available for this seller.");return;}
+          const message="Hello, I'm interested in your listing: "+(state.listing?.title||"your item")+".";
+          window.open("https://wa.me/"+digits+"?text="+encodeURIComponent(message),"_blank","noopener,noreferrer");
+        });
+        document.getElementById("contactOnSite").addEventListener("click",async()=>{
+          const sellerId=state.listing?.user_id;
+          if(!sellerId){messageUser("Seller contact is unavailable.");return;}
+          if(!state.user){
+            messageUser("Sign in to message this seller on Blipmood.");
             const next=encodeURIComponent("listing.html?id="+state.itemId+"&contact=1");
-            window.location.href="login.html?next="+next;
-            return;
+            location.href="login.html?next="+next;return;
           }
-
-          if (!sellerId) {
-            messageUser("Seller contact is unavailable for this listing.");
-            return;
-          }
-          if (sellerId === state.user.id) {
-            messageUser("This is your own listing.");
-            return;
-          }
-          const whatsapp = String(state.sellerProfile?.marketplace_whatsapp || "").replace(/[^\d+]/g, "");
-          if (whatsapp) {
-            const digits = whatsapp.replace(/^\+/, "");
-            const message = `Hello, I'm interested in your listing: ${state.listing?.title || "your item"}.`;
-            window.location.assign(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`);
-            return;
-          }
-
+          if(sellerId===state.user.id){messageUser("This is your own listing.");return;}
           if (state.sellerProfile && state.sellerProfile.allow_messages === false) {
             const inquiry=document.getElementById("inquiryContainer");
-            if(inquiry){
-              inquiry.style.display="block";
-              inquiry.scrollIntoView({behavior:"smooth",block:"center"});
-              document.getElementById("inquiryMessage")?.focus();
-            }
-            messageUser("Direct chat is disabled, but you can still send a marketplace inquiry below.");
-            return;
+            if(inquiry){inquiry.style.display="block";inquiry.scrollIntoView({behavior:"smooth",block:"center"});
+              document.getElementById("inquiryMessage")?.focus();}
+            messageUser("Direct chat is disabled, but you can still send a marketplace inquiry below.");return;
           }
-
           messageUser("Checking available contact options…");
-          // Use the same database-owned permission as Chat. This also allows
-          // official staff DMs without assuming a friendship must exist.
           const permission=await supabase.rpc("can_send_direct_message",{p_recipient:sellerId});
           if(!permission.error&&permission.data===true){
-            window.location.href=`chat.html?user=${encodeURIComponent(sellerId)}`;
-            return;
+            location.href="chat.html?user="+encodeURIComponent(sellerId);return;
           }
-
-          const inquiry = document.getElementById("inquiryContainer");
-          if (inquiry) {
-            inquiry.style.display = "block";
-            inquiry.scrollIntoView({ behavior: "smooth", block: "center" });
-            document.getElementById("inquiryMessage")?.focus();
-            messageUser("Write your inquiry below, then tap Send Inquiry.");
-          }
+          const inquiry=document.getElementById("inquiryContainer");
+          if(inquiry){inquiry.style.display="block";inquiry.scrollIntoView({behavior:"smooth",block:"center"});
+            document.getElementById("inquiryMessage")?.focus();}
+          messageUser("Write an inquiry below; direct messages may require permission.");
         });
 
         document.getElementById("reportBtn").addEventListener("click", async () => {
