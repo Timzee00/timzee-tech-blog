@@ -1134,6 +1134,14 @@ function setupProfileEditor() {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if(form.dataset.saving==="true")return;
+    form.dataset.saving="true";
+    form.setAttribute("aria-busy","true");
+    const saveButton=form.querySelector('button[type="submit"]');
+    const originalLabel=saveButton?.textContent||"Save Profile";
+    if(saveButton){saveButton.disabled=true;saveButton.textContent="Updating profile…";}
+    if(status){status.textContent="Updating profile…";status.style.display="block";status.setAttribute("role","status");}
+    try {
     const displayName = document.getElementById("editDisplayName").value.trim();
     const rawUsername = document.getElementById("editUsername")?.value.trim() || "";
     const username = sanitizeUsername(rawUsername);
@@ -1204,6 +1212,14 @@ function setupProfileEditor() {
       state.profile = result.data;
       renderProfile();
       renderProfileAbout();
+    }
+    }catch(error){
+      console.error("Profile save error",error);
+      if(status){status.textContent="Profile update failed. Please retry.";status.style.display="block";}
+    }finally{
+      form.dataset.saving="false";
+      form.setAttribute("aria-busy","false");
+      if(saveButton){saveButton.disabled=false;saveButton.textContent=originalLabel;}
     }
   });
 }
