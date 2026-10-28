@@ -4,6 +4,7 @@ import { loadUserPreferences, mergePreferences } from "./user-preferences.js";
 import { escapeHTML, clampText, stripHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
 import { diversifyFeed, feedCacheKey, cachedFeed } from "./feed-diversity.mjs";
 import {setupMentionInput} from "./mentions.js";
+import {incrementVideoView} from "./videos-marketplace.js";
 import {renderSocialText} from "./social-rich-text.mjs";
 
 const state = { user: null, preferences: mergePreferences(), type: "all", mode: "for-you", loading: false };
@@ -339,7 +340,21 @@ function bindFypVideoGestures(root){
     const card=zone.closest(".fyp-card"),stage=zone.closest(".fyp-video-stage");
     const video=stage?.querySelector("video"),flash=stage?.querySelector(".fyp-video-flash");
     if(!card||!video)return;
-    let lastTap=0,pending=null;
+    let lastTap=0,pending=null,watchTimer=null,viewAttempted=false;
+    // FYP inline playback counts as a real view too, but not after a glance.
+    // Server-side once-per-viewer-per-day dedup prevents inflation.
+    video.addEventListener("playing",()=>{
+      clearTimeout(watchTimer);
+      if(!state.user?.id||viewAttempted)return;
+      watchTimer=setTimeout(()=>{
+        if(video.paused||!video.isConnected||
+           document.visibilityState==="hidden"||viewAttempted)return;
+        viewAttempted=true;
+        void incrementVideoView(card.dataset.contentId).catch(()=>{});
+      },2000);
+    });
+    video.addEventListener("pause",()=>clearTimeout(watchTimer));
+    video.addEventListener("ended",()=>clearTimeout(watchTimer));
     const showIcon=value=>{
       if(!flash)return;
       flash.textContent=value;flash.classList.remove("show");
