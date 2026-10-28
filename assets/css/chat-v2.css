@@ -333,3 +333,26 @@ html[data-group-tags="hidden"] .member-tag-list { display: none; }
 .chat-list-copy{min-width:0}
 .chat-list-copy strong{overflow-wrap:anywhere}
 @media(max-width:620px){.chat-request-row{min-width:0}.chat-request-row .inline-actions{flex:1 1 100%;justify-content:flex-start}.chat-request-row .inline-actions .btn{min-height:44px}}
+
+/* Floating Find People: never buried under chat tabs or scrolled below the inbox. */
+.chat-find-backdrop{position:fixed;inset:0;z-index:11000;background:rgba(4,15,23,.68);backdrop-filter:blur(5px)}
+.chat-people-search[hidden]{display:none!important}
+.chat-people-search:not([hidden]){
+ position:fixed!important;top:max(80px,env(safe-area-inset-top));left:50%;z-index:11001;
+ width:min(560px,calc(100vw - 24px));height:auto;max-height:min(76dvh,690px);
+ min-width:0;box-sizing:border-box;transform:translateX(-50%);
+ display:flex;flex-direction:column;gap:10px;overflow:hidden;overflow-x:hidden;
+ padding:20px 16px;border-radius:19px;border:1px solid var(--color-border-strong,#3b7073);
+ background:var(--color-surface,#132b34);color:var(--color-text,#fff);
+ box-shadow:0 25px 65px #0008;
+}
+.chat-people-float-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 2px 8px}
+.chat-people-float-heading h2{font-size:1.22rem;margin:2px 0 0;color:var(--color-text,#fff)}
+.chat-people-search .chat-search-shell{flex:none;margin:0 0 6px}
+.chat-people-search #peopleResults{min-height:70px;min-width:0;max-height:calc(76dvh - 160px);overflow-y:auto;overflow-x:hidden}
+.chat-people-search .chat-request-row{grid-template-columns:42px minmax(0,1fr) auto;overflow-wrap:anywhere}
+.chat-people-search .chat-request-row button{min-height:38px}
+@media(max-width:600px){
+ .chat-people-search:not([hidden]){top:max(68px,env(safe-area-inset-top));max-height:calc(100dvh - 158px);padding:15px 12px}
+ .chat-people-search #peopleResults{max-height:calc(100dvh - 290px)}
+}
