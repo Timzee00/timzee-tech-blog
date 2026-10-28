@@ -1,5 +1,5 @@
 import { supabase, getCurrentUser } from "./supabase.js";
-import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap} from "./verified-identity.mjs";
+import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap,publicIdentityName} from "./verified-identity.mjs";
 import { loadUserPreferences, mergePreferences } from "./user-preferences.js";
 import { escapeHTML, clampText, stripHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
 import { diversifyFeed, feedCacheKey, cachedFeed } from "./feed-diversity.mjs";
@@ -56,7 +56,7 @@ function renderRow(row) {
   const creatorHtml=row.author_id
     ? '<a class="fyp-author-identity" href="profile.html?id='+encodeURIComponent(row.author_id)+'">'+
       verifiedAvatar(creator?.avatar_url,creator,{size:"sm",alt:""})+
-      verifiedName(row.author_name||"Member",creator,{compact:true})+'</a>'
+      verifiedName(publicIdentityName(creator,row.author_name),creator,{compact:true})+'</a>'
     : '';
   const reason=row.reason?'<span class="fyp-reason">'+escapeHTML(row.reason)+'</span>':"";
   const feedback=state.mode==="for-you"?
@@ -168,7 +168,7 @@ async function loadInlineComments(card){
     heading.className="fyp-author-identity";
     if(authorId)heading.href="profile.html?id="+encodeURIComponent(authorId);
     heading.innerHTML=verifiedAvatar(profile?.avatar_url,profile,{size:"sm",alt:""})+
-      verifiedName(String(comment.author_name||"Member").replace(/<[^>]*>/g,"").slice(0,70),profile,{compact:true});
+      verifiedName(publicIdentityName(profile,comment.author_name),profile,{compact:true});
     const body=document.createElement("p");body.innerHTML=renderSocialText(comment.body||"");
     article.append(heading,body);
     if(type==="video"){
