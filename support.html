@@ -7,6 +7,39 @@
   <meta name="robots" content="index, follow"><meta name="theme-color" content="#087f73">
   <link rel="canonical" href="https://blipmood.netlify.app/support.html">
   <link rel="stylesheet" href="assets/css/styles.css"><script defer src="assets/js/theme-init.js"></script>
+<style>
+.support-page{max-width:100%;overflow-x:clip}
+.support-page .container{max-width:1020px}
+.support-hero{padding:clamp(26px,6vw,52px);border-radius:24px;background:radial-gradient(circle at 90% 8%,#188a7d66,transparent 52%),linear-gradient(135deg,#071b30,#143f49);color:#f6fffe;border:1px solid #399a8f80}
+.support-eyebrow{color:#4ae0b3;font-size:.73rem;font-weight:850;letter-spacing:.15em}
+.support-hero h1{font-size:clamp(2rem,6vw,3.3rem);line-height:1.13;letter-spacing:-.035em;margin:11px 0}
+.support-hero p{color:#d1e6e4;max-width:60ch;line-height:1.65}
+.support-hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.support-content{padding:clamp(19px,3vw,29px);border:1px solid var(--color-border,#37515b);border-radius:20px;background:var(--color-surface,#152e37);margin-top:18px;max-width:100%;box-sizing:border-box}
+.support-content h2{font-size:clamp(1.24rem,3vw,1.5rem);margin:4px 0 18px}
+.support-topic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.support-topic-card{display:flex;flex-direction:column;gap:10px;padding:19px;min-width:0;border:1px solid var(--color-border,#44636b);border-radius:15px;text-decoration:none;color:var(--color-text,#fff);background:var(--color-surface-muted,#1e3b44);overflow-wrap:anywhere;transition:border-color .15s,transform .15s}
+.support-topic-card:hover,.support-topic-card:focus-visible{border-color:#49cdb0;transform:translateY(-2px)}
+.support-topic-card strong{font-size:1rem}
+.support-topic-card>span:last-child{font-size:.83rem;line-height:1.5;color:var(--color-text-muted,#cee2e2)}
+.support-topic-icon{display:grid;place-items:center;border-radius:12px;width:47px;height:47px;background:#41d9ac22;color:#65ebcb;font-size:1.7rem}
+.support-search-label{display:block;margin-bottom:7px;font-size:.86rem;font-weight:750}
+#supportFaqSearch{width:100%;max-width:100%;box-sizing:border-box;padding:13px;border:1px solid var(--color-border-strong,#5c7378);border-radius:11px;background:var(--color-surface-muted,#1a3540);color:var(--color-text,#fff);font-size:1rem;margin-bottom:14px}
+.support-faq{padding:0;border:1px solid var(--color-border,#36555c);border-radius:12px;margin:0 0 9px;background:var(--color-surface-muted,#1c3642);overflow:hidden}
+.support-faq summary{padding:15px;cursor:pointer;font-weight:700;line-height:1.45;overflow-wrap:anywhere}
+.support-faq-answer{padding:0 15px 16px;line-height:1.6;font-size:.89rem;color:var(--color-text-muted,#dfebec)}
+.support-empty,.support-intro,.support-footer-hint{font-size:.86rem;line-height:1.65;color:var(--color-text-muted,#cedfe1)}
+.support-request-form{display:grid;gap:15px;margin-top:16px}
+.support-request-form label{display:grid;gap:7px;font-size:.88rem;font-weight:750;min-width:0}
+.support-request-form :is(input,select,textarea){width:100%;max-width:100%;box-sizing:border-box;min-width:0;border:1px solid var(--color-border-strong,#4e757b);border-radius:11px;padding:13px;background:var(--color-surface-muted,#15343d);color:var(--color-text,#fff);font:inherit}
+.support-request-form select option{color:#111}
+.support-request-form textarea{resize:vertical;min-height:130px}
+.support-request-form button{min-height:48px}
+.support-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+#supportStatus[hidden]{display:none!important}
+@media(max-width:590px){.support-topic-grid,.support-field-grid{grid-template-columns:1fr}.support-hero{border-radius:16px}.support-content{padding:17px}.support-topic-card{padding:15px}}
+@media(prefers-reduced-motion:reduce){.support-topic-card{transition:none}}
+</style>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -15,24 +48,75 @@
   <nav class="nav-pill" aria-label="Primary navigation"><a href="discussion.html">Discussion</a><a href="marketplace.html">Marketplace</a><a href="videos.html">Videos</a><a href="novels.html">Novels</a><div class="nav-more"><button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span aria-hidden="true">&#9662;</span></button><div class="nav-more-menu"><a href="announcements.html">Announcements</a><a href="ads.html">Advertise</a><a href="newsletter.html">Newsletter</a><a href="contact.html">Contact</a><a href="support.html">Support</a></div></div></nav>
   <div class="header-actions"><a class="icon-btn" href="stories.html" aria-label="Stories" title="Stories">&#128247;</a><a class="icon-btn" href="chat.html" aria-label="Chat" title="Chat">&#128172;</a><div class="auth-actions" id="authActions"></div></div>
 </div></header>
-<main id="main-content" class="page-shell"><div class="container"><section class="post-shell" data-reveal>
-  <span class="chip">Timzee Corp</span><h1>Support</h1>
-  <p class="tagline">Need help with your Blipmood account, community features, publishing, or a technical issue? Send us the details and we will review the request.</p>
-  <div class="feature-grid" style="margin-top:20px;">
-    <article class="feature-card" data-reveal><div class="feature-icon">FAQ</div><h3>Quick answers</h3><p>Check common questions about accounts, posts, community features, and settings.</p></article>
-    <article class="feature-card" data-reveal><div class="feature-icon">HELP</div><h3>Technical support</h3><p>Describe the problem, page, and action that caused it so we can investigate.</p></article>
-    <article class="feature-card" data-reveal><div class="feature-icon">GUIDE</div><h3>Setup guidance</h3><p>Ask about available publishing, moderation, profile, or community workflows.</p></article>
-  </div>
-  <section style="margin-top:24px" id="faqBlock"><h2>FAQ</h2><p style="color:#666">Frequently asked questions from community members. Select a question to expand the answer.</p><div id="faqList">Loading FAQs...</div></section>
-  <form novalidate class="form-grid" style="margin-top:24px" id="supportForm"><input type="text" name="name" placeholder="Full name" required><input type="email" name="email" placeholder="Email address" required><input type="text" name="issue" placeholder="What do you need help with?" required><textarea name="message" placeholder="Describe the issue..." required class="resize-none"></textarea><button class="btn" type="submit">Submit Support Request</button></form>
-  <div class="callout" id="supportStatus" style="margin-top:18px;display:none"></div>
-  <div class="callout" style="margin-top:12px"><strong>Operated by Timzee Corp.</strong> Support route: this form. Email: support@timzeetechhub.com.</div>
+<main id="main-content" class="page-shell support-page"><div class="container">
+  <section class="support-hero" aria-labelledby="supportTitle">
+   <span class="support-eyebrow">BLIPMOOD HELP CENTER</span>
+   <h1 id="supportTitle">How can we help?</h1>
+   <p>Find clear answers, fix account and community problems, or send our team a detailed request.</p>
+   <div class="support-hero-actions"><a class="btn" href="#supportForm">Contact support</a><a class="btn ghost" href="#faqBlock">Browse FAQs</a></div>
+  </section>
+  <section class="support-content" aria-labelledby="supportTopicsTitle">
+   <h2 id="supportTopicsTitle">What do you need help with?</h2>
+   <div class="support-topic-grid">
+    <a href="#supportForm" data-support-topic="Account & privacy" class="support-topic-card"><span class="support-topic-icon" aria-hidden="true">◈</span><strong>Account & privacy</strong><span>Login, usernames, public email, verification and account settings</span></a>
+    <a href="#supportForm" data-support-topic="Messages & marketplace" class="support-topic-card"><span class="support-topic-icon" aria-hidden="true">✉</span><strong>Chat & marketplace</strong><span>Direct messages, groups, inquiries and seller contacts</span></a>
+    <a href="#supportForm" data-support-topic="Spaces & videos" class="support-topic-card"><span class="support-topic-icon" aria-hidden="true">♫</span><strong>Spaces & videos</strong><span>Microphone permissions, reels, comments and publishing</span></a>
+    <a href="#supportForm" data-support-topic="Notifications & bugs" class="support-topic-card"><span class="support-topic-icon" aria-hidden="true">♧</span><strong>Notifications & bugs</strong><span>Push alerts, broken features and technical reports</span></a>
+   </div>
+  </section>
+  <section class="support-content" id="faqBlock" aria-labelledby="faqHeading">
+   <div class="support-section-head"><div><span class="support-eyebrow">SELF SERVICE</span><h2 id="faqHeading">Frequently asked questions</h2></div></div>
+   <label class="support-search-label" for="supportFaqSearch">Search FAQs</label>
+   <input type="search" id="supportFaqSearch" placeholder="Search for answers…" autocomplete="off">
+   <div id="faqList" class="support-faq-list" aria-live="polite">Loading common questions…</div>
+  </section>
+  <section class="support-content" aria-labelledby="supportRequestTitle">
+   <span class="support-eyebrow">TALK TO OUR TEAM</span>
+   <h2 id="supportRequestTitle">Send a support request</h2>
+   <p class="support-intro">Describe the problem, where it happened and what you expected. Never include passwords, one-time codes or private verification documents in this form.</p>
+   <form novalidate class="support-request-form" id="supportForm">
+    <div class="support-field-grid">
+     <label>Full name<input type="text" name="name" autocomplete="name" placeholder="Your name" required maxlength="100"></label>
+     <label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@example.com" required maxlength="254"></label>
+    </div>
+    <label>What is your request about?<select name="issue" id="supportIssue" required>
+     <option value="">Select a category</option><option>Account & privacy</option><option>Messages & marketplace</option>
+     <option>Spaces & videos</option><option>Notifications & bugs</option>
+     <option>Safety or report abuse</option><option>Other help</option>
+    </select></label>
+    <label>Explain the issue<textarea name="message" placeholder="Page or feature, what happened, any error message, steps to reproduce…" minlength="15" maxlength="4000" rows="6" required></textarea></label>
+    <button class="btn" type="submit">Submit support request</button>
+    <div class="callout" id="supportStatus" role="status" aria-live="polite" hidden></div>
+   </form>
+   <p class="support-footer-hint">Support is operated by Timzee Corp. Urgent safety concerns should also be reported using the platform's content report tools.</p>
+  </section>
   <script type="module">
-    import { getPublishedFaqs } from './assets/js/faq.js';
-    const escapeHtml=(s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    (async()=>{try{const box=document.getElementById('faqList');const faqs=await getPublishedFaqs();if(!faqs.length){box.innerHTML='<p style="color:#666">No FAQs available yet.</p>';return;}box.innerHTML=faqs.map(f=>`<details style="margin-bottom:12px;padding:12px;border:1px solid #eee;border-radius:6px"><summary style="font-weight:600;cursor:pointer">${escapeHtml(f.question)}</summary><div style="margin-top:8px;color:#333">${escapeHtml(f.answer).replace(/\n/g,'<br>')}</div></details>`).join('');}catch(err){console.error('FAQ load failed',err);document.getElementById('faqList').innerHTML='<p style="color:#f00">Failed to load FAQs</p>';}})();
+   import {getPublishedFaqs} from './assets/js/faq.js';
+   const escapeHtml=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+   const list=document.getElementById('faqList');
+   const search=document.getElementById('supportFaqSearch');
+   let faqItems=[];
+   const render=()=>{
+    const term=search.value.trim().toLowerCase();
+    const filtered=faqItems.filter(f=>(f.question+' '+f.answer).toLowerCase().includes(term));
+    list.innerHTML=filtered.length?filtered.map(f=>'<details class="support-faq"><summary>'+escapeHtml(f.question)+'</summary><div class="support-faq-answer">'+escapeHtml(f.answer).replace(/\n/g,'<br>')+'</div></details>').join(''):
+     '<p class="support-empty">No matching answer. Use the support form below to ask us.</p>';
+   };
+   search.addEventListener('input',render);
+   (async()=>{try{
+    faqItems=await getPublishedFaqs()||[];
+    if(!faqItems.length)faqItems=[
+     {question:"How do I hide my email address?",answer:"Open Profile, then Privacy & Notifications and disable Show email. Public comments use your username or display name."},
+     {question:"How do I get push notifications?",answer:"Open Settings > Push notifications, allow browser notification permission and activate alerts on this device."},
+     {question:"Why can't I message a seller?",answer:"Some sellers restrict direct messages. Use the marketplace inquiry option or the seller's WhatsApp contact if they provided one."}
+    ];
+    render();
+   }catch(error){console.error("FAQ unavailable",error);list.textContent="FAQs are temporarily unavailable. Please use the support form below.";}})();
+   document.querySelectorAll('[data-support-topic]').forEach(link=>link.addEventListener('click',()=>{
+    document.getElementById('supportIssue').value=link.dataset.supportTopic;
+   }));
   </script>
-</section></div></main>
+ </div></main>
 <a class="floating-action whatsapp" id="whatsappSupportBtn" target="_blank" rel="noopener" style="display:none"><span>Chat on WhatsApp</span></a>
 <button class="floating-action donate" id="donationBtn" type="button" style="display:none"><span>Donate</span></button>
 <div class="donation-modal" id="donationModal" aria-hidden="true"><div class="donation-card"><div class="donation-header"><h3 id="donationTitle">Support Blipmood</h3><button class="btn ghost" id="donationClose" type="button">Close</button></div><p id="donationDetails">Thanks for supporting our community.</p><a class="btn" id="donationLink" target="_blank" rel="noopener">Donate now</a></div></div>
