@@ -29,7 +29,7 @@ const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const tabs=["live","upcoming","mine","here"];
 const q=new URLSearchParams(location.search);
 if(q.get("mini")==="1")document.body.classList.add("space-popout-mode");
-const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),desiredMic:false,audioConfigured:false,capabilityChecked:false,roomsRequestId:0,joining:false,micPermissionError:"",refreshingSpeaking:false,lastSpeakerUpgradeAt:0,micPreparedAt:0,activeSpeakerIds:new Set(),speakingStatusHint:""};
+const state={user:null,rooms:[],room:null,roomId:null,tab:"live",participants:[],profiles:new Map(),joined:false,role:"listener",livekit:null,heartbeat:null,poll:null,lastReactionAt:0,busy:false,mutedUsers:new Set(),desiredMic:false,audioConfigured:false,capabilityChecked:false,roomsRequestId:0,joining:false,micPermissionError:"",refreshingSpeaking:false,lastSpeakerUpgradeAt:0,micPreparedAt:0,activeSpeakerIds:new Set(),speakingStatusHint:"",speakerRequestLoadId:0};
 const el=(tag,text="",className="")=>{const item=document.createElement(tag);item.textContent=String(text);if(className)item.className=className;return item};
 const alertStatus=(message,tone="neutral")=>{const s=$("spacesStatus");s.textContent=message;s.dataset.tone=tone};
 const audioStatus=message=>$("spaceAudioStatus").textContent=message;
@@ -681,21 +681,47 @@ async function refreshSpeaking(){
 }
 async function loadRequests(){
  if(!state.room||state.user?.id!==state.room.owner_id)return;
+ const roomId=state.room.id,loadId=++state.speakerRequestLoadId;
  const response=await supabase.from("spaces_speaker_requests").select("user_id,status")
-  .eq("room_id",state.room.id).eq("status","pending").limit(25);
- if(response.error)return;
+  .eq("room_id",roomId).eq("status","pending").limit(25);
+ if(loadId!==state.speakerRequestLoadId||state.room?.id!==roomId)return;
+ if(response.error){alertStatus("Could not load speaking requests. Please retry.","error");return}
+ // Pending requesters may not be current room participants, so the
+ // participant-only identity cache cannot resolve all their names.
+ const requests=(response.data||[]).filter(item=>validId(item.user_id));
+ const missingIds=[...new Set(requests.map(item=>item.user_id).filter(id=>!state.profiles.get(id)?.username))];
+ if(missingIds.length){
+  const profiles=await supabase.from("public_profiles").select("id,username,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style")
+   .in("id",missingIds).limit(25);
+  if(loadId!==state.speakerRequestLoadId||state.room?.id!==roomId)return;
+  if(!profiles.error)for(const profile of profiles.data||[]){
+   state.profiles.set(profile.id,{...(state.profiles.get(profile.id)||{}),...profile});
+  }
+ }
  const queue=$("spaceRequests");queue.replaceChildren();
- if(!response.data?.length)queue.append(el("p","No pending requests.","studio-muted"));
- for(const item of response.data||[]){
-  const row=el("div","","studio-row");
-  row.append(el("strong","Listener "+item.user_id.slice(0,8)));
+ if(!requests.length){queue.append(el("p","No pending requests.","studio-muted"));return}
+ for(const item of requests){
+  const profile=state.profiles.get(item.user_id);
+  // Never expose UUIDs or email addresses as display-name fallbacks.
+  const username=typeof profile?.username==="string"&&/^[A-Za-z0-9_.]{3,32}$/.test(profile.username)
+   ?profile.username:null;
+  const row=el("div","","studio-row space-speaker-request");
+  const identity=el("div","","space-request-identity");
+  if(profile?.avatar_url){
+   const avatar=el("span","","space-request-avatar");
+   avatar.innerHTML=verifiedAvatar(profile.avatar_url,profile,{size:"sm",alt:username?"@"+username+" avatar":"Member avatar"});
+   identity.append(avatar);
+  }
+  identity.append(el("strong",username?"@"+username:"Member (username unavailable)"));
+  row.append(identity);
   for(const [title,approved] of [["Approve",true],["Decline",false]]){
    row.append(button(title,async()=>{
-    try{success(await supabase.rpc("spaces_review_speaker",{p_room:state.room.id,p_user:item.user_id,p_approve:approved}));
-    await loadRequests();await loadPeople();alertStatus("Request "+(approved?"approved":"declined")+". The speaker will connect automatically.","success")}
-    catch(e){alertStatus(e.message,"error")}
+    try{success(await supabase.rpc("spaces_review_speaker",{p_room:roomId,p_user:item.user_id,p_approve:approved}));
+     await loadRequests();await loadPeople();alertStatus("Request "+(approved?"approved":"declined")+". The speaker will connect automatically.","success")}
+    catch(e){alertStatus(e.message||"Could not review speaking request.","error")}
    }));
-  }queue.append(row);
+  }
+  queue.append(row);
  }
 }
 async function inviteListener(event){
