@@ -1553,7 +1553,7 @@
             video.addEventListener("playing",()=>{
               clearTimeout(watchTimer);
               const videoId=el.dataset.id;
-              if(!state.user?.id||state.viewAttempts.has(videoId))return;
+              if(state.viewAttempts.has(videoId))return;
               watchTimer=setTimeout(async()=>{
                 if(video.paused||!video.isConnected||
                   document.visibilityState==="hidden"||
@@ -1885,32 +1885,53 @@
 
       // Attach seller/uploader verification + staff-pick + comment counts in a batch (avoid N+1)
       async function attachUploaderBadgesAndCounts(videos) {
-        const userIds = [...new Set(videos.map((v) => v.user_id).filter(Boolean))];
-        if (userIds.length) {
-          const profiles = await supabase
-            .from("public_profiles")
-            .select("id, username, display_name, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style, is_staff_pick")
-            .in("id", userIds);
-          const map = {};
-          (profiles.data || []).forEach((p) => {
-            map[p.id] = p;
-          });
-          videos.forEach((v) => {
-            const p = map[v.user_id];
-            v.uploader_profile = p || null;
-            v.uploader_staff_pick = !!p?.is_staff_pick;
-          });
+        if(!videos.length)return;
+        const ids=videos.map(v=>v.id).filter(Boolean).slice(0,50);
+        const userIds=[...new Set(videos.map(v=>v.user_id).filter(Boolean))];
+        // Public reel metadata joins to public_profiles on the server and
+        // never returns a legacy email or display name as the public handle.
+        // Run alongside verified-profile and engagement lookups so a transient
+        // failure in one feature does not hide the creator's identity.
+        const [identity,profilesResult,countsResult]=await Promise.allSettled([
+          supabase.rpc("reel_public_metadata",{p_video_ids:ids}),
+          userIds.length?supabase.from("public_profiles")
+            .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style,is_staff_pick")
+            .in("id",userIds):Promise.resolve({data:[],error:null}),
+          supabase.rpc("video_social_counts",{p_video_ids:ids})
+        ]);
+        const usable=result=>result.status==="fulfilled"&&!result.value?.error
+          ?result.value.data||[]:[];
+        const publicById=new Map(usable(identity).map(row=>[row.video_id,row]));
+        let profiles=usable(profilesResult);
+        if(!profiles.length&&userIds.length){
+          // Retry the essential public username alone if an optional badge or
+          // profile field prevented the larger select from succeeding.
+          const fallback=await supabase.from("public_profiles")
+            .select("id,username").in("id",userIds);
+          if(!fallback.error)profiles=fallback.data||[];
+          else console.warn("Reel public username lookup failed",fallback.error.code||"unknown");
         }
-        if(videos.length){
-          const counts=await supabase.rpc("video_social_counts",{
-            p_video_ids:videos.map(v=>v.id).slice(0,50)
-          });
-          const byId=new Map((counts.data||[]).map(row=>[row.video_id,row]));
-          videos.forEach(v=>{
-            v.like_count=Number(byId.get(v.id)?.like_count??v.like_count??0);
-            v.comment_count=Number(byId.get(v.id)?.comment_count??v.comment_count??0);
-          });
-        }
+        const profileById=new Map(profiles.map(p=>[p.id,p]));
+        const countsById=new Map(usable(countsResult).map(row=>[row.video_id,row]));
+        videos.forEach(v=>{
+          const publicRow=publicById.get(v.id);
+          const p=profileById.get(v.user_id);
+          const validated=publicIdentityName(
+            publicRow?.username?{username:publicRow.username}:p
+          );
+          // Only a verified public username is displayed. Stored author_name
+          // can contain obsolete real names/emails and is never used to override.
+          v.uploader_profile=p||(
+            validated!=="Member"?{username:validated}:null
+          );
+          if(v.uploader_profile&&validated!=="Member")
+            v.uploader_profile.username=validated;
+          v.uploader_staff_pick=!!p?.is_staff_pick;
+          if(publicRow?.view_count!==undefined)
+            v.view_count=Math.max(0,Number(publicRow.view_count)||0);
+          v.like_count=Number(countsById.get(v.id)?.like_count??v.like_count??0);
+          v.comment_count=Number(countsById.get(v.id)?.comment_count??v.comment_count??0);
+        });
       }
 
       async function bootFeed(includeStartingVideo = false) {
