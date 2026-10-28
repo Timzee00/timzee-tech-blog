@@ -85,6 +85,11 @@
         </details>
 
 
+        <section id="marketPurchaseRequests" class="market-owner-workspace" hidden aria-label="Seller purchase confirmations">
+         <div class="market-owner-heading"><div><span class="market-owner-eyebrow">VERIFIED REVIEWS</span><h2>Confirm completed sales</h2><p>Confirm only purchases actually completed outside Blipmood. Buyers can rate your service and item afterwards.</p></div></div>
+         <div id="marketPurchaseQueue" role="status" aria-live="polite">Loading purchase confirmations…</div>
+        </section>
+
         <section id="myMarketListings" class="market-owner-workspace" hidden aria-label="Manage my marketplace listings">
          <div class="market-owner-heading"><div><span class="market-owner-eyebrow">SELLER STUDIO</span><h2>My listings</h2><p>Manage live and hidden items in one place.</p></div>
           <button type="button" class="btn ghost sm" id="refreshMyListings">Refresh</button>
@@ -329,6 +334,34 @@
         status.style.display="block";status.style.color="var(--color-text-muted,#8bc6c2)";
         status.textContent="Your existing photos are kept. Add new images only if you want to.";
       }
+      async function loadPurchaseConfirmations(){
+        const box=document.getElementById("marketPurchaseQueue");
+        if(!state.user)return;
+        box.textContent="Loading buyer confirmation requests…";
+        const r=await supabase.from("marketplace_transactions")
+          .select("id,item_id,buyer_id,status,created_at").eq("seller_id",state.user.id).eq("status","pending")
+          .order("created_at",{ascending:false}).limit(40);
+        if(r.error){box.textContent="Couldn't load purchase requests.";return;}
+        const list=r.data||[];
+        if(!list.length){box.textContent="No purchase confirmations pending.";return;}
+        box.innerHTML=list.map(row=>`<div class="market-owner-item">
+          <div class="market-owner-copy"><strong>Buyer purchase confirmation requested</strong>
+          <small>Listing ID: ${escapeHTML(row.item_id||"")}</small>
+          <div class="market-owner-actions">
+            <button type="button" data-purchase-confirm="${encodeURIComponent(row.id)}">Confirm completed sale</button>
+            <button type="button" data-purchase-reject="${encodeURIComponent(row.id)}">Decline request</button>
+          </div></div></div>`).join("");
+        box.querySelectorAll("[data-purchase-confirm],[data-purchase-reject]").forEach(btn=>btn.addEventListener("click",async()=>{
+          const confirmed=btn.hasAttribute("data-purchase-confirm");
+          const id=btn.dataset.purchaseConfirm||btn.dataset.purchaseReject;
+          if(!window.confirm(confirmed?"Confirm you completed this sale with the buyer?":"Decline this confirmation request?"))return;
+          btn.disabled=true;
+          const update=await supabase.from("marketplace_transactions")
+            .update({status:confirmed?"completed":"cancelled"}).eq("id",id).eq("seller_id",state.user.id).eq("status","pending");
+          if(update.error)window.siteToast?.(update.error.message,{type:"error"});
+          await loadPurchaseConfirmations();
+        }));
+      }
       async function loadMyListings(){
         if(!state.user)return;
         const target=document.getElementById("myMarketList");
@@ -415,6 +448,11 @@
             window.location.reload();
           });
           document.getElementById("createBtnHeader").style.display = "inline-flex";
+          document.getElementById("sellerInquiryInbox").hidden=false;
+          document.getElementById("myMarketListings").hidden=false;
+          document.getElementById("marketPurchaseRequests").hidden=false;
+          void loadMyListings();
+          void loadPurchaseConfirmations();
           await loadSellerProfile();
         } else {
           authActions.innerHTML = `<a class="btn ghost" href="login.html?next=${encodeURIComponent('marketplace.html')}">Log In</a>`;
