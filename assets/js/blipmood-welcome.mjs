@@ -5,6 +5,8 @@ const current=location.pathname.split("/").pop()||"index.html";
 const DURATION=14*24*60*60*1000;
 const before=()=>{try{return Number(localStorage.getItem(KEY)||0)}catch{return 0}};
 function build(){
+ // Returning signed-in members already have a home; don't interrupt them.
+ if(document.querySelector('#authActions a[href*="profile.html"]'))return;
  if(current!=="index.html"||Date.now()-before()<DURATION||
    document.getElementById("bmWelcomeModal")||
    document.getElementById("siteAnnouncementBanner"))return;
