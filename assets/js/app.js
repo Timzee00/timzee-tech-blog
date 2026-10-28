@@ -111,6 +111,20 @@ function showAdminLinks() {
   }
 }
 
+function syncCommunityJoinLinks(){
+  const join=document.querySelector('.home-intro .cta a[href*="login.html?view=signup"]');
+  const note=document.querySelector('.home-intro .intro-note');
+  if(!join)return;
+  if(state.user?.id){
+    join.href="/discussion.html";
+    join.textContent="Explore communities";
+    if(note){note.href="/discussion.html";note.textContent="Welcome back · Find your people →";}
+  }else{
+    join.href="/login.html?view=signup&next="+encodeURIComponent("/discussion.html");
+    join.textContent="Join the community";
+    if(note){note.href=join.href;note.textContent="Find your people. Create an account →";}
+  }
+}
 function renderAuthActions() {
   const actions = document.querySelector(".header-actions");
   if (!actions) return;
@@ -994,6 +1008,7 @@ async function boot() {
       .catch(error => console.warn("Theme unavailable:", error));
   }
   renderAuthActions();
+  syncCommunityJoinLinks();
   showAdminLinks();
   if(state.user?.id){
     void mountReaderHome(state.user,{posts:state.posts,categories:state.categories});
