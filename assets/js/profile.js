@@ -357,7 +357,7 @@ function renderProfile() {
   const headline = document.getElementById("profileHeadline");
   const badgeWrap = document.getElementById("profileBadges");
   if (avatar) {
-    avatar.src = state.profile?.avatar_url || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+    avatar.src = state.profile?.avatar_url || "/assets/img/avatar-placeholder.svg";
   }
   if (cover) {
     cover.src = state.profile?.cover_url || "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1200&q=80";
@@ -383,6 +383,8 @@ function renderProfile() {
     const displayName = plainDisplayName(state.profile?.display_name || "Member");
     name.innerHTML = verifiedName(displayName,state.profile);
   }
+  const handle=document.getElementById("profileHandle");
+  if(handle)handle.textContent=state.profile?.username?"@"+state.profile.username:"";
   if (headline) {
     headline.textContent = state.profile?.headline || "Tech community member";
   }
