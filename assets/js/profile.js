@@ -244,7 +244,7 @@ async function loadFriendSummary() {
   if (!friendIds.length) return;
   const profiles = await supabase
     .from("public_profiles")
-    .select("id, display_name, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style")
+    .select("id, display_name, username, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style")
     .in("id", friendIds);
   state.friendSummary = profiles.data || [];
 }
@@ -316,7 +316,7 @@ function renderProfileFriends() {
       (friend) => `
         <div class="friend-pill">
           ${verifiedAvatar(friend.avatar_url,friend,{size:"sm",alt:"Friend portrait"})}
-          <div class="friend-name">${verifiedName(friend.display_name || "Member",friend,{compact:true})}</div>
+          <div class="friend-name">${verifiedName(friend.username || "Member",friend,{compact:true})}</div>
         </div>
       `
     )
