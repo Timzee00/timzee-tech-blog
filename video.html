@@ -801,7 +801,8 @@
         incrementVideoView,
         uploadVideo,
         detectVideoDuration,
-        isSupportedVideoFile
+        isSupportedVideoFile,
+        captureVideoThumbnail
       } from "./assets/js/videos-marketplace.js";
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
@@ -945,7 +946,7 @@
         uploadStatus.textContent = "";
         const file = uploadFile.files?.[0];
         if (!file) return;
-        if (!file.size || !(file.type.startsWith("video/") || /\.(mp4|webm|ogg|mov)$/i.test(file.name))) {
+        if (!file.size || !isSupportedVideoFile(file)) {
           uploadStatus.textContent = "Choose a valid non-empty video file.";
           return;
         }
@@ -958,43 +959,7 @@
         }
       });
 
-      function captureReelCover(file) {
-        return new Promise(resolve => {
-          let url;
-          try { url = URL.createObjectURL(file); }
-          catch { resolve(null); return; }
-          const video = document.createElement("video");
-          video.muted = true;
-          video.playsInline = true;
-          video.preload = "metadata";
-          let settled = false;
-          const timer = setTimeout(() => finish(null), 6500);
-          function finish(result) {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            video.removeAttribute("src");
-            video.load();
-            URL.revokeObjectURL(url);
-            resolve(result);
-          }
-          video.addEventListener("loadedmetadata", () => {
-            const time = Math.min(0.5, Math.max(0, (video.duration || 0) - 0.1));
-            try { video.currentTime = time; } catch { finish(null); }
-          }, {once:true});
-          video.addEventListener("seeked", () => {
-            try {
-              const canvas = document.createElement("canvas");
-              canvas.width = Math.max(1, video.videoWidth || 320);
-              canvas.height = Math.max(1, video.videoHeight || 180);
-              canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-              canvas.toBlob(blob => finish(blob ? new File([blob], "reel-cover.jpg", {type:"image/jpeg"}) : null), "image/jpeg", 0.8);
-            } catch { finish(null); }
-          }, {once:true});
-          video.addEventListener("error", () => finish(null), {once:true});
-          video.src = url;
-        });
-      }
+      const captureReelCover=captureVideoThumbnail;
 
       uploadForm.addEventListener("submit", async event => {
         event.preventDefault();
