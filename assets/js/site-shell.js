@@ -2,9 +2,7 @@ import "./ui-controls.js";
 import "./image-fallback.js";
 import "./nav.js";
 import "./blipmood-unified-menu.mjs";
-import "./blipmood-welcome.mjs";
 import "./space-mini-dock.mjs";
-import "./visitor-analytics.js";
 import { pageFileName } from "./route-page.mjs";
 
 const BRAND_TEXT="Powered by Timzee Corp";
@@ -147,4 +145,13 @@ export function ensureSiteFooter() {
 }
 async function loadPageEnhancements(){const path=currentSitePath();const imports=[import("./experience-preferences.js"),import("./launch-context.mjs")];if(path==="discussion.html")imports.push(import("./discussion-discovery.js"));if(path==="chat.html")imports.push(import("./chat-context-menu.js"));if(path==="ai-chat.html")imports.push(import("./ai-context.js"));if(imports.length)await Promise.allSettled(imports);}
 function scheduleIdle(task){if(typeof window.requestIdleCallback==="function")window.requestIdleCallback(task,{timeout:900});else window.setTimeout(task,220);}
-if(typeof window!=="undefined"){const start=()=>{ensureBlipmoodHeader();ensureProductNavigation();ensureSiteFooter();synchronizeBrandImages();new MutationObserver(synchronizeBrandImages).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});void import("./privacy-consent.js");scheduleIdle(()=>void loadPageEnhancements());};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();}
+if(typeof window!=="undefined"){const start=()=>{ensureBlipmoodHeader();ensureProductNavigation();ensureSiteFooter();synchronizeBrandImages();new MutationObserver(synchronizeBrandImages).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});void import("./privacy-consent.js");scheduleIdle(()=>{
+  void loadPageEnhancements();
+  void import("./visitor-analytics.js").catch(()=>{});
+});
+if(currentSitePath()==="index.html"){
+  // Never place a popup or its CSS on the critical-rendering path.
+  // The welcome campaign is guest-only and loads after the main hero settles.
+  window.setTimeout(()=>{if(document.visibilityState==="visible")
+    void import("./blipmood-welcome.mjs").catch(()=>{});},4300);
+}};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();}
