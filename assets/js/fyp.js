@@ -341,16 +341,25 @@ function bindFypVideoGestures(root){
     const video=stage?.querySelector("video"),flash=stage?.querySelector(".fyp-video-flash");
     if(!card||!video)return;
     let lastTap=0,pending=null,watchTimer=null,viewAttempted=false;
-    // FYP inline playback counts as a real view too, but not after a glance.
-    // Server-side once-per-viewer-per-day dedup prevents inflation.
+    let viewInFlight=false,viewRetryAfter=0;
+    // Count sustained visible playback. Failed/duplicate receipts must not
+    // permanently disable retries, nor fabricate a successful database view.
     video.addEventListener("playing",()=>{
       clearTimeout(watchTimer);
-      if(viewAttempted)return;
-      watchTimer=setTimeout(()=>{
+      if(viewAttempted||viewInFlight||Date.now()<viewRetryAfter)return;
+      watchTimer=setTimeout(async()=>{
         if(video.paused||!video.isConnected||
-           document.visibilityState==="hidden"||viewAttempted)return;
-        viewAttempted=true;
-        void incrementVideoView(card.dataset.contentId).catch(()=>{});
+           document.visibilityState==="hidden"||viewAttempted||
+           viewInFlight||Date.now()<viewRetryAfter)return;
+        viewInFlight=true;
+        try{
+          const credited=await incrementVideoView(card.dataset.contentId);
+          if(credited)viewAttempted=true;
+          else viewRetryAfter=Date.now()+60000;
+        }catch(error){
+          viewRetryAfter=Date.now()+60000;
+          console.warn("Inline video view unavailable; will retry",error);
+        }finally{viewInFlight=false}
       },2000);
     });
     video.addEventListener("pause",()=>clearTimeout(watchTimer));
