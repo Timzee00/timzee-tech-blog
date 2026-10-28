@@ -300,7 +300,8 @@ async function boot() {
   }
 
   const params = new URLSearchParams(window.location.search);
-  const nextUrl = getSafeNextUrl(params.get("next"));
+  const nextUrl = getSafeNextUrl(params.get("next") ||
+    (params.get("view")==="signup" ? "/discussion.html" : null));
 
   const loginForm = document.getElementById("loginForm");
   const signupForm = document.getElementById("signupForm");
@@ -389,6 +390,10 @@ async function boot() {
     if (profileCheck?.blocked) {
       await signOut();
       setMessage(loginMessage, profileCheck.message || "Account access is restricted.");
+    } else if (queryParams.get("view")==="signup") {
+      // Visiting a registration CTA must not show a signup form to a signed-in member.
+      window.location.replace(await nextAfterMemberSetup(user,nextUrl));
+      return;
     } else if (oauthCallback && !callbackError && !callbackExchangeError) {
       clearHash();
       window.location.replace(await nextAfterMemberSetup(user,nextUrl));
