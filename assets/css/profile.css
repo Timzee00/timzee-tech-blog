@@ -140,3 +140,85 @@
 .profile-image-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:10px}
 .profile-image-dialog-head button{min-height:44px;border:1px solid currentColor;border-radius:9px;background:transparent;color:inherit;padding:9px 14px}
 .profile-image-dialog img{display:block;width:auto;height:auto;max-width:calc(96vw - 30px);max-height:calc(92vh - 80px);object-fit:contain;margin:auto}
+
+/* Blipmood 2026 — mature creator profile, restrained glass treatment.
+   Compact at phone widths; no sideways overflow. */
+.profile-page{min-width:0;max-width:100%;overflow-x:clip}
+.profile-page .container{min-width:0}
+.profile-page .profile-grid{gap:clamp(14px,2vw,25px);min-width:0}
+.profile-page .profile-main,.profile-page .profile-sidebar{min-width:0}
+.profile-page .profile-hero{border-radius:21px;overflow:hidden;
+ border:1px solid var(--color-border-strong,#5378885e);
+ box-shadow:0 18px 50px #050d1b26;background:var(--color-surface,#132b34)}
+.profile-page .profile-cover{height:clamp(160px,24vw,270px);min-height:160px;position:relative;
+ background:radial-gradient(circle at 72% 22%,#bc69dd6d,transparent 42%),
+  linear-gradient(126deg,#093b64,#242e64 48%,#11675b)}
+.profile-page .profile-cover:after{content:"";position:absolute;inset:0;pointer-events:none;
+ background:linear-gradient(transparent 55%,rgba(7,20,32,.4));}
+.profile-page .profile-cover-open{width:100%;height:100%}
+.profile-page .profile-cover-open img{height:100%;width:100%;object-fit:cover}
+.profile-page .profile-identity{align-items:flex-end;gap:19px;padding:0 clamp(15px,3vw,29px) 14px;
+ margin-top:-48px;position:relative;z-index:2;flex-wrap:wrap}
+.profile-page .profile-avatar-wrap{flex:none;width:clamp(98px,14vw,140px);height:clamp(98px,14vw,140px);
+ border:4px solid var(--color-surface,#162f3e);border-radius:50%;background:#1d4354;
+ box-shadow:0 8px 25px #081c3066,0 0 0 1px #74c7cd33;overflow:visible}
+.profile-page .profile-avatar-open{width:100%;height:100%;border-radius:50%;overflow:hidden}
+.profile-page .profile-avatar{width:100%;height:100%;object-fit:cover}
+.profile-page .profile-body{min-width:0;flex:1 1 230px;display:grid;justify-items:start;gap:4px;padding:0 0 3px}
+.profile-page .profile-body h1{font-size:clamp(1.45rem,3vw,2.3rem);line-height:1.15;
+ letter-spacing:-.03em;overflow-wrap:anywhere;max-width:100%;margin:2px 0 0}
+.profile-page .profile-body .profile-headline{margin:2px 0;color:var(--color-text-muted,#adc3ca);
+ line-height:1.5;font-size:.91rem;overflow-wrap:anywhere}
+.profile-handle{font-size:.82rem;font-weight:750;color:#50bcae;margin:0;overflow-wrap:anywhere}
+.profile-page #profileRole{font-size:.72rem;border-radius:999px;padding:5px 11px;letter-spacing:.02em}
+.profile-page .profile-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;max-width:100%}
+.profile-page .profile-actions .btn{border-radius:999px;min-height:40px;max-width:100%;white-space:normal}
+.profile-page .profile-bio{padding:0 clamp(15px,3vw,29px);margin:8px 0 14px;
+ font-size:.9rem;line-height:1.7;max-width:72ch;overflow-wrap:anywhere}
+.profile-page .profile-stats{margin:0 clamp(15px,3vw,29px) 20px;padding:15px 0 8px;
+ border-top:1px solid var(--color-border,#ffffff28);display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(min(92px,100%),1fr));gap:15px;justify-items:center}
+.profile-page .profile-stats .stats-item{min-width:0;text-align:center}
+.profile-page .profile-stats .stats-item strong{font-size:clamp(1.12rem,2vw,1.4rem)}
+.profile-page .profile-sidebar .profile-card,.profile-page .profile-activity .profile-card{
+ border:1px solid var(--color-border,#ffffff20);box-shadow:0 5px 19px #081b2514;
+ border-radius:16px;padding:clamp(15px,2.5vw,23px);min-width:0}
+.profile-page .profile-sidebar .profile-card h3{font-size:1rem;letter-spacing:-.01em;
+ padding-bottom:11px;margin:0 0 12px;border-bottom:1px solid var(--color-border,#ffffff20)}
+.profile-page .profile-tabs{position:relative;display:flex;gap:5px;padding:7px;
+ background:var(--color-surface-muted,#1c3743);border:1px solid var(--color-border,#ffffff2a);
+ border-radius:15px;margin:0 0 19px;min-width:0;max-width:100%;overflow-x:auto;
+ scrollbar-width:thin}
+.profile-page .profile-tabs button{background:transparent;border:1px solid transparent;
+ color:var(--color-text-muted,#c5d0dd);flex-shrink:0;border-radius:10px;
+ padding:10px 15px;font-size:.84rem;font-weight:700;min-height:42px}
+.profile-page .profile-tabs button.active{background:var(--color-primary,#20b99f);
+ color:var(--color-text-on-primary,#0b1b25);box-shadow:0 3px 12px #0a3e442a}
+.profile-page .profile-tabs button:focus-visible,.profile-page .profile-image-open:focus-visible{
+ outline:3px solid #64dbd3;outline-offset:3px}
+.profile-page .form-grid :is(input,textarea,select){max-width:100%;min-width:0;box-sizing:border-box;
+ background:var(--color-surface-muted,#1c3843);color:var(--color-text,#edf5fc);
+ border:1px solid var(--color-border-strong,#678391);border-radius:11px;
+ padding:12px;font:inherit}
+.profile-page .form-grid button[type=submit]{min-height:46px;border-radius:11px}
+@media(max-width:670px){
+ .profile-page .profile-identity{flex-direction:row;align-items:flex-end;text-align:left;margin-top:-38px;
+ padding-inline:16px;gap:12px}
+ .profile-page .profile-avatar-wrap{width:102px;height:102px}
+ .profile-page .profile-body{flex:1 1 190px;justify-items:start;min-width:0}
+ .profile-page .profile-body h1{font-size:1.4rem}
+ .profile-page .profile-body .profile-headline{text-align:left;font-size:.8rem}
+ .profile-page .profile-actions{justify-content:flex-start}
+ .profile-page .profile-bio{text-align:left;padding-inline:16px}
+ .profile-page .profile-stats{margin-inline:16px;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+ .profile-page .profile-hero{border-radius:15px}
+ .profile-page .profile-tabs{gap:4px}
+ .profile-page .profile-tabs button{font-size:.78rem;padding:9px 12px}
+}
+@media(max-width:390px){
+ .profile-page .profile-identity{display:flex;flex-direction:column;align-items:center;text-align:center}
+ .profile-page .profile-body{flex:auto;width:100%;justify-items:center}
+ .profile-page .profile-body .profile-headline{text-align:center}
+ .profile-page .profile-actions{justify-content:center}
+ .profile-page .profile-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
