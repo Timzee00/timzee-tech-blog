@@ -10,7 +10,8 @@ import {
   fetchFeedPosts,
   fetchAds,
   searchPosts,
-  fetchTopProfiles,
+  fetchAnnualLeaderboard,
+  fetchAnnualChampions,
   createContentRequest,
   togglePostLike,
   createPostShare,
@@ -781,15 +782,15 @@ function renderLeaderboard() {
       const name = profile.display_name || profile.username || "Member";
       const defaultAvatar = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
       const avatar = isSafeUrl(profile.avatar_url) ? profile.avatar_url : defaultAvatar;
-      const points = profile.points || 0;
-      const level = profile.level || deriveLevel(points).label;
+      const points = profile.annual_score ?? 0;
+      const level = profile.level || deriveLevel(profile.points || 0).label;
       return `
         <div class="leaderboard-item">
           <a href="profile.html?id=${encodeURIComponent(profile.id || '')}" aria-label="View profile"><img src="${avatar}" alt="member avatar"></a>
           <div>
             <div><strong>${verifiedName(name,profile,{compact:true})}</strong></div>
             <div class="leaderboard-meta">
-              <span>${points} pts</span>
+              <span>${points} annual pts</span>
               <span>${escapeHTML(level)}</span>
             </div>
           </div>
@@ -799,6 +800,15 @@ function renderLeaderboard() {
     .join("");
 }
 
+function renderAnnualChampions(rows=[]){
+ const host=document.getElementById("annualChampions");
+ if(!host)return;
+ if(!rows.length){host.innerHTML='<p class="leaderboard-history-empty">Past champions will appear here after the first annual awards.</p>';return;}
+ host.innerHTML=rows.map(row=>'<div class="leaderboard-history-row"><span aria-hidden="true">'+
+   (row.rank===1?'🏆':row.rank===2?'🥈':'🥉')+'</span><div><strong>'+
+   escapeHTML(row.display_name||"Member")+'</strong><small>'+
+   Number(row.year)+' · #'+Number(row.rank)+' · '+Number(row.score)+' points</small></div></div>').join("");
+}
 function isAdActive(ad) {
   if (!ad) return false;
   if (ad.status && ad.status !== "active") return false;
@@ -946,7 +956,7 @@ async function boot() {
       }),
     [], "popular discussions"
   );
-  const leaderboardPromise = softTimeout(fetchTopProfiles(5), [], "leaderboard");
+  const leaderboardPromise = softTimeout(fetchAnnualLeaderboard(5), [], "annual leaderboard");
 
   // First meaningful content does not wait for sidebar widgets, identity,
   // advertisements or custom-theme lookups.
@@ -1002,6 +1012,7 @@ async function boot() {
   state.suggestedPeople = suggestedPeople;
   renderPopularTopics();
   renderLeaderboard();
+  void softTimeout(fetchAnnualChampions(9), [], "champion archive").then(renderAnnualChampions);
   renderSuggestedPeople();
   renderAds(state.settings);
 }
