@@ -47,13 +47,13 @@ export function rankVideoCandidates(candidates,now=Date.now()){
     (Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0));
   const newest=[...rows].sort((a,b)=>(Date.parse(b.created_at)||0)-
     (Date.parse(a.created_at)||0));
-  // Give genuine newer/less-exposed clips a chance; don't force zero-quality
-  // content to dominate over videos with meaningful watch/engagement signals.
-  const emerging=[...rows].sort((a,b)=>{
-    const left=score(a)-Math.log1p(Math.max(0,Number(a.view_count)||0))*0.65;
-    const right=score(b)-Math.log1p(Math.max(0,Number(b.view_count)||0))*0.65;
-    return right-left;
-  });
+  // Reserve a discovery lane for the bottom half of *eligible* public
+  // candidates, preventing popular videos from also consuming every
+  // exploration slot. Activity and recency decide order within that lane.
+  const emerging=popular.slice(Math.max(1,Math.floor(popular.length*0.5)))
+    .sort((a,b)=>
+      (score(b)-Math.log1p(Math.max(0,Number(b.view_count)||0))*0.65)-
+      (score(a)-Math.log1p(Math.max(0,Number(a.view_count)||0))*0.65));
   const lanes=[popular,popular,newest,popular,emerging];
   const seen=new Set(),result=[];
   for(let i=0;result.length<rows.length&&i<rows.length*3;i++){
