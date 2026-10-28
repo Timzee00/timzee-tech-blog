@@ -48,7 +48,8 @@
     <link rel="preload" href="https://d2ol7oe51mr4n9.cloudfront.net/user_3JR5g6OD2PPsWciJ9XxM8Ue05wO/fc802f03-1c6f-4c85-ab4c-a31f4a6b2981.png" as="image" fetchpriority="high">
     <link rel="stylesheet" href="assets/css/blipmood-home.css">
       <script defer src="assets/js/theme-init.js"></script>
-  </head>
+  <style>.leaderboard-year-hint{display:block;color:var(--color-text-muted,#bed3d2);line-height:1.4;margin-bottom:9px}.leaderboard-history{margin:15px 0;border:1px solid #39ad9e6c;padding:12px;border-radius:12px}.leaderboard-history summary{cursor:pointer;font-weight:800}.leaderboard-history-row{display:flex;gap:12px;align-items:center;padding:9px 3px;border-bottom:1px solid #ffffff16}.leaderboard-history-row>span{font-size:1.35rem}.leaderboard-history-row div{display:grid;gap:3px}.leaderboard-history-row small,.leaderboard-history-empty{font-size:.74rem;color:var(--color-text-muted,#9ebcb7)}</style>
+</head>
   <body class="blipmood-home">
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
@@ -207,8 +208,10 @@
           <aside class="side-card" data-reveal>
             <h3>Hot This Week</h3>
             <div id="trendingList" class="post-list"></div>
-            <h3 style="margin-top:16px;">Top Members</h3>
+            <h3 style="margin-top:16px;">🏆 2026 Leaderboard</h3>
+            <small class="leaderboard-year-hint">Annual scores reset on January 1 · lifetime XP remains</small>
             <div id="leaderboardList" class="leaderboard-list"></div>
+            <details class="leaderboard-history"><summary>Past winners · Hall of Fame</summary><div id="annualChampions" aria-live="polite">Loading champions…</div></details>
             <div class="ad-slot" id="homeTopAd" hidden></div>
             <div class="ad-slot" id="homeSidebarAd" hidden></div>
             <div class="callout">Share posts to boost visibility and reactions.</div>
