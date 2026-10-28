@@ -6,7 +6,17 @@
     <title>Admin Dashboard - Timzee Tech Hub</title>
     <link rel="stylesheet" href="../assets/css/admin.css">
       <script defer src="../assets/js/theme-init.js"></script>
-  </head>
+  <style>
+.admin-ai-studio{border:1px solid #7d66d979;background:radial-gradient(circle at 96% 4%,#7955e125,transparent 42%),var(--color-surface,#112734);padding:clamp(16px,3vw,23px);border-radius:19px;display:grid;gap:12px;margin:15px 0 22px;max-width:100%;min-width:0}
+.admin-ai-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}.admin-ai-head h3{margin:5px 0;font-size:1.18rem}.admin-ai-head>span{font-size:.71rem;color:#b4dce7}.admin-ai-kicker{font-size:.69rem;color:#bc9cff;letter-spacing:.12em;font-weight:850}
+.admin-ai-studio p{font-size:.81rem;line-height:1.5;color:var(--color-text-muted,#a9c1c7);margin:0}.admin-ai-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.admin-ai-studio label{display:grid;gap:7px;font-weight:700;font-size:.82rem;min-width:0}
+.admin-ai-studio :is(input,select,textarea){min-width:0;width:100%;box-sizing:border-box;background:var(--color-surface-muted,#1c3541);color:var(--color-text,#fff);border:1px solid #6e75a188;border-radius:10px;padding:12px;font:inherit}
+.admin-ai-studio textarea{resize:vertical;min-height:90px}.admin-visual-toggle{display:flex;gap:9px;align-items:center;line-height:1.5;max-width:100%;font-size:.84rem}
+.admin-visual-preview img{display:block;object-fit:contain;max-height:250px;max-width:100%;border-radius:12px}
+@media(max-width:520px){.admin-ai-grid{grid-template-columns:1fr}}
+</style>
+</head>
   <body class="admin-shell">
     <a class="skip-link" href="#adminApp">Skip to main content</a>
     <div class="topbar">
@@ -44,8 +54,18 @@
 
       <section class="admin-card" data-panel="compose">
         <h2>Create or Update Post</h2>
+        <section class="admin-ai-studio" aria-labelledby="aiStudioHeading">
+          <div class="admin-ai-head"><div><span class="admin-ai-kicker">EDITORIAL COPILOT</span><h3 id="aiStudioHeading">AI writing assistant</h3></div><span>Drafts need staff review</span></div>
+          <p>Give AI a topic and choose where the draft should go. Nothing gets published automatically.</p>
+          <div class="admin-ai-grid"><label>Write for<select id="aiDraftTarget"><option value="post">Blog post</option><option value="announcement">Announcement</option></select></label>
+          <label>Tone<select id="aiDraftTone"><option value="friendly">Friendly and engaging</option><option value="professional">Clear and professional</option><option value="urgent">Important / urgent</option><option value="playful">Creative and fun</option></select></label></div>
+          <label>Topic or instructions<textarea id="aiDraftPrompt" rows="3" maxlength="2400" placeholder="E.g. Announce our new Spaces feature, explain how it works and invite members…"></textarea></label>
+          <div class="inline-actions"><button type="button" class="btn" id="aiGenerateDraft">✨ Generate draft</button><button type="button" class="btn ghost" id="aiInsertDraft" disabled>Use this draft</button></div>
+          <p id="aiDraftStatus" role="status" aria-live="polite"></p><textarea id="aiDraftResult" rows="7" placeholder="Your editable AI draft will appear here…" aria-label="Edit AI-generated draft"></textarea>
+        </section>
         <form novalidate id="postForm" class="admin-form">
-          <input type="text" id="postTitle" placeholder="Post title" required>
+          <input type="text" id="postTitle" placeholder="Post title (optional for graphics-only)" required>
+          <label class="admin-visual-toggle"><input type="checkbox" id="postVisualOnly"> Graphics-only post — publish an image without title or written caption</label>
           <select id="postCategory" required></select>
           <div id="customCategoryWrap" class="hidden">
             <input type="text" id="customCategory" placeholder="Type a custom category name">
@@ -159,7 +179,11 @@
             <option value="success">✅ Success</option>
             <option value="critical">🔴 Critical</option>
           </select>
-          <textarea id="announcementMessage" placeholder="Announcement message" rows="5" required class="resize-none"></textarea>
+          <textarea id="announcementMessage" placeholder="Announcement message (optional if you upload a graphic)" rows="5" required class="resize-none"></textarea>
+          <label for="announcementVisual">Banner artwork (optional)</label>
+          <input type="file" id="announcementVisual" accept="image/jpeg,image/png,image/webp">
+          <div id="announcementVisualPreview" class="admin-visual-preview" aria-live="polite"></div>
+          <p class="field-hint">You can publish a full graphical banner without writing text. Max 8 MB.</p>
           <select id="announcementStatus">
             <option value="published">Publish now</option>
             <option value="draft">Save as draft</option>
@@ -608,7 +632,8 @@
     </main>
 
     <script type="module" src="../assets/js/admin.js"></script>
-  </body>
+  <script type="module" src="/assets/js/admin-ai-studio.mjs"></script>
+</body>
 </html>
 
 
