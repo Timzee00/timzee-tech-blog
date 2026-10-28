@@ -109,3 +109,36 @@ test("duplicate receipts and database outages never fake an increment",async()=>
  assert.equal(reply.statusCode,503);
  assert.equal(JSON.parse(reply.body).credited,false);
 });
+
+
+test("reel uploader enrichment resolves true public usernames even if the rich profile lookup fails",async()=>{
+ const start=player.indexOf("async function attachUploaderBadgesAndCounts(videos) {");
+ const end=player.indexOf("async function bootFeed(",start);
+ assert.ok(start>0&&end>start);
+ const factory=vm.runInNewContext(
+  "(function(supabase,publicIdentityName){"+player.slice(start,end)+
+   ";return attachUploaderBadgesAndCounts})",
+  {console:{warn(){}}},{timeout:1500}
+ );
+ const attempted=[];
+ const supabase={
+  rpc:async(name)=>{
+   attempted.push(name);
+   if(name==="reel_public_metadata")return {data:[{video_id:UUID,username:"big_timzee",view_count:12}],error:null};
+   if(name==="video_social_counts")return {data:[{video_id:UUID,like_count:2,comment_count:1}],error:null};
+   throw Error("unexpected RPC");
+  },
+  from(table){
+   assert.equal(table,"public_profiles");
+   return {select(){return this},async in(){return {data:null,error:{code:"PGRST999"}}}};
+  }
+ };
+ const item={id:UUID,user_id:"user-uuid",author_name:"private@example.com",view_count:0,like_count:0,comment_count:0};
+ await factory(supabase,p=>p?.username||"Member")([item]);
+ assert.equal(item.uploader_profile.username,"big_timzee");
+ assert.equal(item.view_count,12);
+ assert.equal(item.like_count,2);
+ assert.equal(item.comment_count,1);
+ assert.doesNotMatch(JSON.stringify(item.uploader_profile),/@|private@example.com/);
+ assert.deepEqual(attempted.sort(),["reel_public_metadata","video_social_counts"].sort());
+});
