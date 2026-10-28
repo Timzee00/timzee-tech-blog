@@ -3,7 +3,7 @@ const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const read=p=>fs.readFileSync(p,"utf8");
 const chat=read("chat.html"),chatJS=read("assets/js/chat-v2.js"),chatCSS=read("assets/css/chat-v2.css");
-const listing=read("listing.html"),profile=read("assets/js/profile.js");
+const listing=read("listing.html"),marketplace=read("marketplace.html"),profile=read("assets/js/profile.js");
 const video=read("video.html"),fyp=read("assets/js/fyp.js"),identities=read("assets/js/verified-identity.mjs");
 const support=read("support.html"),push=read("assets/js/browser-push.mjs");
 const profileHTML=read("profile.html"),pushWorker=read("netlify/functions/push-worker.js");
@@ -22,6 +22,9 @@ test("marketplace offers both contact channels, and inquiry no longer creates a 
  assert.match(listing,/wa\.me\//);
  assert.match(listing,/can_send_direct_message/);
  assert.match(listing,/createMarketplaceInquiry/);
+ assert.match(marketplace,/id="sellerInquiryInbox"/);
+ assert.match(marketplace,/from\("marketplace_inquiries"\)/);
+ assert.match(marketplace,/Contact buyer/);
  const sql=read("supabase/migrations/20261028133000_marketplace_inquiries_separate_from_chat.sql");
  assert.match(sql,/NEW\.thread_id:=NULL/);
  assert.doesNotMatch(sql,/INSERT INTO public\.chat_threads/);
