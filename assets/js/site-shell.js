@@ -1,6 +1,8 @@
 import "./ui-controls.js";
 import "./image-fallback.js";
 import "./nav.js";
+import "./blipmood-unified-menu.mjs";
+import "./blipmood-welcome.mjs";
 import "./space-mini-dock.mjs";
 import "./visitor-analytics.js";
 import { pageFileName } from "./route-page.mjs";
