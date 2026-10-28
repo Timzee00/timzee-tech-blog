@@ -26,6 +26,7 @@ import {
 } from "./utils.js";
 import { bindEditorToolbar } from "./editor-tools.js";
 import {setupMentionInput} from "./mentions.js";
+import {loadVerifiedIdentityMap,publicIdentityName} from "./verified-identity.mjs";
 import { setupReveal } from "./reveal.js";
 import "./nav.js";
 
@@ -46,7 +47,8 @@ const state = {
   topicSearchQuery: "",
   voteScores: {},
   userVotes: {},
-  sortMode: "top"
+  sortMode: "top",
+  publicAuthorProfiles: new Map()
 };
 
 // Batched vote loading — one query for every message on screen, not one per message.
@@ -131,7 +133,7 @@ function renderAuthActions() {
   if (state.user) {
     const label = document.createElement("span");
     label.className = "auth-meta";
-    label.textContent = getDisplayName(state.user);
+    label.textContent = state.user.user_metadata?.username || "Member";
     const profile = document.createElement("a");
     profile.className = "btn ghost";
     profile.href = `profile.html?id=${encodeURIComponent(state.user.id)}`;
@@ -170,12 +172,25 @@ function slugifyTopic(title) {
     .slice(0, 20) || "community";
 }
 
+const authorIdentityCache=new Map();
+async function hydrateAuthorProfiles(rows){
+  const ids=(rows||[]).map(row=>row.author_id).filter(Boolean);
+  if(!ids.length)return;
+  try{
+    const profiles=await loadVerifiedIdentityMap(supabase,ids,authorIdentityCache);
+    profiles.forEach((profile,id)=>state.publicAuthorProfiles.set(id,profile));
+  }catch(error){console.warn("Public usernames unavailable",error.message);}
+}
+function publicAuthorName(id){
+  return publicIdentityName(state.publicAuthorProfiles.get(id));
+}
 async function loadTopics() {
   const result = await supabase
     .from("discussion_topics")
     .select("*")
     .order("updated_at", { ascending: false });
   state.topics = result.data || [];
+  await hydrateAuthorProfiles(state.topics);
 
   // One batched query for post counts per topic, instead of one query per topic (N+1)
   if (state.topics.length) {
@@ -233,7 +248,7 @@ function renderTopics() {
           <div class="community-body">
             <div class="community-slug">t/${escapeHTML(topic.slug || slugifyTopic(topic.title))}</div>
             <strong>${escapeHTML(topic.title)}</strong>
-            <div class="topic-meta">${topic.post_count || 0} posts · started by ${escapeHTML(topic.author_name || "Member")} · ${timeAgo(
+            <div class="topic-meta">${topic.post_count || 0} posts · started by ${escapeHTML(publicAuthorName(topic.author_id))} · ${timeAgo(
               topic.created_at
             )} ${mediaTag}</div>
             <div class="topic-desc">${descriptionHtml}</div>
@@ -257,7 +272,7 @@ function updateTopicMeta() {
     meta.textContent = "";
     return;
   }
-  const owner = escapeHTML(state.activeTopic.author_name || "Member");
+  const owner = escapeHTML(publicAuthorName(state.activeTopic.author_id));
   const created = timeAgo(state.activeTopic.created_at);
   const description = state.activeTopic.description || "";
   const descriptionText = description ? clampText(stripHTML(formatRichText(description)), 120) : "";
@@ -402,7 +417,7 @@ function renderReplyPreview() {
   }
   const snippet = clampText(stripHTML(state.replyTo.body || ""), 90);
   preview.innerHTML = `
-    <span>Replying to ${escapeHTML(state.replyTo.author_name || "Member")}: ${escapeHTML(snippet)}</span>
+    <span>Replying to ${escapeHTML(publicAuthorName(state.replyTo.author_id))}: ${escapeHTML(snippet)}</span>
     <button type="button" id="cancelReply">Cancel</button>
   `;
   preview.classList.remove("hidden");
@@ -433,7 +448,7 @@ function buildMessageHtml(message, depth = 0) {
   const ownerLabel = isOwner ? " <span class=\"chip\">Host</span>" : "";
   const canModerate = isTopicOwner();
   const canBan = canModerate && message.author_id && message.author_id !== state.user?.id;
-  const authorName = escapeHTML(message.author_name || "Member");
+  const authorName = escapeHTML(publicAuthorName(message.author_id));
   const authorLink = message.author_id
     ? `<a href="profile.html?id=${encodeURIComponent(message.author_id)}">${authorName}</a>`
     : authorName;
@@ -551,7 +566,7 @@ function bindMessageActions(container) {
         return;
       }
       if (action === "ban") {
-        await banUser(message.author_id, message.author_name || "Member");
+        await banUser(message.author_id, publicAuthorName(message.author_id));
       }
     });
   });
@@ -625,6 +640,7 @@ async function loadMessages(topicId) {
     .eq("topic_id", topicId)
     .order("created_at", { ascending: true });
   state.messages = result.data || [];
+  await hydrateAuthorProfiles(state.messages);
   await loadVotes(state.messages.map((m) => m.id));
   const pinned = state.messages.filter((message) => message.pinned);
   const regular = state.messages.filter((message) => !message.pinned);
@@ -913,7 +929,7 @@ function setupTopicForm() {
       description,
       theme_id: themeId || null,
       author_id: state.user.id,
-      author_name: getDisplayName(state.user),
+      author_name: state.user.user_metadata?.username || "Member",
       media_url: mediaUrl || null,
       media_type: mediaType || null,
       moderation_mode: "off",
@@ -1066,7 +1082,7 @@ function setupMessageForm() {
       id: crypto.randomUUID(),
       topic_id: state.activeTopicId,
       author_id: state.user.id,
-      author_name: getDisplayName(state.user),
+      author_name: state.user.user_metadata?.username || "Member",
       body: finalBody,
       media_url: mediaUrl,
       media_type: mediaKind,
