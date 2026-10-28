@@ -86,7 +86,7 @@ export async function showStoryInteractions(story,user,container,{onReshare=()=>
   let nameMap=new Map();
   if(ids.length){
     const profiles=await supabase.from('public_profiles').select('id,display_name,username').in('id',ids);
-    nameMap=new Map((profiles.data||[]).map(p=>[p.id,p.display_name||p.username||'Member']));
+    nameMap=new Map((profiles.data||[]).map(p=>[p.id,p.username||'Member']));
   }
   if(gen!==generation)return;
   list.innerHTML=rows.map(r=>`<article><strong>${esc(nameMap.get(r.user_id)||'Member')}</strong>
