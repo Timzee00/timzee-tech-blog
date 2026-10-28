@@ -1,6 +1,6 @@
 import {getSession} from "./supabase.js";
-const button=document.getElementById("browserPushToggle");
-const status=document.getElementById("browserPushStatus");
+const button=document.getElementById("browserPushToggle")||document.getElementById("deviceAlertsBtn");
+const status=document.getElementById("browserPushStatus")||document.getElementById("deviceAlertsHelp");
 const put=value=>{if(status)status.textContent=value;};
 const supported=()=>("serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window&&window.isSecureContext);
 const base64ToBytes=key=>{
@@ -22,7 +22,7 @@ async function api(method,subscription){
 async function refresh(){
  if(!button||!status)return;
  if(!supported()){button.disabled=true;put("This browser does not support web push or needs HTTPS.");return;}
- if(Notification.permission==="denied"){button.disabled=true;put("Notifications are blocked. Enable them in your browser settings.");return;}
+ if(Notification.permission==="denied"){button.disabled=true;put("Notifications are blocked by your browser or Android. Open Chrome site settings and allow notifications for Blipmood.");return;}
  let config;
  try{const response=await fetch("/.netlify/functions/push-subscriptions",{cache:"no-store"});config=await response.json();}catch{button.disabled=true;put("Notification configuration is temporarily unavailable.");return;}
  if(!config?.enabled||!config.publicKey){button.disabled=true;put("Push notifications are not activated on this site yet.");return;}
@@ -31,7 +31,7 @@ async function refresh(){
  button.disabled=false;
  button.dataset.mode=existing?"off":"on";
  button.textContent=existing?"Turn off browser notifications":"Enable browser notifications";
- put(existing?"Push alerts are enabled on this browser.":"Get important alerts when the site is not open. Permission is optional.");
+ put(existing?"Push alerts are registered for this device. New notifications can appear when Blipmood is closed.":"Tap Enable to register this device for real background push. Allow Chrome and Android notification permissions.");
  button.dataset.publicKey=config.publicKey;
 }
 button?.addEventListener("click",async()=>{
@@ -59,7 +59,12 @@ button?.addEventListener("click",async()=>{
      });
      try{await api("POST",subscription.toJSON());}
      catch(error){await subscription.unsubscribe();throw error;}
-     put("Browser notifications enabled for this device.");
+     put("Browser push registered. Sending a local confirmation notification…");
+      try{await registration.showNotification("Blipmood push enabled",{
+        body:"Your device is subscribed. Future alerts can arrive when Blipmood is closed.",
+        tag:"blipmood-push-setup",icon:"/assets/img/avatar-placeholder.svg",
+        data:{url:"/profile.html?tab=notifications"}
+      });}catch(error){console.warn("Setup notification unavailable",error?.name||"unknown");}
    }
  }catch(error){put(error?.message||"Unable to update push notifications.");}
  finally{await refresh().catch(()=>{button.disabled=false;});}
