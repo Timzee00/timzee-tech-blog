@@ -26,6 +26,7 @@ function setupDeviceAlertButton(userId){
  const button=document.getElementById("deviceAlertsBtn");
  const label=document.getElementById("deviceAlertsHelp");
  if(!button||!label)return;
+ if(button.dataset.pushManaged==="true")return; // Real Web Push handler owns this button.
  const redraw=()=>{
   const on=deviceAlertsEnabled(userId);
   button.textContent=on?"Disable device alerts":"Enable device alerts";
