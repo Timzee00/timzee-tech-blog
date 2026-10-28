@@ -34,7 +34,7 @@
 .market-owner-actions button{padding:7px 9px;border-radius:8px;border:1px solid #5d858c;background:transparent;color:var(--color-text,#fff);font-size:.78rem;font-weight:700;cursor:pointer;min-height:35px}
 .market-owner-actions .danger{border-color:#bb6666;color:#f09b9b}
 </style>
-</head>
+<style>.market-card-photo-link{display:block;text-decoration:none;max-width:100%;overflow:hidden}.market-card-photo-link:focus-visible{outline:3px solid #37cdb0;outline-offset:3px}.market-card-photo-link:hover .listing-image img{transform:scale(1.045);transition:transform .18s ease}@media(prefers-reduced-motion:reduce){.market-card-photo-link:hover .listing-image img{transform:none;transition:none}}</style></head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
@@ -509,10 +509,12 @@
 
         container.innerHTML = `<div class="marketplace-grid">${state.listings.map((item) => `
           <article class="listing-card" data-id="${encodeURIComponent(item.id)}">
-            <div class="listing-image">
-              ${item.images?.[0] && isSafeUrl(item.images[0]) ? `<img src="${escapeHTML(item.images[0])}" alt="${escapeHTML(item.title || '')}">` : `<div class="listing-image-placeholder" aria-hidden="true">${icon("stories")}<span>No photo yet</span></div>`}
-              ${item.condition ? `<div class="listing-badge">${escapeHTML(item.condition)}</div>` : ''}
-            </div>
+            <a class="market-card-photo-link" href="listing.html?id=${encodeURIComponent(item.id)}" aria-label="View ${escapeHTML(item.title || 'listing')} photos">
+              <div class="listing-image">
+                ${item.images?.[0] && isSafeUrl(item.images[0]) ? `<img src="${escapeHTML(item.images[0])}" alt="${escapeHTML(item.title || '')}" loading="lazy">` : `<div class="listing-image-placeholder" aria-hidden="true">${icon("stories")}<span>No photo yet</span></div>`}
+                ${item.condition ? `<div class="listing-badge">${escapeHTML(item.condition)}</div>` : ''}
+              </div>
+            </a>
             <div class="listing-info">
               <div class="listing-category">${escapeHTML(item.category || '')}</div>
               <h2 class="listing-title"><a href="listing.html?id=${encodeURIComponent(item.id)}">${escapeHTML(item.title || 'Untitled listing')}</a></h2>
