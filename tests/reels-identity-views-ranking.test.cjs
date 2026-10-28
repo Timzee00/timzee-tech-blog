@@ -116,3 +116,15 @@ test("view counting uses an RLS-isolated atomic deduplicated database function",
  assert.match(viewSql,/GRANT EXECUTE ON FUNCTION public\.record_video_view\(uuid\) TO authenticated/);
  assert.doesNotMatch(viewSql,/GRANT EXECUTE ON FUNCTION public\.record_video_view\(uuid\) TO anon/);
 });
+
+test("server synchronizes actual likes and comments for candidate ranking",()=>{
+ const sql=read("supabase/migrations/20261028223000_keep_video_engagement_counters_in_sync.sql");
+ assert.match(sql,/CREATE TRIGGER videos_likes_count_sync/);
+ assert.match(sql,/CREATE TRIGGER videos_comments_count_sync/);
+ assert.match(sql,/AFTER INSERT OR DELETE OR UPDATE OF video_id ON public\.video_likes/);
+ assert.match(sql,/AFTER INSERT OR DELETE OR UPDATE OF video_id ON public\.video_comments/);
+ assert.match(sql,/SET like_count=\(SELECT count\(\*\)::integer FROM public\.video_likes/);
+ assert.match(sql,/comment_count=\(SELECT count\(\*\)::integer FROM public\.video_comments/);
+ assert.match(sql,/REVOKE ALL ON FUNCTION app_private\.adjust_video_like_counter\(\) FROM PUBLIC,anon,authenticated/);
+ assert.match(sql,/SECURITY DEFINER SET search_path=''/);
+});
