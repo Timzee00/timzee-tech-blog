@@ -15,7 +15,19 @@
 .seller-contact-actions button{min-height:48px;min-width:0;white-space:normal;overflow-wrap:anywhere}
 @media(max-width:440px){.seller-contact-actions{grid-template-columns:1fr}}
 </style>
-</head>
+<style>
+.market-image-launch{display:block;position:relative;width:100%;max-width:100%;padding:0;border:0;background:none;cursor:zoom-in}
+.market-image-launch img{max-width:100%;object-fit:contain}
+.market-image-zoom{position:absolute;right:10px;bottom:10px;border:1px solid #ffffff77;border-radius:20px;background:#0b1628c9;color:white;font-size:.73rem;padding:8px 13px}
+.market-image-dialog{inset:0;width:min(960px,calc(100vw - 22px));height:min(850px,calc(100dvh - 22px));max-width:100%;max-height:100%;box-sizing:border-box;overflow:hidden;padding:12px;border:1px solid #639fca;border-radius:18px;background:#0d1226;color:#fff;position:fixed}
+.market-image-dialog::backdrop{background:#000c;backdrop-filter:blur(8px)}
+.market-image-dialog[open]{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:12px}
+.market-image-dialog>img{width:100%;height:100%;max-height:100%;object-fit:contain;min-width:0;min-height:0}
+.market-image-dialog-tools,.market-image-dialog-controls{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.market-image-dialog button{min-height:40px;padding:8px 12px;border:1px solid #8aa6c4;border-radius:10px;background:#253550;color:white;cursor:pointer}
+.market-image-dialog button:disabled{opacity:.4}
+@media(max-width:480px){.market-image-dialog{padding:8px;border-radius:13px}.market-image-dialog-tools,.market-image-dialog-controls{gap:4px}.market-image-dialog button{padding:8px;font-size:.78rem}}
+</style></head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
@@ -74,7 +86,7 @@
           <div class="listing-hero">
             <div>
               <div class="listing-gallery">
-                <img class="gallery-main" id="mainImage" alt="Product" loading="eager" decoding="async">
+                <button type="button" class="market-image-launch" id="marketImageLaunch" aria-label="Open product image viewer"><img class="gallery-main" id="mainImage" alt="Product" loading="eager" decoding="async"><span class="market-image-zoom">⤢ View photo</span></button>
               </div>
               <div id="thumbnails" class="gallery-thumbs"></div>
             </div>
@@ -139,6 +151,11 @@
             <div id="reviewsList"></div>
           </div>
 
+          <dialog id="marketImageViewer" class="market-image-dialog" aria-label="Product photo viewer">
+           <div class="market-image-dialog-tools"><strong id="marketViewerTitle">Listing photos</strong><button type="button" id="marketViewerClose" aria-label="Close image viewer">✕</button></div>
+           <img id="marketViewerPhoto" alt="Selected listing photo">
+           <div class="market-image-dialog-controls"><button type="button" id="marketViewerPrev">← Previous</button><span id="marketViewerCount"></span><button type="button" id="marketViewerNext">Next →</button></div>
+          </dialog>
           <div class="similar-listings">
             <h2>Similar Listings</h2>
             <div id="similarListings" class="similar-grid"></div>
@@ -283,7 +300,9 @@
             <img class="gallery-thumb ${idx === 0 ? "active" : ""}" src="${escapeHTML(img)}" alt="Photo ${idx + 1}" data-idx="${idx}" loading="lazy" decoding="async">
           `).join("");
           thumbs.querySelectorAll(".gallery-thumb").forEach((thumb) => {
-            thumb.addEventListener("click", () => {
+            thumb.setAttribute("tabindex","0");thumb.setAttribute("role","button");
+              thumb.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();thumb.click();}});
+              thumb.addEventListener("click", () => {
               thumbs.querySelectorAll(".gallery-thumb").forEach((item) => item.classList.remove("active"));
               thumb.classList.add("active");
               const idx = Number.parseInt(thumb.dataset.idx, 10);
@@ -403,6 +422,32 @@
           document.getElementById("similarListings").innerHTML = '<div class="callout">Similar listings are unavailable right now.</div>';
         }
       }
+
+      let activeMarketImage=0;
+      const viewer=document.getElementById("marketImageViewer");
+      const safeListingImages=()=>Array.isArray(state.listing?.images)?
+        state.listing.images.filter(url=>typeof url==="string"&&isSafeUrl(url)):[];
+      function updateMarketViewer(){
+        const images=safeListingImages();if(!images.length)return;
+        activeMarketImage=(activeMarketImage+images.length)%images.length;
+        const photo=document.getElementById("marketViewerPhoto");
+        photo.src=images[activeMarketImage];
+        photo.alt=(state.listing?.title||"Listing")+" — photo "+(activeMarketImage+1);
+        document.getElementById("marketViewerCount").textContent=(activeMarketImage+1)+" / "+images.length;
+        document.getElementById("marketViewerPrev").disabled=images.length<2;
+        document.getElementById("marketViewerNext").disabled=images.length<2;
+      }
+      document.getElementById("marketImageLaunch").addEventListener("click",()=>{
+        const images=safeListingImages();if(!images.length)return;
+        const shown=document.getElementById("mainImage").getAttribute("src");
+        activeMarketImage=Math.max(0,images.indexOf(shown));
+        updateMarketViewer();viewer.showModal();
+      });
+      document.getElementById("marketViewerClose").addEventListener("click",()=>viewer.close());
+      document.getElementById("marketViewerPrev").addEventListener("click",()=>{activeMarketImage--;updateMarketViewer();});
+      document.getElementById("marketViewerNext").addEventListener("click",()=>{activeMarketImage++;updateMarketViewer();});
+      viewer.addEventListener("click",event=>{if(event.target===viewer)viewer.close();});
+      viewer.addEventListener("keydown",event=>{if(event.key==="ArrowRight"){activeMarketImage++;updateMarketViewer();}if(event.key==="ArrowLeft"){activeMarketImage--;updateMarketViewer();}});
 
       function setupEventListeners() {
         const options=document.getElementById("sellerContactOptions");
