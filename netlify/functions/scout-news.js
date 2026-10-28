@@ -218,10 +218,13 @@ exports.handler = async (event) => {
         is_posted: false
       };
 
-      // Unique DB constraints on url/source_url are authoritative. Avoid a
-      // SELECT-before-INSERT round-trip and its concurrency race on every item.
+      // ON CONFLICT DO NOTHING is atomic and does not generate noisy
+      // PostgreSQL 23505 errors for articles already seen by concurrent scouts.
+      // Preserve the first editorial draft: never overwrite it on a re-scout.
       const insertResult = await supabase.from("curator_posts")
-        .insert(payload).select("id").single();
+        .upsert(payload, {onConflict:"url",ignoreDuplicates:true})
+        .select("id").maybeSingle();
+      if (!insertResult.error && !insertResult.data) { duplicates++; continue; }
       if (insertResult.error) {
         // A second scout may have already inserted this external article.
         if (insertResult.error.code === "23505") { duplicates++; continue; }
