@@ -66,3 +66,30 @@ test("profile push uses real Web Push subscription, not a local-only preference"
  assert.match(pushWorker,/claim_web_push_deliveries/);
  assert.match(read("netlify.toml"),/functions\."push-worker"/);
 });
+
+
+test("both upload pages share thumbnail extraction, validate videos, and show older covers",()=>{
+ const grid=read("videos.html"),reels=read("video.html");
+ const media=read("assets/js/videos-marketplace.js"),css=read("assets/css/content-pages.css");
+ assert.match(media,/export function captureVideoThumbnail/);
+ assert.match(media,/export function isSupportedVideoFile/);
+ assert.match(media,/thumbnailFile = thumbnailFile \|\| await captureVideoThumbnail\(videoFile\)/);
+ assert.match(grid,/const captureVideoFrame=captureVideoThumbnail/);
+ assert.match(reels,/const captureReelCover=captureVideoThumbnail/);
+ assert.match(grid,/hydrateLegacyCovers\(container\)/);
+ assert.match(css,/tz-video-cover-fallback\.is-ready/);
+});
+test("public surfaces use account handles while profile retains full-name display",()=>{
+ const grid=read("videos.html"),nav=read("assets/js/nav.js"),app=read("assets/js/app.js");
+ const chat=read("assets/js/chat-v2.js"),story=read("stories.html"),article=read("assets/js/post.js");
+ const forum=read("assets/js/discussion.js");
+ assert.match(grid,/verifiedName\(publicIdentityName\(videoCreatorProfiles/);
+ assert.doesNotMatch(grid,/verifiedName\(v\.author_name/);
+ assert.match(nav,/from\("public_profiles"\)\.select\("username"\)/);
+ assert.match(app,/publicHandles: new Map\(\)/);
+ assert.match(chat,/profile\.username/);
+ assert.match(story,/profile\?\.username \|\| "Member"/);
+ assert.match(article,/publicIdentityName\(profile\)/);
+ assert.match(forum,/publicAuthorName\(message\.author_id\)/);
+ assert.match(profile,/state\.profile\?\.display_name/);
+});
