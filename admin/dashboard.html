@@ -57,7 +57,7 @@
         <section class="admin-ai-studio" aria-labelledby="aiStudioHeading">
           <div class="admin-ai-head"><div><span class="admin-ai-kicker">EDITORIAL COPILOT</span><h3 id="aiStudioHeading">AI writing assistant</h3></div><span>Drafts need staff review</span></div>
           <p>Give AI a topic and choose where the draft should go. Nothing gets published automatically.</p>
-          <div class="admin-ai-grid"><label>Write for<select id="aiDraftTarget"><option value="post">Blog post</option><option value="announcement">Announcement</option></select></label>
+          <div class="admin-ai-grid"><label>Write for<select id="aiDraftTarget"><option value="post">Blog post</option><option value="announcement">Announcement</option><option value="help">Admin help / planning</option></select></label>
           <label>Tone<select id="aiDraftTone"><option value="friendly">Friendly and engaging</option><option value="professional">Clear and professional</option><option value="urgent">Important / urgent</option><option value="playful">Creative and fun</option></select></label></div>
           <label>Topic or instructions<textarea id="aiDraftPrompt" rows="3" maxlength="2400" placeholder="E.g. Announce our new Spaces feature, explain how it works and invite members…"></textarea></label>
           <div class="inline-actions"><button type="button" class="btn" id="aiGenerateDraft">✨ Generate draft</button><button type="button" class="btn ghost" id="aiInsertDraft" disabled>Use this draft</button></div>
@@ -169,7 +169,7 @@
       </section>
 
       <section class="admin-card" data-panel="announcements" style="display:none;">
-        <h2>System Announcements</h2>
+        <h2>System Announcements</h2><button type="button" id="aiDraftAnnouncementShortcut" class="btn ghost">✨ Write with AI</button>
         <form novalidate id="announcementForm" class="admin-form">
           <input type="text" id="announcementTitle" placeholder="Announcement title" required>
           <select id="announcementType" required>
