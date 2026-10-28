@@ -1032,6 +1032,25 @@ async function boot() {
   renderAds(state.settings);
 }
 
+function installImmediateCommunityJoin(){
+  const link=document.querySelector('.home-intro .cta a[href*="login.html?view=signup"]');
+  if(!link)return;
+  link.addEventListener("click",async event=>{
+    event.preventDefault();
+    link.setAttribute("aria-busy","true");
+    const label=link.textContent;
+    link.textContent="Opening your community…";
+    try{
+      const identity=state.user?.id?state.user:await getCurrentUser();
+      window.location.href=identity?.id?"/discussion.html":
+        "/login.html?view=signup&next="+encodeURIComponent("/discussion.html");
+    }catch(error){
+      link.textContent=label;link.removeAttribute("aria-busy");
+      window.location.href="/login.html?view=signup&next="+encodeURIComponent("/discussion.html");
+    }
+  });
+}
+installImmediateCommunityJoin();
 boot().catch((error) => {
   reportAppError(error, "Homepage load failed");
   showLoadingPlaceholders();
