@@ -139,7 +139,7 @@ function renderAuthActions() {
   if (state.user) {
     const label = document.createElement("span");
     label.className = "auth-meta";
-    label.textContent = getDisplayName(state.user);
+    label.textContent = state.user.user_metadata?.username || "Member";
     const profile = document.createElement("a");
     profile.className = "btn ghost";
     profile.href = `profile.html?id=${encodeURIComponent(state.user.id)}`;
@@ -752,7 +752,7 @@ function renderSuggestedPeople() {
 
   rail.innerHTML = state.suggestedPeople
     .map((profile) => {
-      const name = profile.display_name || profile.username || "Member";
+      const name = profile.username || "Member";
       return `
         <div class="people-card" data-user-id="${escapeHTML(profile.id || "")}">
           <a class="people-card-avatar" href="profile.html?id=${encodeURIComponent(profile.id || "")}" aria-label="View ${escapeHTML(name)}'s profile">
@@ -793,7 +793,7 @@ function renderLeaderboard() {
   }
   list.innerHTML = state.leaderboard
     .map((profile) => {
-      const name = profile.display_name || profile.username || "Member";
+      const name = profile.username || "Member";
       const defaultAvatar = "/assets/img/avatar-placeholder.svg";
       const avatar = isSafeUrl(profile.avatar_url) ? profile.avatar_url : defaultAvatar;
       const points = profile.annual_score ?? 0;
