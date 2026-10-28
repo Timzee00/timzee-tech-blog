@@ -1221,7 +1221,7 @@ function setupProfileEditor() {
     }finally{
       form.dataset.saving="false";
       form.setAttribute("aria-busy","false");
-      if(saveButton){saveButton.disabled=false;saveButton.textContent=originalLabel;}
+      if(saveButton){saveButton.disabled=false;saveButton.textContent=originalLabel;saveButton.removeAttribute("aria-disabled");}
     }
   });
 }
