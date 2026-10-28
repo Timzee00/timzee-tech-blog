@@ -1071,8 +1071,12 @@ function handlePostForm() {
 
     const now = new Date().toISOString();
     let uploadedCover = "";
-    if (coverFile) {
-      uploadedCover = await uploadMedia(coverFile, "covers");
+    const firstMediaPhoto=mediaOnly?postMediaFiles.find(file=>file.type?.startsWith("image/")):null;
+    if(coverFile)uploadedCover=await uploadMedia(coverFile,"covers");
+    else if(firstMediaPhoto&&!cover)uploadedCover=await uploadMedia(firstMediaPhoto,"covers");
+    if(mediaOnly&&hasArtwork&&!uploadedCover&&!cover&&!editingPostId){
+      document.getElementById("postFormHint").textContent="Graphic upload failed. Please retry; nothing was published.";
+      return;
     }
 
     let savedPostId = editingPostId;
@@ -1126,7 +1130,7 @@ function handlePostForm() {
       const orderStart = existingPostMedia.length;
       for (let index = 0; index < postMediaFiles.length; index += 1) {
         const file = postMediaFiles[index];
-        const uploadedUrl = await uploadMedia(file, "post-media");
+        const uploadedUrl = file===firstMediaPhoto&&!coverFile&&uploadedCover?uploadedCover:await uploadMedia(file, "post-media");
         if (!uploadedUrl) continue;
         const mediaType = file.type?.startsWith("video") ? "video" : "image";
         await createPostMedia({
