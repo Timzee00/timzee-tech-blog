@@ -112,8 +112,7 @@ export async function loadVerifiedIdentityMap(supabase,ids,cache=new Map()){
 /** A public byline must never fall back to an email address even if an old
  *  video/comment row saved one before users changed their privacy settings. */
 export function publicIdentityName(profile,legacyName="Member"){
- const preferred=String(profile?.username||profile?.display_name||"").trim();
- const fallback=String(legacyName||"").trim();
- const chosen=preferred||fallback;
- return chosen&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(chosen)?chosen.slice(0,70):"Member";
+ // Public bylines must not fall back to saved full names or old email values.
+ const handle=String(profile?.username||"").trim().replace(/^@/,"");
+ return /^[a-z0-9_.-]{2,70}$/i.test(handle)?handle:"Member";
 }

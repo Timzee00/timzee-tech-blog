@@ -70,7 +70,8 @@
           <button type="button" class="upload-area" id="uploadArea">
             <strong>Choose a video</strong><span>Or drag and drop an MP4, WebM or OGG file here</span>
           </button>
-          <input type="file" id="videoFile" accept="video/*" hidden aria-label="Video file">
+          <input type="file" id="videoFile" accept="video/*,.mp4,.webm,.ogg,.mov" hidden aria-label="Video file">
+          <p id="videoPickerHint" role="status" aria-live="polite" style="font-size:13px"></p>
 
           <form novalidate id="uploadForm" style="display: none;">
             <div id="trimEditor" style="display:none; margin-bottom: 16px; padding: 14px; border: 1px solid var(--color-border, rgba(15,23,42,0.12)); border-radius: var(--radius-sm, 12px);">
@@ -198,7 +199,7 @@
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
-      import {verifiedName,verifiedAvatar,loadVerifiedIdentityMap} from "./assets/js/verified-identity.mjs";
+      import {verifiedName,verifiedAvatar,loadVerifiedIdentityMap,publicIdentityName} from "./assets/js/verified-identity.mjs";
 
       let state = {
         user: null,
@@ -218,7 +219,7 @@
         const authActions = document.getElementById("authActions");
         if (state.user) {
           authActions.innerHTML = `
-            <span class="auth-meta">${escapeHTML(state.user.email || '')}</span>
+            <span class="auth-meta">${escapeHTML(state.user.user_metadata?.username || "Member")}</span>
             <a class="btn ghost" href="profile.html">Profile</a>
             <button class="btn ghost" id="logoutBtn">Log Out</button>
           `;
@@ -294,14 +295,14 @@
         container.innerHTML = `<div class="video-grid">${state.videos.map(v => `
           <a class="video-card" href="video.html?id=${encodeURIComponent(v.id)}">
             <div class="video-thumbnail">
-              ${v.thumbnail_url && isSafeUrl(v.thumbnail_url) ? `<img src="${escapeHTML(v.thumbnail_url)}" width="640" height="360" loading="lazy" decoding="async" alt="${escapeHTML(v.title || '')}">` : icon('videos')}
+              ${v.thumbnail_url && isSafeUrl(v.thumbnail_url) ? `<img src="${escapeHTML(v.thumbnail_url)}" width="640" height="360" loading="lazy" decoding="async" alt="${escapeHTML(v.title || '')}">` : (v.video_url && isSafeUrl(v.video_url) ? `<video class="tz-video-cover-fallback" muted playsinline preload="none" aria-hidden="true" data-cover-src="${escapeHTML(v.video_url)}"></video><span class="tz-video-cover-placeholder">${icon("videos")}</span>` : icon("videos"))}
               <div class="video-duration">${escapeHTML(String(v.duration || 0))}s</div>
             </div>
             <div class="video-info">
               <div class="video-title">${escapeHTML(v.title || '')}</div>
               ${v.user_id ? `<div class="tz-video-card-author">
                 ${verifiedAvatar(videoCreatorProfiles.get(v.user_id)?.avatar_url,videoCreatorProfiles.get(v.user_id),{size:"sm",alt:""})}
-                ${verifiedName(v.author_name||videoCreatorProfiles.get(v.user_id)?.display_name||"Member",videoCreatorProfiles.get(v.user_id),{compact:true})}
+                ${verifiedName(publicIdentityName(videoCreatorProfiles.get(v.user_id)),videoCreatorProfiles.get(v.user_id),{compact:true})}
               </div>` : ""}
               <div class="video-meta">
                 <span>👁 ${escapeHTML(String(v.view_count || 0))}</span>
@@ -310,10 +311,32 @@
             </div>
           </a>
         `).join("")}</div>`;
+        hydrateLegacyCovers(container);
 
 
       }
 
+      function hydrateLegacyCovers(container) {
+        // Missing covers from older uploads: decode a frame only near the viewport.
+        const clips=container.querySelectorAll(".tz-video-cover-fallback");
+        const hydrate=clip=>{
+          if(clip.dataset.hydrated)return;
+          clip.dataset.hydrated="true"; clip.preload="metadata"; clip.src=clip.dataset.coverSrc;
+          const show=()=>{if(clip.readyState>=2&&clip.videoWidth)clip.classList.add("is-ready");};
+          clip.addEventListener("loadedmetadata",()=>{
+            try{clip.currentTime=Math.min(.2,Math.max(0,(clip.duration||0)-.1));}catch{show();}
+          },{once:true});
+          clip.addEventListener("loadeddata",show);
+          clip.addEventListener("seeked",show);
+          clip.load();
+        };
+        if("IntersectionObserver" in window) {
+          const observer=new IntersectionObserver(entries=>{
+            entries.forEach(e=>{if(e.isIntersecting){observer.unobserve(e.target);hydrate(e.target);}});
+          },{rootMargin:"320px"});
+          clips.forEach(clip=>observer.observe(clip));
+        } else clips.forEach(hydrate);
+      }
       function updateVideoModes(){
         document.querySelectorAll("[data-video-mode]").forEach(button=>{
           const active=button.dataset.videoMode===state.mode;
@@ -379,10 +402,11 @@
       uploadArea.addEventListener("drop", (e) => {
         e.preventDefault();
         uploadArea.classList.remove("drag");
-        if (e.dataTransfer.files[0]) {
-          videoFile.files = e.dataTransfer.files;
+        const file=e.dataTransfer.files[0];
+        if(file && isSupportedVideoFile(file)){
+          videoFile.files=e.dataTransfer.files;
           void showUploadForm();
-        }
+        }else if(file)document.getElementById("videoPickerHint").textContent="Please select a video, not an image.";
       });
 
       videoFile.addEventListener("change", () => {
@@ -433,6 +457,12 @@
 
       async function showUploadForm() {
         const file = videoFile.files[0];
+        if(file && !isSupportedVideoFile(file)){
+          document.getElementById("videoPickerHint").textContent="Choose a video (MP4, WebM, OGG or MOV). Use the cover field for images.";
+          videoFile.value="";
+          return;
+        }
+        document.getElementById("videoPickerHint").textContent="";
         if (file) {
           uploadArea.style.display = "none";
           uploadForm.style.display = "block";
@@ -920,6 +950,7 @@
           if(state.editRenderInProgress||state.editorDirty)
             throw Error("Your video has unapplied edits. Apply and verify them or choose Use Original before posting.");
           const fileToUpload = state.trimmedFile || videoFile.files[0];
+           if(!isSupportedVideoFile(fileToUpload))throw Error("Select a valid video before uploading.");
           let thumbnailFile = videoThumbnail.files[0] || null;
           if (!thumbnailFile && fileToUpload) {
             status.textContent = "Capturing thumbnail...";
@@ -929,7 +960,7 @@
 
           const result = await uploadVideo(
             state.user.id,
-            state.user.user_metadata?.display_name || state.user.email,
+            state.user.user_metadata?.username || "Member",
             fileToUpload,
             thumbnailFile,
             {

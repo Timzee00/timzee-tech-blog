@@ -54,8 +54,60 @@ export async function detectVideoDuration(file) {
   }
 }
 
+/** Shared video picker validation. */
+export function isSupportedVideoFile(file) {
+  return Boolean(file?.size && (/^video\//i.test(file.type || "") ||
+    /\.(mp4|webm|ogg|ogv|mov|m4v)$/i.test(file.name || "")));
+}
+/** Robust auto-cover with timeout and cleaned-up object URLs. */
+export function captureVideoThumbnail(file, seekTime = 0.5) {
+  if (!isSupportedVideoFile(file)) return Promise.resolve(null);
+  return new Promise(resolve => {
+    let url;
+    try { url = URL.createObjectURL(file); } catch { resolve(null); return; }
+    const video = document.createElement("video");
+    video.preload = "auto"; video.muted = true; video.playsInline = true;
+    let done = false, drawing = false;
+    const finish = file => {
+      if (done) return;
+      done = true;
+      clearTimeout(timeout);
+      video.removeAttribute("src"); video.load();
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+    const draw = () => {
+      if (done || drawing || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return false;
+      drawing = true;
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { finish(null); return true; }
+        ctx.drawImage(video,0,0,canvas.width,canvas.height);
+        canvas.toBlob(blob => finish(blob ? new File([blob],"video-cover.jpg",{type:"image/jpeg"}) : null),"image/jpeg",.84);
+      } catch { finish(null); }
+      return true;
+    };
+    const timeout = setTimeout(() => { if (!draw() && !drawing) finish(null); },8000);
+    video.addEventListener("loadedmetadata", () => {
+      const duration=Number.isFinite(video.duration)?video.duration:0;
+      const at=Math.min(Math.max(0,Number(seekTime)||0.1),Math.max(0,duration-0.1));
+      try { if (at>0.02) video.currentTime=at; else if (video.readyState>=2) draw(); }
+      catch { draw(); }
+    },{once:true});
+    video.addEventListener("seeked",draw);
+    video.addEventListener("loadeddata",()=>{if(video.currentTime===0)draw();},{once:true});
+    video.addEventListener("error",()=>finish(null),{once:true});
+    video.src=url; video.load();
+  });
+}
+
 export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, videoData = {}) {
   if (!userId || !videoFile) return { error: "Missing required fields" };
+  if (!isSupportedVideoFile(videoFile)) return { error: "Please select a non-empty video, not a photo." };
+  if (thumbnailFile && (!String(thumbnailFile.type||"").startsWith("image/") || thumbnailFile.size>10*1024*1024))
+    return { error: "The cover must be an image under 10 MB." };
 
   try {
     const videoId = crypto.randomUUID();
@@ -76,7 +128,8 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
 
     let thumbnailUrl = "";
     
-    // Upload thumbnail if provided
+    // Both upload routes get the same automatic thumbnail fallback.
+    thumbnailFile = thumbnailFile || await captureVideoThumbnail(videoFile);
     if (thumbnailFile) {
       const safeThumbnailName = toSafeFileName(thumbnailFile.name || "thumbnail.jpg");
       const thumbnailPath = `video-thumbnails/${userId}/${timestamp}-${safeThumbnailName}`;
@@ -110,11 +163,15 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
       throw new Error("Failed to get video URL from storage");
     }
 
+    // The saved public byline must never contain a real name or email.
+    const {data: uploaderProfile}=await supabase.from("public_profiles")
+      .select("username").eq("id",userId).maybeSingle();
+    const publicUsername=String(uploaderProfile?.username||"").trim();
     // Save video metadata
     const payload = {
       id: videoId,
       user_id: userId,
-      author_name: authorName || "Anonymous",
+      author_name: publicUsername || "Member",
       title: videoData.title || "Untitled Video",
       description: videoData.description || "",
       video_url: videoUrl,

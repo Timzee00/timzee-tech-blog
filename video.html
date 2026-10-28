@@ -800,7 +800,8 @@
         fetchVideoCommentPage,
         incrementVideoView,
         uploadVideo,
-        detectVideoDuration
+        detectVideoDuration,
+        isSupportedVideoFile
       } from "./assets/js/videos-marketplace.js";
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
@@ -1000,7 +1001,7 @@
         if (uploadBusy || !state.user) return;
         if (!uploadForm.reportValidity()) return;
         const file = uploadFile.files?.[0];
-        if (!file?.size || !(file.type.startsWith("video/") || /\.(mp4|webm|ogg|mov)$/i.test(file.name))) {
+        if (!file?.size || !isSupportedVideoFile(file)) {
           uploadStatus.textContent = "Choose a valid non-empty video file.";
           return;
         }
@@ -1029,7 +1030,7 @@
           ]);
           uploadStatus.textContent = "Uploading your reel… Keep this window open.";
           const uploaderProfile=await supabase.from("public_profiles").select("username,display_name").eq("id",state.user.id).maybeSingle();
-          const uploaderPublicName=publicIdentityName(uploaderProfile.data,state.user.user_metadata?.display_name||"Member");
+          const uploaderPublicName=publicIdentityName(uploaderProfile.data);
           const result = await uploadVideo(
             state.user.id,
             uploaderPublicName,
