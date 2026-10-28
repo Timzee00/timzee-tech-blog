@@ -577,7 +577,12 @@
               [...(state.editingListing.images||[]),...images].slice(0,8):images
           };
           const result=state.editingListing?
-            await updateMarketplaceItem(state.editingListing.id,state.user.id,commonFields):
+            await updateMarketplaceItem(state.editingListing.id,state.user.id,{
+              title:commonFields.title,description:commonFields.description,
+              category:commonFields.category,price:commonFields.price,
+              currency:commonFields.currency,condition:commonFields.condition,
+              location:commonFields.location,images:commonFields.images
+            }):
             await createMarketplaceItem(commonFields);
           if(result.error)throw result.error;
           const wasEditing=Boolean(state.editingListing);
