@@ -276,6 +276,17 @@ async function handleOAuthSignIn(provider, button, loginMessage, nextUrl) {
   setMessage(loginMessage, "Opening secure sign-in…");
 }
 
+async function nextAfterMemberSetup(user,nextUrl){
+ if(!user?.id)return nextUrl;
+ try{
+  const {data,error}=await supabase.from("member_onboarding")
+   .select("completed_at").eq("user_id",user.id).maybeSingle();
+  if(error)throw error;
+  if(!data?.completed_at)
+   return "welcome.html?next="+encodeURIComponent(nextUrl);
+ }catch(error){console.warn("Onboarding lookup unavailable",error?.message||"network");}
+ return nextUrl;
+}
 async function boot() {
   // Capture the callback before any awaited settings request: the Supabase
   // PKCE exchange may remove ?code= from the URL while settings are loading.
@@ -379,7 +390,7 @@ async function boot() {
       setMessage(loginMessage, profileCheck.message || "Account access is restricted.");
     } else if (oauthCallback && !callbackError && !callbackExchangeError) {
       clearHash();
-      window.location.replace(nextUrl);
+      window.location.replace(await nextAfterMemberSetup(user,nextUrl));
       return;
     } else {
       setMessage(loginMessage, "You are already logged in. Continue to the site.");
@@ -417,7 +428,7 @@ async function boot() {
         await signOut();
         return;
       }
-      window.location.href = nextUrl;
+      window.location.href = await nextAfterMemberSetup(user,nextUrl);
     });
   }
 
