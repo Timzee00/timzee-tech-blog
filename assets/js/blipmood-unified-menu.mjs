@@ -12,7 +12,7 @@ const GROUPS=[
   ["★","Leaderboard","/index.html#leaderboardList"]]}
 ];
 const current=location.pathname.split("/").pop()||"index.html";
-const safeSkip=new Set(["login.html","welcome.html","video.html","404.html"]);
+const safeSkip=new Set(["login.html","welcome.html","404.html"]);
 function active(path){
  const target=new URL(path,location.origin);
  return current===(target.pathname.split("/").pop()||"index.html") &&
@@ -25,7 +25,32 @@ function makeLinks(){
  '><span class="bm-rail-icon" aria-hidden="true">'+symbol+'</span><span>'+label+'</span></a>').join("")+
  '</div>').join("");
 }
+function installReelMenu(){
+ if(document.getElementById("bmReelMenuToggle"))return;
+ const toggle=document.createElement("button");
+ toggle.type="button";toggle.id="bmReelMenuToggle";toggle.className="bm-reel-menu-toggle";
+ toggle.setAttribute("aria-expanded","false");toggle.setAttribute("aria-controls","bmReelMenuPanel");
+ toggle.textContent="☰ Menu";
+ const shade=document.createElement("div");shade.id="bmReelMenuShade";shade.className="bm-reel-menu-shade";shade.hidden=true;
+ const panel=document.createElement("section");panel.id="bmReelMenuPanel";panel.className="bm-reel-menu-panel";
+ panel.hidden=true;panel.setAttribute("role","dialog");panel.setAttribute("aria-modal","true");
+ panel.setAttribute("aria-label","Blipmood navigation");
+ panel.innerHTML='<div class="bm-reel-menu-heading"><strong>Explore Blipmood</strong><button type="button" aria-label="Close menu" class="bm-reel-menu-close">✕</button></div>'+
+  '<nav aria-label="Site menu">'+makeLinks()+'</nav>';
+ const close=()=>{toggle.setAttribute("aria-expanded","false");panel.hidden=true;shade.hidden=true;toggle.focus();};
+ toggle.addEventListener("click",()=>{
+  const opening=panel.hidden;panel.hidden=!opening;shade.hidden=!opening;
+  toggle.setAttribute("aria-expanded",String(opening));
+  if(opening)panel.querySelector(".bm-reel-menu-close").focus();
+ });
+ panel.querySelector(".bm-reel-menu-close").addEventListener("click",close);
+ shade.addEventListener("click",close);
+ document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!panel.hidden)close();});
+ panel.addEventListener("click",event=>{if(event.target.closest('a[href]'))close();});
+ document.body.append(toggle,shade,panel);
+}
 function install(){
+ if(current==="video.html"){installReelMenu();return;}
  if(safeSkip.has(current)||location.pathname.startsWith("/admin/")||
   location.pathname.startsWith("/super/")||location.pathname.startsWith("/moderator/")||
   location.pathname.startsWith("/author/"))return;
@@ -80,6 +105,22 @@ css.textContent=`
 }
 @media(max-width:1189px){.bm-unified-rail{display:none!important}.bm-has-unified-rail{padding-left:0}}
 @media(max-width:960px){.bm-drawer-navigation{max-height:calc(100dvh - 200px);overflow:auto}}
+.bm-reel-menu-toggle{position:fixed;top:max(79px,calc(env(safe-area-inset-top) + 62px));right:12px;z-index:10020;
+  border:1px solid #9aadeb75;border-radius:999px;background:#10172bd9;color:white;min-width:88px;min-height:43px;
+  font-size:.83rem;font-weight:850;cursor:pointer;box-shadow:0 6px 18px #0007}
+.bm-reel-menu-shade{position:fixed;inset:0;z-index:10021;background:#0009;backdrop-filter:blur(6px)}
+.bm-reel-menu-panel{position:fixed;z-index:10022;top:0;right:0;bottom:0;width:min(360px,calc(100vw - 18px));
+ background:linear-gradient(155deg,#11172c,#142938);border-left:1px solid #7c9ac46c;color:#e3edf8;
+ padding:calc(env(safe-area-inset-top) + 13px) 14px calc(env(safe-area-inset-bottom) + 18px);
+ box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;box-shadow:-15px 0 45px #0008}
+.bm-reel-menu-panel[hidden],.bm-reel-menu-shade[hidden]{display:none!important}
+.bm-reel-menu-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;
+ padding:8px 7px 18px;margin-bottom:14px;border-bottom:1px solid #ffffff25;font-size:1.05rem}
+.bm-reel-menu-close{min-width:43px;min-height:43px;border-radius:11px;border:1px solid #ffffff3b;
+ background:#ffffff13;color:#fff;cursor:pointer}
+.bm-reel-menu-panel .bm-rail-group{margin:8px 0 20px}
+.bm-reel-menu-panel .bm-rail-link{color:#e5eaff}
+.bm-reel-menu-panel .bm-rail-link.is-active{color:#84eec5}
 @media(prefers-reduced-motion:reduce){.bm-rail-link{scroll-behavior:auto}}
 `;
 document.head.appendChild(css);
