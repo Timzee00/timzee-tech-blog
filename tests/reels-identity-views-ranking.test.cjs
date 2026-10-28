@@ -89,7 +89,10 @@ test("views require genuine visible playback and display updated server-accepted
  assert.match(videoHtml,/state\.activeIndex!==Number\(el\.dataset\.index\)/);
  assert.match(videoHtml,/state\.viewAttempts\.add\(videoId\)/);
  assert.match(videoHtml,/await incrementVideoView\(videoId\)/);
- assert.match(videoHtml,/if\(!credited\)return/);
+ assert.match(videoHtml,/if\(credited\)\{/);
+ assert.match(videoHtml,/state\.viewRetryAfter\.set\(videoId,Date\.now\(\)\+60000\)/);
+ assert.match(videoHtml,/if\(!credited\)state\.viewAttempts\.delete\(videoId\)/);
+ assert.match(videoHtml,/supabase\.rpc\("reel_public_metadata",\{p_video_ids:\[videoId\]\}\)/);
  assert.match(videoHtml,/current\.view_count=Math\.max\(0,Number\(current\.view_count\)\|\|0\)\+1/);
  assert.match(videoHtml,/id="viewcount-\$\{index\}"/);
 });
