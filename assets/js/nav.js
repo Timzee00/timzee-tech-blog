@@ -273,6 +273,13 @@ setupMobileMenu();
 document.querySelectorAll(".header-actions .icon-btn").forEach(link => {
   const name = new URL(link.href).pathname.split("/").pop().replace(".html", "");
   link.innerHTML = icon(name);
+  // Icon buttons inside the site drawer must have visible, understandable names.
+  const label = link.dataset.label || link.getAttribute("aria-label") ||
+    (name === "chat" ? "Messages" : name === "stories" ? "Status updates" : name);
+  const text = document.createElement("span");
+  text.className = "nav-action-label";
+  text.textContent = label === "Chat" ? "Messages" : label === "Stories" ? "Status updates" : label;
+  link.appendChild(text);
 });
 setupActiveNavLink();
 setupMoreDropdown();
