@@ -1,4 +1,5 @@
 import {supabase,getCurrentUser} from "./supabase.js";
+import {saveUserPreferences} from "./user-preferences.js";
 const $=id=>document.getElementById(id);
 const form=$("setupForm"),status=$("setupMessage");
 const stages=[...document.querySelectorAll(".setup-stage")];
@@ -75,6 +76,14 @@ form.addEventListener("submit",async event=>{
     avatar_style:avatar==="male"||avatar==="female"?avatar:"neutral",
     completed_at:new Date().toISOString(),updated_at:new Date().toISOString()
   };
+  feedback("Applying your personal settings…");
+  await saveUserPreferences(person.id,{
+    appearance:{theme:$("setupTheme").value,reduceMotion:form.elements.reduce_motion.checked},
+    notifications:{messages:form.elements.notify_messages.checked,replies:form.elements.notify_messages.checked,
+      follows:form.elements.notify_follows.checked,announcements:form.elements.notify_announcements.checked},
+    privacy:{allowMessages:form.elements.allow_messages.checked,
+      allowRequests:form.elements.allow_requests.checked,showEmail:false}
+  });
   const saved=await supabase.from("member_onboarding").upsert(onboarding,{onConflict:"user_id"});
   if(saved.error)throw saved.error;
   location.replace(nextTarget());
