@@ -21,6 +21,19 @@
 .market-inquiry-actions{display:flex;flex-wrap:wrap;gap:8px}
 @media(max-width:450px){.market-inquiry-inbox>summary span{display:block;margin:5px 0 0}}
 </style>
+<style>
+.market-owner-workspace[hidden]{display:none!important}
+.market-owner-workspace{padding:clamp(14px,3vw,24px);border:1px solid #329e9e7a;background:linear-gradient(135deg,#12374631,transparent),var(--color-surface,#142b36);border-radius:19px;margin:15px 0 25px;max-width:100%;min-width:0;box-sizing:border-box}
+.market-owner-heading{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.market-owner-heading h2{margin:5px 0}.market-owner-heading p{margin:0;font-size:.83rem;color:var(--color-text-muted,#9bb6bb)}.market-owner-eyebrow{letter-spacing:.14em;font-size:.68rem;font-weight:900;color:#32c7a8}
+#myMarketList{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+.market-owner-item{display:flex;gap:12px;min-width:0;padding:12px;border:1px solid var(--color-border,#4b7375);border-radius:12px;background:var(--color-surface-muted,#203d47)}
+.market-owner-preview{display:grid;place-items:center;width:73px;height:73px;flex:none;border-radius:10px;background:#0b1b2d;overflow:hidden}
+.market-owner-preview img{width:100%;height:100%;object-fit:cover}
+.market-owner-copy{min-width:0;display:grid;gap:6px}.market-owner-copy strong{font-size:.88rem;overflow-wrap:anywhere}.market-owner-copy small{font-weight:800;font-size:.73rem}
+.market-live{color:#41deac}.market-hidden{color:#f4c88b}.market-owner-actions{display:flex;flex-wrap:wrap;gap:6px}
+.market-owner-actions button{padding:7px 9px;border-radius:8px;border:1px solid #5d858c;background:transparent;color:var(--color-text,#fff);font-size:.78rem;font-weight:700;cursor:pointer;min-height:35px}
+.market-owner-actions .danger{border-color:#bb6666;color:#f09b9b}
+</style>
 </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -72,6 +85,13 @@
         </details>
 
 
+        <section id="myMarketListings" class="market-owner-workspace" hidden aria-label="Manage my marketplace listings">
+         <div class="market-owner-heading"><div><span class="market-owner-eyebrow">SELLER STUDIO</span><h2>My listings</h2><p>Manage live and hidden items in one place.</p></div>
+          <button type="button" class="btn ghost sm" id="refreshMyListings">Refresh</button>
+         </div>
+         <div id="myMarketList" role="status" aria-live="polite">Loading your listings…</div>
+        </section>
+
         <div class="category-filter" id="categoryFilter">
           <button class="filter-btn active" aria-pressed="true" data-category="all">All</button>
           <button class="filter-btn" aria-pressed="false" data-category="electronics">Electronics</button>
@@ -82,7 +102,7 @@
         </div>
 
         <div id="createSection" class="market-panel" style="display: none;">
-          <h2>Create Listing</h2>
+          <h2 id="marketFormHeading">Create Listing</h2>
           <p class="market-help">Your WhatsApp number is used only for marketplace buyer contact and can be updated from your seller profile.</p>
           <form novalidate id="createForm">
             <div class="market-form-row">
@@ -153,7 +173,7 @@
 
             <div id="createStatus" class="market-status" style="display: none;"></div>
             <div class="market-form-actions">
-              <button class="btn" type="submit">Create Listing</button>
+              <button class="btn" id="saveListingBtn" type="submit">Create Listing</button>
               <button class="btn ghost market-cancel-btn" type="button" id="cancelCreate">Cancel</button>
             </div>
           </form>
@@ -187,7 +207,9 @@
       import {
         fetchMarketplaceItems,
         searchMarketplace,
-        createMarketplaceItem
+        createMarketplaceItem,
+        updateMarketplaceItem,
+        deleteMarketplaceItem
       } from "./assets/js/videos-marketplace.js";
       import { getCurrentUser, signOut, supabase, getDisplayName } from "./assets/js/supabase.js";
       import { uploadMedia } from "./assets/js/media.js";
@@ -204,7 +226,8 @@
         offset: 0,
         category: "all",
         limit: 20,
-        selectedPhotos: []
+        selectedPhotos: [],
+        editingListing: null
       };
 
       function normalizeWhatsapp(raw) {
@@ -282,6 +305,75 @@
         if (input) input.value = phone;
         return result.data || null;
       }
+
+
+      const marketFieldIds=["Title","Category","Description","Price","Currency","Condition","Location"];
+      function clearListingEditor(){
+        state.editingListing=null;
+        document.getElementById("marketFormHeading").textContent="Create Listing";
+        document.getElementById("saveListingBtn").textContent="Create Listing";
+      }
+      function editMyListing(item){
+        state.editingListing=item;
+        for(const key of marketFieldIds){
+          const element=document.getElementById("listing"+key);
+          if(element)element.value=item[key.toLowerCase()]??"";
+        }
+        document.getElementById("marketFormHeading").textContent="Edit Listing";
+        document.getElementById("saveListingBtn").textContent="Save Changes";
+        resetPhotoSelection();
+        document.getElementById("createSection").style.display="block";
+        document.getElementById("createSection").scrollIntoView({behavior:"smooth",block:"start"});
+        document.getElementById("listingTitle").focus({preventScroll:true});
+        const status=document.getElementById("createStatus");
+        status.style.display="block";status.style.color="var(--color-text-muted,#8bc6c2)";
+        status.textContent="Your existing photos are kept. Add new images only if you want to.";
+      }
+      async function loadMyListings(){
+        if(!state.user)return;
+        const target=document.getElementById("myMarketList");
+        target.textContent="Loading your listings…";
+        const result=await supabase.from("marketplace_items")
+          .select("id,title,description,category,price,currency,condition,location,images,is_available,created_at")
+          .eq("user_id",state.user.id).order("created_at",{ascending:false}).limit(80);
+        if(result.error){target.textContent="Couldn't load your listings. Please retry.";return;}
+        const mine=result.data||[];
+        if(!mine.length){target.textContent="No listings yet. Create your first one above.";return;}
+        target.innerHTML=mine.map(item=>`
+          <article class="market-owner-item" data-owned-id="${encodeURIComponent(item.id)}">
+           <div class="market-owner-preview">${item.images?.[0]&&isSafeUrl(item.images[0])?
+             '<img loading="lazy" src="'+escapeHTML(item.images[0])+'" alt="">':'<span aria-hidden="true">▧</span>'}</div>
+           <div class="market-owner-copy"><strong>${escapeHTML(item.title||"Untitled")}</strong>
+            <small class="${item.is_available?"market-live":"market-hidden"}">${item.is_available?"● Live":"◌ Hidden"}</small>
+            <div class="market-owner-actions">
+             <button type="button" data-own-act="edit" data-own-id="${encodeURIComponent(item.id)}">Edit</button>
+             <button type="button" data-own-act="visibility" data-own-id="${encodeURIComponent(item.id)}">${item.is_available?"Hide":"Unhide"}</button>
+             <button type="button" data-own-act="delete" data-own-id="${encodeURIComponent(item.id)}" class="danger">Delete</button>
+            </div>
+           </div>
+          </article>`).join("");
+        target.querySelectorAll("[data-own-act]").forEach(button=>button.addEventListener("click",async()=>{
+          const id=button.dataset.ownId,item=mine.find(x=>x.id===id);
+          if(!item)return;
+          const action=button.dataset.ownAct;
+          if(action==="edit"){editMyListing(item);return;}
+          const label=action==="delete"?"permanently delete this listing":item.is_available?"hide this listing":"make this listing visible again";
+          if(!window.confirm("Do you want to "+label+"?"))return;
+          button.disabled=true;
+          try{
+            const response=action==="delete"?
+              await deleteMarketplaceItem(item.id,state.user.id):
+              await updateMarketplaceItem(item.id,state.user.id,{is_available:!item.is_available});
+            if(response.error)throw response.error;
+            await Promise.all([loadMyListings(),loadListings()]);
+            window.siteToast?.(action==="delete"?"Listing deleted.":item.is_available?"Listing hidden.":"Listing restored.",{type:"success"});
+          }catch(error){
+            window.siteToast?.(error?.message||"Couldn't update the listing.",{type:"error"});
+            button.disabled=false;
+          }
+        }));
+      }
+      document.getElementById("refreshMyListings").addEventListener("click",()=>void loadMyListings());
 
       async function loadSellerInquiries(){
         const box=document.getElementById("sellerInquiryList");
@@ -470,8 +562,8 @@
             uploaded.filter(Boolean).forEach((url) => images.push(url));
           }
 
-          status.textContent = "Creating listing...";
-          const result = await createMarketplaceItem({
+          status.textContent = state.editingListing?"Updating listing…":"Creating listing...";
+          const commonFields = {
             userId: state.user.id,
             sellerName: getDisplayName(state.user),
             title: document.getElementById("listingTitle").value.trim(),
@@ -481,15 +573,20 @@
             currency: document.getElementById("listingCurrency").value,
             condition: document.getElementById("listingCondition").value,
             location: document.getElementById("listingLocation").value.trim(),
-            images
-          });
-
-          if (result.error) throw result.error;
-
-          status.textContent = "Listing created successfully.";
+            images:state.editingListing?
+              [...(state.editingListing.images||[]),...images].slice(0,8):images
+          };
+          const result=state.editingListing?
+            await updateMarketplaceItem(state.editingListing.id,state.user.id,commonFields):
+            await createMarketplaceItem(commonFields);
+          if(result.error)throw result.error;
+          const wasEditing=Boolean(state.editingListing);
+          status.textContent=wasEditing?"Listing updated successfully.":"Listing created successfully.";
           status.style.color = "#047857";
           document.getElementById("createForm").reset();
           resetPhotoSelection();
+          clearListingEditor();
+          void loadMyListings();
           await loadSellerProfile();
           setTimeout(() => {
             document.getElementById("createSection").style.display = "none";
@@ -508,6 +605,7 @@
       document.getElementById("cancelCreate").addEventListener("click", () => {
         document.getElementById("createForm").reset();
         resetPhotoSelection();
+        clearListingEditor();
         document.getElementById("createSection").style.display = "none";
       });
 
