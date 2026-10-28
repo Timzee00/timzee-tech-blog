@@ -82,7 +82,7 @@ async function loadMembers(){
  const ids=members.map(m=>m.user_id);
  const profiles=ids.length?await supabase.from("public_profiles")
   .select("id,display_name,username").in("id",ids).limit(50):{data:[]};
- const names=new Map((profiles.data||[]).map(p=>[p.id,p.display_name||p.username]));
+ const names=new Map((profiles.data||[]).map(p=>[p.id,p.username]));
  for(const member of members){
   const owner=state.active.owner_id===state.user.id;
   const controls=owner?[["Remove",async()=>{if(!confirm("Remove this teammate?"))return;
