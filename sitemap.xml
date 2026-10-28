@@ -2,38 +2,53 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://blipmood.netlify.app/</loc>
-    <lastmod>2026-01-25</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
   </url>
   <url>
     <loc>https://blipmood.netlify.app/discussion.html</loc>
-    <lastmod>2026-01-25</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/spaces.html</loc>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/videos.html</loc>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/novels.html</loc>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/marketplace.html</loc>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/stories.html</loc>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/announcements.html</loc>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/content-policy.html</loc>
   </url>
   <url>
     <loc>https://blipmood.netlify.app/ads.html</loc>
-    <lastmod>2026-01-25</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
   </url>
   <url>
     <loc>https://blipmood.netlify.app/newsletter.html</loc>
-    <lastmod>2026-01-25</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://blipmood.netlify.app/support.html</loc>
-    <lastmod>2026-01-25</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
   </url>
   <url>
     <loc>https://blipmood.netlify.app/contact.html</loc>
-    <lastmod>2026-01-25</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/support.html</loc>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/terms.html</loc>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/privacy.html</loc>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/cookies.html</loc>
+  </url>
+  <url>
+    <loc>https://blipmood.netlify.app/accessibility.html</loc>
   </url>
 </urlset>
