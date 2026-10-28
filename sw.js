@@ -1,22 +1,46 @@
-/* Blipmood push worker: no tracking and no caching. */
+/* Blipmood web push: private message content is never shown on lock screens. */
 "use strict";
+const DEFAULT_NOTIFICATION_URL="/profile.html?tab=notifications";
+function safeNotificationUrl(destination){
+  const fallback=new URL(DEFAULT_NOTIFICATION_URL,self.location.origin).href;
+  if(typeof destination!=="string"||destination.length>1500)return fallback;
+  try{
+    const parsed=new URL(destination,self.location.origin);
+    // Push payloads must never navigate to an external origin or a JS URL.
+    if(parsed.origin!==self.location.origin||!["http:","https:"].includes(parsed.protocol))
+      return fallback;
+    return parsed.href;
+  }catch{return fallback;}
+}
 self.addEventListener("push",event=>{
   let message={};
   try{message=event.data?event.data.json():{}}catch{message={};}
-  const title="Blipmood";
-  const body=typeof message.body==="string"?message.body.slice(0,180):"You have new activity.";
-  event.waitUntil(self.registration.showNotification(title,{
-    body,tag:"blipmood-activity",icon:"/assets/brand/blipmood-emblem-light.png",badge:"/assets/brand/blipmood-emblem-light.png",renotify:false,
-    data:{url:"/index.html"}
+  // Only a generic message is displayed; actual notification details stay
+  // behind the authenticated Blipmood inbox.
+  const body="You have a new notification. Open Blipmood to review it.";
+  const url=safeNotificationUrl(message?.url||DEFAULT_NOTIFICATION_URL);
+  event.waitUntil(self.registration.showNotification("Blipmood",{
+    body,tag:"blipmood-activity",
+    icon:"/assets/brand/blipmood-emblem-light.png",
+    badge:"/assets/brand/blipmood-emblem-light.png",
+    renotify:false,data:{url}
   }));
 });
 self.addEventListener("notificationclick",event=>{
   event.notification.close();
   event.waitUntil((async()=>{
-    const url=new URL("/index.html",self.location.origin).href;
+    const url=safeNotificationUrl(event.notification.data?.url);
     const windows=await self.clients.matchAll({type:"window",includeUncontrolled:true});
-    const existing=windows.find(client=>new URL(client.url).origin===self.location.origin);
-    if(existing){await existing.focus();await existing.navigate(url);return;}
+    const existing=windows.find(client=>{
+      try{return new URL(client.url).origin===self.location.origin}catch{return false}
+    });
+    if(existing){
+      try{
+        if(existing.navigate)await existing.navigate(url);
+        await existing.focus();
+        return;
+      }catch{/* A closed or inaccessible tab must not prevent opening the inbox. */}
+    }
     await self.clients.openWindow(url);
   })());
 });
