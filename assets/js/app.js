@@ -57,7 +57,8 @@ const state = {
   discussionTopics: [],
   activeTags: [],
   leaderboard: [],
-  suggestedPeople: []
+  suggestedPeople: [],
+  publicHandles: new Map()
 };
 
 function formatBrandName(name) {
@@ -245,6 +246,18 @@ function fallbackFilterPosts(posts, query = "", tags = []) {
   });
 }
 
+async function hydratePublicHandles(rows) {
+  const ids=[...new Set((rows||[]).map(row=>row.author_id).filter(Boolean))]
+    .filter(id=>!state.publicHandles.has(id)).slice(0,160);
+  for(let i=0;i<ids.length;i+=80){
+    const batch=ids.slice(i,i+80);
+    const {data,error}=await supabaseForEngagement.from("public_profiles")
+      .select("id,username").in("id",batch);
+    if(error){console.warn("Creator usernames unavailable",error.message);return;}
+    const found=new Map((data||[]).map(profile=>[profile.id,profile.username]));
+    for(const id of batch)state.publicHandles.set(id,found.get(id)||"Member");
+  }
+}
 function buildPostCard(post, compact = false) {
   const category = state.categories.find((cat) => cat.id === post.category_id);
   const categoryName = category ? category.name : "General";
@@ -261,7 +274,7 @@ function buildPostCard(post, compact = false) {
   const excerptText = clampText(stripHTML(stripEditorialScaffolding(post.feed_excerpt || post.content || "")), 140);
   const excerpt = compact ? "" : `<div class="post-card-excerpt">${escapeHTML(excerptText)}</div>`;
   const pin = post.pinned ? `<span class="chip">Pinned</span>` : "";
-  const authorName = post.author_name || "Blipmood";
+  const authorName = post.author_id ? (state.publicHandles.get(post.author_id) || "Member") : "Blipmood";
   const initial = authorName.trim().charAt(0).toUpperCase() || "T";
 
   return `
@@ -330,7 +343,7 @@ function renderPopularTopics() {
           <div class="popular-body">
             <div class="popular-meta">
               <span>${count} replies</span>
-              <span>${escapeHTML(topic.author_name || "Member")}</span>
+              <span>${escapeHTML(state.publicHandles.get(topic.author_id) || "Member")}</span>
               <span>${timeAgo(topic.created_at)}</span>
             </div>
             <a href="discussion.html?topic=${topic.id}">
@@ -429,6 +442,8 @@ async function loadMoreHomePosts() {
     renderTagFilters();
     renderCategories();
     renderLists();
+    void hydratePublicHandles(page.items).then(()=>renderLists())
+      .catch(error=>console.warn("Post usernames unavailable",error));
     if (newlyVisible.length) {
       // More articles appear immediately; exact counts resolve independently.
       void fetchPostEngagement(supabaseForEngagement, newlyVisible, state.user?.id)
@@ -962,7 +977,7 @@ async function boot() {
         // The ranking RPC carries counts but not images. A single bounded
         // public lookup preserves visual covers without fetching all topics.
         const media=await supabaseForEngagement.from("discussion_topics")
-          .select("id,media_url,media_type")
+          .select("id,media_url,media_type,author_id")
           .in("id",ranked.map(topic=>topic.id)).limit(5);
         if(media.error)return ranked;
         const byId=new Map((media.data||[]).map(item=>[item.id,item]));
@@ -982,6 +997,8 @@ async function boot() {
   renderNav(state.categories);
   renderCategories();
   renderLists();
+  void hydratePublicHandles(state.posts).then(()=>renderLists())
+    .catch(error=>console.warn("Post usernames unavailable",error));
   // These rankings are independent of login and sidebar data.
   renderTrending(state.activeCategory);
   renderPopular();
@@ -1026,6 +1043,8 @@ async function boot() {
   state.leaderboard = leaderboard;
   state.suggestedPeople = suggestedPeople;
   renderPopularTopics();
+  void hydratePublicHandles(state.discussionTopics).then(()=>renderPopularTopics())
+    .catch(error=>console.warn("Discussion usernames unavailable",error));
   renderLeaderboard();
   void softTimeout(fetchAnnualChampions(9), [], "champion archive").then(renderAnnualChampions);
   renderSuggestedPeople();
