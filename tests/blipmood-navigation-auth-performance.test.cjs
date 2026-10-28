@@ -16,6 +16,14 @@ test("menu buttons have labels, one scroll surface and coordinated routes",()=>{
  assert.match(css,/\.site-menu \.header-actions \.icon-btn \.nav-action-label\{display:inline/);
  assert.match(read("assets/js/blipmood-unified-menu.mjs"),/Help & Support/);
 });
+test("fullscreen Reels retains video viewport and exposes the same grouped menu",()=>{
+ const video=read("video.html"),menu=read("assets/js/blipmood-unified-menu.mjs");
+ assert.match(video,/blipmood-unified-menu\.mjs/);
+ assert.match(menu,/installReelMenu/);
+ assert.match(menu,/bm-reel-menu-panel/);
+ assert.match(menu,/if\(current==="video\.html"\)\{installReelMenu\(\);return;\}/);
+ assert.match(menu,/aria-modal/);
+});
 test("authenticated Join community is not redirected back to signup",()=>{
  const app=read("assets/js/app.js"),login=read("assets/js/user-auth.js");
  assert.match(app,/installImmediateCommunityJoin\(\)/);
