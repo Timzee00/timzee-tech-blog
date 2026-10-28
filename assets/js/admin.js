@@ -384,6 +384,18 @@ function setupTabs() {
 }
 
 async function setupAnnouncementForm() {
+  const art=document.getElementById("announcementVisual");
+  const preview=document.getElementById("announcementVisualPreview");
+  art?.addEventListener("change",()=>{
+    const file=art.files?.[0];preview.replaceChildren();
+    if(!file)return;
+    if(!file.type.startsWith("image/")){preview.textContent="Choose an image.";return;}
+    const img=document.createElement("img");const url=URL.createObjectURL(file);
+    img.src=url;img.alt="Announcement preview";
+    img.addEventListener("load",()=>URL.revokeObjectURL(url),{once:true});
+    preview.appendChild(img);
+  });
+
   const form = document.getElementById("announcementForm");
   const resetBtn = document.getElementById("resetAnnouncementBtn");
   if (!form) return;
@@ -397,14 +409,15 @@ async function setupAnnouncementForm() {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const title = document.getElementById("announcementTitle").value.trim();
-    const type = document.getElementById("announcementType").value;
+    const visualFile=document.getElementById("announcementVisual")?.files?.[0]||null;
+    const title = document.getElementById("announcementTitle").value.trim() || (visualFile?"Blipmood visual update":"");
+    const type = document.getElementById("announcementType").value || (visualFile?"info":"");
     const message = document.getElementById("announcementMessage").value.trim();
     const status = document.getElementById("announcementStatus").value;
     const publishAt = document.getElementById("announcementPublishAt").value;
 
-    if (!title || !type || !message) {
-      window.appUI.toast("Please fill all required fields");
+    if (!title || !type || (!message && !visualFile)) {
+      window.appUI.toast("Add announcement text or upload a graphic.");
       return;
     }
 
@@ -413,6 +426,8 @@ async function setupAnnouncementForm() {
       title,
       type,
       message,
+      body:message||"",
+      banner_image_url:null,
       status,
       publish_at: publishAt ? new Date(publishAt).toISOString() : new Date().toISOString(),
       created_at: new Date().toISOString(),
@@ -420,6 +435,13 @@ async function setupAnnouncementForm() {
     };
 
     try {
+      if(visualFile){
+        if(!["image/jpeg","image/png","image/webp"].includes(visualFile.type)||visualFile.size>8*1024*1024)
+          throw new Error("Use a PNG, JPEG or WebP image smaller than 8 MB.");
+        const url=await uploadMedia(visualFile,"announcement-banners");
+        if(!url)throw new Error("Graphic upload failed. Nothing was published.");
+        payload.banner_image_url=url;
+      }
       const result = await supabase.from("announcements").insert(payload);
       if (result.error) throw result.error;
       
@@ -993,7 +1015,9 @@ function handlePostForm() {
   if (!form) return;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const title = document.getElementById("postTitle").value.trim();
+    const mediaOnly=document.getElementById("postVisualOnly")?.checked===true;
+    const hasArtwork=Boolean(coverFile||postMediaFiles.length||document.getElementById("postCover")?.value.trim());
+    const title = document.getElementById("postTitle").value.trim() || (mediaOnly&&hasArtwork?"Visual update":"");
     const categorySelect = document.getElementById("postCategory");
     let categoryId = categorySelect.value || null;
     const tags = toTagArray(document.getElementById("postTags").value);
@@ -1036,7 +1060,10 @@ function handlePostForm() {
       if (customWrap) customWrap.classList.add("hidden");
     }
 
-    if (!title || !contentText) return;
+    if (!title || (!contentText && !(mediaOnly&&hasArtwork))) {
+      document.getElementById("postFormHint").textContent="Add a title and text, or choose Graphics-only with artwork attached.";
+      return;
+    }
     if (status === "scheduled" && !publishAt) {
       document.getElementById("postFormHint").textContent = "Add a publish date for scheduled posts.";
       return;
