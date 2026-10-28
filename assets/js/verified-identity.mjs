@@ -100,11 +100,20 @@ export async function loadVerifiedIdentityMap(supabase,ids,cache=new Map()){
   for(let start=0;start<missing.length;start+=80){
     const batch=missing.slice(start,start+80);
     const {data,error}=await supabase.from("public_profiles")
-      .select("id,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style")
+      .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style")
       .in("id",batch);
     if(error)throw error;
     const found=new Map((data||[]).map(profile=>[profile.id,profile]));
     for(const id of batch)cache.set(id,{profile:found.get(id)||null,expiresAt:now+60000});
   }
   return new Map(unique.map(id=>[id,cache.get(id)?.profile||null]));
+}
+
+/** A public byline must never fall back to an email address even if an old
+ *  video/comment row saved one before users changed their privacy settings. */
+export function publicIdentityName(profile,legacyName="Member"){
+ const preferred=String(profile?.username||profile?.display_name||"").trim();
+ const fallback=String(legacyName||"").trim();
+ const chosen=preferred||fallback;
+ return chosen&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(chosen)?chosen.slice(0,70):"Member";
 }
