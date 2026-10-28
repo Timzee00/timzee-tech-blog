@@ -369,14 +369,26 @@ export async function getVideoComments(videoId, options) {
 // at most one authenticated view per user/video/UTC day.
 let viewCounterRpcAvailable = true;
 export async function incrementVideoView(videoId) {
-  if (!videoId || !viewCounterRpcAvailable) return false;
+  if (!videoId) return false;
   try {
     const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData?.session?.user?.id) return false;
+    if (!sessionData?.session?.user?.id) {
+      // Free anonymous receipt: a same-origin Netlify function validates the
+      // visible watch and records one hashed guest/video/day. The privileged
+      // database key never reaches the browser.
+      const reply=await fetch("/.netlify/functions/video-view",{
+        method:"POST",
+        credentials:"omit",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({videoId})
+      });
+      if(!reply.ok)return false;
+      const result=await reply.json();
+      return result?.credited===true;
+    }
+    if (!viewCounterRpcAvailable) return false;
     const { data, error } = await supabase.rpc("record_video_view", { p_video_id: videoId });
     if (error) {
-      // Until the reviewed migration is deployed, skip metric updates
-      // rather than bypassing owners' RLS or logging an error per video.
       if (["PGRST202", "42883"].includes(String(error.code || ""))) {
         viewCounterRpcAvailable = false;
         console.warn("Atomic video view tracking is pending the server migration.");
