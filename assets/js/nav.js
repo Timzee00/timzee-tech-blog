@@ -330,13 +330,13 @@ scheduleChromeMeasurement();
     applySiteBranding(settings);
     const user = await getCurrentUser();
     setupBottomTabBar(!!user);
-    populateDrawerFooter(user, signOut);
+    await populateDrawerFooter(user, signOut);
   } catch (error) {
     console.error("Supabase-dependent nav features failed to load (menu is unaffected):", error);
   }
 })();
 
-function populateDrawerFooter(user, signOut) {
+async function populateDrawerFooter(user, signOut) {
   const userCard = document.getElementById("siteMenuUser");
   const authChip = document.getElementById("siteMenuAuthChip");
   if (!userCard || !authChip) return;
@@ -350,12 +350,18 @@ function populateDrawerFooter(user, signOut) {
   }
 
   userCard.hidden = false;
-  const name = user.user_metadata?.display_name || user.email || "Member";
+  let name=user.user_metadata?.username||"Member";
+  try{
+    const {supabase}=await import("./supabase.js");
+    const {data}=await supabase.from("public_profiles").select("username").eq("id",user.id).maybeSingle();
+    if(data?.username)name=data.username;
+  }catch(error){console.warn("Could not load menu handle",error);}
+
   const candidateAvatar = user.user_metadata?.avatar_url || "";
   const avatarUrl = isSafeUrl(candidateAvatar) ? candidateAvatar : "/assets/img/avatar-placeholder.svg";
   document.getElementById("siteMenuUserAvatar").src = avatarUrl;
   document.getElementById("siteMenuUserName").textContent = name;
-  document.getElementById("siteMenuUserHandle").textContent = user.email || "";
+  document.getElementById("siteMenuUserHandle").textContent = name==="Member"?"":"@"+name;
 
   authChip.textContent = "";
   authChip.innerHTML = "&#128682; Sign Out";
