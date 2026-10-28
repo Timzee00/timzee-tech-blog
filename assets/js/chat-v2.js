@@ -1300,7 +1300,25 @@ async function toggleChatMemberFlag(kind){
   const group=activeGroup();if(group)group.is_pinned=next;renderGroups();
   window.siteToast?.(next?'Group pinned.':'Group unpinned.',{type:'success'});
 }
-function setupTabs(){const tabs=document.querySelectorAll('.chat-tab'),panels=document.querySelectorAll('.chat-tab-panel');tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(t=>{const a=t===tab;t.classList.toggle('active',a);t.setAttribute('aria-selected',String(a));});panels.forEach(p=>p.hidden=p.dataset.panel!==tab.dataset.tab);$("peopleSearchPanel").hidden=true;}));}
+function closePeopleSearch(){
+ const panel=$("peopleSearchPanel");if(!panel||panel.hidden)return;
+ panel.hidden=true;$("peopleSearchBackdrop")?.remove();
+ $("peopleSearchToggle")?.setAttribute("aria-expanded","false");
+ $("peopleSearchToggle")?.focus();
+}
+function togglePeopleSearch(){
+ const panel=$("peopleSearchPanel");if(!panel)return;
+ if(!panel.hidden){closePeopleSearch();return}
+ document.body.append(panel);
+ const backdrop=document.createElement("div");
+ backdrop.id="peopleSearchBackdrop";backdrop.className="chat-find-backdrop";
+ backdrop.addEventListener("click",closePeopleSearch);
+ document.body.append(backdrop);
+ panel.hidden=false;
+ $("peopleSearchToggle")?.setAttribute("aria-expanded","true");
+ $("peopleSearch")?.focus();renderPeopleResults();
+}
+function setupTabs(){const tabs=document.querySelectorAll('.chat-tab'),panels=document.querySelectorAll('.chat-tab-panel');tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(t=>{const a=t===tab;t.classList.toggle('active',a);t.setAttribute('aria-selected',String(a));});panels.forEach(p=>p.hidden=p.dataset.panel!==tab.dataset.tab);closePeopleSearch();}));}
 function setupEvents(){
   $("loadOlderMessages")?.addEventListener("click", () => loadOlderMessages().catch(error => reportAppError(error, "Unable to load older messages")));
   setupMentionInput($("chatBody"));
@@ -1432,7 +1450,9 @@ function setupEvents(){
   if(a==='clear')await clearCurrentChat().catch(error=>reportAppError(error,'Could not clear chat'));
   if(a==='report')await reportActiveConversation().catch(error=>reportAppError(error,'Could not submit report'));});
   document.querySelectorAll('[data-close-modal]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.closeModal))); document.querySelectorAll('[data-chat-setting]').forEach(i=>i.addEventListener('change',()=>{state.settings[i.dataset.chatSetting]=i.checked;saveSettings();}));
-  $("peopleSearchToggle")?.addEventListener('click',()=>{$("peopleSearchPanel").hidden=!$("peopleSearchPanel").hidden;if(!$("peopleSearchPanel").hidden){$("peopleSearch").focus();renderPeopleResults();}}); $("newGroupBtn")?.addEventListener('click',()=>{renderGroupPicker();openModal('friendPickerModal');}); $("friendPickerClose")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCancel")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCreate")?.addEventListener('click',()=>createGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Create group'})));
+  $("peopleSearchToggle")?.addEventListener("click",togglePeopleSearch);
+  $("peopleSearchClose")?.addEventListener("click",closePeopleSearch);
+  document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!$("peopleSearchPanel")?.hidden)closePeopleSearch();}); $("newGroupBtn")?.addEventListener('click',()=>{renderGroupPicker();openModal('friendPickerModal');}); $("friendPickerClose")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCancel")?.addEventListener('click',()=>closeModal('friendPickerModal')); $("friendPickerCreate")?.addEventListener('click',()=>createGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Create group'})));
   $("groupMemberSearch")?.addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#groupMemberPicker .chat-picker-row').forEach(r=>r.hidden=!r.innerText.toLowerCase().includes(q));}); $("editGroupBtn")?.addEventListener('click',()=>{const g=activeGroup();if(g){$("groupAvatarPreview").src=g.avatar_url||DEFAULT_GROUP_AVATAR;$("groupNameInput").value=g.name||'';$("groupDescriptionInput").value=g.description||'';$("groupEditor").hidden=false;}}); $("groupAvatarInput")?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)$("groupAvatarPreview").src=URL.createObjectURL(f);}); $("cancelGroupBtn")?.addEventListener('click',()=>{$("groupEditor").hidden=true;}); $("saveGroupBtn")?.addEventListener('click',()=>editGroup().catch(err=>window.siteToast?.(err.message,{type:'error',title:'Group settings'}))); $("infoGroupMembers")?.addEventListener('click',e=>{
     const suspend=e.target.closest('[data-group-suspend]');
     if(suspend)void suspendMember(suspend.dataset.groupSuspend,suspend.dataset.hidden==='true').catch(err=>reportAppError(err,'Unable to suspend member'));
