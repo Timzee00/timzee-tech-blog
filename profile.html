@@ -163,8 +163,8 @@
           </div>
           <div class="inline-actions" style="margin-bottom:12px;">
             <button class="btn ghost" id="markAllReadBtn" type="button">Mark all read</button>
-            <button class="btn ghost" id="deviceAlertsBtn" type="button">Enable device alerts</button>
-            <small id="deviceAlertsHelp" role="status" aria-live="polite">Optional device notifications while Blipmood is open.</small>
+            <button class="btn ghost" id="deviceAlertsBtn" type="button" data-push-managed="true">Enable background push notifications</button>
+            <small id="deviceAlertsHelp" role="status" aria-live="polite">Enable real browser push alerts for this device, including when Blipmood is closed.</small>
           </div>
           <div class="chat-tabs" id="notificationTabs" role="tablist" style="margin-bottom:14px;">
             <button class="chat-tab active" type="button" data-notif-tab="all" role="tab" aria-selected="true">All</button>
@@ -246,7 +246,8 @@
     </footer>
 
     <script type="module" src="assets/js/profile.js"></script>
-  </body>
+  <script type="module" src="assets/js/browser-push.mjs"></script>
+</body>
 </html>
 
 
