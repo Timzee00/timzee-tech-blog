@@ -8,11 +8,18 @@ exports.handler=async event=>{
  if(!["GET","POST","DELETE"].includes(method))return json(405,{error:"Method not allowed"});
  const publicKey=process.env.PUSH_VAPID_PUBLIC_KEY||"";
  const ready=process.env.PUSH_ENABLED==="true" && validVapidPair(publicKey,process.env.PUSH_VAPID_PRIVATE_KEY||"") && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.BREVO_SENDER_EMAIL||"");
- if(method==="GET")return json(200,{enabled:ready,publicKey:ready?publicKey:null});
+ // Public GET exposes VAPID readiness; an authenticated GET with an endpoint
+ // hash verifies that the device is actually saved for the current account.
+ // The endpoint itself is never sent in the URL.
+ const endpointHashForCheck=method==="GET"
+  ?String(event.queryStringParameters?.endpoint_hash||"").trim():"";
+ if(method==="GET"&&!endpointHashForCheck)
+   return json(200,{enabled:ready,publicKey:ready?publicKey:null});
  if(!ready)return json(503,{error:"Browser notifications are not available yet."});
- if((event.body||"").length>5000)return json(413,{error:"Subscription is too large"});
- let payload;
- try{payload=JSON.parse(event.body||"{}");}catch{return json(400,{error:"Invalid JSON"});}
+ if(method==="GET"&&!/^[a-f0-9]{64}$/.test(endpointHashForCheck))
+   return json(400,{error:"Invalid device identifier"});
+ if(method!=="GET"&&(event.body||"").length>5000)
+   return json(413,{error:"Subscription is too large"});
  const token=String(event.headers?.authorization||event.headers?.Authorization||"").replace(/^Bearer\s+/i,"");
  if(!token)return json(401,{error:"Sign in to manage your notifications"});
  const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -23,6 +30,15 @@ exports.handler=async event=>{
  const userId=auth.user.id;
  const {data:profile,error:profileError}=await db.from("profiles").select("account_status").eq("id",userId).maybeSingle();
  if(profileError||profile?.account_status!=="active")return json(403,{error:"Account is not active"});
+ if(method==="GET"){
+   const {data,error}=await db.from("web_push_subscriptions")
+    .select("id").eq("user_id",userId).eq("endpoint_hash",endpointHashForCheck)
+    .is("disabled_at",null).maybeSingle();
+   if(error)return json(503,{error:"Could not check this device"});
+   return json(200,{enabled:true,publicKey,subscribed:!!data});
+ }
+ let payload;
+ try{payload=JSON.parse(event.body||"{}");}catch{return json(400,{error:"Invalid JSON"});}
  let normalized;
  try{normalized=validateSubscription(payload.subscription)}catch{return json(400,{error:"Invalid push subscription"});}
  const endpointHash=crypto.createHash("sha256").update(normalized.endpoint).digest("hex");
