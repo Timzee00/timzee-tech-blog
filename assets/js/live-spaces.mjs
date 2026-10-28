@@ -388,7 +388,7 @@ function renderPeople(){
   container.replaceChildren();
   for(const [index,p] of people.entries()){
    const isFeatured=spotlight&&index===0;
-   const profile=state.profiles.get(p.user_id),name=profile?.display_name||profile?.username||"Member";
+   const profile=state.profiles.get(p.user_id),name=profile?.username||"Member";
    const row=el("div","",isFeatured?"space-person space-speaking-spotlight":"space-person");
    const avatar=el("span","","space-person-avatar"),who=el("strong");
    avatar.innerHTML=verifiedAvatar(profile?.avatar_url,profile,{size:isFeatured?"xl":"lg",alt:name+" avatar"});
@@ -486,7 +486,7 @@ async function startAudio({enableMic=false}={}){
    const data=JSON.parse(new TextDecoder().decode(payload));
    if(data?.type==="reaction"&&["🔥","😂","👏","🙌","💯"].includes(data.emoji)){
     const id=String(participant?.identity||"").replace(/^u_/,"");
-    $("reactionNotice").textContent=data.emoji+" from "+(state.profiles.get(id)?.display_name||"a listener");
+    $("reactionNotice").textContent=data.emoji+" from "+(state.profiles.get(id)?.username||"a listener");
    }
   }catch{}
  });
