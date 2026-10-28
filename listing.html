@@ -27,7 +27,21 @@
 .market-image-dialog button{min-height:40px;padding:8px 12px;border:1px solid #8aa6c4;border-radius:10px;background:#253550;color:white;cursor:pointer}
 .market-image-dialog button:disabled{opacity:.4}
 @media(max-width:480px){.market-image-dialog{padding:8px;border-radius:13px}.market-image-dialog-tools,.market-image-dialog-controls{gap:4px}.market-image-dialog button{padding:8px;font-size:.78rem}}
-</style></head>
+</style><style>
+.market-rating-panel{border:1px solid #44bcb371;border-radius:19px;margin:20px 0;padding:clamp(15px,3vw,24px);background:var(--color-surface,#122f39);max-width:100%;box-sizing:border-box}
+.market-rating-overline{font-size:.7rem;font-weight:850;letter-spacing:.14em;color:#2bd9b4}.market-rating-heading h2{font-size:clamp(1.18rem,3vw,1.6rem);margin:7px 0}
+.market-rating-heading p{font-size:.84rem;color:var(--color-text-muted,#a7c4c8);line-height:1.55}
+.market-score{font-weight:800;font-size:1rem;margin:14px 0;color:#ffd783}
+.market-product-reviews{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:11px}
+.market-review-card{border-radius:11px;border:1px solid #66859366;padding:11px;background:var(--color-surface-muted,#203949);min-width:0}
+.market-review-card strong{color:#ffc860;letter-spacing:.05em}.market-review-card p{overflow-wrap:anywhere;font-size:.83rem}
+.market-review-form[hidden],#marketBuyerReview[hidden],#marketRequestPurchase[hidden]{display:none!important}
+.market-review-form{display:grid;gap:12px;border-top:1px solid #4c848d73;margin:14px 0;padding:14px 0}
+.market-review-form label{display:grid;gap:6px;font-size:.86rem;font-weight:700}
+.market-review-form :is(select,textarea){width:100%;max-width:100%;box-sizing:border-box;padding:12px;border:1px solid #658a98;border-radius:10px;background:var(--color-surface-muted,#1a3742);color:var(--color-text,#fff)}
+#marketPurchaseStatus{font-size:.85rem;line-height:1.5;margin:14px 0;color:var(--color-text-muted,#c4d5de)}
+</style>
+</head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
@@ -146,6 +160,27 @@
             </form>
           </div>
 
+          <section class="market-rating-panel" id="marketRatingPanel" aria-label="Product ratings and purchase confirmation">
+           <div class="market-rating-heading"><span class="market-rating-overline">BUYER TRUST</span><h2>Ratings & verified purchases</h2>
+            <p>Only buyers whose purchases have been confirmed by the seller can publish ratings.</p></div>
+           <div id="marketProductRating" class="market-score">No product reviews yet.</div>
+           <div id="marketProductReviews" class="market-product-reviews"></div>
+           <div id="marketBuyerReview" hidden>
+             <div id="marketPurchaseStatus" role="status" aria-live="polite"></div>
+             <button type="button" class="btn ghost" id="marketRequestPurchase">I bought this item · Request confirmation</button>
+             <form id="marketRateSellerForm" class="market-review-form" hidden>
+              <h3>Rate your experience with this seller</h3>
+              <label>Rating <select name="rating" required><option value="5">★★★★★ — Excellent</option><option value="4">★★★★☆ — Great</option><option value="3">★★★☆☆ — Okay</option><option value="2">★★☆☆☆ — Poor</option><option value="1">★☆☆☆☆ — Very poor</option></select></label>
+              <label>Comment (optional)<textarea name="comment" rows="3" maxlength="1500"></textarea></label><button type="submit" class="btn">Post seller review</button>
+             </form>
+             <form id="marketRateProductForm" class="market-review-form" hidden>
+              <h3>Rate the product</h3>
+              <label>Rating <select name="rating" required><option value="5">★★★★★ — Excellent</option><option value="4">★★★★☆ — Great</option><option value="3">★★★☆☆ — Okay</option><option value="2">★★☆☆☆ — Poor</option><option value="1">★☆☆☆☆ — Very poor</option></select></label>
+              <label>Comment (optional)<textarea name="comment" rows="3" maxlength="1500"></textarea></label><button type="submit" class="btn">Post product review</button>
+             </form>
+           </div>
+          </section>
+
           <div id="reviewsSection" class="reviews-section" style="display: none;">
             <h2 style="margin: 0 0 20px 0;">Reviews from Buyers</h2>
             <div id="reviewsList"></div>
@@ -176,7 +211,7 @@
     <script type="module" src="assets/js/nav.js"></script>
     <script type="module">
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
-      import { incrementMarketplaceView, createMarketplaceInquiry, getSellerRating } from "./assets/js/videos-marketplace.js";
+      import { incrementMarketplaceView, createMarketplaceInquiry, getSellerRating, createMarketplaceReview } from "./assets/js/videos-marketplace.js";
       import { createContentReport } from "./assets/js/data.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import { formatMarketplacePrice as formatCurrency } from "./assets/js/marketplace-currency.mjs";
@@ -323,6 +358,8 @@
         }
 
         loadSellerRating();
+        void showProductReviews();
+        void refreshBuyerReview();
         loadReviews();
         loadSimilarListings();
 
@@ -448,6 +485,90 @@
       document.getElementById("marketViewerNext").addEventListener("click",()=>{activeMarketImage++;updateMarketViewer();});
       viewer.addEventListener("click",event=>{if(event.target===viewer)viewer.close();});
       viewer.addEventListener("keydown",event=>{if(event.key==="ArrowRight"){activeMarketImage++;updateMarketViewer();}if(event.key==="ArrowLeft"){activeMarketImage--;updateMarketViewer();}});
+
+      async function showProductReviews(){
+        const [r]=await Promise.all([supabase.from("marketplace_item_reviews")
+          .select("rating,comment,created_at").eq("item_id",state.itemId)
+          .order("created_at",{ascending:false}).limit(30)]);
+        const score=document.getElementById("marketProductRating");
+        const list=document.getElementById("marketProductReviews");
+        if(r.error){score.textContent="Product ratings unavailable.";return;}
+        const rows=r.data||[];
+        score.textContent=rows.length?
+          "★ "+(rows.reduce((sum,x)=>sum+Number(x.rating||0),0)/rows.length).toFixed(1)+
+          " from "+rows.length+" product review"+(rows.length===1?"":"s"):
+          "No product reviews yet.";
+        list.replaceChildren();
+        for(const review of rows){
+          const card=document.createElement("article");card.className="market-review-card";
+          const stars=document.createElement("strong");stars.textContent="★".repeat(Number(review.rating)||0);
+          const content=document.createElement("p");content.textContent=review.comment||"Rated without a comment.";
+          card.append(stars,content);list.append(card);
+        }
+      }
+      async function refreshBuyerReview(){
+        const panel=document.getElementById("marketBuyerReview");
+        if(!state.user?.id||!state.listing||state.user.id===state.listing.user_id)return;
+        panel.hidden=false;
+        const message=document.getElementById("marketPurchaseStatus");
+        const request=document.getElementById("marketRequestPurchase");
+        const lookup=await supabase.from("marketplace_transactions")
+          .select("id,status").eq("item_id",state.itemId).eq("buyer_id",state.user.id)
+          .in("status",["pending","completed"]).order("created_at",{ascending:false}).limit(1);
+        if(lookup.error){message.textContent="Purchase status unavailable. Please retry.";return;}
+        const txn=lookup.data?.[0]||null;
+        state.purchase=txn;
+        request.hidden=Boolean(txn);
+        if(!txn){message.textContent="Already bought this item? Ask the seller to verify the completed sale. No payment is processed on Blipmood.";return;}
+        if(txn.status==="pending"){message.textContent="Waiting for the seller to confirm this purchase. Reviews unlock afterwards.";return;}
+        message.textContent="Purchase confirmed. You can now review the seller and product.";
+        const [seller,product]=await Promise.all([
+          supabase.from("marketplace_reviews").select("id").eq("transaction_id",txn.id).maybeSingle(),
+          supabase.from("marketplace_item_reviews").select("id").eq("transaction_id",txn.id).maybeSingle()
+        ]);
+        document.getElementById("marketRateSellerForm").hidden=Boolean(seller.data?.id);
+        document.getElementById("marketRateProductForm").hidden=Boolean(product.data?.id);
+      }
+      document.getElementById("marketRequestPurchase").addEventListener("click",async()=>{
+        if(!state.user?.id){location.href="login.html?next="+encodeURIComponent(location.pathname+location.search);return;}
+        if(!window.confirm("Confirm that you already bought this item outside Blipmood and want the seller to verify it?"))return;
+        const btn=document.getElementById("marketRequestPurchase");btn.disabled=true;
+        const r=await supabase.from("marketplace_transactions").insert({
+          id:crypto.randomUUID(),item_id:state.itemId,buyer_id:state.user.id,
+          seller_id:state.listing.user_id,amount:state.listing.price,status:"pending",
+          created_at:new Date().toISOString()
+        });
+        if(r.error)document.getElementById("marketPurchaseStatus").textContent=r.error.message||"Unable to request verification.";
+        else await refreshBuyerReview();
+        btn.disabled=false;
+      });
+      for(const [formId,kind] of [["marketRateSellerForm","seller"],["marketRateProductForm","product"]]){
+        document.getElementById(formId).addEventListener("submit",async event=>{
+          event.preventDefault();
+          if(state.purchase?.status!=="completed")return;
+          const form=event.currentTarget,button=form.querySelector('button[type="submit"]');
+          button.disabled=true;
+          const rating=Number(form.elements.rating.value);
+          const comment=form.elements.comment.value.trim();
+          try{
+            const result=kind==="seller"?
+              await createMarketplaceReview({
+                transactionId:state.purchase.id,reviewerId:state.user.id,
+                revieweeId:state.listing.user_id,rating,comment
+              }):
+              await supabase.from("marketplace_item_reviews").insert({
+                id:crypto.randomUUID(),transaction_id:state.purchase.id,
+                item_id:state.itemId,reviewer_id:state.user.id,rating,comment
+              });
+            if(result.error)throw result.error;
+            document.getElementById("marketPurchaseStatus").textContent="Review saved. Thank you for helping other buyers.";
+            await Promise.all([refreshBuyerReview(),showProductReviews()]);
+            if(kind==="seller")void loadSellerRating();
+          }catch(error){
+            document.getElementById("marketPurchaseStatus").textContent=error?.message||"Unable to save this review.";
+          }finally{button.disabled=false;}
+        });
+      }
 
       function setupEventListeners() {
         const options=document.getElementById("sellerContactOptions");
