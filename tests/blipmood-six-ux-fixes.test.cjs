@@ -93,3 +93,94 @@ test("public surfaces use account handles while profile retains full-name displa
  assert.match(forum,/publicAuthorName\(message\.author_id\)/);
  assert.match(profile,/state\.profile\?\.display_name/);
 });
+
+test("push UI verifies backend ownership and offers repair instead of claiming browser-only success",()=>{
+ const api=read("netlify/functions/push-subscriptions.js");
+ assert.match(push,/async function isRegisteredOnServer\(subscription\)/);
+ assert.match(push,/crypto\.subtle\.digest\("SHA-256"/);
+ assert.match(push,/endpoint_hash=/);
+ assert.match(push,/button\.dataset\.mode="repair"/);
+ assert.match(push,/mode==="repair"/);
+ assert.match(push,/await api\("POST",existing\.toJSON\(\)\)/);
+ assert.match(push,/await api\("DELETE",subscription\.toJSON\(\)\)/);
+ assert.doesNotMatch(push,/finally\{await subscription\.unsubscribe\(\)/);
+ assert.match(api,/endpointHashForCheck/);
+ assert.match(api,/endpointHashForCheck\)\s*return json\(200/);
+ assert.match(api,/\.eq\("endpoint_hash",endpointHashForCheck\)/);
+ assert.match(api,/\.eq\("user_id",userId\)/);
+ assert.match(api,/subscribed:!!data/);
+ assert.match(api,/if\(!token\)return json\(401/);
+});
+
+test("push server checks belong to the signed-in account and never reveal private subscriptions",async()=>{
+ const vm=require("node:vm");
+ const code=read("netlify/functions/push-subscriptions.js");
+ const hash="a".repeat(64);
+ const setup=({known=true}={})=>{
+  const exports={};
+  const queries=[];
+  const database={
+   auth:{getUser:async token=>({data:{user:{id:"user-1"}},error:null})},
+   from(table){
+    const conditions={};
+    const q={
+     select(){return q},
+     eq(key,value){conditions[key]=value;return q},
+     is(key,value){conditions[key]=value;return q},
+     async maybeSingle(){
+      queries.push({table,conditions:{...conditions}});
+      if(table==="profiles")return {data:{account_status:"active"},error:null};
+      if(table==="web_push_subscriptions")
+       return {data:known?{id:"saved-device"}:null,error:null};
+      throw Error("Unexpected table "+table);
+     }
+    };
+    return q;
+   }
+  };
+  vm.runInNewContext(code,{
+   exports,process:{env:{
+    PUSH_ENABLED:"true",PUSH_VAPID_PUBLIC_KEY:"mock-public",
+    PUSH_VAPID_PRIVATE_KEY:"mock-private",BREVO_SENDER_EMAIL:"team@example.com",
+    SUPABASE_URL:"https://example.supabase.co",SUPABASE_SERVICE_ROLE_KEY:"mock-service"
+   }},
+   require:name=>{
+    if(name==="node:crypto")return {};
+    if(name==="@supabase/supabase-js")return {createClient:()=>database};
+    if(name==="./_lib/web-push.cjs")return {validVapidPair:()=>true};
+    throw Error("Unexpected import "+name);
+   }
+  },{timeout:1500});
+  return {handler:exports.handler,queries};
+ };
+ const publicState=setup();
+ const publicResp=await publicState.handler({httpMethod:"GET",headers:{}});
+ assert.equal(publicResp.statusCode,200);
+ assert.deepEqual(JSON.parse(publicResp.body),{enabled:true,publicKey:"mock-public"});
+ const anonymous=await publicState.handler({
+  httpMethod:"GET",queryStringParameters:{endpoint_hash:hash},headers:{}
+ });
+ assert.equal(anonymous.statusCode,401);
+ assert.ok(!anonymous.body.includes("saved-device"));
+ const malformed=await publicState.handler({
+  httpMethod:"GET",queryStringParameters:{endpoint_hash:"abc"},
+  headers:{authorization:"Bearer token"}
+ });
+ assert.equal(malformed.statusCode,400);
+ const registered=setup();
+ const ok=await registered.handler({
+  httpMethod:"GET",queryStringParameters:{endpoint_hash:hash},
+  headers:{authorization:"Bearer token"}
+ });
+ assert.equal(ok.statusCode,200);
+ assert.equal(JSON.parse(ok.body).subscribed,true);
+ assert.ok(registered.queries.some(q=>q.table==="web_push_subscriptions"&&
+  q.conditions.user_id==="user-1"&&q.conditions.endpoint_hash===hash&&
+  q.conditions.disabled_at===null));
+ const lost=setup({known:false});
+ const missing=await lost.handler({
+  httpMethod:"GET",queryStringParameters:{endpoint_hash:hash},
+  headers:{authorization:"Bearer token"}
+ });
+ assert.equal(JSON.parse(missing.body).subscribed,false);
+});
