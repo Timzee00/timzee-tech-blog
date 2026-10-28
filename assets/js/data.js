@@ -416,6 +416,30 @@ export async function fetchTopProfiles(limit = 5) {
   return normalizeResponse(result);
 }
 
+// Annual competition score is independent of a member's lifetime XP.
+export async function fetchAnnualLeaderboard(limit=5){
+ const year=new Date().getUTCFullYear();
+ const score=await supabase.from("leaderboard_year_scores")
+  .select("user_id,score").eq("year",year).gt("score",0)
+  .order("score",{ascending:false}).limit(Math.max(1,Math.min(30,limit)));
+ if(score.error)throw score.error;
+ const rows=score.data||[];
+ if(!rows.length)return [];
+ const profiles=await supabase.from("public_profiles")
+  .select("id,display_name,username,avatar_url,points,level,is_verified,verification_tier,verification_expires_at,frame_style")
+  .in("id",rows.map(row=>row.user_id));
+ if(profiles.error)throw profiles.error;
+ const byId=new Map((profiles.data||[]).map(profile=>[profile.id,profile]));
+ return rows.map(row=>byId.get(row.user_id)?{...byId.get(row.user_id),annual_score:row.score,year}:null).filter(Boolean);
+}
+export async function fetchAnnualChampions(limit=9){
+ const result=await supabase.from("leaderboard_year_winners")
+  .select("year,rank,user_id,display_name,score")
+  .order("year",{ascending:false}).order("rank",{ascending:true}).limit(Math.max(1,Math.min(30,limit)));
+ if(result.error)throw result.error;
+ return result.data||[];
+}
+
 // Newest members, for a "Add friends / who's new" homepage section. Excludes
 // the current viewer (if logged in) and anyone already friends/pending with
 // them, so the section only ever surfaces genuinely new connections.
