@@ -78,7 +78,8 @@
             <div class="chat-list" id="friendRequestsSent"></div>
           </div>
           <div class="chat-tab-panel" data-panel="blocked" hidden><div class="chat-list" id="blockedList"></div></div>
-          <div class="chat-people-search" id="peopleSearchPanel" hidden>
+          <div class="chat-people-search" id="peopleSearchPanel" role="dialog" aria-modal="true" aria-labelledby="peopleSearchTitle" hidden>
+            <div class="chat-people-float-heading"><div><span class="chat-page-kicker">DISCOVER & CONNECT</span><h2 id="peopleSearchTitle">Find people</h2></div><button type="button" class="chat-icon-btn" id="peopleSearchClose" aria-label="Close find people">✕</button></div>
             <div class="chat-section-label">Find people</div>
             <div class="chat-search-shell"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input type="search" id="peopleSearch" placeholder="Name or username"></div>
             <div class="chat-list" id="peopleResults"></div>
