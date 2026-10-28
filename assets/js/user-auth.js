@@ -346,6 +346,7 @@ async function boot() {
   const callbackExchangeError = await getAuthCallbackError();
 
   let initialView = switcher?.dataset.view || "login";
+  if (queryParams.get("view")==="signup") initialView="signup";
   let recoveryAuthorized = false;
   if (isRecovery) {
     initialView = "reset";
@@ -396,7 +397,7 @@ async function boot() {
       setMessage(loginMessage, "You are already logged in. Continue to the site.");
       const continueBtn = document.createElement("a");
       continueBtn.className = "btn";
-      continueBtn.href = nextUrl;
+      continueBtn.href = await nextAfterMemberSetup(user,nextUrl);
       continueBtn.textContent = "Continue";
       loginMessage.appendChild(document.createElement("div"));
       loginMessage.appendChild(continueBtn);
