@@ -345,7 +345,7 @@ function bindFypVideoGestures(root){
     // Server-side once-per-viewer-per-day dedup prevents inflation.
     video.addEventListener("playing",()=>{
       clearTimeout(watchTimer);
-      if(!state.user?.id||viewAttempted)return;
+      if(viewAttempted)return;
       watchTimer=setTimeout(()=>{
         if(video.paused||!video.isConnected||
            document.visibilityState==="hidden"||viewAttempted)return;
