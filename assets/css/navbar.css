@@ -192,3 +192,33 @@
 .site-global-search-form .site-global-search-close{width:44px;background:transparent;color:var(--color-text)}
 @media(max-width:960px){.site-global-search-button{display:inline-flex}.site-menu .search-box{display:none!important}.site-header .wrap{gap:clamp(3px,1.2vw,10px)}}
 @media(max-width:380px){.site-global-search-button{width:40px;min-width:40px;flex-basis:40px}.site-global-search-form{padding:8px;gap:4px}.site-global-search-form button{padding:6px 8px}}
+
+/* One continuous, labeled drawer. Avoid a scrolling nested navigation and
+ * tiny mystery icons; this is shared by all public pages with a site header. */
+.nav-action-label{display:none}
+@media(max-width:960px){
+ .site-menu{overflow-y:auto;overscroll-behavior:contain;max-height:100dvh;min-height:0;
+   width:min(390px,100vw);max-width:100vw;box-sizing:border-box}
+ .site-menu .bm-drawer-navigation{display:block;overflow:visible!important;max-height:none!important;
+   min-height:0;padding:6px 0 10px;flex:0 0 auto}
+ .site-menu .bm-drawer-navigation .bm-rail-group{margin:0 0 14px}
+ .site-menu .header-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;max-width:100%;width:100%;align-items:stretch;margin:0;padding:13px 0;
+    border-top:1px solid var(--color-border,#ffffff30)}
+ .site-menu .header-actions .search-box{display:none!important}
+ .site-menu .header-actions .icon-btn{display:flex!important;align-items:center;justify-content:center;
+    gap:9px;width:100%;height:auto;min-height:45px;box-sizing:border-box;
+    padding:10px 7px;background:var(--color-surface-muted,#23434b);color:var(--color-text,#fff);
+    text-decoration:none;border:1px solid var(--color-border,#ffffff31);border-radius:11px}
+ .site-menu .header-actions .icon-btn .nav-action-label{display:inline;white-space:normal;
+    font-size:.78rem;font-weight:750;line-height:1.25;overflow-wrap:anywhere}
+ .site-menu .header-actions .icon-btn svg{flex:none;width:18px;height:18px}
+ .site-menu .header-actions .auth-actions{grid-column:1/-1;max-width:100%;display:flex;
+    flex-wrap:wrap;min-width:0;gap:8px}
+ .site-menu .header-actions .auth-actions .btn{flex:1 1 110px;max-width:100%;min-width:0;
+    min-height:44px;display:inline-flex;align-items:center;justify-content:center;
+    white-space:normal}
+ .site-menu-footer{padding-top:14px;margin-top:10px}
+ .site-menu-footer-actions .chip{min-height:42px;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}
+}
+@media(min-width:961px){.site-menu .header-actions .nav-action-label{display:none!important}}
