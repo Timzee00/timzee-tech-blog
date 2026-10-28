@@ -1028,9 +1028,11 @@
             cover ? Promise.resolve(cover) : captureReelCover(file)
           ]);
           uploadStatus.textContent = "Uploading your reel… Keep this window open.";
+          const uploaderProfile=await supabase.from("public_profiles").select("username,display_name").eq("id",state.user.id).maybeSingle();
+          const uploaderPublicName=publicIdentityName(uploaderProfile.data,state.user.user_metadata?.display_name||"Member");
           const result = await uploadVideo(
             state.user.id,
-            state.user.user_metadata?.display_name || state.user.email || "Member",
+            uploaderPublicName,
             file, thumbnail,
             {
               title, description,
@@ -1325,7 +1327,8 @@
           if (result.liked) {
             const video = state.videos.find((v) => v.id === videoId);
             if (video && video.user_id && video.user_id !== state.user.id) {
-              const likerName = state.user.user_metadata?.display_name || state.user.email;
+              const likerProfile=await supabase.from("public_profiles").select("username,display_name").eq("id",state.user.id).maybeSingle();
+              const likerName=publicIdentityName(likerProfile.data,state.user.user_metadata?.display_name||"Member");
               notifyVideoLike(video.user_id, likerName, videoId).catch((error) => console.warn("Video-like notification failed:", error));
             }
           }
