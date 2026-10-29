@@ -360,6 +360,8 @@ function renderProfile() {
   if (avatar) {
     avatar.src = state.profile?.avatar_url || "/assets/img/avatar-placeholder.svg";
   }
+  const avatarLink=document.getElementById("profileAvatarLink");
+  if(avatarLink&&state.viewingId)avatarLink.href="profile.html?id="+encodeURIComponent(state.viewingId);
   if (cover) {
     cover.src = state.profile?.cover_url || "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1200&q=80";
   }
@@ -368,7 +370,7 @@ function renderProfile() {
   const frame=document.querySelector(".profile-page .profile-avatar-wrap");
   if(hero){
     hero.classList.remove("tz-frame","tz-frame--silver","tz-frame--gold",
-      "tz-frame--platinum","tz-frame--business");
+      "tz-frame--platinum","tz-frame--business","tz-frame--government");
     if(tier){
       hero.dataset.verificationLevel=tier;
       hero.classList.add("tz-frame","tz-frame--"+tier);
@@ -377,7 +379,7 @@ function renderProfile() {
   }
   if(frame){
     frame.classList.remove("tz-frame","tz-frame--silver","tz-frame--gold","tz-frame--platinum",
-      "tz-frame--business",...FRAME_STYLES.map(style=>"tz-frame--"+style));
+      "tz-frame--business","tz-frame--government",...FRAME_STYLES.map(style=>"tz-frame--"+style));
     if(tier)frame.classList.add(...verifiedFrameClasses(state.profile).split(" "));
   }
   if (name) {
@@ -448,14 +450,22 @@ function renderAccountTransparency(){
  '</strong><span>'+escapeHTML(detail)+'</span>'+(foot?'<small>'+escapeHTML(foot)+'</small>':"")+'</div>';
  const parts=[];
  parts.push(item("Joined Blipmood",identityDate(state.profile.created_at)||"Date unavailable"));
+ const publicBadge={silver:"Blue · Verified individual",gold:"Gold · Verified creator",
+   platinum:"Platinum · Distinguished verified creator",business:"Gold · Verified organization",
+   government:"Grey · Verified government / public official"};
  parts.push(item("Account verification",verified
-   ?(verified==="business"?"Gold · Verified organization":"Blue · Verified individual")
+   ?(publicBadge[verified]||"Verified account")
    :"Not currently verified",verified
     ?("Verified since "+(identityDate(state.profile.verified_at)||"date unavailable")+
       ". Verification can be reviewed or withdrawn."):"Verification is available through a reviewed application."));
- if(verified && verified!=="business" && verified!=="silver"){
-   parts.push(item("Existing creator entitlements",verified==="gold"?"Gold tier":"Platinum tier",
-      "Premium features and identity verification are separate."));
+ if(verified==="government"){
+   parts.push(item("Official designation",state.profile.official_badge_title||"Verified government / public office",
+     "Requires evidence-based staff review; a political opinion alone does not qualify."));
+ }
+ if(verified && ["gold","platinum","government"].includes(verified)){
+   const originalTier=String(state.profile.verification_tier||"silver");
+   parts.push(item("Existing creator entitlements",originalTier[0].toUpperCase()+originalTier.slice(1)+" tier",
+     "Your original account privileges remain distinct from this public badge."));
  }
  for(const org of (details.organizations||[]).slice(0,5)){
    parts.push(item("Verified affiliation",String(org.title||"Member")+" · "+String(org.name||"Organization"),
@@ -528,6 +538,14 @@ async function loadIdentityExtras(){
       appointments:Array.isArray(data?.appointments)?data.appointments:[],
       awards:Array.isArray(data?.awards)?data.awards:[]
    };
+   // One profile-only lookup; feeds use the indexed public author batch cache.
+   const official=await supabase.from("public_profiles")
+     .select("official_badge_kind,official_badge_title")
+     .eq("id",state.viewingId).maybeSingle();
+   if(!official.error&&official.data){
+     state.profile.official_badge_kind=official.data.official_badge_kind;
+     state.profile.official_badge_title=official.data.official_badge_title;
+   }
    const affiliation=state.identityExtras.organizations[0];
    if(affiliation)state.profile.blipmoodOrganization=affiliation;
    else delete state.profile.blipmoodOrganization;
@@ -552,10 +570,11 @@ function renderVerification(){
   }
   const label=verifiedLabel(state.profile);
   const benefits={
-    silver:["Blue individual verification across supported social surfaces","Your existing Silver-tier benefits and collectible frames","Identity and impersonation reporting tools"],
-    gold:["Blue individual identity check, with preserved Gold-tier perks","Creator publishing tools already available to this account","Verified status features and content insights"],
-    platinum:["Blue individual identity check, with preserved Platinum-tier perks","Distinguished portrait collection and creator experience","Existing verified publishing and community tools"],
-    business:["Gold organization verification and branded profile frames","Organization identity shown across supported surfaces","Official account protection and content publishing"]
+    silver:["Distinct Blue badge and blue portrait frames","Former Silver-tier creator benefits are preserved","Verified status and community identity tools"],
+    gold:["Distinct Gold badge and gold portrait frames","Existing Gold-tier creator publishing benefits","Verified contributions and insights"],
+    platinum:["Exclusive Platinum badge and premium purple portrait frames","Distinguished creator identity and frame collection","Original Platinum-tier perks are preserved"],
+    business:["Gold organization check and branded profile frames","Official organization identity on social surfaces","Reviewed brand and organization protection"],
+    government:["Official Grey verification for a government institution or public officeholder","Public office review is separate from your original creator perks","Verified identity and account transparency"]
   };
   const current=verifiedFrameStyle(state.profile);
   const gallery=isSelf
@@ -748,6 +767,8 @@ function renderProfileStats() {
     `
     )
     .join("");
+  const info=document.getElementById("profileReputationHelp");
+  if(info)info.textContent="How reputation grows: publish a discussion topic (+5), reply in a discussion (+1), comment on an article (+2), share/copy an article link (+1), or publish an article (+10, where authorized). These are current activity rewards, not an automatic path to verified status. Levels: Starter 0–99, Rising 100–299, Pro 300–699, Legend 700+.";
 }
 
 function renderActivity() {
