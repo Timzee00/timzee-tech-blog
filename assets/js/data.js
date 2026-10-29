@@ -688,8 +688,15 @@ export async function fetchProfilesByIds(ids = []) {
   if (!list.length) return [];
   const result = await supabase
     .from("public_profiles")
-    .select("id, username, display_name, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style")
+    .select("id, username, display_name, avatar_url, is_verified, verification_tier, verification_expires_at, frame_style, primary_org_name, primary_org_logo_url, primary_org_title")
     .in("id", list);
+  if(!result.error && Array.isArray(result.data)){
+    for(const profile of result.data)if(profile.primary_org_name){
+      profile.blipmoodOrganization={
+        name:profile.primary_org_name,logo_url:profile.primary_org_logo_url,title:profile.primary_org_title
+      };
+    }
+  }
   return normalizeResponse(result);
 }
 
