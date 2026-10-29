@@ -25,6 +25,7 @@ import { setupReveal } from "./reveal.js";
 import { safeNotificationPath } from "./notification-links.mjs";
 import {verifiedName,verifiedAvatar,verifiedLevel,verifiedLabel,verifiedFrameClasses,verifiedFrameStyle,FRAME_OPTIONS,FRAME_STYLES} from "./verified-identity.mjs";
 import {mountReadingLibrary} from "./reader-library.mjs";
+import {FX_EFFECTS,DEFAULT_FX,normalizeFx,createProfileFxEngine} from "./profile-fx.mjs";
 import "./nav.js";
 import { submitModerationReport } from "./moderation-reports.mjs";
 
@@ -657,6 +658,138 @@ function renderVerification(){
     }
   });
   displayPreview();
+}
+
+
+let profileFxEngine=null;
+let profileFxPreviewEngine=null;
+async function setupProfileFx(){
+ const cover=document.querySelector(".profile-page .profile-cover");
+ const avatar=document.querySelector(".profile-page .profile-avatar-wrap");
+ const canvas=document.getElementById("profileFxCanvas");
+ if(!cover||!canvas||!state.viewingId)return;
+ if(profileFxEngine)profileFxEngine.destroy();
+ profileFxEngine=createProfileFxEngine({host:cover,canvas,avatar,maxParticles:62});
+ let stored={...DEFAULT_FX};
+ try{
+  const {data,error}=await supabase.from("member_profile_effects")
+    .select("cover_effect,avatar_effect,intensity,enabled")
+    .eq("user_id",state.viewingId).maybeSingle();
+  if(error)throw error;
+  stored=normalizeFx(data||DEFAULT_FX);
+ }catch(error){
+  // Profile FX is optional; loading failure must never hide the user's profile.
+  console.warn("Optional profile effects are unavailable:",error.message);
+ }
+ profileFxEngine.apply(stored);
+ const own=state.user?.id===state.viewingId;
+ const studio=document.getElementById("profileFxStudio");
+ if(!own||!studio)return;
+ studio.hidden=false;
+ const coverPreview=document.getElementById("fxStudioCover");
+ const avatarPreview=document.getElementById("fxStudioAvatar");
+ if(coverPreview)coverPreview.src=document.getElementById("profileCoverImg")?.src||"";
+ if(avatarPreview)avatarPreview.src=state.profile.avatar_url||"/assets/img/avatar-placeholder.svg";
+ document.getElementById("fxStudioName").textContent=plainDisplayName(state.profile.display_name||"Member");
+ document.getElementById("fxStudioHandle").textContent="@"+(state.profile.username||"member");
+ if(profileFxPreviewEngine)profileFxPreviewEngine.destroy();
+ profileFxPreviewEngine=createProfileFxEngine({
+   host:document.getElementById("fxStudioPreview"),
+   canvas:document.getElementById("fxStudioCanvas"),
+   avatar:document.getElementById("fxStudioAvatarWrap"),maxParticles:44
+ });
+ let target="cover",draft={...stored},saving=false;
+ const choiceList=document.getElementById("fxStudioGallery");
+ const symbols={none:"○",storm:"ϟ",inferno:"♨",glitch:"▦",frost:"❄",void:"◉",
+   sakura:"❀",aurora:"〰",stardust:"✧",hearts:"♥",fireflies:"◌",
+   neon:"◎",halo:"◌",eclipse:"☾",diamond:"◇"};
+ const status=document.getElementById("fxStudioStatus");
+ const intensity=document.getElementById("fxIntensity");
+ const enabled=document.getElementById("fxEnabled");
+ const getChoice=()=>draft[target+"_effect"];
+ function feedback(message){if(status)status.textContent=message;}
+ function repaint(){
+  intensity.value=String(draft.intensity);
+  document.getElementById("fxIntensityValue").textContent=draft.intensity+"%";
+  enabled.checked=draft.enabled;
+  profileFxPreviewEngine.apply(draft);
+  for(const btn of choiceList.querySelectorAll("[data-fx-choice]")){
+    btn.setAttribute("aria-pressed",String(btn.dataset.fxChoice===getChoice()));
+  }
+  const equal=JSON.stringify(draft)===JSON.stringify(stored);
+  document.getElementById("fxSave").disabled=saving||equal;
+  document.getElementById("fxRestore").disabled=saving||equal;
+  document.getElementById("fxReset").disabled=saving;
+ }
+ function showGallery(){
+  choiceList.replaceChildren();
+  for(const option of FX_EFFECTS){
+   const button=document.createElement("button");
+   button.type="button";
+   button.dataset.fxChoice=option.id;
+   button.style.setProperty("--fx-chip",option.color);
+   button.title=option.description;
+   button.setAttribute("aria-label",option.title+": "+option.description);
+   const icon=document.createElement("span");
+   icon.className="fx-chip-symbol";icon.textContent=symbols[option.id]||"✧";
+   icon.setAttribute("aria-hidden","true");
+   const label=document.createElement("span");label.textContent=option.title;
+   button.append(icon,label);choiceList.append(button);
+  }
+  repaint();
+ }
+ document.querySelectorAll("[data-fx-target]").forEach(button=>
+  button.addEventListener("click",()=>{
+   target=button.dataset.fxTarget==="avatar"?"avatar":"cover";
+   document.querySelectorAll("[data-fx-target]").forEach(item=>item.setAttribute("aria-pressed",String(item===button)));
+   repaint();
+   feedback("Previewing "+target+" effects. Your saved profile is unchanged.");
+  })
+ );
+ choiceList.addEventListener("click",event=>{
+  const button=event.target.closest("[data-fx-choice]");
+  if(saving||!button||!FX_EFFECTS.some(e=>e.id===button.dataset.fxChoice))return;
+  draft[target+"_effect"]=button.dataset.fxChoice;
+  repaint();feedback("Preview only. Select Apply effects to save.");
+ });
+ intensity.addEventListener("input",()=>{draft.intensity=Math.max(0,Math.min(100,Number(intensity.value)||0));repaint();});
+ enabled.addEventListener("change",()=>{draft.enabled=enabled.checked;repaint();});
+ document.getElementById("fxRestore").addEventListener("click",()=>{
+  if(saving)return;draft={...stored};repaint();feedback("Restored your saved effect settings.");
+ });
+ document.getElementById("fxReset").addEventListener("click",()=>{
+  if(saving)return;draft={...DEFAULT_FX};repaint();feedback("No-effects preview. Apply to save this choice.");
+ });
+ document.getElementById("fxSave").addEventListener("click",async()=>{
+  if(saving||!state.user||state.user.id!==state.viewingId)return;
+  saving=true;repaint();feedback("Saving your effects securely…");
+  try{
+   const submitted=normalizeFx(draft);
+   const {data,error}=await supabase.from("member_profile_effects")
+     .upsert({user_id:state.user.id,...submitted,updated_at:new Date().toISOString()},{onConflict:"user_id"})
+     .select("cover_effect,avatar_effect,intensity,enabled").single();
+   if(error)throw error;
+   stored=normalizeFx(data);draft={...stored};
+   profileFxEngine.apply(stored);
+   feedback("Effects applied. Your cover photo and avatar are unchanged.");
+  }catch(error){
+   feedback(extractErrorMessage(error,"Couldn't save effects. Your previous appearance is unchanged."));
+  }finally{saving=false;repaint();}
+ });
+ window.addEventListener("pagehide",()=>{
+  profileFxEngine?.destroy();
+  profileFxPreviewEngine?.destroy();
+ },{once:true});
+ showGallery();
+ feedback("Choose a cover or avatar effect and preview it before saving.");
+ const actions=document.getElementById("profileActions");
+ if(actions&&!actions.querySelector(".profile-fx-cta")){
+  const link=document.createElement("a");
+  link.className="profile-fx-cta";
+  link.href="profile.html?tab=settings#profileFxStudio";
+  link.textContent="✧ Customize profile effects";
+  actions.append(link);
+ }
 }
 
 function setupProfileTabs() {
@@ -1630,6 +1763,7 @@ async function boot() {
   renderNotifications();
   document.getElementById("profileVideoUpload").hidden = !state.user || state.user.id !== state.viewingId;
   setupProfileTabs();
+  void setupProfileFx();
   setupNotificationTabs();
   renderProfileActions();
   setupProfileEditor();
