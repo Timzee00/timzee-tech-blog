@@ -426,7 +426,7 @@ export async function fetchAnnualLeaderboard(limit=5){
  const rows=score.data||[];
  if(!rows.length)return [];
  const profiles=await supabase.from("public_profiles")
-  .select("id,display_name,username,avatar_url,points,level,is_verified,verification_tier,verification_expires_at,frame_style")
+  .select("id,display_name,username,avatar_url,points,level,is_verified,verification_tier,verification_expires_at,verified_at,frame_style")
   .in("id",rows.map(row=>row.user_id));
  if(profiles.error)throw profiles.error;
  const byId=new Map((profiles.data||[]).map(profile=>[profile.id,profile]));
