@@ -351,7 +351,7 @@ async function searchPeople(query) {
     // Quote PostgREST filter values and escape LIKE wildcards; search public
     // names only. Email addresses are not a discovery directory.
     const pattern = JSON.stringify(`%${query.replace(/[\\%_]/g, character => `\\${character}`)}%`);
-    const result = await supabase.from('public_profiles').select('id,display_name,username,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style,allow_messages,allow_requests')
+    const result = await supabase.from('public_profiles').select('id,display_name,username,avatar_url,is_verified,verification_tier,verification_expires_at,official_badge_kind,official_badge_title,frame_style,allow_messages,allow_requests')
       .neq('id', state.user.id).or(`display_name.ilike.${pattern},username.ilike.${pattern}`).limit(20);
     if (version !== state.peopleRequest || query !== $("peopleSearch").value.trim()) return;
     if (result.error) throw result.error;
