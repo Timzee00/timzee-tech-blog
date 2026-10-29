@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Identity & Recognition — Blipmood</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="../assets/css/admin.css">
+<script defer src="../assets/js/theme-init.js"></script>
+<style>
+.identity-shell{width:min(1120px,100% - 28px);margin:22px auto 50px;display:grid;gap:20px;color:var(--color-text,#e8f5f5)}
+.identity-header{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.identity-header h1{font-size:clamp(1.5rem,4vw,2.2rem);margin:3px 0}
+.identity-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:17px}
+.identity-card{background:var(--color-surface,#142d38);border:1px solid var(--color-border,#405b65);border-radius:18px;padding:clamp(14px,2vw,24px);min-width:0;display:grid;gap:12px}
+.identity-card h2{font-size:1.12rem;margin:0}
+.identity-card p,.identity-intro{line-height:1.55;color:var(--color-text-muted,#b5c5c9);font-size:.89rem;margin:0}
+.identity-card form{display:grid;gap:10px}
+.identity-card label{display:grid;gap:4px;font-size:.83rem;font-weight:700}
+.identity-card input,.identity-card select,.identity-card textarea{max-width:100%;width:100%;min-height:42px;border-radius:9px;padding:9px 11px;border:1px solid var(--color-border,#567);background:var(--color-surface-muted,#0b2029);color:var(--color-text,#efffff);font:inherit}
+.identity-card textarea{min-height:82px;resize:vertical}
+.identity-card button{min-height:44px}
+.identity-status{min-height:1.4em;font-size:.84rem;overflow-wrap:anywhere}
+.identity-status[data-state=error]{color:#f9a0a0}
+.identity-status[data-state=ok]{color:#90ebd6}
+.identity-hint{font-size:.76rem;color:var(--color-text-muted,#b6c8cf)}
+.identity-notice{padding:13px 15px;border-radius:13px;background:var(--color-surface-muted,#122b34);border:1px solid var(--color-border,#405b65)}
+[hidden]{display:none!important}
+@media(max-width:450px){.identity-shell{width:calc(100% - 20px)}.identity-card{padding:15px}}
+</style>
+</head>
+<body class="admin-shell">
+<main class="identity-shell">
+<header class="identity-header"><div><p class="identity-intro">Blipmood · Trusted Identity</p><h1>Identity & Recognition Center</h1><p class="identity-intro">Review real evidence, invite affiliates and recognize meaningful contributions.</p></div><a class="btn ghost" href="professional-panel.html">← Super Admin</a></header>
+<div class="identity-notice" role="status" id="identityGate">Checking your super-administrator permissions…</div>
+<div id="identityWorkspace" hidden>
+<p class="identity-notice">These controls make audited decisions. Only authenticated super administrators can write records. Company affiliation requests remain private until their recipient accepts, and recognition does not grant moderation powers.</p>
+<div class="identity-grid">
+<section class="identity-card"><h2>1 · Register organization</h2><p>Adding a company never verifies it. First create a pending record, then assess evidence in the review panel.</p>
+<form id="orgCreate">
+<label>Official account @username<input name="owner" autocomplete="off" placeholder="@examplebrand" required></label>
+<label>Organization / brand name<input name="name" minlength="2" maxlength="120" required></label>
+<label>Official website (optional)<input name="website" type="url" placeholder="https://example.com"></label>
+<label>Logo URL (optional)<input name="logo" type="url" placeholder="https://..."></label>
+<label>Public description<input name="summary" maxlength="300" placeholder="What this organization does"></label>
+<button type="submit" class="btn">Create pending organization</button></form><p class="identity-status" id="orgCreateStatus" role="status"></p>
+</section>
+<section class="identity-card"><h2>2 · Verify or revoke organization</h2><p>Document the evidence checked. Verified status is granted only through a reason-required, audited server transaction.</p>
+<form id="orgReview">
+<label>Organization<select name="organization" id="organizationReviewSelect" required></select></label>
+<label>Decision<select name="decision"><option value="verified">Verify after checking evidence</option><option value="revoked">Revoke organization status</option></select></label>
+<label>Private review rationale<textarea name="reason" required minlength="25" maxlength="1500" placeholder="What evidence did you examine? Why is the decision justified?"></textarea></label>
+<button type="submit" class="btn">Record review decision</button></form><p class="identity-status" id="orgReviewStatus" role="status"></p>
+</section>
+<section class="identity-card"><h2>3 · Invite company affiliate</h2><p>Send a pending affiliation to an existing member. It appears publicly only after the member accepts.</p>
+<form id="affiliateCreate">
+<label>Verified organization<select name="organization" id="organizationAffiliateSelect" required></select></label>
+<label>Member @username<input name="user" placeholder="@username" required></label>
+<label>Official position<input name="title" maxlength="90" placeholder="Product Designer" required></label>
+<button type="submit" class="btn">Send affiliation invitation</button></form><p class="identity-status" id="affiliateCreateStatus" role="status"></p>
+</section>
+<section class="identity-card"><h2>4 · Appoint trusted contributor</h2><p>Product Lead and Product Advisor are formal appointments. Community Advisors require demonstrated expertise. Appointments do not carry admin permissions.</p>
+<form id="appointmentCreate">
+<label>Member @username<input name="user" placeholder="@username" required></label>
+<label>Appointment<select name="role"><option value="community_advisor">Community Advisor</option><option value="community_contributor">Community Contributor</option><option value="product_advisor">Product Advisor</option><option value="product_lead">Product Lead</option></select></label>
+<label>Specialization<input name="specialty" maxlength="100" placeholder="Web development, product strategy"></label>
+<label>Public appointment description<textarea name="summary" maxlength="500" placeholder="Why this person is qualified; what they are responsible for"></textarea></label>
+<button type="submit" class="btn">Appoint member</button></form><p class="identity-status" id="appointmentCreateStatus" role="status"></p>
+</section>
+<section class="identity-card"><h2>5 · Award recognition</h2><p>Staff Pick is an editorial award, Featured is discovery placement, and Platinum is a distinguished achievement — none grants verification automatically.</p>
+<form id="awardCreate">
+<label>Member @username<input name="user" placeholder="@username" required></label>
+<label>Recognition<select name="award"><option value="staff_pick">Staff Pick</option><option value="featured">Featured</option><option value="platinum">Platinum distinction</option><option value="product_contributor">Product Contributor</option></select></label>
+<label>Reason for recognition<textarea name="reason" required minlength="15" maxlength="800"></textarea></label>
+<label>Link to relevant work (optional)<input name="source" type="url" placeholder="https://..."></label>
+<label>Expires (optional)<input name="expires" type="date"></label>
+<button type="submit" class="btn">Award recognition</button></form><p class="identity-status" id="awardCreateStatus" role="status"></p>
+</section>
+<section class="identity-card"><h2>6 · Inspect and revoke</h2><p>Look up a member's active appointments and recognitions. Revocation updates public information and writes an audit entry.</p>
+<form id="identityInspect"><label>Member @username<input name="user" placeholder="@username" required></label><button type="submit" class="btn ghost">Inspect identity</button></form><div id="identityInspectResults" aria-live="polite"></div><p class="identity-status" id="identityInspectStatus" role="status"></p>
+</section></div></div>
+</main><script type="module" src="../assets/js/identity-recognition-admin.mjs"></script>
+</body></html>
