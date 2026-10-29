@@ -122,7 +122,13 @@ test("video discovery and full-screen reels use trusted tier frames and batched 
  const discovery=read("videos.html"),reels=read("video.html");
  assert.match(discovery,/loadVerifiedIdentityMap\(supabase,state\.videos\.map/);
  assert.match(discovery,/tz-video-card-author/);
- assert.match(reels,/uploader_profile = p \|\| null/);
+ // Account usernames come from validated server-controlled public identities;
+ // if an optional rich profile fails, the renderer keeps the verified handle.
+ assert.match(reels,/v\\.uploader_profile=p\\|\\|\\(/);
+ assert.match(reels,/validated!=="Member"\\?\\{username:validated\\}:null/);
+ assert.match(reels,/publicIdentityName\\(publicRow\\?\\.username/);
+ assert.match(reels,/\\.select\\("id,username"\\)\\.in\\("id",userIds\\)/);
+ assert.doesNotMatch(reels,/v\\.uploader_profile\\s*=\\s*video\\.author_name/);
  assert.match(reels,/verifiedAvatar\(profile\?\.avatar_url,profile/);
  assert.match(reels,/loadVerifiedIdentityMap\(supabase,page\.map/);
  assert.match(reels,/verifiedCommentClass\(commentProfiles\.get/);
