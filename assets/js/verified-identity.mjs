@@ -2,8 +2,9 @@
    comments, communities and short-video feeds. No copied third-party marks.
    Display must reflect server-protected public_profiles, never self-claimed metadata. */
 const LABELS=Object.freeze({
-  silver:"Blue Verified Individual",gold:"Blue Verified Individual",
-  platinum:"Blue Verified Individual",business:"Gold Verified Organization"
+  silver:"Blue Verified Individual",gold:"Gold Verified Creator",
+  platinum:"Platinum Verified Creator",business:"Gold Verified Organization",
+  government:"Grey Verified Government / Public Official"
 });
 /* Display metadata is centralized so profile selectors, galleries, comments
    and future mobile clients all use the same server-approved frame names. */
@@ -35,7 +36,10 @@ export function verifiedLevel(profile){
   }
   const raw=String(profile.verification_tier||"standard").trim().toLowerCase();
   const normalized=LEGACY_LEVELS[raw]||raw;
-  return Object.prototype.hasOwnProperty.call(LABELS,normalized)?normalized:null;
+  if(!Object.prototype.hasOwnProperty.call(LABELS,normalized))return null;
+  // Official designations are reviewed independently; premium tiers and
+  // existing entitlement columns remain untouched.
+  return profile.official_badge_kind==="government"?"government":normalized;
 }
 export function verifiedLabel(profile){
   const level=verifiedLevel(profile);
@@ -63,9 +67,11 @@ export function verificationBadge(profile,{compact=false}={}){
  const level=verifiedLevel(profile);
  if(!level)return "";
  const label=LABELS[level];
- // Legacy Silver, Gold and Platinum entitlements all display a blue *individual*
- // check. Only a separately reviewed business account carries organization gold.
- const icon=level==="business"?ICON_ROOT+"business.svg":"/assets/img/blipmood-verified-blue.svg";
+ // Tier-specific artwork remains independent of creator feature allowances.
+ // Silver legacy users receive Blue; Platinum keeps its distinct seal.
+ const icon=level==="silver"?"/assets/img/blipmood-verified-blue.svg"
+   :level==="government"?"/assets/img/blipmood-verified-government.svg"
+   :ICON_ROOT+(level==="business"?"business":level)+".svg";
  const date=profile?.verified_at?String(profile.verified_at):"";
  return '<span class="tz-verified-badge tz-verified-badge--'+level+
    (compact?' tz-verified-badge--small':'')+
@@ -99,9 +105,15 @@ function showIdentityExplanation(element){
    ?new Date(rawDate).toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}):"";
  const detail=isOrg
    ?"This affiliation was approved for a verified organization and accepted by the account holder. It is separate from Blipmood identity verification."
+   :label?.includes("Government")
+     ?"This public official or government institution was reviewed against official evidence. Political opinions or self-described job titles alone never qualify."
    :label?.includes("Organization")
-      ?"This organization has passed Blipmood's official organization review."
-      :"This individual account has passed Blipmood's identity review. The blue check does not grant moderator or administrator privileges.";
+     ?"This organization has passed Blipmood's official organization review."
+   :label?.includes("Platinum")
+     ?"Platinum is an individually reviewed, distinguished verified tier. It does not confer moderation powers."
+   :label?.includes("Gold")
+     ?"Gold is an individually reviewed verified creator tier. It does not confer moderation powers."
+     :"Blue marks an individually reviewed, authenticated account. Community reputation does not automatically issue verification.";
  dialog.innerHTML='<div class="tz-identity-dialog-body"><div class="tz-sheet-head"><h2 id="tzIdentityExplanationTitle">'+
    safeText(isOrg?"Organization affiliation":"Verified account")+
    '</h2><form method="dialog"><button type="submit" aria-label="Close details">✕</button></form></div>'+
@@ -164,7 +176,7 @@ export async function loadVerifiedIdentityMap(supabase,ids,cache=new Map()){
   for(let start=0;start<missing.length;start+=80){
     const batch=missing.slice(start,start+80);
     const {data,error}=await supabase.from("public_profiles")
-      .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,verified_at,frame_style,primary_org_name,primary_org_logo_url,primary_org_title")
+      .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,verified_at,frame_style,official_badge_kind,official_badge_title,primary_org_name,primary_org_logo_url,primary_org_title")
       .in("id",batch);
     if(error)throw error;
     const found=new Map((data||[]).map(profile=>{
