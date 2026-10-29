@@ -46,7 +46,7 @@ test("particle engine survives 220 simulated mobile frames, caps particles and c
   setTransform(){},clearRect(){},fillRect(){},beginPath(){},
   arc(x,y,r){if(r<0||!Number.isFinite(r))throws.push(r);},fill(){},stroke(){},
   moveTo(){},lineTo(){},quadraticCurveTo(){},bezierCurveTo(){},ellipse(){},
-  save(){},restore(){},translate(){},rotate(){},
+  save(){},restore(){},translate(){},rotate(){},closePath(){},
   createRadialGradient(){return {addColorStop(){}};}
  };
  const canvas={width:0,height:0,getContext:()=>context};
