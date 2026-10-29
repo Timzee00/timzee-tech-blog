@@ -32,15 +32,48 @@ function validateStep(n){
   if(!/^[a-zA-Z0-9_]{3,32}$/.test(username)){feedback("Choose a username of 3–32 letters, numbers or underscores.");$("setupUsername").focus();return false;}
   if(!Number.isInteger(age)||age<13||age>120){feedback("Enter your age (13 or older).");$("setupAge").focus();return false;}
   if(!["female","male","prefer_not_to_say"].includes(gender)){feedback("Choose a gender option.");$("setupGender").focus();return false;}
+  const avatar=avatarSelection();
+  if(!allowedStarterAvatar(gender,avatar)){
+    feedback("Choose an avatar available for your selected gender.");$("setupGender").focus();return false;
+  }
  }
  return true;
 }
-const avatarSelection=()=>form.querySelector('input[name="avatar"]:checked')?.value||$("setupGender").value;
-$("setupGender").addEventListener("change",()=>{
+const allowedStarterAvatar=(gender,avatar)=>gender==="prefer_not_to_say"
+ ?["male","female"].includes(avatar):["male","female"].includes(gender)&&gender===avatar;
+function syncStarterAvatar(){
  const gender=$("setupGender").value;
- const item=form.querySelector('input[name="avatar"][value="'+gender+'"]');
- if(item)item.checked=true;
-});
+ const options=[...form.querySelectorAll('input[name="avatar"]')];
+ for(const input of options){
+  const permitted=allowedStarterAvatar(gender,input.value);
+  input.disabled=!permitted;
+  const card=input.closest("label");
+  if(card){card.hidden=!permitted;card.setAttribute("aria-disabled",String(!permitted));}
+  if(!permitted)input.checked=false;
+ }
+ const selected=options.find(x=>x.checked&&!x.disabled);
+ if(!selected&&["male","female"].includes(gender)){
+   const matching=options.find(x=>x.value===gender);
+   if(matching)matching.checked=true;
+ }
+ const note=$("starterAvatarHelp");
+ if(note)note.textContent=gender==="male"?"Nova is your available starter illustration. Change gender to access other starter styles."
+  :gender==="female"?"Bloom is your available starter illustration. Change gender to access other starter styles."
+  :gender==="prefer_not_to_say"?"Choose whichever starter illustration you prefer."
+  :"Choose gender first to reveal compatible starter illustrations.";
+}
+const avatarSelection=()=>{
+ const gender=$("setupGender").value;
+ const selected=form.querySelector('input[name="avatar"]:checked')?.value||"";
+ return allowedStarterAvatar(gender,selected)?selected:(gender==="male"||gender==="female"?gender:"");
+};
+$("setupGender").addEventListener("change",syncStarterAvatar);
+form.querySelectorAll('input[name="avatar"]').forEach(input=>input.addEventListener("change",()=>{
+ if(!allowedStarterAvatar($("setupGender").value,input.value)){
+   input.checked=false;syncStarterAvatar();
+   feedback("Choose a starter illustration available for your selected gender.");
+ }
+}));
 $("setupNext").addEventListener("click",()=>{if(validateStep(step))setStage(step+1);});
 $("setupBack").addEventListener("click",()=>setStage(step-1));
 document.querySelectorAll("[data-progress]").forEach(button=>button.addEventListener("click",()=>{
@@ -107,6 +140,7 @@ async function boot(){
  const avatar=o.data?.avatar_style||o.data?.gender;
  const radio=form.querySelector('input[name="avatar"][value="'+avatar+'"]');
  if(radio)radio.checked=true;
+ syncStarterAvatar();
  for(const interest of o.data?.interests||[]){
   const target=[...form.querySelectorAll('[name="interests"]')].find(x=>x.value===interest);
   if(target)target.checked=true;
