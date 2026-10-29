@@ -40,7 +40,8 @@ export function createProfileFxEngine({host,canvas,avatar=null,maxParticles=64}=
  let opts={...DEFAULT_FX},visible=false,raf=0,particles=[],width=1,height=1,last=0,clock=0,resizeObserver=null,intersectionObserver=null,burst=0,disposed=false;
  const lowPower=(navigator.hardwareConcurrency||4)<=4||window.innerWidth<470;
  const fps=lowPower?24:30;
- const cap=Math.min(80,Math.max(12,lowPower?36:maxParticles));
+ const requestedCap=Number.isFinite(maxParticles)?maxParticles:64;
+ const cap=Math.min(80,Math.max(12,Math.min(requestedCap,lowPower?36:80)));
  const rand=Math.random;
  function resize(){
   if(disposed)return;
