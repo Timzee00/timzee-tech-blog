@@ -66,11 +66,19 @@ function item(label,description){
 async function inspectUser(form){
  const userId=await findMember(field(form,"user"));
  const host=$("identityInspectResults");host.replaceChildren();
- const [roles,awards]=await Promise.all([
+ const [roles,awards,affiliations]=await Promise.all([
    supabase.from("identity_appointments").select("id,role_code,specialty,status").eq("user_id",userId).order("granted_at",{ascending:false}).limit(30),
-   supabase.from("identity_awards").select("id,award_code,reason,is_active").eq("user_id",userId).order("awarded_at",{ascending:false}).limit(30)
+   supabase.from("identity_awards").select("id,award_code,reason,is_active").eq("user_id",userId).order("awarded_at",{ascending:false}).limit(30),
+   supabase.from("identity_affiliations").select("id,organization_id,title,status").eq("user_id",userId).limit(30)
  ]);
- if(roles.error||awards.error)throw roles.error||awards.error;
+ if(roles.error||awards.error||affiliations.error)throw roles.error||awards.error||affiliations.error;
+ const orgIds=[...new Set((affiliations.data||[]).map(a=>a.organization_id))];
+ let orgNames=new Map();
+ if(orgIds.length){
+   const orgs=await supabase.from("identity_organizations").select("id,name").in("id",orgIds);
+   if(orgs.error)throw orgs.error;
+   orgNames=new Map((orgs.data||[]).map(o=>[o.id,o.name]));
+ }
  let rows=0;
  function revokeRow(kind,row,label,detail,isActive){
    const element=item(label+(isActive?" · Active":" · Revoked"),detail);
@@ -82,7 +90,9 @@ async function inspectUser(form){
        button.disabled=true;
        const action=kind==="role"
          ?supabase.from("identity_appointments").update({status:"revoked"}).eq("id",row.id)
-         :supabase.from("identity_awards").update({is_active:false}).eq("id",row.id);
+         :kind==="affiliation"
+           ?supabase.from("identity_affiliations").update({status:"revoked",accepted_at:null}).eq("id",row.id)
+           :supabase.from("identity_awards").update({is_active:false}).eq("id",row.id);
        const {error}=await action;
        if(error){button.disabled=false;notice("identityInspectStatus",error.message,true);return;}
        notice("identityInspectStatus","Revocation saved and audited.");
@@ -94,7 +104,10 @@ async function inspectUser(form){
  }
  for(const role of roles.data||[])revokeRow("role",role,role.role_code.replaceAll("_"," "),role.specialty||"Official appointment",role.status==="active");
  for(const award of awards.data||[])revokeRow("award",award,award.award_code.replaceAll("_"," "),award.reason,award.is_active);
- if(!rows)host.append(item("No records","This member has no advisor appointments or awards."));
+ for(const affiliation of affiliations.data||[])revokeRow("affiliation",affiliation,
+   "Company affiliation · "+(orgNames.get(affiliation.organization_id)||"Organization"),
+   affiliation.title,affiliation.status==="active");
+ if(!rows)host.append(item("No records","This member has no appointments, awards or company affiliations."));
 }
 
 async function loadAdvisorQueue(){
