@@ -81,9 +81,13 @@ export function verificationBadge(profile,{compact=false}={}){
    '<img src="'+icon+'" alt="" width="22" height="22" loading="lazy" decoding="async">'+
    '<span class="tz-sr-only">'+safeText(label)+'</span></span>';
 }
+const publicId=profile=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(String(profile?.id||profile?.user_id||""))
+ ?String(profile.id||profile.user_id):"";
+const profileTarget=profile=>{const id=publicId(profile);return id
+ ?' data-user-profile-id="'+id+'" role="link" tabindex="0" title="View member profile"':"";};
 export function verifiedName(name,profile,{compact=false}={}){
  const tier=verifiedLevel(profile);
- return '<span class="tz-identity-name'+(tier?' tz-nameplate tz-nameplate--'+tier:'')+'">'+
+ return '<span class="tz-identity-name'+(tier?' tz-nameplate tz-nameplate--'+tier:'')+'"'+profileTarget(profile)+'>'+
    safeText(name||"Member")+affiliationBadge(profile)+verificationBadge(profile,{compact})+'</span>';
 }
 function showIdentityExplanation(element){
@@ -124,6 +128,29 @@ function showIdentityExplanation(element){
  if(!dialog.open)dialog.showModal();
 }
 if(typeof document!=="undefined"){
+ // A single capture listener covers live-added feed authors, chats, comments,
+ // marketplace sellers and reels. A badge keeps its own explanation action.
+ const navigateFromIdentity=event=>{
+   if(event.type==="keydown"&&!["Enter"," "].includes(event.key))return;
+   const target=event.target.closest?.("[data-user-profile-id]");
+   if(!target||event.target.closest?.("[data-identity-label],[data-org-label]"))return;
+   const id=target.dataset.userProfileId;
+   if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id||""))return;
+   // Native anchors to this exact profile already work and preserve middle-click.
+   const link=event.target.closest?.("a[href]");
+   const url="/profile.html?id="+encodeURIComponent(id);
+   if(link){
+     try{
+       const existing=new URL(link.href,location.href);
+       if(existing.pathname.endsWith("/profile.html")&&existing.searchParams.get("id")===id)return;
+     }catch{}
+   }
+   if(event.type==="click"&&(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||event.button!==0))return;
+   event.preventDefault();event.stopPropagation();
+   location.assign(url);
+ };
+ document.addEventListener("click",navigateFromIdentity,true);
+ document.addEventListener("keydown",navigateFromIdentity,true);
  // Delegation costs one listener on a page containing hundreds of authors.
  document.addEventListener("click",event=>{
    const badge=event.target.closest?.("[data-identity-label],[data-org-label]");
@@ -149,7 +176,7 @@ export function verifiedAvatar(url,profile,{size="md",alt="Profile picture"}={})
   const safeUrl=/^(https:\/\/|\/assets\/|assets\/)/i.test(value)&&
     !/[<>"'\\]/.test(value)?value:"/assets/img/avatar-placeholder.svg";
   return '<span class="tz-avatar-verified '+verifiedFrameClasses(profile)+
-    ' tz-avatar-verified--'+sizeClass+'"><img src="'+safeText(safeUrl)+
+    ' tz-avatar-verified--'+sizeClass+'"'+profileTarget(profile)+'><img src="'+safeText(safeUrl)+
     '" alt="'+safeText(alt)+'" loading="lazy" decoding="async"></span>';
 }
 
