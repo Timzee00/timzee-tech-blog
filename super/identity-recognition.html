@@ -77,6 +77,12 @@
 </section>
 <section class="identity-card"><h2>6 · Inspect and revoke</h2><p>Look up a member's active appointments and recognitions. Revocation updates public information and writes an audit entry.</p>
 <form id="identityInspect"><label>Member @username<input name="user" placeholder="@username" required></label><button type="submit" class="btn ghost">Inspect identity</button></form><div id="identityInspectResults" aria-live="polite"></div><p class="identity-status" id="identityInspectStatus" role="status"></p>
+</section>
+<section class="identity-card"><h2>7 · Review Advisor applications</h2>
+<p>Members can apply through <a href="../advisor.html">Advisory Network</a>. Review the applicant's expertise and supporting evidence before appointing them. Approval is transactional and audited.</p>
+<button id="refreshAdvisorQueue" type="button" class="btn ghost">Refresh pending requests</button>
+<div id="advisorReviewQueue" role="status" aria-live="polite">Loading Advisor applications…</div>
+<p class="identity-status" id="advisorReviewStatus" role="status"></p>
 </section></div></div>
 </main><script type="module" src="../assets/js/identity-recognition-admin.mjs"></script>
 </body></html>
