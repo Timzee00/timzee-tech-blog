@@ -10,15 +10,21 @@ const identity=sandbox.identity;
 const sql=read("supabase/migrations/20261029133242_blipmood_identity_recognition_20261029.sql");
 const sqlFrames=read("supabase/migrations/20261029133351_expand_verified_frame_styles_20261029.sql");
 const sqlReview=read("supabase/migrations/20261029133742_audited_organization_review_20261029.sql");
-test("verified users share a blue individual check while organizations retain a separate badge",()=>{
- for(const tier of ["silver","gold","platinum"]){
-  const html=identity.verificationBadge({is_verified:true,verification_tier:tier});
-  assert.match(html,/blipmood-verified-blue\.svg/);
-  assert.match(html,/Blue Verified Individual/);
+test("verification badges stay distinct: former Silver Blue, Gold, Platinum, government Grey",()=>{
+ const badges=[
+  {tier:"silver",file:"blipmood-verified-blue.svg",label:"Blue Verified Individual"},
+  {tier:"gold",file:"timzee-verified-gold.svg",label:"Gold Verified Creator"},
+  {tier:"platinum",file:"timzee-verified-platinum.svg",label:"Platinum Verified Creator"},
+  {tier:"business",file:"timzee-verified-business.svg",label:"Gold Verified Organization"}
+ ];
+ for(const example of badges){
+  const html=identity.verificationBadge({is_verified:true,verification_tier:example.tier});
+  assert.ok(html.includes(example.file),example.tier+" correct artwork");
+  assert.ok(html.includes(example.label),example.tier+" correct explanation");
  }
- const business=identity.verificationBadge({is_verified:true,verification_tier:"business"});
- assert.match(business,/timzee-verified-business\.svg/);
- assert.match(business,/Gold Verified Organization/);
+ const govt=identity.verificationBadge({is_verified:true,verification_tier:"gold",official_badge_kind:"government"});
+ assert.match(govt,/blipmood-verified-government\.svg/);
+ assert.match(govt,/Grey Verified Government/);
  assert.equal(identity.verificationBadge({is_verified:false,verification_tier:"platinum"}),"");
 });
 test("named frames and badges remain escaped when a malicious display name is supplied",()=>{
@@ -119,4 +125,27 @@ test("award, affiliation and Advisor notifications occur only on database change
  assert.match(migration,/advisor_decision/);
  assert.match(migration,/recognition_awarded/);
  assert.match(migration,/affiliation_invite/);
+});
+
+test("Grey status is audited and is not self-assignable; sparkle is removed",()=>{
+ const sql=read("supabase/migrations/20261029160303_official_grey_verified_badges_20261029.sql");
+ const css=read("assets/css/verified-identity.css");
+ const html=read("super/identity-recognition.html");
+ assert.match(sql,/identity_official_designations/);
+ assert.match(sql,/enable row level security/);
+ assert.match(sql,/has_role_secure\('super'\)/);
+ assert.match(sql,/private\.audit_identity_change/);
+ assert.match(sql,/official_badge_kind/);
+ assert.match(css,/\.profile-page \.profile-avatar-wrap\.tz-frame::before\{content:none/);
+ assert.match(html,/id="governmentCreate"/);
+});
+test("one delegated profile navigation handler covers names and portraits",()=>{
+ const helper=read("assets/js/verified-identity.mjs");
+ const profile=read("profile.html");
+ const nav=read("assets/js/nav.js");
+ assert.match(helper,/data-user-profile-id/);
+ assert.match(helper,/document\.addEventListener\("click",navigateFromIdentity,true\)/);
+ assert.match(helper,/closest\?\.\("\[data-identity-label\]/);
+ assert.match(profile,/profileAvatarLink/);
+ assert.match(nav,/siteMenuUser.*href="\/profile\.html"/);
 });
