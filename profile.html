@@ -75,18 +75,24 @@
             </div>
             <div class="profile-identity">
               <div class="profile-avatar-wrap">
-                <button type="button" class="profile-image-open profile-avatar-open" data-profile-image="avatar" aria-label="View full profile photo"><img id="profileAvatar" class="profile-avatar" alt="Profile avatar"></button>
+                <button type="button" class="profile-image-open profile-avatar-open" data-profile-image="avatar" aria-label="View full profile photo"><img id="profileAvatar" class="profile-avatar" alt="Profile avatar"></button><span class="tz-frame-name-ribbon" id="profileFrameName" aria-hidden="true"></span>
               </div>
               <div class="profile-body">
                 <div class="chip" id="profileRole">Member</div>
                 <h1 id="profileName">Loading...</h1>
                 <p id="profileHandle" class="profile-handle"></p>
-                <p id="profileHeadline" class="profile-headline"></p>
+                <p id="profileHeadline" class="profile-headline"></p><div id="profileIdentityExtras" class="tz-account-affiliation" aria-live="polite"></div>
                 <div id="profileBadges" class="author-badges"></div>
                 <div class="profile-actions" id="profileActions"></div>
               </div>
             </div>
             <p id="profileBio" class="profile-bio"></p>
+            <details id="profileTransparency" class="tz-transparency">
+              <summary>About this account · verification, affiliations and recognition</summary>
+              <div class="tz-transparency-content" id="profileTransparencyContent" aria-live="polite">
+                <p>Loading public account details…</p>
+              </div>
+            </details>
             <div class="stats-list profile-stats" id="profileStats"></div>
             <div id="profileVisitorInsights" class="profile-visitor-insights" aria-live="polite"></div>
           </section>
