@@ -96,6 +96,68 @@ async function inspectUser(form){
  for(const award of awards.data||[])revokeRow("award",award,award.award_code.replaceAll("_"," "),award.reason,award.is_active);
  if(!rows)host.append(item("No records","This member has no advisor appointments or awards."));
 }
+
+async function loadAdvisorQueue(){
+ const host=$("advisorReviewQueue");if(!host)return;
+ host.textContent="Loading pending Advisor applications…";
+ try{
+   const {data,error}=await supabase.from("identity_advisor_applications")
+     .select("id,user_id,requested_role,specialty,statement,evidence_url,created_at")
+     .eq("status","pending").order("created_at",{ascending:true}).limit(30);
+   if(error)throw error;
+   if(!data?.length){host.textContent="There are no pending Advisor applications.";return;}
+   const ids=[...new Set(data.map(x=>x.user_id))];
+   const users=await supabase.from("public_profiles").select("id,username").in("id",ids);
+   if(users.error)throw users.error;
+   const handles=new Map((users.data||[]).map(x=>[x.id,x.username]));
+   host.replaceChildren();
+   for(const app of data){
+     const card=item((handles.has(app.user_id)?"@"+handles.get(app.user_id):"Applicant")+
+       " · "+app.requested_role.replaceAll("_"," "),
+       "Specialization: "+app.specialty);
+     const statement=document.createElement("p");
+     statement.textContent=app.statement;card.append(statement);
+     if(app.evidence_url){
+       const link=document.createElement("a");link.href=app.evidence_url;
+       link.target="_blank";link.rel="noopener noreferrer";
+       link.textContent="Open applicant evidence";card.append(link);
+     }
+     const reason=document.createElement("textarea");
+     reason.placeholder="Review rationale (25 characters minimum)";
+     reason.minLength=25;reason.maxLength=1200;
+     reason.setAttribute("aria-label","Private Advisor review rationale");
+     card.append(reason);
+     const actions=document.createElement("div");
+     actions.style.display="flex";actions.style.gap="8px";actions.style.flexWrap="wrap";
+     for(const [decision,label] of [["approved","Approve"],["rejected","Reject"]]){
+       const button=document.createElement("button");
+       button.type="button";button.className="btn "+(decision==="rejected"?"ghost":"");
+       button.textContent=label;
+       button.addEventListener("click",async()=>{
+         const note=reason.value.trim();
+         if(note.length<25){notice("advisorReviewStatus","Document the reason (25 characters minimum).",true);reason.focus();return;}
+         if(!window.confirm(label+" this Advisor application? This is an audited decision."))return;
+         actions.querySelectorAll("button").forEach(b=>b.disabled=true);
+         notice("advisorReviewStatus","Recording reviewed decision…");
+         const {error}=await supabase.rpc("review_identity_advisor",{
+           p_application_id:app.id,p_decision:decision,p_review_note:note
+         });
+         if(error){
+           actions.querySelectorAll("button").forEach(b=>b.disabled=false);
+           notice("advisorReviewStatus","Review failed: "+error.message,true);return;
+         }
+         notice("advisorReviewStatus","Advisor review recorded successfully.");
+         await loadAdvisorQueue();
+       });
+       actions.append(button);
+     }
+     card.append(actions);host.append(card);
+   }
+ }catch(error){
+   host.textContent="Unable to load Advisor applications.";
+   notice("advisorReviewStatus",error.message||"Please retry.",true);
+ }
+}
 async function initialize(){
  const {data:{user},error:authError}=await supabase.auth.getUser();
  if(authError||!user){$("identityGate").textContent="Please sign in to manage identity records.";return;}
@@ -165,5 +227,7 @@ async function initialize(){
    if(error)throw error;
  });
  attach("identityInspect",inspectUser);
+ $("refreshAdvisorQueue")?.addEventListener("click",()=>void loadAdvisorQueue());
+ void loadAdvisorQueue();
 }
 initialize().catch(error=>{notice("identityGate",error.message||"Identity tools could not be loaded.",true);});
