@@ -8,7 +8,7 @@
 .profile-page .profile-avatar-wrap[data-fx-avatar]:not([data-fx-avatar="none"]),
 .profile-fx-preview-avatar[data-fx-avatar]:not([data-fx-avatar="none"]){
   --fx-avatar-color:#5eead4;
-  box-shadow:0 0 calc(11px + 18px * var(--fx-avatar-opacity, .45)) color-mix(in srgb,var(--fx-avatar-color) 56%,transparent),
+  box-shadow:0 0 26px color-mix(in srgb,var(--fx-avatar-color) 56%,transparent),
    0 8px 25px rgba(0,0,0,.16);
   transition:box-shadow .4s ease;
 }
@@ -27,7 +27,7 @@
 .profile-fx-preview-avatar[data-fx-avatar="void"],
 .profile-fx-preview-avatar[data-fx-avatar="eclipse"]{outline:3px solid var(--fx-avatar-color);outline-offset:3px}
 .profile-page .profile-hero{contain:layout style}
-.profile-fx-studio{max-width:100%;min-width:0;overflow:hidden;display:grid;gap:18px;padding:clamp(17px,3vw,27px)}
+.profile-fx-studio{grid-column:1/-1;max-width:100%;min-width:0;overflow:hidden;display:grid;gap:18px;padding:clamp(17px,3vw,27px)}
 .profile-fx-studio[hidden]{display:none!important}
 .profile-fx-heading{display:flex;align-items:start;justify-content:space-between;gap:12px}
 .profile-fx-heading h3{font-size:clamp(1.2rem,2.5vw,1.65rem);margin:5px 0 8px;letter-spacing:-.025em}
