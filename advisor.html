@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blipmood Advisory Network — Become an Advisor</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+<script defer src="assets/js/theme-init.js"></script>
+<style>
+.advisor-shell{max-width:970px;margin:clamp(30px,5vw,70px) auto 90px;padding:0 18px;color:var(--color-text,#ebf7f5)}
+.advisor-head{padding:clamp(21px,5vw,39px);border-radius:24px;background:linear-gradient(125deg,#103e58,#0e4d50 60%,#142e55);color:#fff}
+.advisor-head h1{font-size:clamp(1.6rem,4vw,2.5rem);line-height:1.2;margin:10px 0}
+.advisor-head p{color:#e0f8f2;line-height:1.55;max-width:70ch}
+.advisor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,315px),1fr));gap:16px;margin-top:21px}
+.advisor-card{padding:clamp(18px,3vw,28px);border:1px solid var(--color-border,#456);border-radius:17px;background:var(--color-surface,#16313a);min-width:0}
+.advisor-card h2{font-size:1.15rem;margin:0 0 10px}
+.advisor-card p{font-size:.91rem;line-height:1.55;color:var(--color-text-muted,#a9c9cb)}
+.advisor-card form{display:grid;gap:12px}
+.advisor-card label{display:grid;gap:5px;font-size:.85rem;font-weight:700}
+.advisor-card :is(input,select,textarea){width:100%;max-width:100%;padding:11px 12px;min-height:44px;border:1px solid var(--color-border,#51777b);background:var(--color-surface-muted,#142e38);color:var(--color-text,#fff);border-radius:10px;font:inherit}
+.advisor-card textarea{min-height:155px;resize:vertical;line-height:1.5}
+.advisor-card button{min-height:46px}
+.advisor-status{padding:10px 12px;margin:14px 0;border:1px solid var(--color-border,#537);border-radius:12px}
+.advisor-status:empty{display:none}
+.advisor-status[data-error=true]{color:#f5b1b1}
+.advisor-history{display:grid;gap:8px}
+.advisor-history article{border:1px solid var(--color-border,#537);padding:11px;border-radius:12px;font-size:.85rem;overflow-wrap:anywhere}
+.advisor-points{padding-left:22px;line-height:1.7;color:var(--color-text-muted,#afc6ce)}
+@media(max-width:500px){.advisor-head{padding:21px}.advisor-card{padding:17px}}
+</style>
+</head>
+<body><main class="advisor-shell" id="main-content">
+<div class="advisor-head"><a href="profile.html" class="btn ghost">← Return to profile</a>
+<h1>Become a Blipmood Advisor</h1>
+<p>Help people learn, solve problems and make informed decisions. Advisors are appointed after an expertise review, not based on followers, payments or automatic badges.</p>
+</div>
+<div class="advisor-grid">
+<section class="advisor-card"><h2>Advisor application</h2>
+<p>Community Advisors support a specialist community. Product Advisors provide input to Blipmood's development team. Neither role grants moderator, verification or administrator powers.</p>
+<div id="advisorGate" class="advisor-status" role="status">Checking your account…</div>
+<form id="advisorApplyForm" hidden>
+<label>Advisor pathway
+<select name="role" required><option value="community_advisor">Community Advisor</option><option value="product_advisor">Product Advisor</option></select></label>
+<label>Your specialization
+<input name="specialty" required minlength="3" maxlength="100" placeholder="e.g. JavaScript, design, business operations"></label>
+<label>Explain your expertise and contributions
+<textarea name="statement" required minlength="80" maxlength="2000" placeholder="Describe your experience, ways you have helped others and what you would contribute as an Advisor."></textarea></label>
+<label>Portfolio or supporting public evidence (optional)
+<input name="evidence" type="url" placeholder="https://your-portfolio.example"></label>
+<p>Blipmood staff review these applications. False qualifications, conflicts of interest or misuse may result in rejection or revocation.</p>
+<button class="btn" type="submit" id="advisorSubmit">Submit for review</button></form>
+<div id="advisorFeedback" class="advisor-status" role="status" aria-live="polite"></div></section>
+<aside class="advisor-card"><h2>How it works</h2>
+<ol class="advisor-points"><li>Build a real history of constructive contributions.</li><li>Apply with an honest explanation and relevant evidence.</li><li>Blipmood staff evaluate your expertise and fit.</li><li>If approved, your title and specialization appear in Account Transparency.</li><li>Continued participation and conduct are reviewed; appointments can be withdrawn.</li></ol>
+<h2>Your application history</h2><div id="advisorHistory" class="advisor-history" role="status">Sign in to see applications.</div>
+<p>For individual account verification, use the separate <a href="verify.html">Blue Verification application</a>. Appointment is not verification.</p></aside>
+</div></main>
+<script type="module" src="assets/js/advisor-applications.mjs"></script>
+</body></html>
