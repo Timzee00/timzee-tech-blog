@@ -93,6 +93,9 @@ test("onboarding gender restricts starter illustrations and database validates n
  assert.match(sql,/member_onboarding_gender_avatar_consistent/);
  assert.match(sql,/not valid/);
  assert.match(sql,/enable row level security/);
+ const validated=read("supabase/migrations/20261029163127_validate_gender_starter_avatar_pair.sql");
+ assert.match(validated,/member_onboarding_gender_avatar_consistent/);
+ assert.match(validated,/avatar_style is not null and avatar_style=gender/);
 });
 test("member visual preferences have owner-only mutations and public safe display",()=>{
  const sql=read("supabase/migrations/20261029162345_profile_fx_and_gender_consistent_starter_20261029.sql");
