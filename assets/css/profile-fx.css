@@ -26,7 +26,7 @@
 .profile-page .profile-avatar-wrap[data-fx-avatar="eclipse"],
 .profile-fx-preview-avatar[data-fx-avatar="void"],
 .profile-fx-preview-avatar[data-fx-avatar="eclipse"]{outline:3px solid var(--fx-avatar-color);outline-offset:3px}
-.profile-page .profile-hero{contain:layout style}
+/* Keep the existing profile hero layout and popovers unchanged. */
 .profile-fx-studio{grid-column:1/-1;max-width:100%;min-width:0;overflow:hidden;display:grid;gap:18px;padding:clamp(17px,3vw,27px)}
 .profile-fx-studio[hidden]{display:none!important}
 .profile-fx-heading{display:flex;align-items:start;justify-content:space-between;gap:12px}
