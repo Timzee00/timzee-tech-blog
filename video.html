@@ -1924,7 +1924,7 @@
         const [identity,profilesResult,countsResult]=await Promise.allSettled([
           supabase.rpc("reel_public_metadata",{p_video_ids:ids}),
           userIds.length?supabase.from("public_profiles")
-            .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style,is_staff_pick")
+            .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,official_badge_kind,official_badge_title,frame_style,is_staff_pick")
             .in("id",userIds):Promise.resolve({data:[],error:null}),
           supabase.rpc("video_social_counts",{p_video_ids:ids})
         ]);
@@ -1955,6 +1955,7 @@
           );
           if(v.uploader_profile&&validated!=="Member")
             v.uploader_profile.username=validated;
+          if(v.uploader_profile&&v.user_id)v.uploader_profile.id=v.user_id;
           v.uploader_staff_pick=!!p?.is_staff_pick;
           if(publicRow?.view_count!==undefined)
             v.view_count=Math.max(0,Number(publicRow.view_count)||0);
