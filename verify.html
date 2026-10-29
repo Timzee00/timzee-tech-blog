@@ -43,24 +43,39 @@
       <div class="verify-container">
         <div class="verify-header">
           <h1>Get Verified</h1>
-          <p>Stand out in the community with an official verification badge</p>
+          <p>Earn your Blipmood blue check through a genuine account history and an approved authenticity review.</p>
         </div>
 
+        <div class="form-section" aria-labelledby="blueEarnTitle">
+          <h2 id="blueEarnTitle">Earn Blue Verification</h2>
+          <p>Verification application and review are free. Active participation helps establish your account history, but likes, follower counts and reputation points alone cannot prove authenticity or guarantee approval.</p>
+          <div id="verifiedJourneyFacts" class="callout" role="status" aria-live="polite">
+            Sign in to see your account age and community reputation.
+          </div>
+          <ol class="perk-list">
+            <li>Build a real history of thoughtful posts and helpful community activity.</li>
+            <li>Keep your account in good standing, secure it, and use an authentic profile.</li>
+            <li>Apply for the Blue Individual check and provide enough evidence to verify your account. Private documents are never public.</li>
+            <li>Staff reviewers check the evidence and issue a decision. For questions or disputes, contact support.</li>
+          </ol>
+          <p>Staff Pick awards, company roles and paid creator features do not automatically award a blue badge.</p>
+        </div>
         <div class="form-section">
-          <h3>Select Verification Level</h3>
+          <h3>Choose an application category</h3>
+          <p>Existing Silver, Gold and Platinum creator entitlements remain supported. All approved individual accounts display the same blue check; organization accounts display the gold organization badge.</p>
           <div class="badge-levels">
             <div class="level-card" data-level="silver">
               <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 28px;">Silver</span>
+                <span style="font-size: 28px;">🔵</span>
                 <div>
-                  <strong>Silver</strong>
-                  <p style="margin: 4px 0; font-size: 13px; color: #666;">For active community members</p>
+                  <strong>Blue Individual · Free</strong>
+                  <p style="margin: 4px 0; font-size: 13px; color: #666;">For genuine individual accounts and community contributors</p>
                 </div>
               </div>
               <ul class="perks-list">
-                <li>Silver verification badge</li>
-                <li>Three exclusive Silver portrait frames</li>
-                <li>Badge visible on profiles, replies and articles</li>
+                <li>One recognizable blue verification check</li>
+                <li>Individual authenticity review</li>
+                <li>Verified identity across supported social surfaces</li>
               </ul>
             </div>
 
@@ -68,12 +83,12 @@
               <div style="display: flex; align-items: center; gap: 12px;">
                 <span style="font-size: 28px;">Gold</span>
                 <div>
-                  <strong>Gold</strong>
+                  <strong>Gold-tier Creator · Blue check</strong>
                   <p style="margin: 4px 0; font-size: 13px; color: #666;">For prominent creators</p>
                 </div>
               </div>
               <ul class="perks-list">
-                <li>Gold verification badge</li>
+                <li>Individual blue verification badge</li>
                 <li>Distinct Gold profile styling</li>
                 <li>Secure verification status history</li>
                 <li>Gold verified contributions in communities</li>
@@ -84,12 +99,12 @@
               <div style="display: flex; align-items: center; gap: 12px;">
                 <span style="font-size: 28px;">Platinum</span>
                 <div>
-                  <strong>Platinum</strong>
+                  <strong>Platinum-tier Creator · Blue check</strong>
                   <p style="margin: 4px 0; font-size: 13px; color: #666;">For industry leaders</p>
                 </div>
               </div>
               <ul class="perks-list">
-                <li>Platinum verification badge</li>
+                <li>Individual blue verification badge</li>
                 <li>Premium Platinum portrait collection</li>
                 <li>Verification renewal reminders</li>
                 <li>Prominent Platinum badge on social contributions</li>
@@ -100,12 +115,12 @@
               <div style="display: flex; align-items: center; gap: 12px;">
                 <span style="font-size: 28px;">Business</span>
                 <div>
-                  <strong>Business</strong>
+                  <strong>Official Organization · Gold check</strong>
                   <p style="margin: 4px 0; font-size: 13px; color: #666;">For companies and organizations</p>
                 </div>
               </div>
               <ul class="perks-list">
-                <li>Business verification badge</li>
+                <li>Gold organization verification badge</li>
                 <li>Official organization identity badge</li>
                 <li>Profile-visit insights and content statistics</li>
                 <li>Organization-themed verified profile frame</li>
@@ -150,7 +165,7 @@
           <div class="form-section">
             <label>
               <input type="checkbox" id="agreeTerms" required>
-              <span>I agree to Timzee's verification guidelines and terms</span>
+              <span>I agree to Blipmood’s verification guidelines and terms</span>
             </label>
           </div>
 
@@ -200,8 +215,18 @@
         });
 
         const result=await supabase.from("public_profiles")
-          .select("is_verified,verification_tier,verification_expires_at").eq("id",state.user.id).maybeSingle();
+          .select("is_verified,verification_tier,verification_expires_at,created_at,points").eq("id",state.user.id).maybeSingle();
         const badge=result.data;
+        const journey=document.getElementById("verifiedJourneyFacts");
+        if(journey){
+          if(result.error||!badge){journey.textContent="Account history is temporarily unavailable. You may still submit an application."; }
+          else{
+            const age=Math.max(0,Math.floor((Date.now()-Date.parse(badge.created_at||""))/86400000))||0;
+            const reputation=Number.isFinite(Number(badge.points))?Math.max(0,Number(badge.points)):0;
+            journey.textContent="Your account history: "+age+" days on Blipmood · "+reputation+
+              " reputation points. These are context for human review, not automatic approval criteria.";
+          }
+        }
         if (verifiedLevel(badge)) {
           document.getElementById("verificationForm").innerHTML = `
             <div class="callout" style="background: #dbeafe; border-color: #0284c7;">
