@@ -49,13 +49,13 @@ function setupMobileMenu() {
     footer.className = "site-menu-footer";
     footer.id = "siteMenuFooter";
     footer.innerHTML = `
-      <div class="site-menu-user" id="siteMenuUser" hidden>
+      <a class="site-menu-user" id="siteMenuUser" href="/profile.html" aria-label="Open my profile" hidden>
         <img id="siteMenuUserAvatar" alt="">
         <div>
           <div class="site-menu-user-name" id="siteMenuUserName">—</div>
           <div class="site-menu-user-handle" id="siteMenuUserHandle"></div>
         </div>
-      </div>
+      </a>
       <div class="site-menu-footer-actions">
         <button type="button" class="chip" id="siteMenuThemeChip">&#127768; Theme</button>
         <button type="button" class="chip" id="siteMenuCookieSettings">Cookie settings</button>
