@@ -72,6 +72,7 @@
             <div class="profile-cover">
               <button type="button" class="profile-image-open profile-cover-open" data-profile-image="cover" aria-label="View full cover photo"><img id="profileCoverImg" alt="Profile cover"></button>
               <div class="profile-cover-overlay" aria-hidden="true"></div>
+              <canvas id="profileFxCanvas" class="profile-fx-canvas" aria-hidden="true"></canvas>
             </div>
             <div class="profile-identity">
               <div class="profile-avatar-wrap">
@@ -185,6 +186,37 @@
       </section>
 
       <section class="container profile-settings" data-profile-section="settings">
+        <section class="profile-fx-studio discussion-card" id="profileFxStudio" aria-labelledby="fxStudioTitle" hidden>
+  <div class="profile-fx-heading">
+    <div><span class="profile-fx-kicker">BLIPMOOD PROFILE FX</span><h3 id="fxStudioTitle">Make your profile unforgettable</h3>
+    <p>Keep your real cover photo and avatar; add original effects around them. All visual effects are optional.</p></div>
+    <span class="profile-fx-icon" aria-hidden="true">✧</span>
+  </div>
+  <div id="fxStudioPreview" class="profile-fx-preview">
+    <img id="fxStudioCover" alt="" class="profile-fx-preview-cover" loading="lazy">
+    <canvas id="fxStudioCanvas" class="profile-fx-canvas" aria-hidden="true"></canvas>
+    <div class="profile-fx-preview-bottom"><div id="fxStudioAvatarWrap" class="profile-fx-preview-avatar"><img id="fxStudioAvatar" alt=""></div>
+      <div><strong id="fxStudioName">Member</strong><small id="fxStudioHandle">@member</small></div></div>
+  </div>
+  <div class="profile-fx-targets" role="group" aria-label="Choose where the effect is applied">
+    <button type="button" data-fx-target="cover" aria-pressed="true">Cover effects</button>
+    <button type="button" data-fx-target="avatar" aria-pressed="false">Avatar effects</button>
+  </div>
+  <div id="fxStudioGallery" class="profile-fx-gallery" role="group" aria-label="Choose a visual effect"></div>
+  <div class="profile-fx-controls">
+    <label for="fxIntensity">Effect intensity: <output id="fxIntensityValue" for="fxIntensity">45%</output></label>
+    <input type="range" id="fxIntensity" min="0" max="100" value="45" step="5">
+    <label class="profile-fx-toggle"><input type="checkbox" id="fxEnabled" checked> Enable my profile effects</label>
+  </div>
+  <div class="profile-fx-buttons">
+    <button type="button" class="btn" id="fxSave">Apply effects</button>
+    <button type="button" class="btn ghost" id="fxRestore">Restore saved</button>
+    <button type="button" class="btn ghost" id="fxReset">No effects</button>
+  </div>
+  <p id="fxStudioStatus" class="profile-fx-status" role="status" aria-live="polite"></p>
+  <p class="profile-fx-footnote">Effects stop when offscreen or the tab is hidden, honor reduced motion, and never change your verification status or uploaded photos.</p>
+</section>
+
         <div class="discussion-card" id="profileEditor">
           <h3>Profile Settings</h3>
           <div class="settings-grid">
