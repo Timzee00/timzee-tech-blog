@@ -7,13 +7,14 @@ const identitySource=read("assets/js/verified-identity.mjs").replace(/^export\s+
 const context={};
 vm.runInNewContext(identitySource+"\nthis.identity={FRAME_OPTIONS,FRAME_STYLES,verifiedLevel,verifiedFrameStyle,verifiedFrameClasses,verifiedAvatar,verifiedName,verificationBadge};",context);
 const I=context.identity;
-const styles=["signature","library","aurora","orbit","laurel","comet"];
+const legacyStyles=["signature","library","aurora","orbit","laurel","comet"];
+const styles=[...legacyStyles,"constellation","crest","nameplate"];
 const serverProfile={is_verified:true,verification_tier:"gold",frame_style:"orbit",avatar_url:"/assets/img/avatar-placeholder.svg"};
 
-test("all six original collectibles use one shared frame catalog",()=>{
+test("all nine verified collectibles use one shared frame catalog",()=>{
  assert.deepEqual(Array.from(I.FRAME_STYLES),styles);
  assert.deepEqual(Array.from(I.FRAME_OPTIONS,x=>x.id),styles);
- assert.equal(new Set(I.FRAME_STYLES).size,6);
+ assert.equal(new Set(I.FRAME_STYLES).size,9);
 });
 
 test("unverified, expired and untrusted profile data cannot create a badge",()=>{
@@ -22,7 +23,7 @@ test("unverified, expired and untrusted profile data cannot create a badge",()=>
  assert.equal(I.verifiedLevel({...serverProfile,verification_expires_at:"2000-01-01T00:00:00Z"}),null);
  assert.equal(I.verifiedLevel({...serverProfile,verification_tier:"super"}),null);
  assert.equal(I.verifiedLevel(serverProfile),"gold");
- assert.match(I.verificationBadge(serverProfile),/timzee-verified-gold\.svg/);
+ assert.match(I.verificationBadge(serverProfile),/blipmood-verified-blue\.svg/);
 });
 
 test("avatar decoration is tier-locked and external user text never becomes markup",()=>{
@@ -34,7 +35,7 @@ test("avatar decoration is tier-locked and external user text never becomes mark
  assert.match(markup,/&lt;img onerror=/);
  const safe=I.verifiedName('<svg onload="bad">',serverProfile);
  assert.doesNotMatch(safe,/<svg/i);
- assert.match(safe,/Silver|Gold/);
+ assert.match(safe,/Blue Verified Individual/);
 });
 
 test("profile editor previews before saving and has an explicit restore action",()=>{
@@ -50,7 +51,7 @@ test("profile editor previews before saving and has an explicit restore action",
 
 test("server validates the collectible collection; cosmetics never grant verification",()=>{
  const sql=read("supabase/migrations/20261018140000_verified_frame_collection.sql");
- for(const name of styles)assert.ok(sql.includes("'"+name+"'"));
+ for(const name of legacyStyles)assert.ok(sql.includes("'"+name+"'"));
  assert.match(sql,/IF NOT coalesce\(NEW\.is_verified,false\) THEN/);
  assert.match(sql,/NEW\.frame_style := 'signature'/);
  assert.doesNotMatch(sql,/UPDATE\s+public\.profiles\s+SET\s+is_verified\s*=\s*true/i);
