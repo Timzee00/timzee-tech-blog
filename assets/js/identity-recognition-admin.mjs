@@ -66,12 +66,13 @@ function item(label,description){
 async function inspectUser(form){
  const userId=await findMember(field(form,"user"));
  const host=$("identityInspectResults");host.replaceChildren();
- const [roles,awards,affiliations]=await Promise.all([
+ const [roles,awards,affiliations,official]=await Promise.all([
    supabase.from("identity_appointments").select("id,role_code,specialty,status").eq("user_id",userId).order("granted_at",{ascending:false}).limit(30),
    supabase.from("identity_awards").select("id,award_code,reason,is_active").eq("user_id",userId).order("awarded_at",{ascending:false}).limit(30),
-   supabase.from("identity_affiliations").select("id,organization_id,title,status").eq("user_id",userId).limit(30)
+   supabase.from("identity_affiliations").select("id,organization_id,title,status").eq("user_id",userId).limit(30),
+   supabase.from("identity_official_designations").select("id,office_title,issuer_name,status").eq("user_id",userId).limit(1)
  ]);
- if(roles.error||awards.error||affiliations.error)throw roles.error||awards.error||affiliations.error;
+ if(roles.error||awards.error||affiliations.error||official.error)throw roles.error||awards.error||affiliations.error||official.error;
  const orgIds=[...new Set((affiliations.data||[]).map(a=>a.organization_id))];
  let orgNames=new Map();
  if(orgIds.length){
@@ -90,6 +91,8 @@ async function inspectUser(form){
        button.disabled=true;
        const action=kind==="role"
          ?supabase.from("identity_appointments").update({status:"revoked"}).eq("id",row.id)
+         :kind==="official"
+           ?supabase.from("identity_official_designations").update({status:"revoked",reviewed_by:actorId,reviewed_at:new Date().toISOString()}).eq("id",row.id)
          :kind==="affiliation"
            ?supabase.from("identity_affiliations").update({status:"revoked",accepted_at:null}).eq("id",row.id)
            :supabase.from("identity_awards").update({is_active:false}).eq("id",row.id);
@@ -107,7 +110,10 @@ async function inspectUser(form){
  for(const affiliation of affiliations.data||[])revokeRow("affiliation",affiliation,
    "Company affiliation · "+(orgNames.get(affiliation.organization_id)||"Organization"),
    affiliation.title,affiliation.status==="active");
- if(!rows)host.append(item("No records","This member has no appointments, awards or company affiliations."));
+ for(const designation of official.data||[])revokeRow("official",designation,
+   "Grey government / public official",designation.office_title+" · "+designation.issuer_name,
+   designation.status==="active");
+ if(!rows)host.append(item("No records","This member has no appointments, awards or official affiliations."));
 }
 
 async function loadAdvisorQueue(){
@@ -237,6 +243,24 @@ async function initialize(){
      user_id,award_code,reason,source_url:httpsOnly(field(form,"source")),
      expires_at,granted_by:actorId
    });
+   if(error)throw error;
+ });
+ attach("governmentCreate",async form=>{
+   const user_id=await findMember(field(form,"user"));
+   const office_title=field(form,"office"),issuer_name=field(form,"issuer"),evidence_note=field(form,"evidence");
+   if(office_title.length<4||issuer_name.length<4||evidence_note.length<50)
+     throw Error("Provide a verified office, issuing institution and at least 50 characters of evidence.");
+   const {data:profile,error:profileError}=await supabase.from("public_profiles")
+     .select("is_verified,verification_expires_at").eq("id",user_id).maybeSingle();
+   if(profileError)throw profileError;
+   if(!profile?.is_verified || (profile.verification_expires_at&&new Date(profile.verification_expires_at)<=new Date()))
+     throw Error("This account must pass individual identity review before an official Grey designation.");
+   if(!window.confirm("You confirm this government/public office was checked against reliable official evidence?"))
+     throw Error("Official verification was cancelled.");
+   const {error}=await supabase.from("identity_official_designations").upsert({
+     user_id,office_title,issuer_name,evidence_note,reviewed_by:actorId,
+     reviewed_at:new Date().toISOString(),status:"active"
+   },{onConflict:"user_id"});
    if(error)throw error;
  });
  attach("identityInspect",inspectUser);
