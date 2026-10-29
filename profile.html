@@ -75,7 +75,7 @@
             </div>
             <div class="profile-identity">
               <div class="profile-avatar-wrap">
-                <button type="button" class="profile-image-open profile-avatar-open" data-profile-image="avatar" aria-label="View full profile photo"><img id="profileAvatar" class="profile-avatar" alt="Profile avatar"></button><span class="tz-frame-name-ribbon" id="profileFrameName" aria-hidden="true"></span>
+                <a id="profileAvatarLink" class="profile-image-open profile-avatar-open" href="profile.html" aria-label="Go to this member’s profile"><img id="profileAvatar" class="profile-avatar" alt="Profile avatar"></a><span class="tz-frame-name-ribbon" id="profileFrameName" aria-hidden="true"></span>
               </div>
               <div class="profile-body">
                 <div class="chip" id="profileRole">Member</div>
@@ -94,6 +94,7 @@
               </div>
             </details>
             <div class="stats-list profile-stats" id="profileStats"></div>
+            <details class="tz-reputation-help"><summary>How reputation points work</summary><p id="profileReputationHelp">Reputation grows through authentic community contributions.</p></details>
             <div id="profileVisitorInsights" class="profile-visitor-insights" aria-live="polite"></div>
           </section>
         </section>
