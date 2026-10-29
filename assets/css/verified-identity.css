@@ -5,12 +5,12 @@
 .tz-verified-badge{--tz-badge-glow:rgba(137,160,178,.2);display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;flex:0 0 auto;inline-size:24px;block-size:24px;position:relative;border-radius:50%;filter:drop-shadow(0 1px 2px var(--tz-badge-glow));white-space:nowrap}
 .tz-verified-badge img{inline-size:100%;block-size:100%;object-fit:contain;vertical-align:middle}
 .tz-verified-badge--small{inline-size:19px;block-size:19px}
-.tz-verified-badge--silver{--tz-badge-glow:rgba(114,147,173,.26)}
+.tz-verified-badge--silver{--tz-badge-glow:rgba(35,158,255,.28)}
 .tz-verified-badge--gold{--tz-badge-glow:rgba(205,145,37,.3)}
 .tz-verified-badge--platinum{--tz-badge-glow:rgba(133,117,215,.3)}
 .tz-verified-badge--business{--tz-badge-glow:rgba(5,134,113,.24)}
 .tz-frame{--tz-frame-a:#d9e4ec;--tz-frame-b:#647988;--tz-frame-c:#384f60;--tz-frame-glow:rgba(127,155,179,.24)}
-.tz-frame--silver{--tz-frame-a:#e6f1f7;--tz-frame-b:#879fb2;--tz-frame-c:#476377;--tz-frame-glow:rgba(120,162,192,.23)}
+.tz-frame--silver{--tz-frame-a:#e4f6ff;--tz-frame-b:#40b5ff;--tz-frame-c:#1265af;--tz-frame-glow:rgba(30,144,245,.24)}
 .tz-frame--gold{--tz-frame-a:#fff6d4;--tz-frame-b:#d29a30;--tz-frame-c:#825412;--tz-frame-glow:rgba(205,149,44,.26)}
 .tz-frame--platinum{--tz-frame-a:#e5faff;--tz-frame-b:#aa9ced;--tz-frame-c:#5148a3;--tz-frame-glow:rgba(130,118,224,.24)}
 .tz-frame--business{--tz-frame-a:#d6fff0;--tz-frame-b:#41a493;--tz-frame-c:#075f5a;--tz-frame-glow:rgba(38,153,122,.22)}
@@ -23,14 +23,14 @@
 .tz-avatar-verified.tz-frame--aurora{background:conic-gradient(from 20deg,var(--tz-frame-a),var(--tz-frame-b),var(--tz-frame-c),var(--tz-frame-a),var(--tz-frame-b));box-shadow:0 0 0 1px var(--tz-frame-a),0 5px 16px var(--tz-frame-glow)}
 .tz-avatar-verified>img{inline-size:100%!important;block-size:100%!important;max-inline-size:100%;max-block-size:100%;aspect-ratio:1!important;border-radius:50%!important;object-fit:cover!important;display:block;min-width:0}
 .tz-verified-contribution{--tz-contrib-accent:#7a94ab;--tz-contrib-tint:rgba(114,144,167,.055);position:relative;border-inline-start:3px solid var(--tz-contrib-accent)!important;background:linear-gradient(110deg,var(--tz-contrib-tint),transparent 74%)!important;border-radius:9px;max-inline-size:100%;min-width:0}
-.tz-verified-contribution--silver{--tz-contrib-accent:#8199aa;--tz-contrib-tint:rgba(110,143,165,.07)}
+.tz-verified-contribution--silver{--tz-contrib-accent:#239de4;--tz-contrib-tint:rgba(35,157,228,.065)}
 .tz-verified-contribution--gold{--tz-contrib-accent:#c19235;--tz-contrib-tint:rgba(198,141,34,.075)}
 .tz-verified-contribution--platinum{--tz-contrib-accent:#8976cc;--tz-contrib-tint:rgba(128,113,204,.08)}
 .tz-verified-contribution--business{--tz-contrib-accent:#168a78;--tz-contrib-tint:rgba(21,148,119,.07)}
 .tz-verified-contribution .tz-identity-name{font-weight:750}
 .tz-verified-role-label{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;font-size:.74rem;font-weight:750;border:1px solid var(--tz-frame-b);border-radius:999px;background:var(--color-surface,#fff);color:var(--color-text,#1b2930)}
 .profile-page .profile-hero[data-verification-level]{--tz-profile-glow:rgba(137,158,177,.12);box-shadow:0 6px 35px var(--tz-profile-glow),0 0 0 1px var(--tz-frame-b)}
-.profile-page .profile-hero[data-verification-level="silver"]{--tz-profile-glow:rgba(113,152,175,.18)}
+.profile-page .profile-hero[data-verification-level="silver"]{--tz-profile-glow:rgba(35,157,235,.16)}
 .profile-page .profile-hero[data-verification-level="gold"]{--tz-profile-glow:rgba(196,141,38,.16)}
 .profile-page .profile-hero[data-verification-level="platinum"]{--tz-profile-glow:rgba(134,114,215,.17)}
 .profile-page .profile-hero[data-verification-level="business"]{--tz-profile-glow:rgba(25,151,122,.15)}
@@ -39,9 +39,9 @@
 .profile-page .profile-avatar-wrap.tz-frame{border:4px solid var(--tz-frame-a);outline:2px solid var(--tz-frame-b);outline-offset:2px;background:conic-gradient(var(--tz-frame-a),var(--tz-frame-b),var(--tz-frame-c),var(--tz-frame-a));box-shadow:0 9px 28px var(--tz-frame-glow);isolation:isolate}
 .profile-page .profile-avatar-wrap.tz-frame--library{border:5px double var(--tz-frame-b);outline:3px solid var(--tz-frame-a);outline-offset:3px;box-shadow:0 8px 30px var(--tz-frame-glow),0 0 0 7px color-mix(in srgb,var(--tz-frame-a) 28%,transparent)}
 .profile-page .profile-avatar-wrap.tz-frame--aurora{border:5px solid var(--tz-frame-a);outline:2px dotted var(--tz-frame-b);outline-offset:4px;box-shadow:0 0 0 8px color-mix(in srgb,var(--tz-frame-b) 13%,transparent),0 8px 26px var(--tz-frame-glow)}
-.profile-page .profile-avatar-wrap.tz-frame::before{content:"✦";position:absolute;z-index:2;bottom:-11px;right:-5px;display:grid;place-items:center;inline-size:30px;block-size:30px;border-radius:50%;border:2px solid var(--color-surface,#fff);background:var(--tz-frame-c);color:var(--tz-frame-a);font-size:16px;pointer-events:none;box-shadow:0 2px 7px var(--tz-frame-glow)}
-.profile-page .profile-avatar-wrap.tz-frame--library::before{content:"✧"}
-.profile-page .profile-avatar-wrap.tz-frame--aurora::before{content:"✦"}
+.profile-page .profile-avatar-wrap.tz-frame::before{content:none;display:none}
+.profile-page .profile-avatar-wrap.tz-frame--library::before{content:none}
+.profile-page .profile-avatar-wrap.tz-frame--aurora::before{content:none}
 .tz-frame-selector{display:grid;gap:10px;padding:16px;border-radius:14px;background:var(--color-surface-muted,#eef4f4);border:1px solid var(--color-border,#ddd);max-width:100%;min-width:0}
 .tz-frame-selector label{display:block;font-size:.82rem;font-weight:750}
 .tz-frame-selector select{max-width:100%;width:100%;font:inherit}
@@ -344,3 +344,17 @@ html[data-reduce-motion="true"] .tz-avatar-verified.tz-frame::after{animation:no
 .tz-account-affiliation img{inline-size:20px;block-size:20px;object-fit:contain;border-radius:5px}
 @media(max-width:440px){.profile-page .profile-actions .profile-action-more-menu{right:0}.profile-page .profile-avatar-wrap.tz-frame--nameplate{margin-bottom:12px}}
 @media(prefers-reduced-motion:reduce){.tz-identity-dialog,.tz-identity-dialog *{animation:none!important;transition:none!important}}
+
+/* Badge hierarchy: Blue (former Silver), Gold, Platinum and official Grey.
+   No decorative sparkle overlays on photographs; the frame itself is enough. */
+.tz-verified-badge--government{--tz-badge-glow:rgba(135,148,165,.25)}
+.tz-frame--government{--tz-frame-a:#f4f6fa;--tz-frame-b:#9ca9b9;--tz-frame-c:#48596c;--tz-frame-glow:rgba(122,134,151,.18)}
+.tz-verified-contribution--government{--tz-contrib-accent:#94a3b8;--tz-contrib-tint:rgba(148,163,184,.075)}
+.profile-page .profile-hero[data-verification-level="government"]{--tz-profile-glow:rgba(148,163,184,.15)}
+.profile-page .profile-avatar-wrap.tz-frame::before,
+.profile-page .profile-avatar-wrap.tz-frame--library::before,
+.profile-page .profile-avatar-wrap.tz-frame--aurora::before{content:none!important;display:none!important}
+.tz-avatar-verified.tz-frame--signature::before{content:none}
+.tz-verified-badge--platinum img{filter:drop-shadow(0 0 2px rgba(176,161,248,.26))}
+.tz-identity-name[data-user-profile-id],.tz-avatar-verified[data-user-profile-id]{cursor:pointer}
+.tz-identity-name[data-user-profile-id]:focus-visible,.tz-avatar-verified[data-user-profile-id]:focus-visible{outline:2px solid #48baf5;outline-offset:3px}
