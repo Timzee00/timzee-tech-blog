@@ -83,6 +83,17 @@
 <button id="refreshAdvisorQueue" type="button" class="btn ghost">Refresh pending requests</button>
 <div id="advisorReviewQueue" role="status" aria-live="polite">Loading Advisor applications…</div>
 <p class="identity-status" id="advisorReviewStatus" role="status"></p>
+</section>
+<section class="identity-card"><h2>8 · Official Grey verification</h2>
+<p>Reserve the Grey badge for verified government institutions and genuine public officeholders. A political opinion, party membership or self-described title alone is not enough. The user must already have active identity verification.</p>
+<form id="governmentCreate">
+<label>Member @username<input name="user" autocomplete="off" placeholder="@official" required></label>
+<label>Verified government or public office title<input name="office" required minlength="4" maxlength="130" placeholder="Official title and office"></label>
+<label>Issuing government institution<input name="issuer" required minlength="4" maxlength="160" placeholder="Official public institution"></label>
+<label>Private evidence and decision rationale<textarea name="evidence" required minlength="50" maxlength="1600" placeholder="Which official public sources and/or documents were independently verified?"></textarea></label>
+<button type="submit" class="btn">Review and grant Grey designation</button>
+</form><p class="identity-status" id="governmentCreateStatus" role="status"></p>
+<p>To revoke a Grey designation, use <strong>Inspect and revoke</strong> above. Review notes stay private.</p>
 </section></div></div>
 </main><script type="module" src="../assets/js/identity-recognition-admin.mjs"></script>
 </body></html>
