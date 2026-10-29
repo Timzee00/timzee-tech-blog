@@ -477,7 +477,7 @@ function renderAccountTransparency(){
    parts.push(item("Featured","Featured by Blipmood","A discovery placement, not a verification credential."));
  }
  host.innerHTML=parts.join("")+
-  (state.user?.id===state.viewingId?'<div id="profileAffiliationInvites" role="status"></div>':"")+
+  (state.user?.id===state.viewingId?'<div id="profileAffiliationInvites" role="status"></div><a class="btn ghost sm" href="advisor.html">Apply to become an Advisor</a>':"")+
   (verified?"":'<a class="btn ghost sm" href="verify.html">Apply for free reviewed verification</a>');
  const transparency=document.getElementById("profileTransparency");
  if(transparency&&!transparency.dataset.identityBound){
