@@ -408,8 +408,20 @@ function renderProfile() {
   }
   if (badgeWrap) {
     const badges = [];
-    if (state.profile?.is_featured) badges.push('<span class="badge-chip featured">Featured</span>');
-    if (state.profile?.is_staff_pick) badges.push('<span class="badge-chip staff">Staff Pick</span>');
+    const earned=(state.identityExtras?.awards||[]).filter(x=>x?.code);
+    const hasEarned=code=>earned.some(x=>x.code===code);
+    if (state.profile?.is_featured && !hasEarned("featured")) badges.push('<span class="badge-chip featured">Featured</span>');
+    if (state.profile?.is_staff_pick && !hasEarned("staff_pick")) badges.push('<span class="badge-chip staff">Staff Pick</span>');
+    for(const award of earned.slice(0,4)){
+      const label=IDENTITY_AWARDS[award.code];
+      if(label)badges.push('<span class="badge-chip '+(award.code==="staff_pick"?"staff":"featured")+'" title="'+
+        escapeHTML(award.reason||"Blipmood recognition")+'">'+escapeHTML(label)+'</span>');
+    }
+    for(const appointment of (state.identityExtras?.appointments||[]).slice(0,2)){
+      const label=IDENTITY_ROLES[appointment.role];
+      if(label)badges.push('<span class="badge-chip" title="'+escapeHTML(appointment.summary||"Official appointment")+
+        '">'+escapeHTML(label)+'</span>');
+    }
     badgeWrap.innerHTML = badges.join("");
   }
 }
