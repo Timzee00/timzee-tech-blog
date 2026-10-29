@@ -80,3 +80,43 @@ test("blue verification is a free reviewed application, never a self-issued veri
  assert.match(html,/verification_applications/);
  assert.doesNotMatch(html,/\.update\(\{is_verified:\s*true/);
 });
+
+test("approved company affiliations are copied into public profile batches without N+1 requests",()=>{
+ const migration=read("supabase/migrations/20261029134835_identity_affiliation_public_batch_cache.sql");
+ const renderer=read("assets/js/verified-identity.mjs");
+ const data=read("assets/js/data.js");
+ for(const field of ["primary_org_name","primary_org_logo_url","primary_org_title"]){
+  assert.match(migration,new RegExp(field));
+  assert.match(renderer,new RegExp(field));
+  assert.match(data,new RegExp(field));
+ }
+ assert.match(renderer,/blipmoodOrganization/);
+ assert.match(migration,/refresh_public_affiliation/);
+ assert.match(migration,/status='active'/);
+ assert.match(migration,/o.status='verified'/);
+ assert.match(renderer,/for\(let start=0;start<missing.length;start\+=80\)/);
+});
+test("Advisor applications cannot self-approve and reviewers are audited",()=>{
+ const migration=read("supabase/migrations/20261029135139_identity_advisor_applications_review.sql");
+ const portal=read("advisor.html");
+ const portalJs=read("assets/js/advisor-applications.mjs");
+ const admin=read("assets/js/identity-recognition-admin.mjs");
+ for(const phrase of ["enable row level security","Advisor applicants submit only pending requests","Only super reviews Advisor requests","review_identity_advisor","for update"]){
+  assert.ok(migration.toLowerCase().includes(phrase.toLowerCase()),"Missing: "+phrase);
+ }
+ assert.match(migration,/user_id=\(select auth.uid\(\)\)/);
+ assert.match(migration,/reviewed_by is null/);
+ assert.match(migration,/grant execute on function public.review_identity_advisor/);
+ assert.match(portal,/Become a Blipmood Advisor/);
+ assert.match(portalJs,/identity_advisor_applications/);
+ assert.match(admin,/review_identity_advisor/);
+ assert.match(read("super/identity-recognition.html"),/id="advisorReviewQueue"/);
+});
+test("award, affiliation and Advisor notifications occur only on database changes",()=>{
+ const migration=read("supabase/migrations/20261029135612_identity_review_notifications.sql");
+ assert.match(migration,/after insert or update of status/);
+ assert.match(migration,/public.emit_user_notification/);
+ assert.match(migration,/advisor_decision/);
+ assert.match(migration,/recognition_awarded/);
+ assert.match(migration,/affiliation_invite/);
+});
