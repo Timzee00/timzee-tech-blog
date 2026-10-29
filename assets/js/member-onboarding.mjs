@@ -88,6 +88,7 @@ form.addEventListener("submit",async event=>{
   const currentAvatar=String(existing?.avatar_url||"");
   const isStarter=!currentAvatar||/avatar-placeholder|avatar-(female|male)\.svg/i.test(currentAvatar);
   const avatar=avatarSelection();
+  if(!allowedStarterAvatar($("setupGender").value,avatar))throw Error("Select a starter avatar compatible with your gender choice.");
   const avatars={male:"/assets/img/avatar-male.svg",female:"/assets/img/avatar-female.svg"};
   const profile={
    display_name:name,username,
