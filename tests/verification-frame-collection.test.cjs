@@ -23,7 +23,7 @@ test("unverified, expired and untrusted profile data cannot create a badge",()=>
  assert.equal(I.verifiedLevel({...serverProfile,verification_expires_at:"2000-01-01T00:00:00Z"}),null);
  assert.equal(I.verifiedLevel({...serverProfile,verification_tier:"super"}),null);
  assert.equal(I.verifiedLevel(serverProfile),"gold");
- assert.match(I.verificationBadge(serverProfile),/blipmood-verified-blue\.svg/);
+ assert.match(I.verificationBadge(serverProfile),/timzee-verified-gold\.svg/);
 });
 
 test("avatar decoration is tier-locked and external user text never becomes markup",()=>{
@@ -35,7 +35,7 @@ test("avatar decoration is tier-locked and external user text never becomes mark
  assert.match(markup,/&lt;img onerror=/);
  const safe=I.verifiedName('<svg onload="bad">',serverProfile);
  assert.doesNotMatch(safe,/<svg/i);
- assert.match(safe,/Blue Verified Individual/);
+ assert.match(safe,/Gold Verified Creator/);
 });
 
 test("profile editor previews before saving and has an explicit restore action",()=>{
