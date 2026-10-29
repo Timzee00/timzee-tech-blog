@@ -7,9 +7,9 @@ const source=read("assets/js/verified-identity.mjs").replace(/^export\s+/gm,"");
 const sandbox={};
 vm.runInNewContext(source+"\nthis.identity={FRAME_OPTIONS,verifiedName,verificationBadge,verifiedLevel,verifiedFrameStyle};",sandbox);
 const identity=sandbox.identity;
-const sql=read("supabase/migrations/20261029153000_blipmood_identity_recognition.sql");
-const sqlFrames=read("supabase/migrations/20261029154000_expand_verified_frame_styles.sql");
-const sqlReview=read("supabase/migrations/20261029155000_audited_organization_review.sql");
+const sql=read("supabase/migrations/20261029133242_blipmood_identity_recognition_20261029.sql");
+const sqlFrames=read("supabase/migrations/20261029133351_expand_verified_frame_styles_20261029.sql");
+const sqlReview=read("supabase/migrations/20261029133742_audited_organization_review_20261029.sql");
 test("verified users share a blue individual check while organizations retain a separate badge",()=>{
  for(const tier of ["silver","gold","platinum"]){
   const html=identity.verificationBadge({is_verified:true,verification_tier:tier});
