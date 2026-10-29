@@ -2,8 +2,8 @@
    comments, communities and short-video feeds. No copied third-party marks.
    Display must reflect server-protected public_profiles, never self-claimed metadata. */
 const LABELS=Object.freeze({
-  silver:"Silver Verified",gold:"Gold Verified",
-  platinum:"Platinum Verified",business:"Official Organization"
+  silver:"Blue Verified Individual",gold:"Blue Verified Individual",
+  platinum:"Blue Verified Individual",business:"Gold Verified Organization"
 });
 /* Display metadata is centralized so profile selectors, galleries, comments
    and future mobile clients all use the same server-approved frame names. */
@@ -13,7 +13,10 @@ export const FRAME_OPTIONS=Object.freeze([
   Object.freeze({id:"aurora",title:"Aurora",description:"Soft illuminated ribbons"}),
   Object.freeze({id:"orbit",title:"Orbit",description:"Twin orbital rings and stars"}),
   Object.freeze({id:"laurel",title:"Laurel",description:"A distinguished collector's wreath"}),
-  Object.freeze({id:"comet",title:"Comet",description:"A luminous passing streak"})
+  Object.freeze({id:"comet",title:"Comet",description:"A luminous passing streak"}),
+  Object.freeze({id:"constellation",title:"Constellation",description:"A subtle crown of stars"}),
+  Object.freeze({id:"crest",title:"Heritage Crest",description:"Refined silver and teal engraving"}),
+  Object.freeze({id:"nameplate",title:"Signature Name",description:"Your profile name set into a ceremonial ribbon"})
 ]);
 export const FRAME_STYLES=Object.freeze(FRAME_OPTIONS.map(item=>item.id));
 const LEGACY_LEVELS=Object.freeze({standard:"silver",pro:"gold",elite:"platinum",creator:"silver"});
@@ -46,20 +49,81 @@ export function verifiedFrameClasses(profile){
   const level=verifiedLevel(profile);
   return level?"tz-frame tz-frame--"+level+" tz-frame--"+verifiedFrameStyle(profile):"";
 }
+const safeUrl=url=>/^(https:\/\/|\/assets\/|assets\/)/i.test(String(url||""))&&!/[<>"'\\]/.test(String(url||""));
+export function affiliationBadge(profile){
+ const affiliation=profile?.blipmoodOrganization;
+ if(!affiliation?.name)return "";
+ const label="Affiliated with "+String(affiliation.name).slice(0,120);
+ const logo=safeUrl(affiliation.logo_url)?'<img src="'+safeText(affiliation.logo_url)+'" alt="" width="19" height="19" loading="lazy" decoding="async">':"⌂";
+ return '<span class="tz-affiliation-mark" role="button" tabindex="0" data-org-label="'+safeText(label)+
+ '" data-org-title="'+safeText(affiliation.title||"Affiliated member")+'" aria-label="'+safeText(label)+
+ '" title="'+safeText(label)+'">'+logo+'</span>';
+}
 export function verificationBadge(profile,{compact=false}={}){
-  const level=verifiedLevel(profile);
-  if(!level)return "";
-  const label=LABELS[level];
-  return '<span class="tz-verified-badge tz-verified-badge--'+level+
-    (compact?' tz-verified-badge--small':'')+
-    '" role="img" aria-label="'+safeText(label)+'" title="'+safeText(label)+'">'+
-    '<img src="'+ICON_ROOT+level+'.svg" alt="" width="22" height="22" loading="lazy" decoding="async">'+
-    '<span class="tz-sr-only">'+safeText(label)+'</span></span>';
+ const level=verifiedLevel(profile);
+ if(!level)return "";
+ const label=LABELS[level];
+ // Legacy Silver, Gold and Platinum entitlements all display a blue *individual*
+ // check. Only a separately reviewed business account carries organization gold.
+ const icon=level==="business"?ICON_ROOT+"business.svg":"/assets/img/blipmood-verified-blue.svg";
+ const date=profile?.verified_at?String(profile.verified_at):"";
+ return '<span class="tz-verified-badge tz-verified-badge--'+level+
+   (compact?' tz-verified-badge--small':'')+
+   '" role="button" tabindex="0" data-identity-label="'+safeText(label)+
+   '" data-identity-date="'+safeText(date)+'" aria-label="Learn about '+safeText(label)+
+   '" title="'+safeText(label)+'">'+
+   '<img src="'+icon+'" alt="" width="22" height="22" loading="lazy" decoding="async">'+
+   '<span class="tz-sr-only">'+safeText(label)+'</span></span>';
 }
 export function verifiedName(name,profile,{compact=false}={}){
-  const tier=verifiedLevel(profile);
-  return '<span class="tz-identity-name'+(tier?' tz-nameplate tz-nameplate--'+tier:'')+'">'+
-    safeText(name||"Member")+verificationBadge(profile,{compact})+'</span>';
+ const tier=verifiedLevel(profile);
+ return '<span class="tz-identity-name'+(tier?' tz-nameplate tz-nameplate--'+tier:'')+'">'+
+   safeText(name||"Member")+affiliationBadge(profile)+verificationBadge(profile,{compact})+'</span>';
+}
+function showIdentityExplanation(element){
+ if(typeof document==="undefined")return;
+ let dialog=document.getElementById("tzIdentityExplanation");
+ if(!dialog){
+   dialog=document.createElement("dialog");
+   dialog.id="tzIdentityExplanation";
+   dialog.className="tz-identity-dialog";
+   dialog.setAttribute("aria-labelledby","tzIdentityExplanationTitle");
+   document.body.append(dialog);
+   dialog.addEventListener("click",event=>{if(event.target===dialog)dialog.close();});
+ }
+ const isOrg=element.hasAttribute("data-org-label");
+ const label=isOrg?element.dataset.orgLabel:element.dataset.identityLabel;
+ const title=element.dataset.orgTitle||"";
+ const rawDate=element.dataset.identityDate||"";
+ const date=rawDate&&!Number.isNaN(Date.parse(rawDate))
+   ?new Date(rawDate).toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}):"";
+ const detail=isOrg
+   ?"This affiliation was approved for a verified organization and accepted by the account holder. It is separate from Blipmood identity verification."
+   :label?.includes("Organization")
+      ?"This organization has passed Blipmood's official organization review."
+      :"This individual account has passed Blipmood's identity review. The blue check does not grant moderator or administrator privileges.";
+ dialog.innerHTML='<div class="tz-identity-dialog-body"><div class="tz-sheet-head"><h2 id="tzIdentityExplanationTitle">'+
+   safeText(isOrg?"Organization affiliation":"Verified account")+
+   '</h2><form method="dialog"><button type="submit" aria-label="Close details">✕</button></form></div>'+
+   '<p class="tz-sheet-label">'+safeText(label||"Identity information")+'</p><p>'+safeText(detail)+'</p>'+
+   (title?'<p><strong>Role:</strong> '+safeText(title)+'</p>':'')+
+   (date?'<p><strong>Verified since:</strong> '+safeText(date)+'</p>':'')+
+   '<p class="tz-sheet-footnote">Badges and affiliations can be withdrawn when requirements are no longer met.</p></div>';
+ if(!dialog.open)dialog.showModal();
+}
+if(typeof document!=="undefined"){
+ // Delegation costs one listener on a page containing hundreds of authors.
+ document.addEventListener("click",event=>{
+   const badge=event.target.closest?.("[data-identity-label],[data-org-label]");
+   if(!badge)return;
+   event.preventDefault();event.stopPropagation();showIdentityExplanation(badge);
+ });
+ document.addEventListener("keydown",event=>{
+   if(event.key!=="Enter"&&event.key!==" ")return;
+   const badge=event.target.closest?.("[data-identity-label],[data-org-label]");
+   if(!badge)return;
+   event.preventDefault();event.stopPropagation();showIdentityExplanation(badge);
+ });
 }
 export function verifiedCommentClass(profile){
   const level=verifiedLevel(profile);
