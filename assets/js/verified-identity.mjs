@@ -164,7 +164,7 @@ export async function loadVerifiedIdentityMap(supabase,ids,cache=new Map()){
   for(let start=0;start<missing.length;start+=80){
     const batch=missing.slice(start,start+80);
     const {data,error}=await supabase.from("public_profiles")
-      .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style,primary_org_name,primary_org_logo_url,primary_org_title")
+      .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,verified_at,frame_style,primary_org_name,primary_org_logo_url,primary_org_title")
       .in("id",batch);
     if(error)throw error;
     const found=new Map((data||[]).map(profile=>{
