@@ -31,6 +31,7 @@ import { submitModerationReport } from "./moderation-reports.mjs";
 const state = {
   user: null,
   profile: null,
+  identityExtras: null,
   viewingId: null,
   friendship: null,
   friendCount: null,
@@ -389,13 +390,142 @@ function renderProfile() {
     headline.textContent = state.profile?.headline || "Tech community member";
   }
   if (bio) bio.textContent = state.profile?.bio || "No bio yet.";
-  if (role) role.textContent = state.profile?.role || "Member";
+  if (role) {
+    const roleName=String(state.profile?.role||"member").toLowerCase();
+    role.textContent=roleName==="user"?"Member":roleName;
+    role.hidden=["member","user","reader"].includes(roleName);
+  }
+  const ribbon=document.getElementById("profileFrameName");
+  if(ribbon)ribbon.textContent=plainDisplayName(state.profile?.display_name||"Member").slice(0,22);
+  const company=document.getElementById("profileIdentityExtras");
+  if(company){
+    const item=state.identityExtras?.organizations?.[0];
+    const logo=String(item?.logo_url||"");
+    const validLogo=/^https:\/\//i.test(logo)&&!/[<>"'\\]/.test(logo);
+    company.innerHTML=item?'<span class="tz-account-affiliation">'+
+      (validLogo?'<img src="'+escapeHTML(logo)+'" alt="" loading="lazy" decoding="async">':"⌂")+
+      '<span>'+escapeHTML(item.title||"Affiliate")+' · '+escapeHTML(item.name||"Organization")+'</span></span>':"";
+  }
   if (badgeWrap) {
     const badges = [];
     if (state.profile?.is_featured) badges.push('<span class="badge-chip featured">Featured</span>');
     if (state.profile?.is_staff_pick) badges.push('<span class="badge-chip staff">Staff Pick</span>');
     badgeWrap.innerHTML = badges.join("");
   }
+}
+
+
+const IDENTITY_ROLES=Object.freeze({
+ product_lead:"Product Lead",product_advisor:"Product Advisor",
+ community_advisor:"Community Advisor",community_contributor:"Community Contributor"
+});
+const IDENTITY_AWARDS=Object.freeze({
+ staff_pick:"Staff Pick",featured:"Featured Creator",
+ platinum:"Platinum Distinction",product_contributor:"Product Contributor"
+});
+function identityDate(value){
+ if(!value||Number.isNaN(Date.parse(value)))return "";
+ return new Date(value).toLocaleDateString(undefined,{month:"long",year:"numeric",day:"numeric"});
+}
+function renderAccountTransparency(){
+ const host=document.getElementById("profileTransparencyContent");
+ if(!host||!state.profile)return;
+ const details=state.identityExtras||{};
+ const verified=verifiedLevel(state.profile);
+ const item=(title,detail,foot="")=>'<div class="tz-transparency-item"><strong>'+escapeHTML(title)+
+ '</strong><span>'+escapeHTML(detail)+'</span>'+(foot?'<small>'+escapeHTML(foot)+'</small>':"")+'</div>';
+ const parts=[];
+ parts.push(item("Joined Blipmood",identityDate(state.profile.created_at)||"Date unavailable"));
+ parts.push(item("Account verification",verified
+   ?(verified==="business"?"Gold · Verified organization":"Blue · Verified individual")
+   :"Not currently verified",verified
+    ?("Verified since "+(identityDate(state.profile.verified_at)||"date unavailable")+
+      ". Verification can be reviewed or withdrawn."):"Verification is available through a reviewed application."));
+ if(verified && verified!=="business" && verified!=="silver"){
+   parts.push(item("Existing creator entitlements",verified==="gold"?"Gold tier":"Platinum tier",
+      "Premium features and identity verification are separate."));
+ }
+ for(const org of (details.organizations||[]).slice(0,5)){
+   parts.push(item("Verified affiliation",String(org.title||"Member")+" · "+String(org.name||"Organization"),
+      "Accepted company affiliation — distinct from verification and staff authority"));
+ }
+ for(const role of (details.appointments||[]).slice(0,5)){
+   parts.push(item(IDENTITY_ROLES[role.role]||"Community appointment",
+     role.specialty||role.summary||"Blipmood-appointed role",
+     "Appointed "+(identityDate(role.granted_at)||"date unavailable")));
+ }
+ for(const award of (details.awards||[]).slice(0,8)){
+   parts.push(item(IDENTITY_AWARDS[award.code]||"Recognition",award.reason||"Community contribution",
+     "Recognized "+(identityDate(award.awarded_at)||"date unavailable")));
+ }
+ if(state.profile.is_staff_pick && !(details.awards||[]).some(x=>x.code==="staff_pick")){
+   parts.push(item("Staff Pick","Legacy staff recognition","The historical award does not have a published justification."));
+ }
+ if(state.profile.is_featured && !(details.awards||[]).some(x=>x.code==="featured")){
+   parts.push(item("Featured","Featured by Blipmood","A discovery placement, not a verification credential."));
+ }
+ host.innerHTML=parts.join("")+
+  (state.user?.id===state.viewingId?'<div id="profileAffiliationInvites" role="status"></div>':"")+
+  (verified?"":'<a class="btn ghost sm" href="verify.html">Apply for free reviewed verification</a>');
+ const transparency=document.getElementById("profileTransparency");
+ if(transparency&&!transparency.dataset.identityBound){
+   transparency.dataset.identityBound="true";
+   transparency.addEventListener("toggle",()=>{
+     if(transparency.open&&state.user?.id===state.viewingId)void loadIdentityInvitations();
+   });
+ }
+}
+async function loadIdentityInvitations(){
+ const host=document.getElementById("profileAffiliationInvites");
+ if(!host||!state.user||state.user.id!==state.viewingId)return;
+ try{
+   const {data,error}=await supabase.from("identity_affiliations")
+     .select("id,organization_id,title").eq("user_id",state.user.id)
+     .eq("status","pending").limit(8);
+   if(error)throw error;
+   if(!data?.length){host.textContent="";return;}
+   const ids=[...new Set(data.map(x=>x.organization_id))];
+   const orgs=await supabase.from("identity_organizations")
+     .select("id,name").in("id",ids).eq("status","verified");
+   if(orgs.error)throw orgs.error;
+   const names=new Map((orgs.data||[]).map(x=>[x.id,x.name]));
+   host.innerHTML='<h3>Pending organization invitations</h3>'+
+      data.filter(x=>names.has(x.organization_id)).map(x=>
+        '<div class="tz-transparency-item"><span>'+escapeHTML(names.get(x.organization_id))+
+        ' · '+escapeHTML(x.title)+'</span><button type="button" class="btn ghost sm" data-accept-affiliation="'+
+        escapeHTML(x.id)+'">Accept affiliation</button></div>').join("");
+   host.querySelectorAll("[data-accept-affiliation]").forEach(button=>
+     button.addEventListener("click",async()=>{
+       button.disabled=true;
+       try{
+         const {error}=await supabase.rpc("accept_identity_affiliation",{p_affiliation_id:button.dataset.acceptAffiliation});
+         if(error)throw error;
+         await loadIdentityExtras();
+         if(document.getElementById("profileTransparency")?.open)void loadIdentityInvitations();
+       }catch(err){button.disabled=false;window.appUI?.toast?.(err.message||"Unable to accept affiliation.",{type:"error"});}
+     }));
+ }catch(error){host.textContent="Invitations are temporarily unavailable.";}
+}
+async function loadIdentityExtras(){
+ if(!state.viewingId)return;
+ try{
+   const {data,error}=await supabase.rpc("blipmood_public_identity",{p_user_id:state.viewingId});
+   if(error)throw error;
+   state.identityExtras={
+      organizations:Array.isArray(data?.organizations)?data.organizations:[],
+      appointments:Array.isArray(data?.appointments)?data.appointments:[],
+      awards:Array.isArray(data?.awards)?data.awards:[]
+   };
+   const affiliation=state.identityExtras.organizations[0];
+   if(affiliation)state.profile.blipmoodOrganization=affiliation;
+   else delete state.profile.blipmoodOrganization;
+   renderProfile();
+   renderAccountTransparency();
+ }catch(error){
+   // Missing optional identity data must NEVER block core profile, chat or feed.
+   console.warn("Optional account transparency is unavailable:",error.message);
+   renderAccountTransparency();
+ }
 }
 
 function renderVerification(){
@@ -410,10 +540,10 @@ function renderVerification(){
   }
   const label=verifiedLabel(state.profile);
   const benefits={
-    silver:["Original Silver badge across supported social surfaces","Silver profile frames and extended status eligibility","Identity and impersonation reporting tools"],
-    gold:["Original Gold badge and profile themes","Creator publishing tools already available to this account","Verified status features and content insights"],
-    platinum:["Original Platinum badge and premium frames","Professional creator experience","Existing verified publishing and community tools"],
-    business:["Official Organization badge and branded profile frame","Organization identity shown across supported surfaces","Official account protection and content publishing"]
+    silver:["Blue individual verification across supported social surfaces","Your existing Silver-tier benefits and collectible frames","Identity and impersonation reporting tools"],
+    gold:["Blue individual identity check, with preserved Gold-tier perks","Creator publishing tools already available to this account","Verified status features and content insights"],
+    platinum:["Blue individual identity check, with preserved Platinum-tier perks","Distinguished portrait collection and creator experience","Existing verified publishing and community tools"],
+    business:["Gold organization verification and branded profile frames","Organization identity shown across supported surfaces","Official account protection and content publishing"]
   };
   const current=verifiedFrameStyle(state.profile);
   const gallery=isSelf
@@ -927,7 +1057,16 @@ function renderProfileActions() {
       window.appUI.toast(error.message||"Could not submit report.",{tone:"error"});
     } finally{reportUserBtn.disabled=false;}
   });
-  actions.append(reportUserBtn);
+  const more=document.createElement("details");
+  more.className="profile-action-more";
+  const summary=document.createElement("summary");
+  summary.textContent="···";
+  summary.setAttribute("aria-label","More account actions");
+  const moreMenu=document.createElement("div");
+  moreMenu.className="profile-action-more-menu";
+  more.append(summary,moreMenu);
+  moreMenu.append(reportUserBtn);
+  actions.append(more);
   const allowRequests = state.profile?.allow_requests !== false;
   const allowMessages = state.profile?.allow_messages !== false;
 
@@ -937,7 +1076,7 @@ function renderProfileActions() {
       unblock.className = "btn ghost";
       unblock.textContent = "Unblock";
       unblock.addEventListener("click", unblockUser);
-      actions.appendChild(unblock);
+      moreMenu.appendChild(unblock);
     } else {
       const blocked = document.createElement("span");
       blocked.className = "chip";
@@ -975,7 +1114,7 @@ function renderProfileActions() {
     blockBtn.textContent = "Block";
     blockBtn.addEventListener("click", blockUser);
     actions.appendChild(addBtn);
-    actions.appendChild(blockBtn);
+    moreMenu.appendChild(blockBtn);
     return;
   }
 
@@ -993,7 +1132,7 @@ function renderProfileActions() {
     blockBtn.addEventListener("click", blockUser);
     actions.appendChild(sent);
     actions.appendChild(cancel);
-    actions.appendChild(blockBtn);
+    moreMenu.appendChild(blockBtn);
     return;
   }
 
@@ -1012,7 +1151,7 @@ function renderProfileActions() {
     blockBtn.addEventListener("click", blockUser);
     actions.appendChild(accept);
     actions.appendChild(decline);
-    actions.appendChild(blockBtn);
+    moreMenu.appendChild(blockBtn);
     return;
   }
 
@@ -1039,7 +1178,7 @@ function renderProfileActions() {
     blockBtn.textContent = "Block";
     blockBtn.addEventListener("click", blockUser);
     actions.appendChild(remove);
-    actions.appendChild(blockBtn);
+    moreMenu.appendChild(blockBtn);
   }
 }
 
@@ -1449,6 +1588,8 @@ async function boot() {
   }
   renderProfileAbout();
   renderVerification();
+  renderAccountTransparency();
+  void loadIdentityExtras();
   renderProfileFriends();
   renderActivity();
   renderBookmarks();
