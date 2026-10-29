@@ -12,7 +12,7 @@ const video=(id,ago,likes=0,comments=0,views=0,userId=id)=>({
 });
 
 test("reel profile query explicitly loads username; verified byline does not expose email",()=>{
- assert.match(videoHtml,/\.select\("id, username, display_name, avatar_url, is_verified/);
+ assert.match(videoHtml,/\.select\("id,\s*username,\s*display_name,\s*avatar_url,\s*is_verified/);
  assert.match(videoHtml,/publicIdentityName\(profile,video\.author_name\|\|"Member"\)/);
  assert.match(videoHtml,/verifiedName\("@"\+uploaderName/);
  assert.doesNotMatch(videoHtml,/verifiedName\("@?"\+video\.author_name/);
