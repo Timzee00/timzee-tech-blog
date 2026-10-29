@@ -145,7 +145,9 @@ export function createProfileFxEngine({host,canvas,avatar=null,maxParticles=64}=
    const radius=safeFxRadius(p.size*proportion);
    if(radius<=0)return false;
    p.x+=(p.vx+Math.sin(clock*1.5+p.phase)*.20)*dt*60;
-   p.y+=(p.kind==="inferno"||p.kind==="hearts"||p.kind==="fireflies" ?-.6:p.kind==="frost"||p.kind==="storm"?.5:p.vy)*dt*60;
+   const driftDown=(p.kind==="storm"||p.kind==="frost") ? .5 : p.vy;
+   const driftY=["inferno","hearts","fireflies"].includes(p.kind) ? -.6 : driftDown;
+   p.y+=driftY*dt*60;
    if(p.x<-30||p.x>width+30||p.y<-30||p.y>height+30)return false;
    ctx.fillStyle=ink;ctx.strokeStyle=ink;ctx.lineWidth=1;
    ctx.globalAlpha=Math.min(.75,proportion*.72)*opts.intensity/100;
