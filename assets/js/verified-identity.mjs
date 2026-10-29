@@ -164,10 +164,15 @@ export async function loadVerifiedIdentityMap(supabase,ids,cache=new Map()){
   for(let start=0;start<missing.length;start+=80){
     const batch=missing.slice(start,start+80);
     const {data,error}=await supabase.from("public_profiles")
-      .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style")
+      .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,frame_style,primary_org_name,primary_org_logo_url,primary_org_title")
       .in("id",batch);
     if(error)throw error;
-    const found=new Map((data||[]).map(profile=>[profile.id,profile]));
+    const found=new Map((data||[]).map(profile=>{
+      if(profile.primary_org_name)profile.blipmoodOrganization={
+        name:profile.primary_org_name,logo_url:profile.primary_org_logo_url,title:profile.primary_org_title
+      };
+      return [profile.id,profile];
+    }));
     for(const id of batch)cache.set(id,{profile:found.get(id)||null,expiresAt:now+60000});
   }
   return new Map(unique.map(id=>[id,cache.get(id)?.profile||null]));
