@@ -299,3 +299,48 @@ html[data-reduce-motion="true"] .tz-avatar-verified.tz-frame::after{animation:no
 /* Use theme-aware text contrast instead of muted grey-on-white author details. */
 .author-card :is(.author-name,.author-role,p),#authorProfileCard :is(.author-name,.author-role,p){color:var(--color-text,#20303a);opacity:1}
 .author-card :is(.author-role,p),#authorProfileCard :is(.author-role,p){opacity:.88}
+
+/* Blipmood identity refresh: blue is the reviewed individual check. Legacy
+   paid-plan tiers keep their own frames/entitlements, not misleading gold ticks. */
+.tz-verified-badge:is(.tz-verified-badge--silver,.tz-verified-badge--gold,.tz-verified-badge--platinum){--tz-badge-glow:rgba(29,155,240,.36)}
+.tz-verified-badge[data-identity-label],.tz-affiliation-mark[data-org-label]{cursor:pointer;touch-action:manipulation}
+.tz-verified-badge:focus-visible,.tz-affiliation-mark:focus-visible{outline:3px solid #38bdf8;outline-offset:4px}
+.tz-affiliation-mark{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid #7596a7;border-radius:6px;background:var(--color-surface,#112734);font-size:15px;flex:0 0 20px}
+.tz-affiliation-mark img{width:100%;height:100%;object-fit:contain;border-radius:5px}
+.tz-identity-dialog{width:min(460px,calc(100% - 24px));max-height:min(80vh,650px);margin:auto auto 0;border:1px solid var(--color-border,#457080);border-radius:22px 22px 0 0;padding:0;background:var(--color-surface,#102631);color:var(--color-text,#f5fbfc);box-shadow:0 -12px 42px #0005}
+.tz-identity-dialog::backdrop{background:rgba(0,8,18,.66)}
+.tz-identity-dialog-body{padding:22px clamp(16px,5vw,28px) 28px;font-size:.95rem;line-height:1.55;overflow-wrap:anywhere}
+.tz-identity-dialog .tz-sheet-head{display:flex;justify-content:space-between;align-items:start;gap:12px}
+.tz-identity-dialog h2{font-size:1.4rem;margin:0 0 14px}
+.tz-identity-dialog button{border:1px solid var(--color-border,#456);background:transparent;color:inherit;border-radius:50%;width:38px;height:38px;cursor:pointer}
+.tz-sheet-label{font-weight:800;color:#38bdf8;font-size:1rem}
+.tz-sheet-footnote{font-size:.78rem;color:var(--color-text-muted,#a4bbc7)}
+.tz-frame--constellation{--tz-frame-a:#edf5ff;--tz-frame-b:#7196da;--tz-frame-c:#1d3874;--tz-frame-glow:rgba(81,132,224,.25)}
+.tz-frame--crest{--tz-frame-a:#d4fffb;--tz-frame-b:#66bfae;--tz-frame-c:#0d4c55;--tz-frame-glow:rgba(50,186,162,.25)}
+.tz-frame--nameplate{--tz-frame-a:#fff8dc;--tz-frame-b:#d1a956;--tz-frame-c:#5b3d16;--tz-frame-glow:rgba(212,159,72,.22)}
+.profile-page .profile-avatar-wrap.tz-frame--constellation{border:5px double var(--tz-frame-b);outline:2px dashed var(--tz-frame-a);outline-offset:4px}
+.profile-page .profile-avatar-wrap.tz-frame--crest{border:5px ridge var(--tz-frame-b);outline:2px solid var(--tz-frame-c);outline-offset:3px}
+.profile-page .profile-avatar-wrap.tz-frame--nameplate{border:4px solid var(--tz-frame-a);outline:2px solid var(--tz-frame-b);outline-offset:3px}
+.tz-avatar-verified.tz-frame--constellation{background:repeating-conic-gradient(var(--tz-frame-a) 0 7deg,var(--tz-frame-c) 8deg 13deg,var(--tz-frame-b) 14deg 19deg)}
+.tz-avatar-verified.tz-frame--crest{background:conic-gradient(var(--tz-frame-a),var(--tz-frame-b),var(--tz-frame-c),var(--tz-frame-a))}
+.tz-avatar-verified.tz-frame--nameplate{background:conic-gradient(var(--tz-frame-b),var(--tz-frame-a),var(--tz-frame-c),var(--tz-frame-b))}
+.profile-page .profile-avatar-wrap{position:relative}
+.profile-page .tz-frame-name-ribbon{position:absolute;z-index:4;bottom:-15px;left:50%;transform:translateX(-50%);max-width:160px;width:max-content;min-width:78px;padding:3px 10px;border:1px solid #f4dc9c;border-radius:9px;background:linear-gradient(125deg,#5b3d16,#b88434,#503a18);color:#fffaf0;font-size:clamp(.65rem,2vw,.8rem);font-weight:800;line-height:1.35;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 4px 12px #0004;pointer-events:none}
+.profile-page .profile-avatar-wrap:not(.tz-frame--nameplate) .tz-frame-name-ribbon{display:none}
+.profile-page #profileRole[hidden]{display:none!important}
+.profile-page .badge-chip.staff{color:#0c302c!important;background:#91f0d7!important;border:1px solid #3aaf95!important}
+.profile-page .profile-actions .profile-action-more{position:relative}
+.profile-page .profile-action-more summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--color-border,#557);border-radius:999px;min-width:44px;min-height:44px;padding:8px 13px}
+.profile-page .profile-action-more[open]{z-index:8}
+.profile-page .profile-action-more-menu{display:grid;gap:7px;position:absolute;right:0;top:calc(100% + 6px);min-width:180px;max-width:min(85vw,260px);padding:10px;background:var(--color-surface,#102631);border:1px solid var(--color-border,#567);border-radius:14px;box-shadow:0 12px 34px #0005}
+.profile-page .profile-action-more-menu .btn{width:100%;justify-content:flex-start}
+.tz-transparency{margin:14px 0 0;border-top:1px solid var(--color-border,#557);padding:12px 0 0}
+.tz-transparency summary{cursor:pointer;font-weight:750;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tz-transparency summary::after{content:"⌄";font-size:1.3rem}
+.tz-transparency-content{display:grid;gap:10px;padding:14px 0}
+.tz-transparency-item{display:grid;gap:3px;padding:9px 12px;background:var(--color-surface-muted,#1c3540);border:1px solid var(--color-border,#355);border-radius:11px;font-size:.88rem}
+.tz-transparency-item small{color:var(--color-text-muted,#a3b2b9)}
+.tz-account-affiliation{display:inline-flex;align-items:center;gap:7px;min-width:0;max-width:100%;font-size:.8rem;color:var(--color-text-muted,#9cb5be);overflow-wrap:anywhere}
+.tz-account-affiliation img{inline-size:20px;block-size:20px;object-fit:contain;border-radius:5px}
+@media(max-width:440px){.profile-page .profile-actions .profile-action-more-menu{right:0}.profile-page .profile-avatar-wrap.tz-frame--nameplate{margin-bottom:12px}}
+@media(prefers-reduced-motion:reduce){.tz-identity-dialog,.tz-identity-dialog *{animation:none!important;transition:none!important}}
