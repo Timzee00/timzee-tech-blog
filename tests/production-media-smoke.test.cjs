@@ -125,3 +125,67 @@ test('verified translation usage is tracked in Postgres rather than worker memor
  assert.match(migration,/requests<18/);
  assert.match(migration,/ENABLE ROW LEVEL SECURITY/);
 });
+
+test('Status discovery keeps the creator and viewer controls and hides private previews',()=>{
+ const html=load('stories.html'),css=load('assets/css/blipmood-status-refresh.css');
+ const interactions=load('assets/js/story-interactions.mjs');
+ for(const id of ['storiesRail','storiesEmpty','statusHighlights','statusGalleryMore','storyLoadMore',
+  'savedStoryToggle','storyViewer','storyViewerMedia','storyViewerSocial','storyComposer',
+  'storyFile','storyCaption','storyMusicFile','storyDuration','storyVisibility','viewerSequence']){
+  const key=id==='storyVisibility'?'name="storyVisibility"':'id="'+id+'"';
+  assert.ok(html.includes(key),'Missing '+key);
+ }
+ assert.match(html,/data-story-filter="friends"/);
+ assert.match(html,/newest\.visibility!=="private"&&newest\.media_type==="image"/);
+ assert.match(html,/newest\.caption\|\|/);
+ assert.match(html,/state\.galleryExpanded/);
+ assert.match(html,/profile\?\.username\|\|profile\?\.display_name/);
+ assert.match(html,/story-private-media/);
+ assert.match(css,/\.status-gallery-grid\{display:grid/);
+ assert.match(css,/\.story-social-actions\{display:grid/);
+ assert.match(css,/@media\(max-width:680px\)/);
+ for(const action of ['like','reply','share','save','reshare','poll'])
+  assert.ok(interactions.includes('data-action="'+action+'"'),'Missing '+action);
+ assert.match(interactions,/story-extra-menu/);
+ assert.match(interactions,/story-comments-panel/);
+ assert.match(html,/fetchStoriesFeedPage\(\{cursor:state\.storyNextCursor\}\)/);
+});
+
+test('Status feed fetch is bounded and keyset pagination keeps multi-status authors intact',async()=>{
+ const source=load('assets/js/stories.js').split('\n')
+  .filter(line=>!line.trim().startsWith('import '))
+  .map(line=>line.replace(/^export /,'')).join('\n');
+ const id=n=>'33333333-3333-4333-8333-'+String(n).padStart(12,'0');
+ const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222';
+ const rows=[
+  {id:id(4),user_id:a,created_at:'2026-10-30T12:04:00Z'},
+  {id:id(3),user_id:b,created_at:'2026-10-30T12:03:00Z'},
+  {id:id(2),user_id:a,created_at:'2026-10-30T12:02:00Z'},
+  {id:id(1),user_id:b,created_at:'2026-10-30T12:01:00Z'}
+ ];
+ const trace={};
+ const query={
+  select(){return this;},order(name,opts){(trace.orders??=[]).push([name,opts.ascending]);return this;},
+  limit(n){trace.limit=n;return this;},or(cursor){trace.cursor=cursor;return this;},
+  then(ok,bad){return Promise.resolve({data:rows,error:null}).then(ok,bad);}
+ };
+ const client={from(table){
+  if(table==='stories')return query;
+  if(table==='public_profiles')return {select(){return this;},in(name,ids){
+   trace.profiles=ids;return Promise.resolve({data:[{id:a,username:'a'},{id:b,username:'b'}],error:null});
+  }};
+  throw Error('Unexpected table '+table);
+ }};
+ const fetchPage=vm.runInNewContext(source+';fetchStoriesFeedPage',
+  {supabase:client,uploadMedia(){},console},{timeout:2000});
+ const page=await fetchPage({limit:3});
+ assert.equal(trace.limit,4);
+ assert.equal(page.hasMore,true);
+ assert.equal(page.groups.length,2);
+ assert.deepEqual(Array.from(page.groups[0].stories,story=>story.id),[id(2),id(4)]);
+ assert.equal(page.nextCursor.id,id(2));
+ await fetchPage({limit:3,cursor:page.nextCursor});
+ assert.match(trace.cursor,/created_at\.lt\./);
+ assert.match(trace.cursor,/id\.lt\./);
+ await assert.rejects(()=>fetchPage({cursor:{created_at:'bad',id:'bad'}}),/Invalid status feed cursor/);
+});
