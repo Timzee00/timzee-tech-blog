@@ -170,7 +170,7 @@ if(currentSitePath()==="index.html"){
     const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
     introPlanned=localStorage.getItem("blipmood:intro:seen:v1")!=="1"
       &&document.documentElement.dataset.reduceMotion!=="true"
-      &&!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+      &&!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
       &&!connection?.saveData
       &&!/(?:slow-2g|2g)/.test(connection?.effectiveType||"");
   } catch { /* Don't block navigation when storage is unavailable. */ }
