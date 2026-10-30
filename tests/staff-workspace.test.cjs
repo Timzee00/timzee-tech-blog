@@ -48,5 +48,7 @@ test("Consent-based traffic tracking retries transient failures and reports conf
  assert.match(collector,/window\.addEventListener\("online"/);
  assert.doesNotMatch(collector,/sessionStorage\.setItem\(UNAVAILABLE_KEY/);
  assert.match(report,/ANALYTICS_HMAC_SECRET/);
- assert.match(report,/Visitor tracking is not configured/);
+ assert.match(report,/site_aggregate_report/);
+ assert.match(report,/opt_in_status/);
+ assert.match(report,/not_configured/);
 });
