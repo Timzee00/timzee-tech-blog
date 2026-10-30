@@ -220,7 +220,7 @@
       const state = {
         user: null,
         groups: [], allGroups: [], savedOnly:false, viewFilter:"all", friendIds:new Set(),
-        galleryExpanded:false, storyNextCursor:null, storyHasMore:false, storyLoadingMore:false,
+        galleryExpanded:false, storyNextCursor:null, storyHasMore:false, storyLoadingMore:false, loadError:null,
         activeGroupIndex: -1,
         activeStoryIndex: 0,
         timerId: null,
@@ -295,7 +295,7 @@
         try {
           await refreshStoryDiscovery();
         } catch (error) {
-          state.groups = [];
+          state.groups = [];state.loadError=error?.message||"Stories could not be loaded. Please refresh and try again.";
           const empty = document.getElementById("storiesEmpty");
           if (empty) {
             empty.hidden = false;
@@ -351,6 +351,7 @@
       }
       async function refreshStoryDiscovery(){
         const page=await fetchStoriesFeedPage();
+        state.loadError=null;
         state.allGroups=page.groups;
         state.storyNextCursor=page.nextCursor;
         state.storyHasMore=page.hasMore;
@@ -412,7 +413,7 @@
         for(const group of (state.galleryExpanded?groups:groups.slice(0,8))){
           const groupIndex=state.groups.indexOf(group);
           const own=state.user?.id===group.userId;
-          const name=own?"You":group.profile?.username||"Member";
+          const name=own?"You":group.profile?.username||group.profile?.display_name||"Member";
           const newest=group.stories[group.stories.length-1];
           const card=document.createElement("button");
           card.type="button";card.className="status-moment-card";
@@ -460,7 +461,7 @@
         state.groups.forEach((group, index) => {
           const profile = group.profile;
           const isOwn = state.user && group.userId === state.user.id;
-          const name = isOwn ? "You" : profile?.username || "Member";
+          const name = isOwn ? "You" : profile?.username || profile?.display_name || "Member";
           const el = document.createElement("button");
           el.type = "button";
           el.className = "story-avatar";
@@ -488,8 +489,8 @@
           empty.before(el);
         });
         if(!state.groups.length){
-          empty.textContent=state.viewFilter==="saved"?"No saved statuses in this selection.":
-            state.viewFilter==="friends"?"No friends have active statuses yet.":"No active stories yet — be the first!";
+          empty.textContent=state.loadError||(state.viewFilter==="saved"?"No saved statuses in this selection.":
+            state.viewFilter==="friends"?"No friends have active statuses yet.":"No active stories yet — be the first!");
         }
         document.getElementById("storyLoadMore").hidden=!state.storyHasMore;
         renderGallery();
@@ -643,7 +644,7 @@
         document.getElementById("viewerAvatar").src = isSafeUrl(profile?.avatar_url)
           ? profile.avatar_url
           : DEFAULT_AVATAR;
-        document.getElementById("viewerName").textContent = (profile?.username || "Member")+
+        document.getElementById("viewerName").textContent = (profile?.username || profile?.display_name || "Member")+
           (profile?.is_verified?" ✓ Verified":"");
         document.getElementById("viewerTime").textContent = timeAgo(story.created_at);
         document.getElementById("viewerSequence").textContent = `${state.activeStoryIndex+1} of ${group.stories.length}`;
