@@ -45,6 +45,7 @@ const state = {
   searchTerm: "",
   categories: [],
   posts: [],
+  feedCategory: "all",
   postsCursor: null,
   hasMorePosts: false,
   loadingMorePosts: false,
@@ -438,7 +439,7 @@ async function loadHomeCategory(category="all"){
   try{
     const page=await fetchFeedPosts({limit:POSTS_PAGE_SIZE,categoryId});
     if(request!==homeFeedRequest||category!==state.activeCategory)return;
-    state.posts=page.items;state.postsCursor=page.nextCursor;state.hasMorePosts=page.hasMore;
+    state.posts=page.items;state.feedCategory=category;state.postsCursor=page.nextCursor;state.hasMorePosts=page.hasMore;
     state.loadingMorePosts=false;state.filteredPosts=null;
     renderTagFilters();renderCategories();renderLists();
     void hydratePublicHandles(page.items).then(()=>{if(request===homeFeedRequest)renderLists()})
@@ -720,7 +721,7 @@ function setupTagFilters() {
       renderTrending(state.activeCategory);
       renderPopular();
       renderPopularTopics();
-      if(state.activeCategory!=="all")void loadHomeCategory(state.activeCategory);
+      if(state.feedCategory!==state.activeCategory)void loadHomeCategory(state.activeCategory);
       else renderLists();
     });
   }
@@ -736,7 +737,7 @@ async function performSearch() {
     renderTrending(state.activeCategory);
     renderPopular();
     renderPopularTopics();
-    if(state.activeCategory!=="all")void loadHomeCategory(state.activeCategory);
+    if(state.feedCategory!==state.activeCategory)void loadHomeCategory(state.activeCategory);
     else renderLists();
     return;
   }
@@ -1036,6 +1037,7 @@ async function boot() {
   const [categories, feed] = await Promise.all([categoriesPromise, postsPromise]);
   state.categories = categories;
   state.posts = feed.items;
+  state.feedCategory = "all";
   state.postsCursor = feed.nextCursor;
   state.hasMorePosts = feed.hasMore;
   renderNav(state.categories);
