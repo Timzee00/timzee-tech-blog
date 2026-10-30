@@ -1,0 +1,210 @@
+/* Blipmood home refresh: shorter landing, discovery cards, bounded feed.
+   All selectors stay on the homepage; theme tokens preserve user settings. */
+body.blipmood-home{--bm-home-ring:color-mix(in srgb,var(--color-primary) 35%,transparent)}
+.blipmood-home .home-intro{padding-top:clamp(20px,3.5vw,38px);padding-bottom:12px}
+.blipmood-home .bm-hero-split{grid-template-columns:minmax(0,1.16fr) minmax(0,.84fr);gap:clamp(12px,3vw,42px)}
+.blipmood-home .home-intro h1{font-size:clamp(37px,4.8vw,64px);line-height:1.07;margin-bottom:11px}
+.blipmood-home .bm-hero-description{font-size:clamp(14px,1.45vw,16px);line-height:1.65;max-width:52ch;margin-bottom:19px}
+.blipmood-home .bm-hero-art{min-height:235px}
+.blipmood-home .bm-hero-art img{width:min(75%,320px);max-height:290px}
+.blipmood-home .explore-panel{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
+ margin-top:clamp(13px,2vw,23px);padding:15px;border-radius:19px;
+ background:color-mix(in srgb,var(--color-surface) 93%,var(--color-primary) 7%);
+ box-shadow:0 10px 26px rgba(4,24,31,.075)
+}
+.blipmood-home .explore-heading,.blipmood-home .explore-footer{grid-column:1/-1}
+.blipmood-home .explore-heading{padding:1px 3px 4px}
+.blipmood-home .explore-footer{padding:10px 4px 2px;display:flex;flex-wrap:wrap;gap:8px 24px}
+.blipmood-home .explore-panel>a{
+ display:grid;grid-template-columns:34px minmax(0,1fr);align-content:start;align-items:start;
+ gap:12px;min-height:104px;margin:0;padding:17px 12px;border-radius:14px;
+ background:color-mix(in srgb,var(--color-surface) 89%,var(--color-bg) 11%);
+ border:1px solid var(--color-border);
+ box-shadow:none
+}
+.blipmood-home .explore-panel .explore-number,.blipmood-home .explore-panel .bm-row-chevron{display:none}
+.blipmood-home .explore-panel .bm-explore-icon{
+ background:color-mix(in srgb,var(--color-primary) 10%,var(--color-surface));
+ border:1px solid var(--color-border);border-radius:11px;min-height:36px
+}
+.blipmood-home .explore-panel .bm-explore-icon svg{width:21px;height:21px}
+.blipmood-home .explore-panel>a>span:nth-child(3){min-width:0;overflow-wrap:anywhere}
+.blipmood-home .explore-panel strong{display:block;font-size:clamp(12px,1.25vw,14px);line-height:1.35}
+.blipmood-home .explore-panel small{display:block;font-size:11px;line-height:1.5}
+.blipmood-home #latest{margin-top:28px;scroll-margin-top:85px}
+.blipmood-home #latest .content-grid{
+ grid-template-columns:minmax(0,1fr) minmax(260px,315px);
+ gap:clamp(17px,2.3vw,26px);align-items:start
+}
+.blipmood-home #latest .content-grid>div{min-width:0}
+.blipmood-home .bm-feed-heading{
+ display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;
+ gap:12px;margin:0 0 17px
+}
+.blipmood-home .bm-feed-eyebrow{
+ display:block;color:var(--color-primary);letter-spacing:.15em;
+ text-transform:uppercase;font-size:.67rem;font-weight:850;margin-bottom:7px
+}
+.blipmood-home .bm-feed-heading .section-title{
+ font-size:clamp(1.6rem,2.6vw,2.2rem);letter-spacing:-.045em;
+ margin:0 0 5px;line-height:1.18
+}
+.blipmood-home .bm-feed-heading p{
+ margin:0;max-width:51ch;line-height:1.55;
+ font-size:clamp(.8rem,1.22vw,.92rem);color:var(--color-text-muted)
+}
+.blipmood-home .bm-feed-all{
+ color:var(--color-primary);font-size:.82rem;font-weight:800;
+ display:inline-flex;align-items:center;gap:8px;padding:10px 12px;
+ background:var(--color-surface);border:1px solid var(--color-border);
+ border-radius:11px;text-decoration:none
+}
+.blipmood-home .bm-feed-all:hover{border-color:var(--color-primary)}
+.blipmood-home #categoryNav{
+ display:flex;flex-wrap:nowrap;align-items:center;gap:7px;
+ overflow-x:auto;max-width:100%;overscroll-behavior-x:contain;
+ margin:0 0 10px;padding:4px 2px 10px;scrollbar-width:thin
+}
+.blipmood-home #categoryNav a{
+ display:inline-flex;align-items:center;justify-content:center;
+ flex:0 0 auto;white-space:nowrap;min-height:39px;padding:8px 15px;
+ border-radius:999px;font-size:.8rem;font-weight:700;border:1px solid var(--color-border);
+ color:var(--color-text-muted);background:var(--color-surface);
+ text-decoration:none
+}
+.blipmood-home #categoryNav a[aria-current="true"]{
+ background:var(--color-primary);color:var(--color-text-on-primary);
+ border-color:var(--color-primary)
+}
+.blipmood-home .bm-feed-filter-details{margin:0 0 12px;border:0}
+.blipmood-home .bm-feed-filter-details>summary{
+ cursor:pointer;list-style:none;padding:9px 0;min-height:42px;
+ font-size:.8rem;font-weight:700;color:var(--color-text-muted)
+}
+.blipmood-home .bm-feed-filter-details>summary::-webkit-details-marker{display:none}
+.blipmood-home .bm-feed-filter-details[open]>summary span{display:inline-block;transform:rotate(180deg)}
+.blipmood-home .bm-feed-filter-details .filter-bar{
+ margin:8px 0 13px;gap:12px;padding:12px;border-radius:13px;
+ background:var(--color-surface);border:1px solid var(--color-border)
+}
+.blipmood-home #latestPosts{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ align-items:stretch;gap:13px;min-width:0;min-height:180px
+}
+.blipmood-home #latestPosts>.callout{grid-column:1/-1}
+.blipmood-home #latestPosts .post-card{
+ display:flex;flex-direction:column;min-width:0;min-height:224px;
+ padding:17px;border:1px solid var(--color-border-strong);
+ border-radius:17px;background:var(--color-surface);
+ box-shadow:0 6px 23px rgba(3,23,33,.045);
+ overflow:hidden;transition:border-color .15s ease,transform .15s ease,box-shadow .15s ease
+}
+.blipmood-home #latestPosts .post-card:hover{
+ transform:translateY(-2px);border-color:var(--bm-home-ring);
+ box-shadow:0 9px 29px rgba(3,23,33,.085)
+}
+.blipmood-home #latestPosts .post-card-header{align-items:center;gap:9px;margin-bottom:14px}
+.blipmood-home #latestPosts .post-card-avatar{width:36px;height:36px;font-size:.8rem}
+.blipmood-home #latestPosts .post-card-author{font-size:.82rem;color:var(--color-text)}
+.blipmood-home #latestPosts .post-card-subline{font-size:.7rem;color:var(--color-text-muted)}
+.blipmood-home #latestPosts .post-card-story{
+ display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;
+ align-items:start;min-width:0
+}
+.blipmood-home #latestPosts .post-card-story-copy{min-width:0}
+.blipmood-home #latestPosts h3{
+ font-size:clamp(.98rem,1.38vw,1.12rem);line-height:1.37;
+ letter-spacing:-.02em;color:var(--color-text);
+ margin:0 0 8px;overflow-wrap:anywhere
+}
+.blipmood-home #latestPosts .post-card-story a{text-decoration:none}
+.blipmood-home #latestPosts .post-card-story a:hover h3{text-decoration:underline;text-decoration-thickness:1px}
+.blipmood-home #latestPosts .post-card-excerpt{
+ font-size:.79rem;line-height:1.58;color:var(--color-text-muted);
+ margin:0;overflow-wrap:anywhere
+}
+.blipmood-home #latestPosts .post-card-cover{
+ display:block;flex:none;width:100px;height:89px;overflow:hidden;
+ border-radius:11px;background:var(--color-surface-muted);border:1px solid var(--color-border)
+}
+.blipmood-home #latestPosts .post-card-cover img{display:block;width:100%;height:100%;object-fit:cover}
+.blipmood-home #latestPosts .tag-list{margin:10px 0 0;gap:5px}
+.blipmood-home #latestPosts .tag{font-size:.66rem;border-radius:8px}
+.blipmood-home #latestPosts .post-icon-row{
+ margin-top:auto;padding-top:12px;gap:3px;justify-content:space-between
+}
+.blipmood-home #latestPosts .post-icon-btn{
+ min-height:41px;min-width:37px;padding:6px 4px;font-size:.72rem;gap:4px
+}
+.blipmood-home #loadMorePostsBtn:not([hidden]){
+ display:flex;align-items:center;justify-content:center;
+ margin:20px auto 6px;min-height:45px;min-width:190px;
+ border-radius:12px;border-color:var(--color-border-strong)
+}
+.blipmood-home #loadMorePostsBtn[hidden]{display:none!important}
+.blipmood-home #loadMorePostsStatus{font-size:.8rem;color:var(--color-text-muted);text-align:center;margin:8px}
+.blipmood-home #latest>.content-grid>.side-card{
+ border-radius:18px;padding:18px;box-shadow:0 7px 26px rgba(3,23,33,.055)
+}
+.blipmood-home #latest .side-card>h3{
+ margin:2px 0 15px;font-size:1.05rem;letter-spacing:-.015em
+}
+.blipmood-home #trendingList{gap:8px;min-height:0}
+.blipmood-home #trendingList .post-card{
+ min-height:0;padding:12px;border-radius:12px;
+ background:var(--color-surface-muted);border-color:var(--color-border)
+}
+.blipmood-home #trendingList .post-card h3{font-size:.84rem;line-height:1.45;margin:3px 0}
+.blipmood-home #trendingList .post-card-excerpt{font-size:.74rem;line-height:1.55}
+.blipmood-home .bm-sidebar-cta{
+ padding:16px;margin-top:19px;border-radius:14px;
+ background:linear-gradient(135deg,color-mix(in srgb,var(--color-primary) 15%,var(--color-surface)),var(--color-surface-muted));
+ border:1px solid var(--color-border-strong)
+}
+.blipmood-home .bm-sidebar-cta strong{color:var(--color-text);font-size:.9rem}
+.blipmood-home .bm-sidebar-cta p{font-size:.78rem;color:var(--color-text-muted);line-height:1.55;margin:7px 0 10px}
+.blipmood-home .bm-sidebar-cta a{font-size:.81rem;font-weight:800;color:var(--color-primary)}
+.blipmood-home #popular,.blipmood-home #popularTopics,.blipmood-home #categories{margin-top:30px}
+.blipmood-home #categories{padding-bottom:24px}
+.blipmood-home .footer{margin-top:30px}
+@media(max-width:1080px){
+ .blipmood-home .explore-panel{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .blipmood-home #latest .content-grid{grid-template-columns:minmax(0,1fr) 265px}
+}
+@media(max-width:800px){
+ .blipmood-home #latest .content-grid{grid-template-columns:minmax(0,1fr)}
+ .blipmood-home #latest .side-card{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
+ .blipmood-home #trendingList,.blipmood-home #leaderboardList{align-self:start}
+ .blipmood-home #latest .side-card>.bm-sidebar-cta{grid-column:1/-1}
+ .blipmood-home #latestPosts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:600px){
+ .blipmood-home .bm-hero-split{display:block}
+ .blipmood-home .home-intro h1{font-size:clamp(35px,10vw,49px);max-width:85%}
+ .blipmood-home .bm-hero-art{position:absolute;right:0;top:28px;width:36%;min-height:0;opacity:.5;pointer-events:none}
+ .blipmood-home .bm-hero-art img{width:100%;height:auto}
+ .blipmood-home .explore-panel{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px}
+ .blipmood-home .explore-panel>a{
+  grid-template-columns:minmax(0,1fr);gap:9px;min-height:115px;
+  padding:12px 10px;align-content:start
+ }
+ .blipmood-home .explore-panel .bm-explore-icon{width:34px;height:34px}
+ .blipmood-home .explore-panel strong{font-size:12px}
+ .blipmood-home .explore-panel small{font-size:10px}
+ .blipmood-home #latestPosts{grid-template-columns:minmax(0,1fr)}
+ .blipmood-home #latestPosts .post-card{min-height:0;padding:15px}
+ .blipmood-home #latestPosts .post-card-cover{width:105px;height:92px}
+ .blipmood-home #latest .side-card{display:block}
+ .blipmood-home #latest .side-card>h3{margin-top:14px}
+ .blipmood-home .bm-feed-heading p{font-size:.83rem}
+ .blipmood-home #latest{scroll-margin-top:65px}
+}
+@media(max-width:360px){
+ .blipmood-home .explore-panel>a{min-height:125px}
+ .blipmood-home #latestPosts .post-card-cover{width:86px;height:77px}
+ .blipmood-home #latestPosts .post-icon-btn{font-size:.67rem;min-width:33px}
+}
+@media(prefers-reduced-motion:reduce){
+ .blipmood-home #latestPosts .post-card{transition:none;transform:none}
+}
