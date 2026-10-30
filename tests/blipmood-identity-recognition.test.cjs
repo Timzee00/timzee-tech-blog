@@ -149,3 +149,37 @@ test("one delegated profile navigation handler covers names and portraits",()=>{
  assert.match(profile,/profileAvatarLink/);
  assert.match(nav,/siteMenuUser.*href="\/profile\.html"/);
 });
+
+
+test("official identity events are strictly authorized, without allowing arbitrary cross-user alerts",()=>{
+ const migration=read("supabase/migrations/20261030223000_identity_notification_validator_fix.sql");
+ for(const kind of ["advisor_appointment","appointment_revoked","affiliation_invite","recognition_awarded","advisor_decision"])
+   assert.match(migration,new RegExp(kind));
+ assert.match(migration,/private\.identity_notification_authorized/);
+ assert.match(migration,/has_role_secure\('super'\)/);
+ assert.match(migration,/record_id/);
+ assert.match(migration,/Unsupported notification type cannot target another user/);
+ assert.match(migration,/Notification is not backed by a pending friend request/);
+});
+test("identity emails are server-enqueued, held for upgrade, and revalidated before Brevo",()=>{
+ const migration=read("supabase/migrations/20261030230000_identity_transactional_email_delivery.sql");
+ const handshake=read("supabase/migrations/20261030234000_identity_email_worker_rollout_handshake.sql");
+ const worker=read("netlify/functions/email-worker.js");
+ const settings=read("assets/js/settings-page.js");
+ const html=read("settings.html");
+ assert.match(migration,/email_jobs_template_check/);
+ assert.match(migration,/private\.enqueue_identity_update_email/);
+ assert.match(migration,/identity_updates boolean not null default true/);
+ assert.match(migration,/next_attempt_at/);
+ assert.match(migration,/'infinity'::timestamptz/);
+ assert.match(migration,/can_send_identity_update/);
+ assert.match(migration,/private\.email_suppressions/);
+ assert.match(handshake,/current_setting\('role',true\) is distinct from 'service_role'/);
+ assert.match(handshake,/next_attempt_at=now\(\)/);
+ assert.match(worker,/activate_identity_email_dispatch/);
+ assert.match(worker,/can_send_identity_update/);
+ assert.match(worker,/if\(current\.data!==true\)/);
+ assert.match(worker,/identityAction\?\.subject/);
+ assert.match(settings,/identity_updates/);
+ assert.match(html,/data-email-notification="identity_updates"/);
+});
