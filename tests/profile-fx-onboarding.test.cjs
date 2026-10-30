@@ -125,11 +125,11 @@ test("social-first profile keeps the identity header visible across all content 
  assert.match(html,/data-profile-image="avatar"/);
  assert.match(script,/renderProfileHighlights\(\)/);
  assert.match(script,/void loadProfilePosts\(\)/);
- assert.match(script,/\\.from\("community_threads"\)/);
- assert.match(script,/\\.eq\("status","published"\)/);
- assert.match(script,/isSafeUrl\(asset\\.media_url\)/);
- assert.match(script,/profilePostUrl\(post\\.id\)/);
- assert.match(script,/\\.range\(offset,offset\\+PROFILE_POST_PAGE\)/);
- assert.match(css,/@media\\(max-width:670px\\)/);
+ assert.ok(script.includes('.from("community_threads")'));
+ assert.ok(script.includes('.eq("status","published")'));
+ assert.ok(script.includes("isSafeUrl(asset.media_url)"));
+ assert.ok(script.includes("profilePostUrl(post.id)"));
+ assert.ok(script.includes(".range(offset,offset+PROFILE_POST_PAGE)"));
+ assert.ok(css.includes("@media(max-width:670px)"));
  assert.match(css,/prefers-reduced-motion:reduce/);
 });
