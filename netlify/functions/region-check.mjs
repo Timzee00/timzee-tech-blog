@@ -16,6 +16,23 @@ function serverClient(){
  return service;
 }
 export default async function regionCheck(request,context){
+ if(request.method==="GET"){
+  // This response contains no user information and can be cached by Netlify
+  // edge for two minutes. At default all-global rules no auth call is needed.
+  const supabase=serverClient();
+  if(!supabase)return respond({overrides:true,status:"unavailable"},503);
+  try{
+   const {data,error}=await supabase.from("platform_feature_rules")
+      .select("feature_key").neq("country_code","*").limit(1);
+   if(error)throw error;
+   return new Response(JSON.stringify({overrides:Boolean(data?.length)}),{
+    headers:{"content-type":"application/json; charset=utf-8",
+     "cache-control":"public, max-age=120",
+     "netlify-cdn-cache-control":"public, s-maxage=120, stale-while-revalidate=120",
+     "x-content-type-options":"nosniff"}
+   });
+  }catch{return respond({overrides:true,status:"unavailable"},503);}
+ }
  if(request.method!=="POST")return respond({error:"Method not allowed"},405);
  const country=String(context?.geo?.country?.code||"").toUpperCase();
  const authorization=request.headers.get("authorization")||"";
