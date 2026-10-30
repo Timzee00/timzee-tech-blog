@@ -7,7 +7,7 @@ import {syncObservedRegion} from "./observed-region.mjs";
 
 function getUploadOptions(file, fallbackContentType) {
   return {
-    cacheControl: "3600",
+    cacheControl: "604800",
     upsert: false,
     contentType: file?.type || fallbackContentType
   };
