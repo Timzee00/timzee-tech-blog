@@ -105,7 +105,7 @@ function applySettings() {
   let wallpaper=validWallpapers.includes(state.settings.wallpaper)?state.settings.wallpaper:"default";
   if(!state.verified&&["aurora","platinum"].includes(wallpaper))wallpaper="default";
   const size=Number(state.settings.fontSize);
-  const safeSize=[.875,1,1.125,1.25].includes(size)?size:1;
+  const safeSize=[.75,.875,1,1.125,1.25].includes(size)?size:1;
   document.documentElement.dataset.chatWallpaper=wallpaper;
   document.documentElement.style.setProperty("--timzee-chat-message-scale",String(safeSize));
   if($("chatWallpaper"))$("chatWallpaper").value=wallpaper;
@@ -258,7 +258,10 @@ async function loadAllChatData() {
     ...savedPartners
   ])].filter(id=>id&&id!==state.user.id&&!blockedPairs.has(id));
   await loadProfiles([...state.friends,...state.directPartners,...state.requests.map(r=>r.requester_id),...state.sentRequests.map(r=>r.addressee_id),...state.blocked]);
-  state.previews = await loadThreadPreviews([...new Set([...state.friends,...state.directPartners])].map(threadForFriend));
+  state.previews = await loadThreadPreviews([
+    ...[...new Set([...state.friends,...state.directPartners])].map(threadForFriend),
+    ...state.groups.map(g=>g.id)
+  ]);
 }
 async function loadThreadPreviews(threadIds = []) {
   // One preview per thread, never an unbounded download of complete histories.
@@ -266,21 +269,62 @@ async function loadThreadPreviews(threadIds = []) {
 }
 
 function renderFriends() {
-  const target=$("friendList"); if(!target)return;
+  const target=$("dmsList"); if(!target)return;
   const previewMap=state.previews;
   const rows=[...new Set([...state.friends,...state.directPartners])].map(friendId=>({friendId,profile:profileFor(friendId)||{},preview:previewMap.get(threadForFriend(friendId))||null}));
   const q=state.searchTerm.trim().toLowerCase();
   const filtered=rows.filter(({friendId,profile})=>!isArchived(threadForFriend(friendId))&&(!q||[profile.username,profile.username,profile.email].some(v=>String(v||"").toLowerCase().includes(q)))).sort((a,b)=>new Date(b.preview?.created_at||0)-new Date(a.preview?.created_at||0));
   target.innerHTML=filtered.length?filtered.map(({friendId,profile,preview})=>`<button class="chat-list-row ${friendId===state.activeFriendId?'active':''}" type="button" data-friend-id="${friendId}">${verifiedAvatar(profile.avatar_url||DEFAULT_AVATAR,profile,{size:"md"})}<span class="chat-list-copy"><strong>${verifiedName(profile.username||"Member",profile,{compact:true})}${["super","admin","moderator"].includes(profile.role)?' <span class="chat-staff-label">Staff</span>':''}</strong><small>${escapeHTML(preview?.body||(preview?.media_type?`Sent ${preview.media_type}`:'Start a conversation'))}</small></span><span class="chat-list-time">${preview?chatTimeAgo(preview.created_at):''}</span></button>`).join(''):`<div class="callout">${q?'No matching chats.':'No friends yet. Use Find people to connect.'}</div>`;
+  renderUnifiedInbox();
   renderArchived();
 }
 function renderGroups() { const badge=$("groupsBadge");if(badge){badge.textContent=String(state.groups.filter(g=>!isArchived(g.id)).length);badge.hidden=!state.groups.some(g=>!isArchived(g.id));}
   const target=$("groupList"); if(!target)return; const q=state.searchTerm.trim().toLowerCase();
   const groups=state.groups.filter(g=>!isArchived(g.id)&&(!q||String(g.name||'').toLowerCase().includes(q))).sort((a,b)=>Number(b.is_pinned)-Number(a.is_pinned)||new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at));
-  target.innerHTML=groups.length?groups.map(g=>`<button class="chat-list-row ${g.id===state.activeGroupId?'active':''}" type="button" data-group-id="${g.id}"><img class="chat-list-avatar" src="${escapeHTML(g.avatar_url||DEFAULT_GROUP_AVATAR)}" alt=""><span class="chat-list-copy"><strong>${escapeHTML(g.name||'Group')}</strong><small>${escapeHTML(g.description||'Group chat')}</small></span><span class="chat-list-time">${g.is_pinned?'Pinned':''}</span></button>`).join(''):`<div class="callout">No groups yet. Create one to get started.</div>`;
+  target.innerHTML=groups.length?groups.map(g=>`<button class="chat-list-row ${g.id===state.activeGroupId?'active':''}" type="button" data-group-id="${g.id}"><img class="chat-list-avatar" src="${escapeHTML(g.avatar_url||DEFAULT_GROUP_AVATAR)}" alt=""><span class="chat-list-copy"><strong>${escapeHTML(g.name||'Group')}</strong><small>${escapeHTML(state.previews.get(g.id)?.body||(state.previews.get(g.id)?.media_type?`Sent ${state.previews.get(g.id).media_type}`:g.description||'Group chat'))}</small></span><span class="chat-list-time">${state.previews.get(g.id)?chatTimeAgo(state.previews.get(g.id).created_at):''}${g.is_pinned?'<span class="chat-row-pin" aria-label="Pinned chat">◆</span>':''}</span></button>`).join(''):`<div class="callout">No groups yet. Create one to get started.</div>`;
+  renderUnifiedInbox();
   renderArchived();
 }
 
+
+function renderUnifiedInbox(){
+ const target=$("friendList");if(!target||!state.user)return;
+ const q=state.searchTerm.trim().toLowerCase();
+ const dms=[...new Set([...state.friends,...state.directPartners])].map(id=>{
+  const profile=profileFor(id)||{},threadId=threadForFriend(id);
+  return {id,threadId,type:'dm',title:profile.username||'Member',
+   profile,preview:state.previews.get(threadId)||null, pinned:false};
+ }).filter(item=>!isArchived(item.threadId));
+ const groups=state.groups.filter(g=>!isArchived(g.id)).map(g=>({
+  id:g.id,threadId:g.id,type:'group',title:g.name||'Group',
+  group:g,preview:state.previews.get(g.id)||null,pinned:g.is_pinned===true
+ }));
+ const all=[...dms,...groups].filter(item=>!q||
+   [item.title,item.type==='group'?item.group?.description:'',item.preview?.body]
+     .some(part=>String(part||'').toLowerCase().includes(q)));
+ all.sort((a,b)=>Number(b.pinned)-Number(a.pinned)||
+   new Date(asUtcTimestamp(b.preview?.created_at||b.group?.updated_at||b.group?.created_at)||0)-
+   new Date(asUtcTimestamp(a.preview?.created_at||a.group?.updated_at||a.group?.created_at)||0));
+ target.innerHTML=all.length?all.map(item=>{
+  const active=item.type==='group'?item.id===state.activeGroupId:item.id===state.activeFriendId;
+  const icon=item.type==='group'?
+   '<img class="chat-list-avatar" src="'+escapeHTML(item.group.avatar_url||DEFAULT_GROUP_AVATAR)+'" alt="">':
+   verifiedAvatar(item.profile.avatar_url||DEFAULT_AVATAR,item.profile,{size:"md"});
+  const label=item.type==='group'?escapeHTML(item.title):
+   verifiedName(item.title,item.profile,{compact:true});
+  const excerpt=String(item.preview?.body||(
+    item.preview?.media_type?'Sent '+item.preview.media_type:
+    item.type==='group'?item.group?.description||'Group chat':'Start a conversation')).slice(0,120);
+  const when=item.preview?chatTimeAgo(item.preview.created_at):'';
+  return '<button class="chat-list-row '+(active?'active':'')+'" type="button" data-'+
+   (item.type==='group'?'group-id':'friend-id')+'="'+escapeHTML(item.id)+'">'+
+   icon+'<span class="chat-list-copy"><strong>'+label+'</strong><small>'+
+   escapeHTML(excerpt)+'</small></span><span class="chat-list-time">'+escapeHTML(when)+
+   (item.pinned?'<span class="chat-row-pin" title="Pinned">◆</span>':'')+
+   '</span></button>';
+ }).join(''):'<div class="callout">'+
+  (q?'No matching conversations.':'No chats yet. Find people or create a group to get started.')+'</div>';
+}
 function renderArchived(){
   const target=$("archivedList"),badge=$("archivedBadge");
   if(!target)return;
@@ -310,7 +354,7 @@ function renderRequests() {
   if(incoming)incoming.innerHTML=state.requests.length?state.requests.map(r=>`<div class="chat-request-row">${verifiedAvatar(profileFor(r.requester_id)?.avatar_url||DEFAULT_AVATAR,profileFor(r.requester_id),{size:"sm"})}<div><strong>${name(r.requester_id)}</strong><small>Friend request</small></div><div class="inline-actions"><button class="btn sm" data-request="accept" data-id="${r.id}">Accept</button><button class="btn ghost sm" data-request="decline" data-id="${r.id}">Decline</button></div></div>`).join(''):`<div class="callout">No incoming requests.</div>`;
   if(outgoing)outgoing.innerHTML=state.sentRequests.length?state.sentRequests.map(r=>`<div class="chat-request-row">${verifiedAvatar(profileFor(r.addressee_id)?.avatar_url||DEFAULT_AVATAR,profileFor(r.addressee_id),{size:"sm"})}<div><strong>${name(r.addressee_id)}</strong><small>Request sent</small></div><button class="btn ghost sm" data-request="cancel" data-id="${r.id}">Cancel</button></div>`).join(''):`<div class="callout">No outgoing requests.</div>`;
 }
-function renderBlocked() { const badge=$("blockedBadge");if(badge){badge.textContent=String(state.blocked.length);badge.hidden=!state.blocked.length;} const target=$("blockedList"); if(!target)return; target.innerHTML=state.blocked.length?state.blocked.map(id=>`<div class="chat-request-row">${verifiedAvatar(profileFor(id)?.avatar_url||DEFAULT_AVATAR,profileFor(id),{size:"sm",alt:""})}<div><strong>${escapeHTML(profileFor(id)?.username||'Member')}</strong><small>Blocked</small></div><button class="btn ghost sm" data-unblock="${id}">Unblock</button></div>`).join(''):`<div class="callout">No blocked users.</div>`; }
+function renderBlocked() { const badge=$("blockedBadge");if(badge){badge.textContent=String(state.blocked.length);badge.hidden=!state.blocked.length;} if($("chatBlockedFooterCount"))$("chatBlockedFooterCount").textContent=state.blocked.length?"("+state.blocked.length+")":""; const target=$("blockedList"); if(!target)return; target.innerHTML=state.blocked.length?state.blocked.map(id=>`<div class="chat-request-row">${verifiedAvatar(profileFor(id)?.avatar_url||DEFAULT_AVATAR,profileFor(id),{size:"sm",alt:""})}<div><strong>${escapeHTML(profileFor(id)?.username||'Member')}</strong><small>Blocked</small></div><button class="btn ghost sm" data-unblock="${id}">Unblock</button></div>`).join(''):`<div class="callout">No blocked users.</div>`; }
 function renderPeopleResults() {
   const target=$("peopleResults"); if(!target)return;
   const q=state.peopleTerm.trim().toLowerCase();
@@ -584,6 +628,7 @@ function renderGroupMembers(){
   if(!target||!section||!state.activeGroupId)return;
   const members=state.groupMembers.get(state.activeGroupId)||[];
   section.hidden=false;$("groupMemberCount").textContent=String(members.length);
+  if($("chatHeaderGroupCount")){$("chatHeaderGroupCount").hidden=false;$("chatHeaderGroupCount").textContent=members.length+" members";}
   updateGroupControlVisibility();
   const owner=isOwnerOfActiveGroup();
   const me=members.find(m=>m.user_id===state.user?.id);
@@ -725,10 +770,6 @@ async function leaveCurrentGroup(){
   await loadAllChatData();renderGroups();leaveConversation();
   window.siteToast?.('You left the group.',{type:'success'});
 }
-async function addPeopleToGroup(){
-  const g=activeGroup();if(!g)return;
-  const existing=new Set((state.groupMembers.get(g.id)||[]).map(x=>x.user_id));
-  const candidates=state.friends.filter(id=>!existing.has(id));
 async function lookupGroupPerson(rawName){
   const handle=String(rawName||'').trim().replace(/^@/,'');
   if(!/^[a-zA-Z0-9_.-]{2,40}$/.test(handle))throw Error('Enter a valid username.');
@@ -750,6 +791,11 @@ async function unbanGroupMember(){
   if(error)throw error;
   window.siteToast?.('Member can now be added or invited again.',{type:'success'});
 }
+
+async function addPeopleToGroup(){
+  const g=activeGroup();if(!g)return;
+  const existing=new Set((state.groupMembers.get(g.id)||[]).map(x=>x.user_id));
+  const candidates=state.friends.filter(id=>!existing.has(id));
   const wrapper=document.createElement('div');wrapper.className='group-add-inline';
   const select=document.createElement('select');select.className='input';select.setAttribute('aria-label','Choose a friend to add');
   for(const id of candidates){
@@ -840,9 +886,13 @@ function refreshChatAvatarFrames(profile){
      (classes?" "+classes:"");
  }
 }
-function updateHeaderForFriend(id){const p=profileFor(id)||{};$("chatAvatar").src=p.avatar_url||DEFAULT_AVATAR;refreshChatAvatarFrames(p);$("chatName").innerHTML=verifiedName(p.username||'Member',p,{compact:true})+
+function updateHeaderForFriend(id){if($("chatHeaderGroupCount"))$("chatHeaderGroupCount").hidden=true;const p=profileFor(id)||{};$("chatAvatar").src=p.avatar_url||DEFAULT_AVATAR;refreshChatAvatarFrames(p);$("chatName").innerHTML=verifiedName(p.username||'Member',p,{compact:true})+
     (["super","admin","moderator"].includes(p.role)?" · Staff":"");$("chatProfileBtn").href=`profile.html?id=${encodeURIComponent(id)}`;$("directInfoActions").hidden=false;$("groupInfoSection").hidden=true;$("groupMembersSection").hidden=true;$("infoPanelTitle").textContent='Chat details';}
 function updateHeaderForGroup(g){
+  const summary=$("chatInfoSummary");
+  if(summary){summary.hidden=false;summary.textContent=String(g.description||"Group conversation");}
+  const count=$("chatHeaderGroupCount");
+  if(count){count.hidden=false;count.textContent=(state.groupMembers.get(g.id)||[]).length+" members";}
   const panel=$("groupPermissionsPanel");
   if(panel){
     panel.hidden=!isOwnerOfActiveGroup();
@@ -866,13 +916,18 @@ function refreshInfoProfile() {
   refreshChatAvatarFrames(group?null:profile);
   $("infoName").textContent = group ? group.name || 'Group' : profile.username || 'Member';
   $("infoStatus").textContent = group ? group.description || 'Group conversation' : profile.username ? `@${profile.username}` : 'Private conversation';
+  const summary=$("chatInfoSummary");if(summary){summary.hidden=Boolean(!group);summary.textContent=group?((state.groupMembers.get(group.id)||[]).length+" members · "+(group.description||"Group chat")):"";}
   const owner=isOwnerOfActiveGroup();
   $("editGroupBtn").hidden=!(owner||(groupMemberRole()==='admin'&&group?.settings?.allow_admin_manage_settings===true));
 }
-function openConversationDetails() {
+function openConversationDetails({automatic=false}={}) {
   if (!state.activeThreadId || state.loadingThread) return;
+  if(automatic&&(!state.activeGroupId||!window.matchMedia("(min-width: 1180px)").matches))return;
+  const panel=$("chatInfoPanel");if(!panel)return;
   refreshInfoProfile();
-  $("chatInfoPanel").showModal();
+  if(panel.open)return;
+  if(window.matchMedia("(min-width: 1180px)").matches)panel.show();
+  else panel.showModal();
 }
 function closeEditPanel(restoreFocus=false){
   state.editing=null;
@@ -1050,6 +1105,7 @@ async function selectConversation({ friendId = '', groupId = '' }) {
     if (group)updateGroupControlVisibility();
     if (selection !== state.selection) return;
     state.loadingThread = false; updateComposer();
+    if(group)openConversationDetails({automatic:true});
     void chatEnhancements.activate(state.user.id,threadId,friendId).then(()=>{
       if(threadId===state.activeThreadId&&selection===state.selection) {
         const lastIncoming=state.messages.filter(m=>m.sender_id!==state.user.id).at(-1);
@@ -1318,7 +1374,29 @@ function togglePeopleSearch(){
  $("peopleSearchToggle")?.setAttribute("aria-expanded","true");
  $("peopleSearch")?.focus();renderPeopleResults();
 }
-function setupTabs(){const tabs=document.querySelectorAll('.chat-tab'),panels=document.querySelectorAll('.chat-tab-panel');tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(t=>{const a=t===tab;t.classList.toggle('active',a);t.setAttribute('aria-selected',String(a));});panels.forEach(p=>p.hidden=p.dataset.panel!==tab.dataset.tab);closePeopleSearch();}));}
+function activateChatTab(name){
+ const tabs=[...document.querySelectorAll('.chat-tab')],panels=[...document.querySelectorAll('.chat-tab-panel')];
+ if(!panels.some(p=>p.dataset.panel===name))return;
+ tabs.forEach(tab=>{const active=tab.dataset.tab===name;tab.classList.toggle('active',active);tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;});
+ panels.forEach(panel=>panel.hidden=panel.dataset.panel!==name);
+ closePeopleSearch();
+}
+function setupTabs(){
+ const tabs=[...document.querySelectorAll('.chat-tab:not(.chat-tab-secondary)')];
+ tabs.forEach(tab=>{
+  tab.addEventListener('click',()=>activateChatTab(tab.dataset.tab));
+  tab.addEventListener('keydown',event=>{
+   if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+   event.preventDefault();
+   const index=tabs.indexOf(tab);
+   const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:
+    (index+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+   activateChatTab(tabs[next].dataset.tab);tabs[next].focus();
+  });
+ });
+ $("chatBlockedToggle")?.addEventListener('click',()=>activateChatTab('blocked'));
+ $("chatMobileCreate")?.addEventListener('click',()=>{$("newGroupBtn")?.click();});
+}
 function setupEvents(){
   $("loadOlderMessages")?.addEventListener("click", () => loadOlderMessages().catch(error => reportAppError(error, "Unable to load older messages")));
   setupMentionInput($("chatBody"));
