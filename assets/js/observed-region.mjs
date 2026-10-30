@@ -2,9 +2,14 @@
 // 30-minute session cache avoids expensive server/auth calls per swipe.
 const cache=new Map();
 export async function syncObservedRegion(supabase){
- if(!supabase)return false;
- const {data:{session},error}=await supabase.auth.getSession();
- if(error||!session?.access_token||!session.user?.id)return false;
+ if(!supabase?.auth?.getSession)return false;
+ let session=null;
+ try{
+   const result=await supabase.auth.getSession();
+   if(result.error)return false;
+   session=result.data?.session||null;
+ }catch{return false;}
+ if(!session?.access_token||!session.user?.id)return false;
  const id=session.user.id;
  const existing=cache.get(id);
  if(existing&&Date.now()-existing<30*60*1000)return true;
