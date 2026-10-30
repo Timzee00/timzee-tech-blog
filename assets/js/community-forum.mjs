@@ -135,6 +135,20 @@ function renderCommunityList(){
   "<span><strong>"+escape(c.title)+"</strong><small>"+escape(c.category||"Technology")+
   " · "+Number(c.member_count||0).toLocaleString()+" members</small></span></button>").join(""):
   "<p class='forum-muted'>No communities found in this category.</p>";
+ const discover=$("forumDiscoverResults");
+ if(discover){
+  const showing=Boolean(state.communitySearch.trim()||state.selectedCategory!=="All");
+  discover.hidden=!showing;
+  if(showing){
+   discover.innerHTML="<div class='forum-discover-heading'><strong>Matching communities</strong><span>"+
+    Number(state.communities.length).toLocaleString()+(state.hasMoreCommunities?"+":"")+" found</span></div>"+
+    (state.communities.length?state.communities.slice(0,10).map(c=>
+     "<button type='button' data-open-community='"+escape(c.id)+"'><span class='forum-community-icon' aria-hidden='true'>"+
+      escape(c.icon_emoji||"💬")+"</span><span><strong>"+escape(c.title)+"</strong><small>"+
+      Number(c.member_count||0).toLocaleString()+" members</small></span></button>").join(""):
+     "<p class='forum-muted'>No communities matched. Try a different search or category.</p>");
+  }
+ }
 }
 function renderSuggestions(){
  $("forumSuggestions").innerHTML=state.communities.slice(0,5).map(c=>
