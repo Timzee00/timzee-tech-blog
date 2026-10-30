@@ -133,3 +133,33 @@ test("social-first profile keeps the identity header visible across all content 
  assert.ok(css.includes("@media(max-width:670px)"));
  assert.match(css,/prefers-reduced-motion:reduce/);
 });
+
+test("cinematic profile keeps real photo, verified identity and editable settings",()=>{
+ const html=read("profile.html"),css=read("assets/css/blipmood-neon-experience.css"),
+  logic=read("assets/js/profile.js");
+ assert.match(html,/<body class="blipmood-profile">/);
+ assert.match(html,/href="assets\/css\/blipmood-neon-experience\.css"/);
+ assert.match(html,/class="bm-profile-identity-kicker"/);
+ assert.match(html,/id="profileTabs" role="group" aria-label="Profile sections"/);
+ assert.equal((html.match(/<h1\b/g)||[]).length,1);
+ for(const id of ["profileCoverImg","profileAvatar","profileFxCanvas","profileFrameName",
+ "profileName","profileHandle","profileIdentityExtras","profileBadges","profileActions",
+ "profileSpotlightStats","profileStats","profileTabs","profilePostFeed","profileMorePosts",
+ "profileMediaGallery","profileVideoGallery","profileVerification","profileFriends",
+ "profileEditor","profileForm","editCoverFile","editAvatarFile","profileFxStudio",
+ "fxStudioCanvas","fxSave","fxRestore"])
+  assert.ok(html.includes('id="'+id+'"'),"Profile control lost: "+id);
+ for(const tab of ["overview","media","videos","activity","bookmarks","notifications","settings"])
+  assert.ok(html.includes('data-tab="'+tab+'"'),"Tab missing: "+tab);
+ assert.match(css,/body\.blipmood-profile\{/);
+ assert.match(css,/\.blipmood-profile \.profile-page \.profile-cover-open\{z-index:1\}/);
+ assert.match(css,/\.blipmood-profile \.profile-page \.profile-actions \.btn/);
+ assert.match(css,/\.blipmood-profile \.profile-page \.profile-tabs button.active/);
+ assert.match(css,/\.blipmood-profile \.profile-page \.bm-profile-identity-kicker/);
+ assert.match(css,/pointer-events:none/);
+ assert.match(css,/@media\(max-width:650px\)/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+ assert.match(logic,/verifiedName\(displayName,state\.profile\)/);
+ assert.match(logic,/void loadProfilePosts\(\)/);
+ assert.match(logic,/function renderProfileActions\(\)/);
+});
