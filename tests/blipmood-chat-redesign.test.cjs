@@ -48,4 +48,5 @@ test("messaging controls and moderation still use existing safe backend operatio
   assert.match(html, /id="groupNotifyBtn"/);
   assert.match(html, /id="infoPinnedList"/);
   assert.match(js, /field\.setRangeText\(emoji,start,end,"end"\)/);
+  assert.match(js, /function keepPeopleSearchFocus\(event\)/);
 });
