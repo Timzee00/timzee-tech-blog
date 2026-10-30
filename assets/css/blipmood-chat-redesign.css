@@ -386,3 +386,71 @@ html[data-theme="dark"] body.chat-page.blipmood-chat-redesign .chat-tab.active{
 @media(prefers-reduced-motion:reduce){
  body.chat-page.blipmood-chat-redesign *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
+
+/* Mockup-equivalent five-tab inbox; blocked contacts remain accessible via footer. */
+body.chat-page.blipmood-chat-redesign .chat-tab-secondary{display:none!important}
+body.chat-page.blipmood-chat-redesign .chat-composer{position:relative}
+body.chat-page.blipmood-chat-redesign .chat-emoji-toggle{
+ border:0;border-radius:50%;background:transparent;
+ color:var(--color-text-muted,#65788a);font-size:1.35rem
+}
+body.chat-page.blipmood-chat-redesign .chat-emoji-menu:not([hidden]){
+ display:grid;grid-template-columns:repeat(6,minmax(0,1fr));
+ position:absolute;bottom:calc(100% - 4px);right:14px;z-index:12;
+ width:min(300px,calc(100% - 28px));max-height:215px;overflow-y:auto;
+ gap:3px;padding:10px;border:1px solid var(--chat-line);
+ border-radius:15px;background:var(--color-surface,#fff);
+ box-shadow:0 12px 32px #17334429
+}
+body.chat-page.blipmood-chat-redesign .chat-emoji-item{
+ border:0;border-radius:8px;background:transparent;min-height:42px;
+ font-size:1.42rem;cursor:pointer;color:var(--color-text,#193547)
+}
+body.chat-page.blipmood-chat-redesign .chat-emoji-item:hover{
+ background:var(--color-surface-muted,#f0f5f7)
+}
+body.chat-page.blipmood-chat-redesign .chat-info-pinned{order:3;margin-top:14px}
+body.chat-page.blipmood-chat-redesign .chat-info-pinned-list{display:grid;gap:6px}
+body.chat-page.blipmood-chat-redesign .chat-info-pinned-item{
+ width:100%;min-height:41px;display:flex;gap:10px;align-items:center;
+ text-align:left;border:1px solid var(--chat-line);border-radius:10px;
+ padding:10px;background:var(--color-surface-muted,#f4f7f9);
+ color:var(--color-text,#153547);font-size:.76rem;
+ line-height:1.4;cursor:pointer;overflow-wrap:anywhere
+}
+body.chat-page.blipmood-chat-redesign .chat-info-pinned-item:hover{
+ border-color:var(--chat-brand)
+}
+body.chat-page.blipmood-chat-redesign .chat-info-pinned + .chat-info-section{
+ order:4
+}
+body.chat-page.blipmood-chat-redesign .chat-info-section:has(> .chat-info-media-grid){
+ order:4
+}
+body.chat-page.blipmood-chat-redesign #groupMembersSection{order:5}
+body.chat-page.blipmood-chat-redesign #groupInfoSection{order:6}
+body.chat-page.blipmood-chat-redesign .chat-group-actions #groupAddMembersBtn::before{
+ content:"♧";font-size:1.15rem;color:var(--chat-brand)
+}
+body.chat-page.blipmood-chat-redesign .chat-group-actions #groupShareInviteBtn::before{
+ content:"↗";font-size:1.15rem;color:var(--chat-brand)
+}
+body.chat-page.blipmood-chat-redesign .chat-group-actions #groupUnbanBtn::before{
+ content:"✓";font-size:.85rem;color:var(--chat-brand)
+}
+body.chat-page.blipmood-chat-redesign .chat-group-actions #groupLeaveBtn{
+ color:var(--color-danger,#a83939)
+}
+@media(max-width:760px){
+ body.chat-page.blipmood-chat-redesign .chat-sidebar-footer{flex-shrink:0}
+ body.chat-page.blipmood-chat-redesign .chat-composer-row #chatAttachToggle{
+  width:34px;min-width:34px
+ }
+ body.chat-page.blipmood-chat-redesign .chat-composer-row #recordVoiceBtn,
+ body.chat-page.blipmood-chat-redesign .chat-composer-row #chatEmojiToggle{
+  width:31px;min-width:31px
+ }
+ body.chat-page.blipmood-chat-redesign .chat-composer-row .chat-send-btn{
+  width:37px;min-width:37px
+ }
+}
