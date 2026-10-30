@@ -2,7 +2,7 @@ import {syncObservedRegion} from "./observed-region.mjs";
 // Page-local recommendation cache. Each viewer and feed mode is isolated.
 // An empty Following list is valid and must not be replaced with Latest.
 const MAX_CANDIDATES = 50;
-const TTL_MS = 45000;
+const TTL_MS = 120000;
 const MAX_CACHE_ENTRIES = 16;
 const cache = new Map();
 
