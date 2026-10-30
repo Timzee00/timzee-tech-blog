@@ -2,7 +2,7 @@ const test=require("node:test");
 const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const read=path=>fs.readFileSync(path,"utf8");
-const sql=read("supabase/migrations/20261030014000_blipmood_product_council_foundation.sql");
+const sql=read("supabase/migrations/20261030040000_blipmood_product_council_foundation.sql");
 const page=read("product-council.html");
 const js=read("assets/js/product-council.mjs");
 const roles=["product_lead","product_manager","product_advisor","community_advisor","community_contributor","beta_tester","research_contributor","design_contributor","launch_reviewer"];
