@@ -1,3 +1,4 @@
+import {syncObservedRegion} from "./observed-region.mjs";
 import {supabase,getCurrentUser} from "./supabase.js";
 import {verifiedAvatar,verifiedName} from "./verified-identity.mjs";
 const $=id=>document.getElementById(id);
@@ -255,6 +256,7 @@ async function createRoom(event){
  state.busy=true;$("spacesSubmit").disabled=true;
  try{
   if(f.timing==="now")await prepareMicrophone();
+  await syncObservedRegion(supabase);
   const room=success(await supabase.from("spaces_rooms").insert({
    owner_id:state.user.id,title:f.title.trim(),description:f.description.trim(),
    visibility:f.visibility,starts_at:starts.toISOString(),capacity:Number(f.capacity),
