@@ -74,8 +74,18 @@ if (previewHeaders) {
 // Staff workspaces have separate layouts and are intentionally excluded.
 for (const file of files.filter(path => path.endsWith(".html"))) {
   const original = await readFile(file, "utf8");
+  const relativePath = file.slice(output.length+1).replaceAll("\\\\", "/");
   const chrome = injectSiteShell(original);
-  const enhanced = injectSocialDefaults(chrome, file.slice(output.length+1));
+  let enhanced = injectSocialDefaults(chrome, relativePath);
+  // The public analytics module is a singleton ESM import: pages with the
+  // shared site-shell reuse this module, and shell-less public pages still
+  // record aggregate page opens. Never load it in a staff workspace.
+  if (!/^(admin|author|moderator|super)\\//.test(relativePath)
+      && /<\\/body\\s*>/i.test(enhanced)
+      && !/<script[^>]+src=["'][^"']*visitor-analytics[.]js/.test(enhanced)) {
+    enhanced = enhanced.replace(/<\\/body\\s*>/i,
+      '  <script type="module" src="/assets/js/visitor-analytics.js"></script>\\n</body>');
+  }
   if (enhanced !== original) await writeFile(file, enhanced);
 }
 // Include the exact user-approved artwork in the first-party published bundle.
