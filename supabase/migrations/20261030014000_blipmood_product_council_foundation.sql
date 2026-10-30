@@ -67,11 +67,16 @@ create policy "Council members read approved workspaces" on public.council_items
 create policy "Council approved authors create items" on public.council_items
  for insert to authenticated with check(
   author_id=(select auth.uid()) and (select public.council_is_member())
+  and status='proposed' and assignee_id is null and priority=2 and due_at is null
   and (kind in ('proposal','bug','feedback') or (select public.council_can_manage()))
  );
 create policy "Council managers update work items" on public.council_items
- for update to authenticated using ((select public.council_can_manage()))
- with check ((select public.council_can_manage()));
+ for update to authenticated using (
+  (select public.council_has_role(array['product_lead']))
+  or ((select public.council_has_role(array['product_manager'])) and status not in ('approved','shipped')))
+ with check (
+  (select public.council_has_role(array['product_lead']))
+  or ((select public.council_has_role(array['product_manager'])) and status not in ('approved','shipped')));
 
 create table if not exists public.council_comments(
  id uuid primary key default gen_random_uuid(),
@@ -129,6 +134,7 @@ create policy "Council beta invite is private" on public.council_beta_enrollment
 create policy "Council managers invite test members" on public.council_beta_enrollments
  for insert to authenticated with check(
  (select public.council_can_manage()) and invited_by=(select auth.uid())
+ and status='invited' and responded_at is null
  and exists(select 1 from public.council_items where id=item_id and kind='beta')
  and exists(select 1 from public.identity_appointments where user_id=council_beta_enrollments.user_id
     and role_code='beta_tester' and status='active' and (expires_at is null or expires_at>now()))
@@ -178,7 +184,7 @@ begin
   new.updated_at=now();
  elsif tg_table_name='council_beta_enrollments' then
   if new.user_id is distinct from old.user_id or new.item_id is distinct from old.item_id
-  or new.invited_by is distinct from old.invited_by then
+  or new.invited_by is distinct from old.invited_by or new.invited_at is distinct from old.invited_at then
    raise exception 'Beta invitation identity is immutable' using errcode='42501';
   end if;
   if old.status='invited' and new.status in('accepted','declined') then new.responded_at=now(); end if;
