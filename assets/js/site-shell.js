@@ -140,6 +140,17 @@ export function ensureSiteFooter() {
     }
   });
   legal.append(cookies);
+  if(currentSitePath()==="index.html"){
+    const replay=document.createElement("button");
+    replay.type="button";
+    replay.className="footer-cookie-settings";
+    replay.textContent="Replay intro";
+    replay.addEventListener("click",()=>{
+      void import("./blipmood-intro.mjs").then(mod=>mod.playIntro({force:true}))
+        .catch(()=>{window.appUI?.showToast?.("Intro unavailable right now.");});
+    });
+    legal.append(replay);
+  }
   container.append(legal);
   const brand = document.createElement("small"); brand.className = "footer-brand"; brand.textContent = BRAND_TEXT; container.append(brand);
 }
@@ -151,8 +162,24 @@ if(typeof window!=="undefined"){const start=()=>{ensureBlipmoodHeader();ensurePr
   void import("./animated-brand.mjs").then(module=>module.enhanceAnimatedHeader()).catch(()=>{});
 });
 if(currentSitePath()==="index.html"){
-  // Never place a popup or its CSS on the critical-rendering path.
-  // The welcome campaign is guest-only and loads after the main hero settles.
-  window.setTimeout(()=>{if(document.visibilityState==="visible")
-    void import("./blipmood-welcome.mjs").catch(()=>{});},4300);
+  // The cinematic brand introduction plays for the first browser visit only.
+  // Existing members can replay it from the footer. Skip on slow connections
+  // and when motion is reduced; do not compete with the older welcome popup.
+  let introPlanned=false;
+  try {
+    const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+    introPlanned=localStorage.getItem("blipmood:intro:seen:v1")!=="1"
+      &&document.documentElement.dataset.reduceMotion!=="true"
+      &&!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+      &&!connection?.saveData
+      &&!/(?:slow-2g|2g)/.test(connection?.effectiveType||"");
+  } catch { /* Don't block navigation when storage is unavailable. */ }
+  if(introPlanned){
+    void import("./blipmood-intro.mjs").then(mod=>mod.playIntro()).catch(()=>{});
+  } else {
+    // The site already has a guest welcome campaign. Never stack it on top
+    // of the cinematic intro during the first visit.
+    window.setTimeout(()=>{if(document.visibilityState==="visible")
+      void import("./blipmood-welcome.mjs").catch(()=>{});},4300);
+  }
 }};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();}
