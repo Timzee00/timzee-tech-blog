@@ -104,3 +104,14 @@ body.blipmood-status{--status-ink:var(--color-text,#17272b);--status-muted:var(-
 @media(max-width:680px){.blipmood-status .status-intro{flex-direction:column;gap:13px}.blipmood-status .story-create-action{width:100%;justify-content:center;margin:0}.blipmood-status .status-gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.blipmood-status .status-discovery{padding:14px;border-radius:18px}.blipmood-status .status-moment-card{padding:12px;border-radius:16px}.blipmood-status .stories-rail{gap:12px}.blipmood-status .stories-rail .story-avatar{width:76px}.blipmood-status .story-viewer-media{border-radius:0;box-shadow:none}.blipmood-status .story-tap-zone::after{display:none}.blipmood-status .story-tap-zone{width:29%;top:106px;bottom:167px}.blipmood-status .story-viewer-social{padding:5px 8px 8px}.blipmood-status .story-social-panel{padding:8px}.blipmood-status .story-progress-row{padding-top:8px}}
 @media(max-width:380px){.blipmood-status .status-moment-card{aspect-ratio:3/4.5}.blipmood-status .story-social-actions{gap:5px}.blipmood-status .story-social-actions>button,.blipmood-status .story-extra-menu>summary{font-size:.69rem;padding:7px 3px}.blipmood-status .story-viewer-caption:not(:empty){font-size:.79rem;padding:8px 10px}.blipmood-status .story-viewer-social{max-height:38dvh}}
 @media(prefers-reduced-motion:reduce){.blipmood-status .status-moment-card,.blipmood-status .story-create-action,.blipmood-status .stories-rail .story-ring{transition:none!important}.blipmood-status .status-moment-card:hover,.blipmood-status .story-create-action:hover{transform:none}}
+
+/* Accessible status creator disclosures and playback position. */
+.blipmood-status .status-composer-label{display:block;font-size:.84rem;font-weight:730;color:var(--status-ink);margin:10px 0 6px}
+.blipmood-status .story-composer-details{border:1px solid var(--status-border);background:var(--status-surface);border-radius:13px;margin:10px 0;overflow:visible}
+.blipmood-status .story-composer-details>summary{padding:13px 14px;cursor:pointer;min-height:46px;color:var(--status-ink);font-size:.85rem;font-weight:750}
+.blipmood-status .story-composer-details[open]>summary{border-bottom:1px solid var(--status-border)}
+.blipmood-status .story-composer-details .story-music-composer{border:0;margin:4px 0 0;padding:12px}
+.blipmood-status .story-composer-details .story-composer-extras{padding:12px;margin:0}
+.blipmood-status .story-viewer-sequence{display:inline-block;font:650 .68rem system-ui;color:#d8f5f0;margin-top:3px;letter-spacing:.03em}
+.blipmood-status .story-composer-details>summary:focus-visible{outline:3px solid #13bfae;outline-offset:3px;border-radius:10px}
+.blipmood-status .status-filter-bar button:disabled{opacity:.43;cursor:not-allowed}
