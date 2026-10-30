@@ -108,3 +108,28 @@ test("member visual preferences have owner-only mutations and public safe displa
  assert.match(sql,/avatar_effect in/);
  assert.doesNotMatch(sql,/alter table public.profiles add column.*verification_tier/i);
 });
+
+test("social-first profile keeps the identity header visible across all content tabs",()=>{
+ const html=read("profile.html"),script=read("assets/js/profile.js"),css=read("assets/css/blipmood-profile-redesign.css");
+ const hero=html.indexOf('class="container profile-masthead"');
+ const tabs=html.indexOf('id="profileTabs"');
+ const overview=html.indexOf('data-profile-section="overview"');
+ assert.ok(hero>0&&hero<tabs&&tabs<overview,"Cover, avatar and identity stay above the tab sections");
+ for(const tab of ["overview","media","videos","activity","bookmarks","notifications","settings"])
+  assert.match(html,new RegExp('data-tab="'+tab+'"'));
+ for(const id of ["profileCoverImg","profileAvatar","profileFxCanvas","profileFrameName","profileBadges",
+  "profileActions","profileSpotlightStats","profileStats","profilePostFeed","profileMediaGallery",
+  "profileVideoGallery","profileEditor","profileFxStudio","profileMorePosts","profileMoreMedia"]){
+  assert.match(html,new RegExp('id="'+id+'"'));
+ }
+ assert.match(html,/data-profile-image="avatar"/);
+ assert.match(script,/renderProfileHighlights\(\)/);
+ assert.match(script,/void loadProfilePosts\(\)/);
+ assert.match(script,/\\.from\("community_threads"\)/);
+ assert.match(script,/\\.eq\("status","published"\)/);
+ assert.match(script,/isSafeUrl\(asset\\.media_url\)/);
+ assert.match(script,/profilePostUrl\(post\\.id\)/);
+ assert.match(script,/\\.range\(offset,offset\\+PROFILE_POST_PAGE\)/);
+ assert.match(css,/@media\\(max-width:670px\\)/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+});
