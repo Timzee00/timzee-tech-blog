@@ -43,7 +43,7 @@ test("public visitor script counts a page open without an opt-in ID",()=>{
 test("Super Admin reports page opens and interest without implying unique people",()=>{
   const api=read("netlify/functions/site-traffic-report.js");
   const ui=read("super/professional-panel.html");
-  assert.match(api,/requireRole[(]db,token,[[]["]super["][]]/);
+  assert.match(api,/requireRole\(db,token,\["super"\]/);
   assert.match(api,/site_aggregate_report/);
   assert.match(api,/opt_in_status/);
   assert.match(ui,/Page opens [(]all cookie choices[)]/);
