@@ -112,6 +112,10 @@ async function runEmailWorker(){
   const dailyCap=Number.isFinite(capInput)?Math.max(1,Math.min(250,capInput)):50;
   const {data:statistics,error:statsError}=await supabase.rpc("email_delivery_statistics");
   if(statsError) throw new Error("Email quota check unavailable; refusing to send");
+  // The upgraded worker is the only process allowed to release held identity emails.
+  // Old worker versions cannot activate unsupported templates.
+  const activated=await supabase.rpc("activate_identity_email_dispatch");
+  if(activated.error)throw new Error("Identity email rollout gate unavailable");
   const remaining=Math.max(0,dailyCap-Number(statistics?.sent_last_24h||0));
   if(!remaining) return {statusCode:200,body:"Worker daily email cap reached"};
   const {data,error}=await supabase.rpc("claim_email_jobs",{p_limit:Math.min(1,remaining)});
