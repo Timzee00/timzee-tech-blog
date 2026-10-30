@@ -59,3 +59,25 @@
 @media(max-width:340px){
  .site-header .brand .bm-wordmark-image{width:102px}
 }
+
+/* Progressive animated wordmark: retain intrinsic PNG dimensions and the
+   same responsive width. PNG stays available when JS fails or motion is off. */
+.site-header .brand .bm-brand-display:has(> blipmood-logo){
+ position:relative;isolation:isolate;
+}
+.site-header .brand .bm-brand-display > blipmood-logo{
+ display:block;position:absolute;inset:0 auto auto 0;width:100%;
+ max-width:100%;height:auto;opacity:0;pointer-events:none;
+}
+.site-header .brand .bm-brand-display.bm-animated-ready > blipmood-logo{
+ opacity:1;pointer-events:auto;
+}
+.site-header .brand .bm-brand-display.bm-animated-ready > .bm-wordmark-image{
+ visibility:hidden;
+}
+@media(prefers-reduced-motion:reduce){
+ .site-header .brand .bm-brand-display > blipmood-logo{display:none!important}
+ .site-header .brand .bm-brand-display > .bm-wordmark-image{visibility:visible!important}
+}
+html[data-reduce-motion="true"] .site-header .brand .bm-brand-display > blipmood-logo{display:none!important}
+html[data-reduce-motion="true"] .site-header .brand .bm-brand-display > .bm-wordmark-image{visibility:visible!important}
