@@ -139,7 +139,8 @@ test('Status discovery keeps the creator and viewer controls and hides private p
  assert.match(html,/newest\.visibility!=="private"&&newest\.media_type==="image"/);
  assert.match(html,/newest\.caption\|\|/);
  assert.match(html,/state\.galleryExpanded/);
- assert.match(html,/profile\?\.username\|\|profile\?\.display_name/);
+ assert.match(html,/profile\?\.username/);
+ assert.match(html,/profile\?\.display_name/);
  assert.match(html,/story-private-media/);
  assert.match(css,/\.status-gallery-grid\{display:grid/);
  assert.match(css,/\.story-social-actions\{display:grid/);
