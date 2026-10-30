@@ -290,3 +290,12 @@ body.blipmood-community-redesign .forum-notice{margin-bottom:12px}
   scroll-behavior:auto!important;transition:none!important
  }
 }
+
+/* Final controls: keep the vote rail horizontal and join CTAs compact. */
+body.blipmood-community-redesign .forum-vote-rail{flex-direction:row}
+body.blipmood-community-redesign .forum-suggestion-item .forum-join-suggestion{width:auto;flex:0 0 auto;display:inline-flex;justify-content:center;white-space:nowrap}
+body.blipmood-community-redesign .forum-byline{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:auto;font-size:.72rem}
+body.blipmood-community-redesign .forum-thread-content .forum-topic-media-indicator{margin:5px 0 0}
+body.blipmood-community-redesign .forum-suggestion-item button:focus-visible{outline:2px solid var(--color-primary,#087f73);outline-offset:2px}
+body.blipmood-community-redesign #forumSignupCard[hidden]{display:none!important}
+@media(max-width:550px){body.blipmood-community-redesign .forum-byline{width:100%;margin-left:0}}
