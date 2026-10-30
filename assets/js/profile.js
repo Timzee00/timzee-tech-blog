@@ -977,7 +977,7 @@ function renderProfilePostFeed(){
   const thumb=profileMediaTile(post);if(thumb)article.append(thumb);
   const foot=document.createElement("div");foot.className="profile-post-footer";
   const comments=document.createElement("span");comments.textContent=formatProfileCount(post.reply_count)+" replies";
-  const votes=document.createElement("span");votes.textContent=formatProfileCount(post.score)+" score";
+  const votes=document.createElement("span");const score=Number(post.score);votes.textContent=(Number.isFinite(score)?score.toLocaleString():"—")+" score";
   const link=document.createElement("a");link.href=profilePostUrl(post.id);link.textContent="View discussion";
   foot.append(comments,votes,link);article.append(foot);host.append(article);
  }
