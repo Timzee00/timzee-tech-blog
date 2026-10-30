@@ -107,7 +107,7 @@
       <!-- Site Analysis -->
       <section class="admin-card" data-panel="analysis" style="display:none;">
         <h2>📈 Site Analysis</h2>
-        <div class="stats-grid" id="analysisStats"></div><section class="form-card admin-traffic-panel"><div class="admin-management-row"><h3>Site visits</h3><label for="trafficRange">Period</label><select id="trafficRange"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option></select></div><p id="trafficNote" role="status">Loading consent-based traffic data…</p><div class="stats-grid" id="trafficTotals"></div><div class="admin-traffic-chart" id="trafficChart" role="img" aria-label="Daily unique browsers and page views"></div></section>
+        <div class="stats-grid" id="analysisStats"></div><section class="form-card admin-traffic-panel"><div class="admin-management-row"><h3>Site visits</h3><label for="trafficRange">Period</label><select id="trafficRange"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option></select></div><p id="trafficNote" role="status">Loading anonymous aggregate traffic…</p><div class="stats-grid" id="trafficTotals"></div><div class="admin-traffic-chart" id="trafficChart" role="img" aria-label="Daily page opens"></div><div class="admin-traffic-pages" id="trafficTopPages"></div></section>
         <div class="callout" id="analysisTopPosts" style="margin-top:16px;"></div>
       </section>
 
@@ -793,28 +793,58 @@
           const note=document.getElementById("trafficNote");
           const totals=document.getElementById("trafficTotals");
           const chart=document.getElementById("trafficChart");
-          note.textContent="Loading traffic data…";totals.replaceChildren();chart.replaceChildren();
+          const pages=document.getElementById("trafficTopPages");
+          note.textContent="Loading traffic data…";
+          totals.replaceChildren();chart.replaceChildren();pages.replaceChildren();
           try{
             const res=await fetchWithAuth("/.netlify/functions/site-traffic-report?days="+range);
             const parsed=await safeParseJson(res);
             if(!res.ok)throw Error(parsed.data?.error||"Traffic reports are unavailable.");
-            const daily=parsed.data.daily||[];
-            const uniques=daily.reduce((sum,d)=>sum+Number(d.unique_browsers||0),0);
-            const views=daily.reduce((sum,d)=>sum+Number(d.pageviews||0),0);
-            const lifetime=Number(parsed.data.unique_browsers_total||0);
-            const metrics=[["Lifetime unique browsers",lifetime],["Daily uniques combined",uniques],["Pageviews in range",views]];
-            totals.innerHTML=metrics.map(([name,n])=>'<div class="stat-card"><div class="stat-label">'+escapeHTML(name)+'</div><div class="stat-value">'+n.toLocaleString()+'</div></div>').join("");
-            const max=Math.max(1,...daily.map(d=>Number(d.unique_browsers||0)));
+            const aggregate=parsed.data?.aggregate;
+            if(!aggregate||!Array.isArray(aggregate.daily))throw Error("Incomplete analytics response.");
+            const daily=aggregate.daily;
+            const stats=aggregate.totals||{};
+            const views=Number(stats.pageviews||0);
+            const engaged=Number(stats.engaged||0);
+            const joins=Number(stats.signup_clicks||0);
+            const rate=views?Math.min(100,Math.round(engaged/views*100)):0;
+            const metrics=[
+              ["Page opens (all cookie choices)",views.toLocaleString()],
+              ["Engaged page opens",engaged.toLocaleString()],
+              ["Join button clicks",joins.toLocaleString()],
+              ["Engagement rate",rate+"%"]
+            ];
+            if(parsed.data.opt_in_status==="available" && parsed.data.opt_in_browser_report){
+              metrics.push(["Unique opted-in browsers",Number(parsed.data.opt_in_browser_report.unique_browsers_total||0).toLocaleString()]);
+            }
+            totals.innerHTML=metrics.map(([name,value])=>'<div class="stat-card"><div class="stat-label">'+escapeHTML(name)+'</div><div class="stat-value">'+escapeHTML(String(value))+'</div></div>').join("");
+            const max=Math.max(1,...daily.map(d=>Number(d.pageviews||0)));
             daily.forEach(d=>{
               const item=document.createElement("div");item.className="admin-traffic-day";
               const bar=document.createElement("div");bar.className="admin-traffic-bar";
-              bar.style.height=Math.max(2,Math.round(100*Number(d.unique_browsers||0)/max))+"%";
-              bar.title=d.date+": "+d.unique_browsers+" unique browsers, "+d.pageviews+" pageviews";
+              bar.style.height=Math.max(2,Math.round(100*Number(d.pageviews||0)/max))+"%";
+              bar.title=String(d.date)+": "+d.pageviews+" page opens, "+d.engaged+" engaged page opens, "+d.signup_clicks+" join clicks";
               const date=document.createElement("small");date.textContent=String(d.date).slice(5);
               item.append(bar,date);chart.append(item);
             });
-            note.textContent="Deduplicated opted-in browsers per UTC day; repeat page loads increase pageviews, not daily uniques. Devices, not confirmed people. No visits before tracking began.";
-          }catch(error){note.textContent=error.message+" Historical unique visits were not collected before this feature."; }
+            const top=(aggregate.top_pages||[]).filter(p=>Number(p.pageviews)>0);
+            if(top.length){
+              const heading=document.createElement("h4");heading.textContent="Most visited sections";
+              const list=document.createElement("ol");
+              list.style.cssText="display:grid;gap:7px;padding-left:22px;margin:10px 0 0";
+              for(const p of top){
+                const item=document.createElement("li");
+                const section=p.page==="/"?"Homepage":String(p.page).replace(/^\\/|[.]html$/g,"").replace(/[-_]/g," ");
+                item.textContent=section+": "+Number(p.pageviews).toLocaleString()+" opens · "+Number(p.engaged).toLocaleString()+" engaged";
+                list.append(item);
+              }
+              pages.append(heading,list);
+            }
+            note.textContent="Anonymous totals include page opens without optional cookies. Engaged means at least 15 seconds visible plus an interaction. These counts are not unique people, and may undercount blocked or JavaScript-disabled browsers. "+
+              (parsed.data.opt_in_status==="available"?"Opt-in unique-browser counts appear separately.":"Optional unique-browser tracking is not configured.");
+          }catch(error){
+            note.textContent="Traffic reporting unavailable: "+error.message+" No zero counts are displayed until reporting succeeds.";
+          }
         };
         document.getElementById("trafficRange").addEventListener("change",()=>void loadTraffic());
         const loadAnalysis = async () => {
