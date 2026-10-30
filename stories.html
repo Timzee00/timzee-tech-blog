@@ -116,6 +116,7 @@
         <div>
           <div class="story-viewer-name" id="viewerName">—</div>
           <div class="story-viewer-time" id="viewerTime">—</div>
+          <span id="viewerSequence" class="story-viewer-sequence" aria-live="polite"></span>
         </div>
         <button class="btn ghost icon-only story-viewer-own-delete" id="viewerDeleteBtn" type="button" title="Delete this story" hidden>&#128465;</button>
         <button class="btn ghost icon-only" id="viewerCloseBtn" type="button" aria-label="Close">&times;</button>
@@ -146,7 +147,9 @@
         </label>
         <input type="file" id="storyFile" accept="image/*,video/*" hidden required>
         <button type="button" id="storyEditPhoto" class="btn ghost" hidden>Edit photo: crop, rotate, text, draw</button>
-        <textarea id="storyCaption" placeholder="Add a caption · @mention a member" rows="2" maxlength="200" class="resize-none"></textarea>
+        <label class="status-composer-label" for="storyCaption">Caption (optional)</label>
+        <textarea id="storyCaption" placeholder="Share a thought · @mention a member" rows="2" maxlength="200" class="resize-none"></textarea>
+        <details class="story-composer-details"><summary>♫ Add a soundtrack (optional)</summary>
         <fieldset class="story-music-composer">
           <legend>Optional soundtrack</legend>
           <label for="storyMusicFile">Upload music you own or are licensed to use
@@ -162,6 +165,8 @@
           <small>MP3, M4A, OGG or WebM; 10 MB maximum. Music plays alongside your status; it is not embedded in downloaded video files. No copyrighted catalogue is provided without licensing.</small>
           <audio id="storyMusicPreview" controls hidden preload="metadata"></audio>
         </fieldset>
+        </details>
+        <details class="story-composer-details"><summary>⚙ Duration and interaction settings</summary>
         <div class="story-composer-extras">
           <label for="storyDuration">Status duration<select id="storyDuration">
             <option value="24">24 hours (standard)</option>
@@ -172,6 +177,7 @@
           <label><input type="checkbox" id="storyAllowComments" checked> Allow public comments</label>
           <p id="storyCreatorEntitlements" class="story-creator-note"></p>
         </div>
+        </details>
         <div class="story-visibility-toggle">
           <label>
             <input type="radio" name="storyVisibility" value="public" checked>
@@ -182,7 +188,7 @@
             Friends only
           </label>
         </div>
-        <div class="callout" id="storyComposerStatus" style="display:none;"></div>
+        <div class="callout" id="storyComposerStatus" role="status" aria-live="polite" style="display:none;"></div>
         <button type="submit" class="btn" id="storySubmitBtn">Post Story</button>
       </form>
     </div>
@@ -640,6 +646,7 @@
         document.getElementById("viewerName").textContent = (profile?.username || "Member")+
           (profile?.is_verified?" ✓ Verified":"");
         document.getElementById("viewerTime").textContent = timeAgo(story.created_at);
+        document.getElementById("viewerSequence").textContent = `${state.activeStoryIndex+1} of ${group.stories.length}`;
         document.getElementById("viewerCaption").textContent = story.caption || "";
         const musicControls=document.getElementById("storyMusicControls");
         const soundtrack=document.getElementById("storyMusicAudio");
