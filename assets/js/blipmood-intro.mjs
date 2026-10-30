@@ -13,9 +13,9 @@ const skipForAccessibility=()=>{
 };
 export function shouldShowIntro(){
   if(!currentIsHome()||skipForAccessibility()||active)return false;
-  try{return sessionStorage.getItem(KEY)!=="1"}catch{return false}
+  try{return localStorage.getItem(KEY)!=="1"}catch{return false}
 }
-function markSeen(){try{sessionStorage.setItem(KEY,"1")}catch{}}
+function markSeen(){try{localStorage.setItem(KEY,"1")}catch{}}
 const nodes=[
   {x:300,y:85,initial:"D",name:"DISCUSS"},
   {x:486,y:192.5,initial:"V",name:"REELS"},
