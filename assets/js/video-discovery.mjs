@@ -108,9 +108,16 @@ export async function fetchVideoDiscoveryPage(supabase, {
 
     let rows;
     if (mode === "for-you" && (!ids.length || isMissingFeedFunction(error))) {
-      // Cold-start recommendations: show recent public videos when there are
-      // no scored candidates yet. Preserve the server's public visibility RLS.
-      rows = await fetchPublicVideoFallback(supabase);
+      // A disabled regional FYP returns no candidates. Never bypass the
+      // server's decision by falling back to Latest public videos.
+      const permitted=await supabase.rpc("blipmood_feature_allowed",{
+        p_feature:"fyp_recommendations"
+      });
+      if(permitted.error||permitted.data!==true){
+        rows=[]; // Fail closed if regional eligibility cannot be confirmed.
+      }else{
+        rows=await fetchPublicVideoFallback(supabase);
+      }
     } else if (!ids.length) {
       rows = []; // A creator-following feed should stay empty until you follow.
     } else {
