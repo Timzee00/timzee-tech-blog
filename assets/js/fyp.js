@@ -1,4 +1,5 @@
 import { supabase, getCurrentUser } from "./supabase.js";
+import {syncObservedRegion} from "./observed-region.mjs";
 import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap,publicIdentityName} from "./verified-identity.mjs";
 import { loadUserPreferences, mergePreferences } from "./user-preferences.js";
 import { escapeHTML, clampText, stripHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
@@ -249,6 +250,7 @@ async function loadFeed({ force = false } = {}) {
     const key = feedCacheKey(mode, type);
     let rows = !force ? cachedFeed(feedCache, key) : null;
     if (!rows) {
+      if(mode==="for-you")await syncObservedRegion(supabase);
       const rpcName = mode === "following" ? "get_following_feed" : "get_personalized_feed";
       const response = await supabase.rpc(rpcName, {
         p_limit: 40, p_content_type: type === "all" ? "all" : type
