@@ -940,6 +940,7 @@ function openConversationDetails({automatic=false}={}) {
   const panel=$("chatInfoPanel");if(!panel)return;
   refreshInfoProfile();
   if(panel.open)return;
+  $("chatInfoToggle")?.setAttribute("aria-expanded","true");
   if(window.matchMedia("(min-width: 1180px)").matches)panel.show();
   else panel.showModal();
 }
@@ -1391,8 +1392,9 @@ function togglePeopleSearch(){
 function activateChatTab(name){
  const tabs=[...document.querySelectorAll('.chat-tab')],panels=[...document.querySelectorAll('.chat-tab-panel')];
  if(!panels.some(p=>p.dataset.panel===name))return;
- tabs.forEach(tab=>{const active=tab.dataset.tab===name;tab.classList.toggle('active',active);tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;});
+ tabs.forEach(tab=>{const active=tab.dataset.tab===name;tab.classList.toggle('active',active);tab.setAttribute('aria-selected',String(active));tab.tabIndex=(active||(name==='blocked'&&tab.dataset.tab==='all'))?0:-1;});
  panels.forEach(panel=>panel.hidden=panel.dataset.panel!==name);
+ $("chatBlockedToggle")?.setAttribute('aria-pressed',String(name==='blocked'));
  closePeopleSearch();
 }
 function setupTabs(){
@@ -1409,6 +1411,7 @@ function setupTabs(){
   });
  });
  $("chatBlockedToggle")?.addEventListener('click',()=>activateChatTab('blocked'));
+ $("chatInfoPanel")?.addEventListener("close",()=>{$("chatInfoToggle")?.setAttribute("aria-expanded","false");});
  $("chatMobileCreate")?.addEventListener('click',()=>{$("newGroupBtn")?.click();});
 }
 
