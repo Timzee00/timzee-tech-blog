@@ -148,6 +148,7 @@ function scheduleIdle(task){if(typeof window.requestIdleCallback==="function")wi
 if(typeof window!=="undefined"){const start=()=>{ensureBlipmoodHeader();ensureProductNavigation();ensureSiteFooter();synchronizeBrandImages();new MutationObserver(synchronizeBrandImages).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});void import("./privacy-consent.js");scheduleIdle(()=>{
   void loadPageEnhancements();
   void import("./visitor-analytics.js").catch(()=>{});
+  void import("./animated-brand.mjs").then(module=>module.enhanceAnimatedHeader()).catch(()=>{});
 });
 if(currentSitePath()==="index.html"){
   // Never place a popup or its CSS on the critical-rendering path.
