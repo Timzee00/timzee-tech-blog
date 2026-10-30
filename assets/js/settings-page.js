@@ -94,13 +94,13 @@ function mountExtraSettings(){
   });
 }
 
-const EMAIL_OPTION_KEYS=["message_digest","mention_digest","marketplace_alerts","community_digest","inactivity_reminders"];
+const EMAIL_OPTION_KEYS=["message_digest","mention_digest","marketplace_alerts","community_digest","inactivity_reminders","identity_updates"];
 async function loadEmailPreferences(){
   const result=await supabase.from("email_notification_preferences")
-    .select("message_digest,mention_digest,marketplace_alerts,community_digest,inactivity_reminders")
+    .select("message_digest,mention_digest,marketplace_alerts,community_digest,inactivity_reminders,identity_updates")
     .eq("user_id",state.user.id).maybeSingle();
   if(result.error)throw result.error;
-  state.emailPreferences=Object.fromEntries(EMAIL_OPTION_KEYS.map(key=>[key,result.data?.[key]===true]));
+  state.emailPreferences=Object.fromEntries(EMAIL_OPTION_KEYS.map(key=>[key,key==="identity_updates"?result.data?.identity_updates!==false:result.data?.[key]===true]));
   document.querySelectorAll("[data-email-notification]").forEach(input=>{
     input.checked=state.emailPreferences[input.dataset.emailNotification]===true;
   });
