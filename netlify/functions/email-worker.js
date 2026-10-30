@@ -54,7 +54,7 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
     `${template.body} ${digestCount} unread update${digestCount===1?"":"s"} in the last 24 hours. Sign in to review them.` :
     isWorkflow ? `${template.body} Current status: ${state||"updated"}.` : template.body;
   const referenceLine=(optional||isIdentity)?"":`Reference: ${reference}\n\n`;
-  const settingsUrl="https://blipmood.netlify.app/settings.html#email";
+  const settingsUrl="https://blipmood.netlify.app/settings.html#notifications";
   const unsubscribeUrl=isInactivity ?
     "https://blipmood.netlify.app/unsubscribe.html?token="+
       encodeURIComponent(createInactivityToken(job)) : null;
