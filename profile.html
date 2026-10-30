@@ -21,6 +21,7 @@
     <meta name="twitter:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80">
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="assets/css/profile-fx.css">
+    <link rel="stylesheet" href="assets/css/blipmood-profile-redesign.css">
       <script defer src="assets/js/theme-init.js"></script>
   </head>
   <body>
@@ -56,18 +57,7 @@
     </header>
 
     <main id="main-content" class="page-shell profile-page">
-      <div class="container">
-        <div class="profile-tabs" id="profileTabs">
-          <button class="active" data-tab="overview" type="button">Overview</button>
-          <button data-tab="videos" type="button">Videos</button>
-          <button data-tab="activity" type="button">Activity</button>
-          <button data-tab="bookmarks" type="button">Saved</button>
-          <button data-tab="notifications" type="button">Notifications</button>
-          <button data-tab="settings" type="button">Settings</button>
-        </div>
-      </div>
-
-      <section class="container profile-grid active" data-profile-section="overview">
+      <section class="container profile-masthead" aria-label="Member profile">
         <section class="profile-main">
           <section class="discussion-card profile-card profile-hero" data-reveal>
             <div class="profile-cover">
@@ -77,7 +67,7 @@
             </div>
             <div class="profile-identity">
               <div class="profile-avatar-wrap">
-                <a id="profileAvatarLink" class="profile-image-open profile-avatar-open" href="profile.html" aria-label="Go to this member’s profile"><img id="profileAvatar" class="profile-avatar" alt="Profile avatar"></a><span class="tz-frame-name-ribbon" id="profileFrameName" aria-hidden="true"></span>
+                <button id="profileAvatarLink" type="button" data-profile-image="avatar" class="profile-image-open profile-avatar-open" aria-label="View full profile photo"><img id="profileAvatar" class="profile-avatar" alt="Profile avatar"></button><span class="tz-frame-name-ribbon" id="profileFrameName" aria-hidden="true"></span>
               </div>
               <div class="profile-body">
                 <div class="chip" id="profileRole">Member</div>
@@ -95,12 +85,37 @@
                 <p>Loading public account details…</p>
               </div>
             </details>
-            <div class="stats-list profile-stats" id="profileStats"></div>
+            <div id="profileSpotlightStats" class="profile-spotlight-stats" aria-label="Profile highlights">
+              <div><strong>—</strong><span>Posts</span></div><div><strong>—</strong><span>Followers</span></div><div><strong>—</strong><span>Following</span></div>
+            </div>
+            <details class="profile-more-stats"><summary>More profile stats <span aria-hidden="true">⌄</span></summary><div class="stats-list profile-stats" id="profileStats"></div></details>
             <details class="tz-reputation-help"><summary>How reputation points work</summary><p id="profileReputationHelp">Reputation grows through authentic community contributions.</p></details>
             <div id="profileVisitorInsights" class="profile-visitor-insights" aria-live="polite"></div>
           </section>
         </section>
+      </section>
+      <div class="container">
+        <div class="profile-tabs" id="profileTabs">
+          <button class="active" data-tab="overview" type="button">Posts</button>
+          <button data-tab="media" type="button">Media</button>
+          <button data-tab="videos" type="button">Videos</button>
+          <button data-tab="activity" type="button">Activity</button>
+          <button data-tab="bookmarks" type="button">Saved</button>
+          <button data-tab="notifications" type="button">Notifications</button>
+          <button data-tab="settings" type="button">Settings</button>
+        </div>
+      </div>
 
+      <section class="container profile-grid active" data-profile-section="overview">
+        <section class="profile-main">
+          <section class="discussion-card profile-card profile-posts-card" aria-labelledby="profilePostsHeading">
+            <div class="profile-content-heading">
+              <div><span class="profile-content-eyebrow">FROM THIS CREATOR</span><h2 id="profilePostsHeading">Posts</h2><p>Public discussions and community contributions.</p></div>
+              <a class="profile-community-link" href="discussion.html">Explore communities</a>
+            </div>
+            <div id="profilePostFeed" class="profile-post-feed" aria-live="polite" aria-busy="true"><p class="profile-empty-state">Loading posts…</p></div>
+          </section>
+        </section>
         <aside class="profile-sidebar">
           <section class="discussion-card profile-card" data-reveal>
             <h3>Intro</h3>
@@ -117,6 +132,10 @@
         </aside>
       </section>
 
+      <section class="container profile-media-section" data-profile-section="media" aria-labelledby="profileMediaTitle">
+        <div class="profile-section-title"><div><h2 id="profileMediaTitle">Media</h2><p>Photos and videos shared in community discussions.</p></div></div>
+        <div id="profileMediaGallery" class="profile-media-gallery" aria-live="polite" aria-busy="true"><p class="profile-empty-state">Loading media…</p></div>
+      </section>
       <section class="container profile-video-section" data-profile-section="videos">
         <div class="profile-section-title"><h2>Videos</h2>
           <a class="btn ghost sm" href="videos.html#uploadSection" id="profileVideoUpload" hidden>Upload video</a></div>
@@ -219,21 +238,21 @@
 </section>
 
         <div class="discussion-card" id="profileEditor">
-          <h3>Profile Settings</h3>
+          <h3>Profile Settings</h3><p class="profile-form-intro">Make your profile feel like you. Your changes appear across Blipmood.</p>
           <div class="settings-grid">
             <form novalidate id="profileForm" class="form-grid">
               <h4>Profile Details</h4>
-              <input type="text" id="editDisplayName" placeholder="Display name" required>
-              <input type="text" id="editUsername" placeholder="Username (unique)">
-              <input type="text" id="editHeadline" placeholder="Headline (e.g. Product builder, DevOps)">
-              <textarea id="editBio" placeholder="Short bio" class="resize-none"></textarea>
-              <input type="text" id="editLocation" placeholder="Location">
-              <input type="text" id="editWebsite" placeholder="Website URL">
-              <input type="text" id="editAvatarUrl" placeholder="Avatar URL (optional)">
-              <input type="file" id="editAvatarFile" accept="image/*">
+              <label class="profile-edit-label" for="editDisplayName">Display name</label><input type="text" id="editDisplayName" placeholder="Display name" required>
+              <label class="profile-edit-label" for="editUsername">Username</label><input type="text" id="editUsername" placeholder="Username (unique)">
+              <label class="profile-edit-label" for="editHeadline">Headline</label><input type="text" id="editHeadline" placeholder="Headline (e.g. Product builder, DevOps)">
+              <label class="profile-edit-label" for="editBio">About you</label><textarea id="editBio" placeholder="Short bio" class="resize-none"></textarea>
+              <label class="profile-edit-label" for="editLocation">Location</label><input type="text" id="editLocation" placeholder="Location">
+              <label class="profile-edit-label" for="editWebsite">Website</label><input type="text" id="editWebsite" placeholder="Website URL">
+              <label class="profile-edit-label" for="editAvatarUrl">Avatar image URL</label><input type="text" id="editAvatarUrl" placeholder="Avatar URL (optional)">
+              <label class="profile-edit-label" for="editAvatarFile">Upload avatar photo</label><input type="file" id="editAvatarFile" accept="image/*">
               <img id="editAvatarPreview" class="profile-preview" alt="Avatar preview">
-              <input type="text" id="editCoverUrl" placeholder="Cover image URL (optional)">
-              <input type="file" id="editCoverFile" accept="image/*">
+              <label class="profile-edit-label" for="editCoverUrl">Cover image URL</label><input type="text" id="editCoverUrl" placeholder="Cover image URL (optional)">
+              <label class="profile-edit-label" for="editCoverFile">Upload cover photo</label><input type="file" id="editCoverFile" accept="image/*">
               <img id="editCoverPreview" class="profile-preview" alt="Cover preview">
               <button type="submit" class="btn">Save Profile</button>
               <div class="callout" id="profileStatus" style="margin-top:12px; display:none;"></div>
