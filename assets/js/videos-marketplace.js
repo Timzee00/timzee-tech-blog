@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js";
+import {syncObservedRegion} from "./observed-region.mjs";
 
 // ============================================================================
 // VIDEO FUNCTIONS
@@ -110,6 +111,7 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
   // without exposing private bucket inventory. Server checks again on insert.
   let limits;
   try {
+    await syncObservedRegion(supabase);
     const [feature,policy]=await Promise.all([
       supabase.rpc("blipmood_feature_allowed",{p_feature:"video_uploads"}),
       supabase.rpc("blipmood_media_upload_policy")
