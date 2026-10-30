@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 440" role="img" aria-label="Mountain landscape above a peaceful lake">
+<defs>
+ <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#70b8d4"/><stop offset=".52" stop-color="#448fae"/><stop offset="1" stop-color="#a1c7d0"/></linearGradient>
+ <linearGradient id="water" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#176d83"/><stop offset=".5" stop-color="#0a4a62"/><stop offset="1" stop-color="#07394c"/></linearGradient>
+ <linearGradient id="peaks" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#7cabc2"/><stop offset="1" stop-color="#2e688c"/></linearGradient>
+ <linearGradient id="forest" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#214d58"/><stop offset="1" stop-color="#042e3b"/></linearGradient>
+ <radialGradient id="glow" cx=".79" cy=".34" r=".65"><stop stop-color="#e4f3ed" stop-opacity=".52"/><stop offset="1" stop-color="#d1edf1" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="1200" height="440" fill="url(#sky)"/><rect width="1200" height="330" fill="url(#glow)"/>
+<path d="M0 225 130 142 205 203 320 96 428 195 518 133 602 207 720 80 835 199 941 114 1055 194 1143 131 1200 180V300H0Z" fill="#4f8baf"/>
+<path d="M0 258 122 185 206 232 339 114 425 213 535 157 629 228 732 100 825 206 949 145 1034 231 1160 172 1200 210V316H0Z" fill="url(#peaks)"/>
+<path d="M265 166 339 114 390 172 359 161 345 175 335 145 313 174 299 159Z M680 161 732 100 790 170 766 153 743 161 725 134 710 157Z M896 182 949 145 1000 204 963 189 947 170 925 192Z" fill="#e6f4f1" opacity=".82"/>
+<path d="M0 278q140-59 283-21 144-57 285-5 152-49 280 0 189-58 352 14V323H0Z" fill="#23576a"/>
+<path d="M0 303q120-43 217-17 120-31 236-6 139-40 269-13 155-35 287-8 92-11 191 20v53H0Z" fill="url(#forest)"/>
+<rect y="306" width="1200" height="134" fill="url(#water)"/>
+<path d="M0 324q170-15 320-1 196 15 370-5 220-5 510 12" fill="none" stroke="#b8dae1" stroke-opacity=".3" stroke-width="2"/>
+<path d="M55 352q139 7 267 0m163 17q126-3 211 4m102-17q162 1 293 0M118 405q117-7 252 1m298-9q148 2 324-1" stroke="#c3e4e2" stroke-opacity=".13" stroke-width="2" fill="none"/>
+<g fill="#083646">
+ <path d="m0 330 18-28 14 29 18-42 19 41 21-28 14 28 16-61 23 61 18-32 15 32v110H0Z"/>
+ <path d="m1070 327 16-35 15 35 20-60 21 61 15-30 17 29 20-70 22 69 17-42 15 45 25-38v149h-133Z"/>
+</g>
+<g stroke="#0b3e4d" stroke-width="4" stroke-linecap="round">
+ <path d="M76 305V259m-19 23 19-35 20 35m-31-12 11-25 15 28"/>
+ <path d="M1133 294V228m-23 41 23-52 25 52m-39-18 14-39 17 39"/>
+</g>
+</svg>
