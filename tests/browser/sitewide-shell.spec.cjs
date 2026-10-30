@@ -216,7 +216,7 @@ test("story tiles use safe text and the same order as the viewer", async ({ page
   await expect(tiles).toHaveCount(2);
   await expect(tiles.nth(0)).toContainText("First author");
   await expect(tiles.nth(1)).toContainText("<img src=x onerror=alert(1)>");
-  await expect(tiles.nth(1).locator("img")).toHaveAttribute("src", "/assets/img/media-placeholder.svg");
+  await expect(tiles.nth(1).locator("img")).toHaveAttribute("src", "/assets/img/avatar-placeholder.svg");
   await expect(page.locator('#storiesRail img[onerror]')).toHaveCount(0);
   await tiles.nth(0).click();
   await expect(page.getByRole("dialog", { name: "Story viewer" })).toBeVisible();
