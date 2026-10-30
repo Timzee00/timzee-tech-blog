@@ -1,52 +1,43 @@
 import { supabase } from "./supabase.js";
 import { uploadMedia } from "./media.js";
 
-// Fetches every currently-active (non-expired, visibility-permitted) story
-// the current user is allowed to see, grouped by author. RLS already filters
-// out expired/private-not-a-friend rows server-side; this just groups them.
-export async function fetchStoriesFeed() {
-  const result = await supabase
-    .from("stories")
-    .select("id, user_id, media_url, media_type, caption, visibility, created_at, expires_at, allow_reshare, allow_public_comments, original_story_id, music_url, music_title")
-    .order("created_at", { ascending: true });
-
-  if (result.error) {
-    console.error("Failed to load stories:", result.error);
-    throw result.error;
-  }
-
-  const rows = result.data || [];
-  const userIds = [...new Set(rows.map((row) => row.user_id))];
-  if (!userIds.length) return [];
-
-  const profilesResult = await supabase
-    .from("public_profiles")
-    .select("id, display_name, username, avatar_url, is_verified")
-    .in("id", userIds);
-  if (profilesResult.error) {
-    console.error("Failed to load story profiles:", profilesResult.error);
-    throw profilesResult.error;
-  }
-
-  const profileMap = {};
-  (profilesResult.data || []).forEach((profile) => {
-    profileMap[profile.id] = profile;
-  });
-
-  const grouped = new Map();
-  rows.forEach((row) => {
-    if (!grouped.has(row.user_id)) {
-      grouped.set(row.user_id, {
-        userId: row.user_id,
-        profile: profileMap[row.user_id] || null,
-        stories: []
-      });
-    }
-    grouped.get(row.user_id).stories.push(row);
-  });
-
-  return Array.from(grouped.values());
+// Bounded, RLS-filtered status discovery; stable cursor preserves timestamp ties.
+const STORY_PAGE_SIZE=72;
+const STORY_FIELDS="id, user_id, media_url, media_type, caption, visibility, created_at, expires_at, allow_reshare, allow_public_comments, original_story_id, music_url, music_title";
+const STORY_UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
+const STORY_DATE=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/;
+export async function fetchStoriesFeedPage({limit=STORY_PAGE_SIZE,cursor=null}={}){
+ const pageSize=Math.max(1,Math.min(STORY_PAGE_SIZE,Number(limit)||STORY_PAGE_SIZE));
+ let query=supabase.from("stories").select(STORY_FIELDS)
+  .order("created_at",{ascending:false}).order("id",{ascending:false}).limit(pageSize+1);
+ if(cursor!==null){
+  if(!STORY_UUID.test(cursor.id||"")||!STORY_DATE.test(cursor.created_at||""))throw Error("Invalid status feed cursor.");
+  query=query.or(`created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`);
+ }
+ const {data,error}=await query;
+ if(error)throw error;
+ const rows=(data||[]).slice(0,pageSize);
+ const hasMore=(data||[]).length>pageSize;
+ const last=rows[rows.length-1];
+ const nextCursor=hasMore&&last?{created_at:last.created_at,id:last.id}:null;
+ if(!rows.length)return {groups:[],hasMore:false,nextCursor:null};
+ const userIds=[...new Set(rows.map(row=>row.user_id).filter(id=>STORY_UUID.test(id||"")))];
+ const profilesResult=userIds.length?await supabase.from("public_profiles")
+  .select("id, display_name, username, avatar_url, is_verified").in("id",userIds):{data:[],error:null};
+ if(profilesResult.error)throw profilesResult.error;
+ const profileMap=new Map((profilesResult.data||[]).map(profile=>[profile.id,profile]));
+ const grouped=new Map();
+ for(const row of rows){
+  if(!grouped.has(row.user_id))grouped.set(row.user_id,{userId:row.user_id,profile:profileMap.get(row.user_id)||null,stories:[]});
+  grouped.get(row.user_id).stories.push(row);
+ }
+ // Newest authors first, but show each author's sequence oldest to newest.
+ const groups=[...grouped.values()];
+ for(const group of groups)group.stories.reverse();
+ return {groups,hasMore,nextCursor};
 }
+// Backwards-compatible grouped-list API.
+export async function fetchStoriesFeed(){return (await fetchStoriesFeedPage()).groups;}
 
 export async function fetchUserStories(userId) {
   const result = await supabase
