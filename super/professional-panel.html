@@ -834,7 +834,7 @@
               list.style.cssText="display:grid;gap:7px;padding-left:22px;margin:10px 0 0";
               for(const p of top){
                 const item=document.createElement("li");
-                const section=p.page==="/"?"Homepage":String(p.page).replace(/^\\/|[.]html$/g,"").replace(/[-_]/g," ");
+                const section=p.page==="/"?"Homepage":String(p.page).replace(/^[/]/,"").replace(/[.]html$/,"").replace(/[-_]/g," ");
                 item.textContent=section+": "+Number(p.pageviews).toLocaleString()+" opens · "+Number(p.engaged).toLocaleString()+" engaged";
                 list.append(item);
               }
