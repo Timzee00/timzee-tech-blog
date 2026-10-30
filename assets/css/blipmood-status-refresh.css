@@ -115,3 +115,7 @@ body.blipmood-status{--status-ink:var(--color-text,#17272b);--status-muted:var(-
 .blipmood-status .story-viewer-sequence{display:inline-block;font:650 .68rem system-ui;color:#d8f5f0;margin-top:3px;letter-spacing:.03em}
 .blipmood-status .story-composer-details>summary:focus-visible{outline:3px solid #13bfae;outline-offset:3px;border-radius:10px}
 .blipmood-status .status-filter-bar button:disabled{opacity:.43;cursor:not-allowed}
+
+/* Leave the lower part of native video players unobstructed by tap navigation. */
+.blipmood-status .story-viewer:has(.story-viewer-media video) .story-tap-zone{bottom:42%}
+.blipmood-status .story-viewer .story-tap-zone{touch-action:manipulation}
