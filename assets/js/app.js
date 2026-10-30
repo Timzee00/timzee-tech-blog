@@ -37,7 +37,9 @@ import {mountReaderHome} from "./reader-home.mjs";
 import {verifiedAvatar,verifiedName} from "./verified-identity.mjs";
 import "./nav.js";
 
-const POSTS_PAGE_SIZE = 24;
+// The homepage is a curated discovery preview rather than an archive.
+const POSTS_PAGE_SIZE = 9;
+let homeFeedRequest = 0;
 const state = {
   activeCategory: "all",
   searchTerm: "",
@@ -198,7 +200,8 @@ function renderNav(categories) {
     renderTrending(state.activeCategory);
     renderPopular();
     renderPopularTopics();
-    renderLists();
+    if(state.searchTerm||state.activeTags.length)renderLists();
+    else void loadHomeCategory(state.activeCategory);
     // Scroll to the latest section
     const latestSection = document.getElementById("latest");
     if (latestSection) {
@@ -272,7 +275,9 @@ function buildPostCard(post, compact = false) {
   const publishedAt = post.publish_at || post.created_at;
   const title = compact ? clampText(post.title || "", 60) : post.title || "";
   const excerptText = clampText(stripHTML(stripEditorialScaffolding(post.feed_excerpt || post.content || "")), 140);
-  const excerpt = compact ? "" : `<div class="post-card-excerpt">${escapeHTML(excerptText)}</div>`;
+  const excerpt=compact?"":`<div class="post-card-excerpt">${escapeHTML(excerptText)}</div>`;
+  const imageSrc=post.cover&&isSafeUrl(post.cover)?escapeHTML(post.cover):"";
+  const image=imageSrc?`<a class="post-card-cover" href="post.html?id=${post.id}" aria-label="Read ${escapeHTML(title)}"><img src="${imageSrc}" alt="" width="190" height="134" loading="lazy" decoding="async"></a>`:"";
   const pin = post.pinned ? `<span class="chip">Pinned</span>` : "";
   const authorName = post.author_id ? (state.publicHandles.get(post.author_id) || "Member") : "Blipmood";
   const initial = authorName.trim().charAt(0).toUpperCase() || "T";
@@ -287,8 +292,10 @@ function buildPostCard(post, compact = false) {
         </div>
         ${pin}
       </div>
-      <a href="post.html?id=${post.id}"><h3>${escapeHTML(title)}</h3></a>
-      ${excerpt}
+      <div class="post-card-story"><div class="post-card-story-copy">
+        <a href="post.html?id=${post.id}"><h3>${escapeHTML(title)}</h3></a>
+        ${excerpt}
+      </div>${image}</div>
       <div class="tag-list">${tags}</div>
       <div class="post-icon-row">
         <button class="post-icon-btn${liked ? " active" : ""}" data-action="like" data-id="${post.id}" data-like-button="${post.id}" aria-label="${liked ? "Unlike" : "Like"} ${likeCount} likes">
@@ -374,7 +381,7 @@ function renderCategories() {
         <a class="category-card" href="#latest" data-category="${escapeHTML(cat.id)}" data-reveal>
           <h3>${escapeHTML(cat.name)}</h3>
           <div>${escapeHTML(cat.description || "")}</div>
-          <div class="category-meta"><span>${postCount} recent posts</span><span>Browse posts →</span></div>
+          <div class="category-meta"><span>See the latest</span><span>Browse posts →</span></div>
         </a>
       `;
     })
@@ -391,14 +398,10 @@ function renderLists() {
   if (!latestTarget) return;
 
   const sourcePosts = state.filteredPosts || state.posts;
-  const filtered = sourcePosts
-    .filter((post) =>
-      state.activeCategory === "all" ? true : post.category_id === state.activeCategory
-    )
-    .sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return new Date(b.created_at) - new Date(a.created_at);
-    });
+  // Keep fresh posts ahead of old pinned items on the discovery homepage.
+  const filtered=sourcePosts
+    .filter(post=>state.activeCategory==="all"||post.category_id===state.activeCategory)
+    .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
 
   latestTarget.innerHTML = filtered.map((post) => buildPostCard(post, false)).join("");
   if (!filtered.length) {
@@ -424,15 +427,54 @@ function renderLists() {
   if (loadMoreBtn) loadMoreBtn.hidden = !state.hasMorePosts || Boolean(state.filteredPosts);
 }
 
+async function loadHomeCategory(category="all"){
+  const request=++homeFeedRequest;
+  const categoryId=category==="all"?null:category;
+  const latest=document.getElementById("latestPosts");
+  const status=document.getElementById("loadMorePostsStatus");
+  const button=document.getElementById("loadMorePostsBtn");
+  if(latest)latest.innerHTML='<div class="callout" role="status">Finding the latest posts in this category…</div>';
+  if(button)button.hidden=true;
+  if(status)status.textContent="";
+  try{
+    const page=await fetchFeedPosts({limit:POSTS_PAGE_SIZE,categoryId});
+    if(request!==homeFeedRequest||category!==state.activeCategory)return;
+    state.posts=page.items;state.postsCursor=page.nextCursor;state.hasMorePosts=page.hasMore;
+    state.loadingMorePosts=false;state.filteredPosts=null;
+    renderTagFilters();renderCategories();renderLists();
+    void hydratePublicHandles(page.items).then(()=>{if(request===homeFeedRequest)renderLists()})
+      .catch(error=>console.warn("Category usernames unavailable:",error));
+    if(page.items.length){
+      void fetchPostEngagement(supabaseForEngagement,page.items.map(post=>post.id),state.user?.id)
+        .then(engagement=>{
+          if(request!==homeFeedRequest)return;
+          Object.assign(state.likeCounts,engagement.likeCounts);
+          Object.assign(state.commentCounts,engagement.commentCounts);
+          for(const id of engagement.likedPostIds||[])state.userLikes.add(id);
+          renderLists();
+        }).catch(error=>console.warn("Category engagement unavailable:",error));
+    }
+  }catch(error){
+    if(request!==homeFeedRequest)return;
+    state.hasMorePosts=false;
+    if(latest)latest.innerHTML='<div class="callout" role="alert">Could not load this category. Choose a category to retry.</div>';
+    if(status)status.textContent="Category loading failed.";
+    console.warn("Homepage category failed:",error);
+  }
+}
+
 async function loadMoreHomePosts() {
   const button = document.getElementById("loadMorePostsBtn");
   const status = document.getElementById("loadMorePostsStatus");
   if (state.loadingMorePosts || !state.hasMorePosts) return;
+  const request=homeFeedRequest;
+  const categoryId=state.activeCategory==="all"?null:state.activeCategory;
   state.loadingMorePosts = true;
   if (button) { button.disabled = true; button.textContent = "Loading more posts…"; }
   if (status) status.textContent = "";
   try {
-    const page = await fetchFeedPosts({ limit: POSTS_PAGE_SIZE, cursor: state.postsCursor });
+    const page = await fetchFeedPosts({ limit: POSTS_PAGE_SIZE, cursor: state.postsCursor, categoryId });
+    if(request!==homeFeedRequest)return;
     // A stable (created_at,id) cursor avoids increasingly costly OFFSET scans.
     state.postsCursor = page.nextCursor;
     state.hasMorePosts = page.hasMore;
@@ -448,6 +490,7 @@ async function loadMoreHomePosts() {
       // More articles appear immediately; exact counts resolve independently.
       void fetchPostEngagement(supabaseForEngagement, newlyVisible, state.user?.id)
         .then(engagement => {
+          if(request!==homeFeedRequest)return;
           Object.assign(state.likeCounts, engagement.likeCounts);
           Object.assign(state.commentCounts, engagement.commentCounts);
           for (const id of engagement.likedPostIds) state.userLikes.add(id);
@@ -458,7 +501,7 @@ async function loadMoreHomePosts() {
         });
     }
   } catch (error) {
-    if (status) status.textContent = "Could not load more posts. Please retry.";
+    if(request===homeFeedRequest&&status) status.textContent = "Could not load more posts. Please retry.";
     console.warn("Additional posts failed:", error);
   } finally {
     state.loadingMorePosts = false;
@@ -678,7 +721,8 @@ function setupTagFilters() {
       renderTrending(state.activeCategory);
       renderPopular();
       renderPopularTopics();
-      renderLists();
+      if(state.activeCategory!=="all")void loadHomeCategory(state.activeCategory);
+      else renderLists();
     });
   }
 }
@@ -693,7 +737,8 @@ async function performSearch() {
     renderTrending(state.activeCategory);
     renderPopular();
     renderPopularTopics();
-    renderLists();
+    if(state.activeCategory!=="all")void loadHomeCategory(state.activeCategory);
+    else renderLists();
     return;
   }
 
