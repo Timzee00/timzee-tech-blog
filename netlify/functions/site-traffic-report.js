@@ -9,6 +9,10 @@ exports.handler=async event=>{
  const token=(event.headers?.authorization||event.headers?.Authorization||"").replace(/^Bearer\s+/i,"");
  const guard=await requireRole(db,token,["super"],"Super Admin required.");
  if(guard.error)return reply(403,{error:guard.error});
+ // A working report query is not proof that the collection endpoint is enabled.
+ // Fail clearly rather than displaying misleading zeros during misconfiguration.
+ const secret=process.env.ANALYTICS_HMAC_SECRET;
+ if(!secret||secret.length<32)return reply(503,{error:"Visitor tracking is not configured in Netlify Functions. Add ANALYTICS_HMAC_SECRET (32+ characters) to the production environment and redeploy."});
  const days=Number(event.queryStringParameters?.days||30);
  if(![7,30,90].includes(days))return reply(400,{error:"Range must be 7, 30 or 90 days."});
  const {data,error}=await db.rpc("site_traffic_report",{p_days:days});
