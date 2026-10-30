@@ -46,7 +46,7 @@ test("anonymous browsing and Following do not get unrelated feed results",async(
   mode:"following",userId:"viewer-reels-metrics-test",force:true
  });
  assert.deepEqual(data,[]);
- assert.deepEqual(calls,["get_following_feed"]);
+ assert.deepEqual(calls,["blipmood_video_feed_ids"]);
 });
 
 test("fresh social totals enrich ranked candidates in one bounded RPC",async()=>{
@@ -57,6 +57,7 @@ test("fresh social totals enrich ranked candidates in one bounded RPC",async()=>
  const supabase={
   async rpc(name){
     calls.push(name);
+    if(name==="blipmood_video_feed_ids")return {error:{code:"PGRST202",message:"Old deployment fallback"}};
     if(name==="get_personalized_feed")return {data:candidates.map(v=>({
        content_type:"video",content_id:v.id
     })),error:null};
@@ -80,7 +81,7 @@ test("fresh social totals enrich ranked candidates in one bounded RPC",async()=>
  });
  assert.equal(rows[0].id,"popular");
  assert.equal(rows[0].like_count,6);
- assert.deepEqual(calls,["get_personalized_feed","video_social_counts"]);
+ assert.deepEqual(calls,["blipmood_video_feed_ids","get_personalized_feed","video_social_counts"]);
 });
 
 test("views require genuine visible playback and display updated server-accepted total",()=>{
