@@ -128,6 +128,8 @@
   outline:3px solid var(--profile-accent);outline-offset:-3px;
 }
 .profile-page .profile-grid{gap:clamp(16px,2vw,25px);align-items:start}
+/* The generic tab engine uses display:block on active sections; restore the overview grid. */
+.profile-page .profile-grid[data-profile-section].active{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,320px)}
 .profile-page .profile-posts-card{
   display:block;min-width:0;padding:clamp(17px,2.5vw,26px);
   border:1px solid var(--profile-line);border-radius:16px;
@@ -147,6 +149,8 @@
 }
 .profile-page .profile-community-link{font-size:.78rem;font-weight:750;color:var(--profile-accent)}
 .profile-page .profile-post-feed{display:grid;gap:12px;min-width:0}
+.profile-page .profile-load-more{display:block;margin:18px auto 2px;min-height:44px;border-radius:12px}
+.profile-page .profile-load-more[hidden]{display:none!important}
 .profile-page .profile-post-item{
   padding:17px;border-radius:15px;border:1px solid var(--profile-line);
   background:var(--profile-soft);min-width:0;display:grid;gap:10px;
@@ -219,6 +223,7 @@
 .profile-page #profileEditor .form-grid{min-width:0}
 .profile-page #profileEditor .profile-preview{max-width:100%;max-height:220px;border:1px solid var(--profile-line)}
 @media(max-width:960px){
+  .profile-page .profile-grid[data-profile-section].active{grid-template-columns:minmax(0,1fr)}
   .profile-page .profile-grid{grid-template-columns:minmax(0,1fr)}
   .profile-page .profile-sidebar{grid-template-columns:repeat(2,minmax(0,1fr))}
   .profile-page .profile-sidebar>:last-child{grid-column:1/-1}
