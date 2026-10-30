@@ -9,13 +9,30 @@ exports.handler=async event=>{
  const token=(event.headers?.authorization||event.headers?.Authorization||"").replace(/^Bearer\s+/i,"");
  const guard=await requireRole(db,token,["super"],"Super Admin required.");
  if(guard.error)return reply(403,{error:guard.error});
- // A working report query is not proof that the collection endpoint is enabled.
- // Fail clearly rather than displaying misleading zeros during misconfiguration.
- const secret=process.env.ANALYTICS_HMAC_SECRET;
- if(!secret||secret.length<32)return reply(503,{error:"Visitor tracking is not configured in Netlify Functions. Add ANALYTICS_HMAC_SECRET (32+ characters) to the production environment and redeploy."});
  const days=Number(event.queryStringParameters?.days||30);
  if(![7,30,90].includes(days))return reply(400,{error:"Range must be 7, 30 or 90 days."});
- const {data,error}=await db.rpc("site_traffic_report",{p_days:days});
- if(error)return reply(503,{error:"Site visit analytics needs its staging-reviewed SQL migration."});
- return reply(200,{...data,period_days:days,metric_note:"Opted-in browser identifiers. Pageviews may include refreshes; unique browsers are deduplicated per UTC day. Not unique people."});
+ const {data:aggregate,error}=await db.rpc("site_aggregate_report",{p_days:days});
+ if(error){
+   console.warn("Aggregate traffic report unavailable",error.code);
+   return reply(503,{error:"Aggregate traffic migration is not available. Check production database setup."});
+ }
+ // Opt-in browser identification is optional and must never block page-open
+ // reports. A missing secret is a configuration issue, not a zero count.
+ const secret=process.env.ANALYTICS_HMAC_SECRET;
+ let optedIn=null;
+ let optInState=(!secret||secret.length<32)?"not_configured":"available";
+ if(optInState==="available"){
+   const optional=await db.rpc("site_traffic_report",{p_days:days});
+   if(optional.error){
+     optInState="unavailable";
+     console.warn("Opt-in traffic report unavailable",optional.error.code);
+   }else optedIn=optional.data;
+ }
+ return reply(200,{
+   aggregate,
+   opt_in_browser_report:optedIn,
+   opt_in_status:optInState,
+   period_days:days,
+   metric_note:"Aggregate page opens, engagement signals and join clicks. No identifier is stored for these totals; they are not distinct visitors. Opt-in unique-browser measurement is reported separately."
+ });
 };
