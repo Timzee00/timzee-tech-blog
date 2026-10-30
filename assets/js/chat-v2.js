@@ -1371,6 +1371,16 @@ async function toggleChatMemberFlag(kind){
   const group=activeGroup();if(group)group.is_pinned=next;renderGroups();
   window.siteToast?.(next?'Group pinned.':'Group unpinned.',{type:'success'});
 }
+function keepPeopleSearchFocus(event){
+ const panel=$("peopleSearchPanel");
+ if(event.key!=="Tab"||!panel||panel.hidden)return;
+ const focusable=[...panel.querySelectorAll('button:not([disabled]),input:not([disabled]),a[href]')].filter(el=>el.getClientRects().length);
+ if(!focusable.length){event.preventDefault();return;}
+ const first=focusable[0],last=focusable[focusable.length-1];
+ if(!panel.contains(document.activeElement)){event.preventDefault();(event.shiftKey?last:first).focus();return;}
+ if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+ else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+}
 function closePeopleSearch(){
  const panel=$("peopleSearchPanel");if(!panel||panel.hidden)return;
  panel.hidden=true;$("peopleSearchBackdrop")?.remove();
@@ -1442,6 +1452,7 @@ function setupChatEmojiMenu(){
 }
 function setupEvents(){
   setupChatEmojiMenu();
+  $("peopleSearchPanel")?.addEventListener("keydown",keepPeopleSearchFocus);
   $("loadOlderMessages")?.addEventListener("click", () => loadOlderMessages().catch(error => reportAppError(error, "Unable to load older messages")));
   setupMentionInput($("chatBody"));
   setupMentionInput($("chatEditBody"));
