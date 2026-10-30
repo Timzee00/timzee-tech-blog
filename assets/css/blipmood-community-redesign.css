@@ -299,3 +299,28 @@ body.blipmood-community-redesign .forum-thread-content .forum-topic-media-indica
 body.blipmood-community-redesign .forum-suggestion-item button:focus-visible{outline:2px solid var(--color-primary,#087f73);outline-offset:2px}
 body.blipmood-community-redesign #forumSignupCard[hidden]{display:none!important}
 @media(max-width:550px){body.blipmood-community-redesign .forum-byline{width:100%;margin-left:0}}
+
+/* Search/category results appear only when the visitor actually searches or filters. */
+body.blipmood-community-redesign .forum-discover-results{
+ display:flex;flex-wrap:wrap;gap:9px;padding:13px;border-radius:14px;
+ border:1px solid var(--color-border,#dce6e9);background:var(--color-surface,#fff);
+}
+body.blipmood-community-redesign .forum-discover-results[hidden]{display:none!important}
+body.blipmood-community-redesign .forum-discover-heading{
+ display:flex;justify-content:space-between;gap:12px;align-items:center;
+ width:100%;font-size:.81rem
+}
+body.blipmood-community-redesign .forum-discover-heading span{font-size:.73rem;color:var(--color-text-muted,#6e8092)}
+body.blipmood-community-redesign .forum-discover-results>button{
+ flex:1 1 168px;display:flex;align-items:center;min-width:0;gap:9px;
+ padding:10px;border-radius:11px;text-align:left;color:var(--color-text,#172b32);
+ background:var(--color-surface-muted,#f3f8f9);border:1px solid var(--color-border,#dce6e9)
+}
+body.blipmood-community-redesign .forum-discover-results>button:hover{border-color:var(--color-primary,#087f73)}
+body.blipmood-community-redesign .forum-discover-results>button>span:last-child{min-width:0}
+body.blipmood-community-redesign .forum-discover-results>button strong,
+body.blipmood-community-redesign .forum-discover-results>button small{
+ display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+body.blipmood-community-redesign .forum-discover-results>button strong{font-size:.79rem}
+body.blipmood-community-redesign .forum-discover-results>button small{font-size:.69rem;color:var(--color-text-muted,#64778d)}
