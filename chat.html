@@ -163,10 +163,12 @@
                 <button type="button" role="menuitem" data-attach-kind="audio"><span aria-hidden="true">🎵</span><span>Audio</span></button>
                 <button type="button" role="menuitem" data-attach-kind="document"><span aria-hidden="true">📄</span><span>Document or file</span></button>
               </div>
+              <div id="chatEmojiMenu" class="chat-emoji-menu" role="group" aria-label="Choose a message emoji" hidden></div>
               <div class="chat-composer-row">
                 <button class="chat-composer-btn" id="chatAttachToggle" type="button" title="Choose attachment" aria-label="Choose attachment" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 6.7-6.7a3.2 3.2 0 0 1 4.5 4.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 <input type="file" id="chatMedia" accept="*/*" hidden>
                 <textarea id="chatBody" rows="1" placeholder="Write a message… @mention someone" autocomplete="off" class="resize-none"></textarea>
+                <button class="chat-composer-btn chat-emoji-toggle" id="chatEmojiToggle" type="button" title="Choose emoji" aria-label="Choose emoji" aria-haspopup="true" aria-expanded="false">☺</button>
                 <button class="chat-composer-btn" id="recordVoiceBtn" type="button" title="Record voice" aria-label="Record voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="3" width="7" height="12" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 11.5a7 7 0 0 0 14 0M12 18.5v3M8.5 21.5h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
                 <button class="chat-send-btn" type="submit" title="Send message" aria-label="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5 20 12 4 19.5l3-7.5-3-7.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
               </div>
@@ -233,6 +235,10 @@
               <div class="chat-info-section-head"><h3>Members</h3><span class="chat-member-count" id="groupMemberCount">0</span></div>
               <div class="chat-member-list" id="infoGroupMembers"></div>
             </section>
+            <section class="chat-info-section chat-info-pinned" id="infoPinnedSection" hidden>
+              <div class="chat-info-section-head"><h3>Pinned Messages</h3><span id="chatInfoPinnedCount" class="chat-member-count">0</span></div>
+              <div id="infoPinnedList" class="chat-info-pinned-list"></div>
+            </section>
             <section class="chat-info-section">
               <div class="chat-info-section-head"><h3>Media, Links and Files</h3></div>
               <div class="chat-info-media-grid" id="infoMediaGrid"><div class="callout">No media shared yet.</div></div>
@@ -278,7 +284,7 @@
               <label class="chat-setting-row"><span><strong>Compact messages</strong><small>Reduce bubble spacing for busy conversations.</small></span><input type="checkbox" data-chat-setting="compact"></label>
               <div class="chat-appearance-options">
                 <label>Message text size<select id="chatTextSize">
-                  <option value="0.5">Very Small</option>
+                  <option value="0.75">Very Small</option>
                   <option value="0.875">Small</option>
                   <option value="1">Normal</option>
                   <option value="1.125">Large</option>
