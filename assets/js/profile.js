@@ -51,7 +51,10 @@ const state = {
   bookmarks: [],
   notifications: [],
   visitorInsights: null,
-  adminRequest: null
+  adminRequest: null,
+  profilePosts: [], profileMedia: [], profilePostOffset: 0,
+  profilePostHasMore: false, profilePostsLoaded: false, profilePostsLoading: false,
+  profilePostsError: false
 };
 
 function sanitizeUsername(value = "") {
@@ -338,6 +341,7 @@ function setupProfilePhotoViewer(){
   document.querySelectorAll("[data-profile-image]").forEach(button=>button.addEventListener("click",()=>{
     const kind=button.dataset.profileImage;
     const source=document.getElementById(kind==="cover"?"profileCoverImg":"profileAvatar");
+    if(!source||source.hidden||!source.getAttribute("src"))return;
     const url=source?.currentSrc||source?.src;
     if(!url || !isSafeUrl(url))return;
     image.src=url;
@@ -363,9 +367,13 @@ function renderProfile() {
     avatar.src = state.profile?.avatar_url || "/assets/img/avatar-placeholder.svg";
   }
   const avatarLink=document.getElementById("profileAvatarLink");
-  if(avatarLink&&state.viewingId)avatarLink.href="profile.html?id="+encodeURIComponent(state.viewingId);
+  if(avatarLink)avatarLink.setAttribute("aria-label","View full profile photo");
   if (cover) {
-    cover.src = state.profile?.cover_url || "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1200&q=80";
+    const coverUrl=String(state.profile?.cover_url||"").trim();
+    cover.hidden=!coverUrl;
+    if(coverUrl)cover.src=coverUrl;else cover.removeAttribute("src");
+    const button=cover.closest(".profile-cover-open");
+    if(button)button.disabled=!coverUrl;
   }
   const tier=verifiedLevel(state.profile);
   const hero=document.querySelector(".profile-page .profile-hero");
@@ -902,9 +910,148 @@ function renderProfileStats() {
     `
     )
     .join("");
+  renderProfileHighlights();
   const info=document.getElementById("profileReputationHelp");
   if(info)info.textContent="How reputation grows: publish a discussion topic (+5), reply in a discussion (+1), comment on an article (+2), share/copy an article link (+1), or publish an article (+10, where authorized). These are current activity rewards, not an automatic path to verified status. Levels: Starter 0–99, Rising 100–299, Pro 300–699, Legend 700+.";
 }
+
+
+const PROFILE_POST_PAGE=18;
+function formatProfileCount(value){
+ const n=Number(value);return Number.isFinite(n)&&n>=0?n.toLocaleString():"—";
+}
+function profilePostUrl(id){return "discussion.html?thread="+encodeURIComponent(id);}
+function renderProfileHighlights(){
+ const host=document.getElementById("profileSpotlightStats");if(!host)return;
+ host.replaceChildren();
+ const count=state.profilePostsLoaded&&!state.profilePostsError
+   ?formatProfileCount(state.profilePosts.length)+(state.profilePostHasMore?"+":""):"—";
+ for(const [label,value] of [["Posts",count],["Followers",formatProfileCount(state.followersCount)],
+   ["Following",formatProfileCount(state.followingCount)]]){
+  const cell=document.createElement("div"),valueNode=document.createElement("strong"),labelNode=document.createElement("span");
+  valueNode.textContent=value;labelNode.textContent=label;cell.append(valueNode,labelNode);host.append(cell);
+ }
+}
+function profileMediaTile(attachment,forGallery=false){
+ const url=String(attachment.media_url||"");
+ if(!url||url.startsWith("forum-private-media/")||!isSafeUrl(url))return null;
+ const video=attachment.media_type==="video"||/\.(mp4|webm)(?:\?|$)/i.test(url);
+ const node=document.createElement(forGallery?"a":"div");
+ node.className=forGallery?"profile-media-item":"profile-post-thumb";
+ if(video){
+  const icon=document.createElement("span");
+  icon.className=forGallery?"profile-media-play":"profile-video-attachment";
+  icon.textContent="▶ Video";node.append(icon);
+ }else{
+  const img=document.createElement("img");img.src=url;
+  img.alt=forGallery?"Community photo":"Photo attached to this post";
+  img.loading="lazy";img.decoding="async";node.append(img);
+ }
+ return node;
+}
+function renderProfilePostFeed(){
+ const host=document.getElementById("profilePostFeed"),more=document.getElementById("profileMorePosts");
+ if(!host)return;
+ host.replaceChildren();host.setAttribute("aria-busy",String(state.profilePostsLoading&&!state.profilePostsLoaded));
+ if(state.profilePostsError&&!state.profilePosts.length){
+  const note=document.createElement("p");note.className="profile-empty-state";
+  note.textContent="Posts are temporarily unavailable. Please try again later.";host.append(note);
+ }else if(!state.profilePostsLoaded||!state.profilePosts.length){
+  const note=document.createElement("p");note.className="profile-empty-state";
+  note.textContent=state.profilePostsLoaded?"No published community posts yet.":"Loading posts…";host.append(note);
+ }
+ for(const post of state.profilePosts){
+  const article=document.createElement("article");article.className="profile-post-item";
+  const meta=document.createElement("div");meta.className="profile-post-topline";
+  const kind=document.createElement("span");kind.className="profile-post-kind";
+  kind.textContent=String(post.kind||"discussion").replace(/^./,c=>c.toUpperCase());
+  const time=document.createElement("time");time.dateTime=post.created_at||"";
+  time.textContent=post.created_at?timeAgo(post.created_at):"";
+  meta.append(kind,time);
+  const title=document.createElement("a");title.className="profile-post-title";
+  title.href=profilePostUrl(post.id);title.textContent=post.title||"Community discussion";
+  article.append(meta,title);
+  const excerpt=clampText(stripHTML(String(post.body||"")).replace(/\s+/g," ").trim(),240);
+  if(excerpt){const p=document.createElement("p");p.className="profile-post-excerpt";p.textContent=excerpt;article.append(p);}
+  const thumb=profileMediaTile(post);if(thumb)article.append(thumb);
+  const foot=document.createElement("div");foot.className="profile-post-footer";
+  const comments=document.createElement("span");comments.textContent=formatProfileCount(post.reply_count)+" replies";
+  const votes=document.createElement("span");votes.textContent=formatProfileCount(post.score)+" score";
+  const link=document.createElement("a");link.href=profilePostUrl(post.id);link.textContent="View discussion";
+  foot.append(comments,votes,link);article.append(foot);host.append(article);
+ }
+ if(more){more.hidden=!state.profilePostHasMore;more.disabled=state.profilePostsLoading;}
+}
+function renderProfileMedia(){
+ const host=document.getElementById("profileMediaGallery"),more=document.getElementById("profileMoreMedia");
+ if(!host)return;
+ host.replaceChildren();host.setAttribute("aria-busy",String(state.profilePostsLoading&&!state.profilePostsLoaded));
+ if(!state.profilePostsLoaded||!state.profileMedia.length){
+  const p=document.createElement("p");p.className="profile-empty-state";
+  p.textContent=state.profilePostsLoaded
+   ?"No visible photos or videos in these community posts.":"Loading media…";
+  host.append(p);
+ }
+ for(const asset of state.profileMedia){
+  const card=profileMediaTile(asset,true);if(!card)continue;
+  card.href=profilePostUrl(asset.thread_id);
+  card.setAttribute("aria-label","Open community post containing "+(asset.media_type==="video"?"video":"photo"));
+  if(asset.media_type!=="video"){
+   const badge=document.createElement("span");badge.className="profile-media-badge";badge.textContent="Photo";card.append(badge);
+  }
+  host.append(card);
+ }
+ if(more){more.hidden=!state.profilePostHasMore;more.disabled=state.profilePostsLoading;}
+}
+async function loadProfilePosts({append=false}={}){
+ if(state.profilePostsLoading||!state.viewingId)return;
+ state.profilePostsLoading=true;
+ const offset=append?state.profilePostOffset:0;
+ if(!append){state.profilePosts=[];state.profileMedia=[];state.profilePostOffset=0;state.profilePostsLoaded=false;}
+ state.profilePostsError=false;renderProfilePostFeed();renderProfileMedia();
+ try{
+  // Respect RLS for public, restricted and private community visibility.
+  // At most 19 threads are fetched per page; never scan entire post history.
+  const {data,error}=await supabase.from("community_threads")
+   .select("id,title,body,kind,created_at,media_url,media_type,reply_count,score")
+   .eq("author_id",state.viewingId).eq("status","published").eq("is_legacy_room",false)
+   .order("created_at",{ascending:false}).order("id",{ascending:false})
+   .range(offset,offset+PROFILE_POST_PAGE);
+  if(error)throw error;
+  const page=(data||[]).slice(0,PROFILE_POST_PAGE);
+  const gallery=[];
+  if(page.length){
+   try{
+    const {data:extras,error:galleryError}=await supabase.from("community_thread_media")
+     .select("thread_id,media_url,media_type,position")
+     .in("thread_id",page.map(p=>p.id)).order("position",{ascending:true}).limit(108);
+    if(galleryError)throw galleryError;
+    gallery.push(...(extras||[]));
+   }catch(error){console.warn("Extra profile attachments unavailable:",error);}
+  }
+  const mediaSeen=new Set(state.profileMedia.map(m=>m.thread_id+"|"+m.media_url));
+  for(const post of page){
+   const assets=[{thread_id:post.id,media_url:post.media_url,media_type:post.media_type},
+    ...gallery.filter(m=>m.thread_id===post.id)];
+   for(const asset of assets){
+    if(!asset.media_url||String(asset.media_url).startsWith("forum-private-media/")||!isSafeUrl(asset.media_url))continue;
+    const key=asset.thread_id+"|"+asset.media_url;
+    if(!mediaSeen.has(key)){state.profileMedia.push(asset);mediaSeen.add(key);}
+   }
+  }
+  state.profilePosts.push(...page);
+  state.profilePostOffset=offset+page.length;
+  state.profilePostHasMore=(data||[]).length>PROFILE_POST_PAGE;
+  state.profilePostsLoaded=true;
+ }catch(error){
+  console.warn("Profile posts unavailable:",error);
+  state.profilePostsError=true;state.profilePostsLoaded=true;state.profilePostHasMore=false;
+ }finally{
+  state.profilePostsLoading=false;renderProfilePostFeed();renderProfileMedia();renderProfileHighlights();
+ }
+}
+document.getElementById("profileMorePosts")?.addEventListener("click",()=>void loadProfilePosts({append:true}));
+document.getElementById("profileMoreMedia")?.addEventListener("click",()=>void loadProfilePosts({append:true}));
 
 function renderActivity() {
   const topicsEl = document.getElementById("profileTopics");
@@ -1765,6 +1912,7 @@ async function boot() {
   renderNotifications();
   document.getElementById("profileVideoUpload").hidden = !state.user || state.user.id !== state.viewingId;
   setupProfileTabs();
+  void loadProfilePosts();
   void setupProfileFx();
   setupNotificationTabs();
   renderProfileActions();
