@@ -159,11 +159,11 @@ function renderItem(item,handles){
   const voted=myVotes.has(item.id);
   actions.append(makeButton(voted?"✓ Supported":"Support idea",async event=>{
    const b=event.currentTarget;b.disabled=true;
-   const q=voted
+   const q=myVotes.has(item.id)
     ?supabase.from("council_votes").delete().eq("item_id",item.id).eq("user_id",actor.id)
     :supabase.from("council_votes").insert({item_id:item.id,user_id:actor.id});
    const {error}=await q;
-   if(error)setStatus($("pcGate"),friendlyError(error),true);
+   if(error){const errorNote=el("span","pc-muted",friendlyError(error));actions.append(errorNote);}
    else{myVotes.has(item.id)?myVotes.delete(item.id):myVotes.add(item.id);b.textContent=myVotes.has(item.id)?"✓ Supported":"Support idea";}
    b.disabled=false;
   }));
@@ -175,7 +175,7 @@ function renderItem(item,handles){
     const b=ev.currentTarget;b.disabled=true;
     const {error}=await supabase.from("council_beta_enrollments")
      .update({status:accept?"accepted":"declined"}).eq("id",invitation.id).eq("user_id",actor.id);
-    if(error)setStatus($("pcGate"),friendlyError(error),true);
+    if(error){actions.append(el("span","pc-muted",friendlyError(error)));}
     else{myInvites.set(item.id,{...invitation,status:accept?"accepted":"declined"});await loadItems();}
     b.disabled=false;
    }));
