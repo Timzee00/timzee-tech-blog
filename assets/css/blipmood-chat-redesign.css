@@ -454,3 +454,9 @@ body.chat-page.blipmood-chat-redesign .chat-group-actions #groupLeaveBtn{
   width:37px;min-width:37px
  }
 }
+
+/* Chat owns the approved five-item mobile navigation, not the global six-item bar. */
+body.chat-page.blipmood-chat-redesign .bottom-tab-bar{display:none!important}
+body.chat-page.blipmood-chat-redesign .chat-group-actions #groupNotifyBtn::before{
+ content:"♧";font-size:1.15rem;color:var(--chat-brand)
+}
