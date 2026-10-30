@@ -1,6 +1,20 @@
 const { createClient } = require("@supabase/supabase-js");
 const {createInactivityToken}=require("./_lib/email-opt-out-token.js");
 
+const identityActions=Object.freeze({
+  affiliation_invite:{subject:"Organization invitation | Blipmood",body:"A verified organization invited you to connect your Blipmood account. Open your profile to review the invitation."},
+  affiliation_confirmed:{subject:"Your affiliation is confirmed | Blipmood",body:"Your organization affiliation is now confirmed and visible on your Blipmood profile."},
+  affiliation_revoked:{subject:"Affiliation update | Blipmood",body:"An organization affiliation on your Blipmood account has ended."},
+  advisor_appointment:{subject:"Your official appointment | Blipmood",body:"You received an official Blipmood appointment."},
+  appointment_revoked:{subject:"Appointment update | Blipmood",body:"An official Blipmood appointment on your account has ended."},
+  recognition_awarded:{subject:"You've earned recognition | Blipmood",body:"Blipmood has recognized your contribution with a new award."},
+  recognition_revoked:{subject:"Recognition update | Blipmood",body:"An award on your Blipmood account has been withdrawn."},
+  advisor_decision:{subject:"Advisor application reviewed | Blipmood",body:"Your Blipmood Advisor application has been reviewed. Sign in for your decision."}
+});
+const appointmentRoles=Object.freeze({
+  product_lead:"Product Lead",product_advisor:"Product Advisor",
+  community_advisor:"Community Advisor",community_contributor:"Community Contributor"
+});
 const templates = {
   contact_received: { subject: "We received your message | Blipmood", body: "Your message has reached our team." },
   support_received: { subject: "Support request received | Blipmood", body: "Your support request has been received. Our team will review it." },
@@ -13,7 +27,8 @@ const templates = {
   advertising_status: { subject: "Advertising request update | Blipmood", body: "Your advertising request has a new status." },
   verification_status: { subject: "Verification application update | Blipmood", body: "Your verification application has a new status." },
   report_status: { subject: "Report review update | Blipmood", body: "Your submitted report has a new status." },
-  inactivity_reminder: { subject: "A friendly check-in from Blipmood", body: "It's been a while since your last visit. Your Blipmood account is here whenever you're ready to return." }
+  inactivity_reminder: { subject: "A friendly check-in from Blipmood", body: "It's been a while since your last visit. Your Blipmood account is here whenever you're ready to return." },
+  identity_update: { subject: "Official account update | Blipmood", body: "An official account record has changed." }
 };
 function escapeHtml(s) {
   return String(s || "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -22,6 +37,9 @@ const timeout = ms => AbortSignal.timeout(ms);
 async function sendBrevo(job,apiKey,senderEmail,senderName) {
   const template=templates[job.template];
   if(!template) throw new Error("Unrecognized template");
+  const isIdentity=job.template==="identity_update";
+  const identityAction=isIdentity?identityActions[job.payload?.identity_action]:null;
+  if(isIdentity&&!identityAction)throw new Error("Unrecognized identity action");
   const name=String(job.payload?.name || "").slice(0,120);
   const reference=String(job.payload?.reference || "").slice(0,100);
   const isDigest=job.template.endsWith("_digest") || job.template==="marketplace_alerts";
@@ -32,20 +50,21 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
   const digestCount=Number.isSafeInteger(Number(job.payload?.count)) ?
     Math.max(1,Math.min(9999,Number(job.payload?.count))) : 1;
   const intro=name ? `Hello ${name},` : "Hello,";
-  const message=isDigest ?
+  const message=isIdentity ? identityAction.body+(job.payload?.identity_action==="advisor_appointment" ? ` Your role: ${appointmentRoles[job.payload?.role]||"Contributor"}.`:"") : isDigest ?
     `${template.body} ${digestCount} unread update${digestCount===1?"":"s"} in the last 24 hours. Sign in to review them.` :
     isWorkflow ? `${template.body} Current status: ${state||"updated"}.` : template.body;
-  const referenceLine=optional?"":`Reference: ${reference}\n\n`;
+  const referenceLine=(optional||isIdentity)?"":`Reference: ${reference}\n\n`;
   const settingsUrl="https://blipmood.netlify.app/settings.html#email";
   const unsubscribeUrl=isInactivity ?
     "https://blipmood.netlify.app/unsubscribe.html?token="+
       encodeURIComponent(createInactivityToken(job)) : null;
   const optOutText=unsubscribeUrl ? "Stop future check-in emails: "+unsubscribeUrl+"\n\n" : "";
   const optOutHtml=unsubscribeUrl ? `<p><a href="${unsubscribeUrl}">Stop these reminders without signing in</a></p>` : "";
-  const text=`${intro}\n\n${message}\n\n${referenceLine}${optional ? `Manage email preferences: ${settingsUrl}\n\n` : ""}${optOutText}Blipmood`;
-  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#101e24;border-radius:12px"><img src="https://blipmood.netlify.app/assets/brand/blipmood-wordmark-dark.png" width="230" height="76" alt="Blipmood" style="width:230px;max-width:100%;height:auto;display:block"></div><p>${escapeHtml(intro)}</p><p>${escapeHtml(message)}</p>${optional ?
+  const accountUrl=isIdentity?(job.payload?.identity_action==="advisor_decision"?"https://blipmood.netlify.app/advisor.html":"https://blipmood.netlify.app/profile.html"):null;
+  const text=`${intro}\n\n${message}\n\n${referenceLine}${accountUrl?`View your account update: ${accountUrl}\n\n`:""}${(optional||isIdentity) ? `Manage email preferences: ${settingsUrl}\n\n` : ""}${optOutText}Blipmood`;
+  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#172b31"><div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#101e24;border-radius:12px"><img src="https://blipmood.netlify.app/assets/brand/blipmood-wordmark-dark.png" width="230" height="76" alt="Blipmood" style="width:230px;max-width:100%;height:auto;display:block"></div><p>${escapeHtml(intro)}</p><p>${escapeHtml(message)}</p>${isIdentity ? `<p><a href="${accountUrl}">View your account update</a></p><p><a href="${settingsUrl}">Manage email preferences</a></p>` : optional ?
     `<p><a href="${settingsUrl}">Manage email preferences</a></p>` :
-    `<p><strong>Reference:</strong> ${escapeHtml(reference)}</p>`}${optOutHtml}<hr><small>${optional?"You opted in to this optional email category. You can disable it in account settings.":"Transactional notification regarding your request."} Do not reply with passwords or sensitive details.</small></div>`;
+    `<p><strong>Reference:</strong> ${escapeHtml(reference)}</p>`}${optOutHtml}<hr><small>${isIdentity?"This is an official account-identity notification. You can opt out of these emails in Settings.":optional?"You opted in to this optional email category. You can disable it in account settings.":"Transactional notification regarding your request."} Do not reply with passwords or sensitive details.</small></div>`;
   let res;
   try {
     res=await fetch("https://api.brevo.com/v3/smtp/email",{
@@ -54,7 +73,7 @@ async function sendBrevo(job,apiKey,senderEmail,senderName) {
       body:JSON.stringify({
         sender:{email:senderEmail,name:senderName},
         to:[{email:job.recipient_email}],
-        subject:template.subject,htmlContent:html,textContent:text,
+        subject:identityAction?.subject||template.subject,htmlContent:html,textContent:text,
         headers:{"X-Mailin-custom":"type:transactional",idempotencyKey:job.id}
       })
     });
@@ -131,6 +150,18 @@ async function runEmailWorker(){
       if(current.data!==true){
         const stopped=await supabase.rpc("suppress_email_job",{p_id:job.id});
         if(stopped.error)throw new Error("Unable to stop stale workflow message");
+        results.suppressed=(results.suppressed||0)+1;continue;
+      }
+    }
+    if(job.template==="identity_update"){
+      const current=await supabase.rpc("can_send_identity_update",{
+        p_email:job.recipient_email,p_user_id:job.payload?.user_id,
+        p_record_id:job.payload?.record_id,p_action:job.payload?.identity_action
+      });
+      if(current.error)throw new Error("Identity email eligibility check unavailable; refusing to send");
+      if(current.data!==true){
+        const stopped=await supabase.rpc("suppress_email_job",{p_id:job.id});
+        if(stopped.error)throw new Error("Unable to stop stale or opted-out identity email");
         results.suppressed=(results.suppressed||0)+1;continue;
       }
     }
