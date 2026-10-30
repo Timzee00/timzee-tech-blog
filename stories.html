@@ -333,19 +333,105 @@
           small.textContent=label;box.append(strong,small);host.append(box);
         }
       }
+      async function refreshStoryDiscovery(){
+        const page=await fetchStoriesFeedPage();
+        state.allGroups=page.groups;
+        state.storyNextCursor=page.nextCursor;
+        state.storyHasMore=page.hasMore;
+        await applySavedFilter();
+      }
+      async function loadMoreStories(){
+        if(!state.storyHasMore||!state.storyNextCursor||state.storyLoadingMore)return;
+        const button=document.getElementById("storyLoadMore");
+        state.storyLoadingMore=true;
+        button.disabled=true;button.textContent="Loading more moments…";
+        try{
+          const page=await fetchStoriesFeedPage({cursor:state.storyNextCursor});
+          const byAuthor=new Map(state.allGroups.map(group=>[group.userId,group]));
+          for(const group of page.groups){
+            if(!byAuthor.has(group.userId)){byAuthor.set(group.userId,group);continue;}
+            const target=byAuthor.get(group.userId);
+            const seen=new Set(target.stories.map(story=>story.id));
+            for(const story of group.stories)if(!seen.has(story.id)){target.stories.push(story);seen.add(story.id);}
+            target.stories.sort((a,b)=>Date.parse(a.created_at)-Date.parse(b.created_at)||a.id.localeCompare(b.id));
+            if(!target.profile&&group.profile)target.profile=group.profile;
+          }
+          state.allGroups=[...byAuthor.values()].sort((a,b)=>
+            Date.parse(b.stories[b.stories.length-1].created_at)-Date.parse(a.stories[a.stories.length-1].created_at));
+          state.storyNextCursor=page.nextCursor;
+          state.storyHasMore=page.hasMore;
+          await applySavedFilter();
+        }catch(error){
+          window.appUI?.toast?.(error.message||"More statuses could not be loaded.");
+        }finally{
+          state.storyLoadingMore=false;
+          button.disabled=false;button.textContent="Load more status updates";
+          button.hidden=!state.storyHasMore;
+        }
+      }
       async function applySavedFilter(){
-        if(!state.savedOnly||!state.user){
-          state.groups=state.allGroups;
+        if(state.viewFilter==="friends"){
+          state.groups=state.allGroups.filter(group=>group.userId===state.user?.id||state.friendIds.has(group.userId));
           renderRail();return;
         }
-        const {data,error}=await supabase.from('story_saves')
-          .select('story_id').eq('user_id',state.user.id).order('created_at',{ascending:false}).limit(300);
-        if(error){window.appUI?.toast?.(error.message);return;}
+        if(state.viewFilter!=="saved"||!state.user){
+          state.groups=state.allGroups;renderRail();return;
+        }
+        const {data,error}=await supabase.from("story_saves")
+          .select("story_id").eq("user_id",state.user.id).order("created_at",{ascending:false}).limit(300);
+        if(error){window.appUI?.toast?.(error.message);state.groups=[];renderRail();return;}
         const ids=new Set((data||[]).map(row=>row.story_id));
         state.groups=state.allGroups.map(group=>({
           ...group,stories:group.stories.filter(story=>ids.has(story.id))
         })).filter(group=>group.stories.length);
         renderRail();
+      }
+      function renderGallery(){
+        const host=document.getElementById("statusHighlights");
+        const section=document.getElementById("statusGallerySection");
+        const toggle=document.getElementById("statusGalleryMore");
+        host.replaceChildren();
+        const groups=state.groups.filter(group=>group.stories.length);
+        section.hidden=groups.length===0;
+        for(const group of (state.galleryExpanded?groups:groups.slice(0,8))){
+          const groupIndex=state.groups.indexOf(group);
+          const own=state.user?.id===group.userId;
+          const name=own?"You":group.profile?.username||"Member";
+          const newest=group.stories[group.stories.length-1];
+          const card=document.createElement("button");
+          card.type="button";card.className="status-moment-card";
+          card.setAttribute("aria-label",`View ${name}'s latest status`);
+          const previewable=newest.visibility!=="private"&&newest.media_type==="image"&&
+            isSafeUrl(newest.media_url)&&!String(newest.media_url).startsWith("story-private-media/");
+          if(previewable){
+            const photo=document.createElement("img");
+            photo.className="status-moment-photo";photo.src=newest.media_url;
+            photo.alt="";photo.loading="lazy";photo.decoding="async";card.appendChild(photo);
+          }
+          const author=document.createElement("span");author.className="status-moment-author";
+          const avatar=document.createElement("img");avatar.alt="";
+          avatar.src=isSafeUrl(group.profile?.avatar_url)?group.profile.avatar_url:DEFAULT_AVATAR;
+          const authorName=document.createElement("span");authorName.textContent=name+(group.profile?.is_verified?" ✓":"");
+          author.append(avatar,authorName);card.appendChild(author);
+          const info=document.createElement("span");info.className="status-moment-bottom";
+          if(newest.visibility==="private"){
+            const label=document.createElement("span");label.className="status-moment-lock";
+            label.textContent="Friends only";info.appendChild(label);
+          }
+          const caption=document.createElement("span");caption.className="status-moment-caption";
+          caption.textContent=newest.caption||(
+            newest.media_type==="video"?"▶ Video moment":newest.visibility==="private"?"A private moment":"A moment worth sharing");
+          info.appendChild(caption);
+          const meta=document.createElement("span");meta.className="status-moment-meta";
+          const time=document.createElement("span");time.textContent=timeAgo(newest.created_at);
+          const count=document.createElement("span");
+          count.textContent=group.stories.length===1?"1 moment":group.stories.length+" moments";
+          meta.append(time,count);info.appendChild(meta);card.appendChild(info);
+          card.addEventListener("click",()=>openViewer(groupIndex,group.stories.length-1));
+          host.appendChild(card);
+        }
+        toggle.hidden=groups.length<=8;
+        toggle.textContent=state.galleryExpanded?"Show fewer moments":"Explore all moments";
       }
       function renderRail() {
         const rail = document.getElementById("storiesRail");
@@ -385,6 +471,12 @@
           // after the add tile: the order must match state.groups indices.
           empty.before(el);
         });
+        if(!state.groups.length){
+          empty.textContent=state.viewFilter==="saved"?"No saved statuses in this selection.":
+            state.viewFilter==="friends"?"No friends have active statuses yet.":"No active stories yet — be the first!";
+        }
+        document.getElementById("storyLoadMore").hidden=!state.storyHasMore;
+        renderGallery();
       }
 
       // ------------------------------------------------------------------
