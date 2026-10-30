@@ -30,7 +30,7 @@
 </head>
 <body class="admin-shell">
 <main class="identity-shell">
-<header class="identity-header"><div><p class="identity-intro">Blipmood · Trusted Identity</p><h1>Identity & Recognition Center</h1><p class="identity-intro">Review real evidence, invite affiliates and recognize meaningful contributions.</p></div><a class="btn ghost" href="professional-panel.html">← Super Admin</a></header>
+<header class="identity-header"><div><p class="identity-intro">Blipmood · Trusted Identity</p><h1>Identity & Recognition Center</h1><p class="identity-intro"><a href="../product-council.html">Open Product Council workspace</a></p><p class="identity-intro">Review real evidence, invite affiliates and recognize meaningful contributions.</p></div><a class="btn ghost" href="professional-panel.html">← Super Admin</a></header>
 <div class="identity-notice" role="status" id="identityGate">Checking your super-administrator permissions…</div>
 <div id="identityWorkspace" hidden>
 <p class="identity-notice">These controls make audited decisions. Only authenticated super administrators can write records. Company affiliation requests remain private until their recipient accepts, and recognition does not grant moderation powers.</p>
@@ -40,7 +40,7 @@
 <label>Official account @username<input name="owner" autocomplete="off" placeholder="@examplebrand" required></label>
 <label>Organization / brand name<input name="name" minlength="2" maxlength="120" required></label>
 <label>Official website (optional)<input name="website" type="url" placeholder="https://example.com"></label>
-<label>Logo URL (optional)<input name="logo" type="url" placeholder="https://..."></label>
+<label>Logo URL (optional)<input name="logo" type="url" placeholder="https://..."></label><p class="identity-hint">Official Blipmood account: use your existing approved emblem URL: https://blipmood.netlify.app/assets/brand/blipmood-emblem-light.png. Once the organization is verified, invite appointed team members. Its logo appears beside their username only after they accept. Never assign this affiliation to unapproved accounts.</p>
 <label>Public description<input name="summary" maxlength="300" placeholder="What this organization does"></label>
 <button type="submit" class="btn">Create pending organization</button></form><p class="identity-status" id="orgCreateStatus" role="status"></p>
 </section>
@@ -61,7 +61,7 @@
 <section class="identity-card"><h2>4 · Appoint trusted contributor</h2><p>Product Lead and Product Advisor are formal appointments. Community Advisors require demonstrated expertise. Appointments do not carry admin permissions.</p>
 <form id="appointmentCreate">
 <label>Member @username<input name="user" placeholder="@username" required></label>
-<label>Appointment<select name="role"><option value="community_advisor">Community Advisor</option><option value="community_contributor">Community Contributor</option><option value="product_advisor">Product Advisor</option><option value="product_lead">Product Lead</option></select></label>
+<label>Appointment<select name="role"><option value="community_advisor">Community Advisor</option><option value="community_contributor">Community Contributor</option><option value="product_advisor">Product Advisor</option><option value="product_lead">Product Lead</option><option value="product_manager">Product Manager</option><option value="beta_tester">Beta Tester</option><option value="research_contributor">Research Contributor</option><option value="design_contributor">Design Contributor</option><option value="launch_reviewer">Launch Reviewer</option></select></label>
 <label>Specialization<input name="specialty" maxlength="100" placeholder="Web development, product strategy"></label>
 <label>Public appointment description<textarea name="summary" maxlength="500" placeholder="Why this person is qualified; what they are responsible for"></textarea></label>
 <button type="submit" class="btn">Appoint member</button></form><p class="identity-status" id="appointmentCreateStatus" role="status"></p>

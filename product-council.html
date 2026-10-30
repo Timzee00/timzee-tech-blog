@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Blipmood Product Council: propose ideas, collaborate on releases, test features and earn recognized contributions.">
+<title>Product Council — Blipmood</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="assets/css/product-council.css">
+<script defer src="assets/js/theme-init.js"></script>
+</head>
+<body>
+<a class="pc-skip" href="#pcMain">Skip to Product Council</a>
+<main class="pc-shell" id="pcMain">
+<header class="pc-hero">
+ <div class="pc-hero-top"><a href="index.html" class="pc-back">← Blipmood</a><span class="pc-official"><img src="/assets/brand/blipmood-emblem-light.png" width="23" height="23" alt=""> Product Council</span></div>
+ <p class="pc-eyebrow">BUILD WHAT'S NEXT · TOGETHER</p>
+ <h1>The ideas become the product.</h1>
+ <p class="pc-lead">A trusted workspace for Blipmood's appointed product leaders, advisors, contributors and beta testers. Real decisions, real responsibility and real credit.</p>
+ <div class="pc-hero-links"><a href="advisor.html" class="pc-ghost">Apply to advise</a><a href="profile.html" class="pc-ghost">My profile</a><a href="super/identity-recognition.html" id="pcAdminLink" class="pc-ghost" hidden>Manage appointments</a></div>
+</header>
+<section class="pc-summary" aria-label="About the Council">
+ <article><span class="pc-icon">✦</span><h2>Propose</h2><p>Turn community pain points into actionable product ideas.</p></article>
+ <article><span class="pc-icon">◈</span><h2>Build</h2><p>Give initiatives clear owners, priorities and milestones.</p></article>
+ <article><span class="pc-icon">◎</span><h2>Validate</h2><p>Run structured beta programmes and review results.</p></article>
+ <article><span class="pc-icon">★</span><h2>Recognize</h2><p>Credit the people whose work meaningfully improves Blipmood.</p></article>
+</section>
+<div class="pc-gate" id="pcGate" role="status" aria-live="polite">Checking your Council appointment…</div>
+<section class="pc-workspace" id="pcWorkspace" hidden>
+ <div class="pc-welcome"><div><p class="pc-eyebrow">YOUR WORKSPACE</p><h2 id="pcWelcome">Product Council</h2><p id="pcRole" class="pc-muted"></p></div><div class="pc-kpis"><div><strong id="pcCount">—</strong><small>Current work items</small></div><div><strong id="pcMyCount">—</strong><small>Assigned to you</small></div></div></div>
+ <div class="pc-layout">
+ <nav class="pc-tabs" aria-label="Product Council tools" id="pcTabs">
+  <button type="button" data-kind="all" aria-pressed="true">Overview</button>
+  <button type="button" data-kind="initiative" aria-pressed="false">Roadmap</button>
+  <button type="button" data-kind="proposal" aria-pressed="false">Ideas</button>
+  <button type="button" data-kind="bug" aria-pressed="false">Bug triage</button>
+  <button type="button" data-kind="beta" aria-pressed="false">Beta Lab</button>
+  <button type="button" data-kind="mission" aria-pressed="false">Missions</button>
+  <button type="button" data-kind="session" aria-pressed="false">Council sessions</button>
+  <button type="button" data-kind="release_review" aria-pressed="false">Release reviews</button>
+  <button type="button" data-kind="feedback" aria-pressed="false">Feedback</button>
+  <button type="button" data-kind="research" aria-pressed="false">Research</button>
+ </nav>
+ <div class="pc-content">
+  <div class="pc-toolbar"><div><h2 id="pcSectionTitle">Overview</h2><p class="pc-muted" id="pcSectionHint">Track work and take part in product decisions.</p></div><button class="pc-button pc-button-primary" id="pcNewButton" type="button">+ Submit idea</button></div>
+  <form id="pcCreateForm" class="pc-card pc-form" hidden>
+    <h3>Create a Council item</h3>
+    <label for="pcKind">Type</label>
+    <select id="pcKind" name="kind" required>
+     <option value="proposal">Product proposal</option><option value="bug">Bug report</option><option value="feedback">Product feedback</option>
+     <option value="initiative" data-manager>Roadmap initiative</option><option value="mission" data-manager>Contribution mission</option>
+     <option value="beta" data-manager>Beta programme</option><option value="session" data-manager>Council session</option>
+     <option value="release_review" data-manager>Release review</option><option value="research" data-manager>Research brief</option>
+    </select>
+    <label for="pcTitle">Title</label><input id="pcTitle" name="title" minlength="6" maxlength="140" required placeholder="Describe the improvement clearly">
+    <label for="pcBody">Details, expected outcome, and evidence</label><textarea id="pcBody" name="body" minlength="15" maxlength="5000" rows="5" required placeholder="What is the issue? Who benefits? What would success look like?"></textarea>
+    <div class="pc-actions"><button type="submit" class="pc-button pc-button-primary" id="pcCreateSubmit">Submit for review</button><button type="button" class="pc-button" id="pcCancelCreate">Cancel</button></div>
+    <p id="pcCreateResult" role="status" aria-live="polite"></p>
+  </form>
+  <div class="pc-list" id="pcItems" aria-live="polite"></div>
+  <button class="pc-button pc-load" id="pcLoadMore" type="button" hidden>Load more</button>
+ </div>
+ </div>
+</section>
+<section class="pc-public" aria-label="Recognized contributions"><div class="pc-toolbar"><div><p class="pc-eyebrow">ACCOUNTABLE RECOGNITION</p><h2>Shipped with the community</h2><p class="pc-muted">Only published credits appear here, never private Council discussions.</p></div></div><div class="pc-public-list" id="pcCredits"><p class="pc-muted">Loading published recognition…</p></div></section>
+<footer class="pc-footer">Appointments do not grant verification, moderation access, private-message access or automatic feed promotion. All Council actions are subject to review.</footer>
+</main>
+<script type="module" src="assets/js/product-council.mjs"></script>
+</body>
+</html>

@@ -433,7 +433,9 @@ function renderProfile() {
 
 const IDENTITY_ROLES=Object.freeze({
  product_lead:"Product Lead",product_advisor:"Product Advisor",
- community_advisor:"Community Advisor",community_contributor:"Community Contributor"
+ community_advisor:"Community Advisor",community_contributor:"Community Contributor",
+ product_manager:"Product Manager",beta_tester:"Beta Tester",
+ research_contributor:"Research Contributor",design_contributor:"Design Contributor",launch_reviewer:"Launch Reviewer"
 });
 const IDENTITY_AWARDS=Object.freeze({
  staff_pick:"Staff Pick",featured:"Featured Creator",

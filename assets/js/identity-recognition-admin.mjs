@@ -1,6 +1,6 @@
 import {supabase} from "./supabase.js";
 const $=id=>document.getElementById(id);
-const allowedRoles=new Set(["community_advisor","community_contributor","product_advisor","product_lead"]);
+const allowedRoles=new Set(["community_advisor","community_contributor","product_advisor","product_lead","product_manager","beta_tester","research_contributor","design_contributor","launch_reviewer"]);
 const allowedAwards=new Set(["staff_pick","featured","platinum","product_contributor"]);
 let actorId=null;
 const trim=value=>String(value||"").trim();
