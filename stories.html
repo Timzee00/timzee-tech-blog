@@ -13,10 +13,11 @@
     <meta property="og:title" content="Stories - Blipmood">
     <meta property="og:description" content="Share a public or friends-only story that disappears after 24 hours.">
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/blipmood-status-refresh.css">
     <link rel="stylesheet" href="assets/css/content-polls.css">
     <script defer src="assets/js/theme-init.js"></script>
   </head>
-  <body>
+  <body class="blipmood-status">
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
@@ -47,20 +48,22 @@
       </div>
     </header>
 
-    <main id="main-content" class="page-shell">
+    <main id="main-content" class="page-shell status-shell">
       <div class="container">
-        <div class="page-heading">
-          <h1>Stories</h1>
-          <p>Moments, ideas and updates from the Timzee community.</p>
+        <div class="status-intro">
+          <div class="page-heading">
+            <p class="status-eyebrow">A little more life</p>
+            <h1>Stories</h1>
+            <p>Every moment has a story. Catch up with friends, discover creators, and share yours on Blipmood.</p>
+          </div>
+          <button type="button" id="createStatusAction" class="story-create-action" hidden aria-label="Create a new story">
+            <span class="story-create-action-icon" aria-hidden="true">+</span>
+            <span class="story-create-action-copy">
+              <strong>Create story</strong>
+              <small>24 hours · up to 72 for verified creators</small>
+            </span>
+          </button>
         </div>
-        <button type="button" id="createStatusAction" class="story-create-action" hidden aria-label="Create a new story">
-          <span class="story-create-action-icon" aria-hidden="true">+</span>
-          <span class="story-create-action-copy">
-            <strong>Create story</strong>
-            <small>24 hours · up to 72 hours for verified creators</small>
-          </span>
-        </button>
-        <button type="button" id="savedStoryToggle" class="btn ghost sm" hidden aria-pressed="false">☆ Saved statuses</button>
         <section id="verifiedStoryInsights" class="verified-story-insights" hidden>
           <div class="verified-insights-heading"><div><strong>Verified Creator Insights</strong>
             <small>Private performance overview · last 30 days</small></div>
@@ -68,16 +71,36 @@
           <div id="verifiedStoryInsightsStats" class="verified-story-metrics" aria-live="polite">Loading insights…</div>
           <p>View totals include only viewers who allow read receipts.</p>
         </section>
-        <div class="stories-rail" id="storiesRail">
-          <button type="button" class="story-avatar story-avatar-add" id="addStoryBtn" aria-label="Add your story">
-            <div class="story-ring story-ring-add">
-              <img id="ownStoryAvatar" alt="Your avatar" src="/assets/img/avatar-placeholder.svg">
-              <span class="story-add-badge">+</span>
+        <section class="status-discovery" aria-labelledby="statusStoriesHeading">
+          <div class="status-section-title">
+            <h2 id="statusStoriesHeading">Your circle</h2>
+            <p>Tap a portrait to view a story</p>
+          </div>
+          <div class="stories-rail" id="storiesRail" aria-label="Story creators">
+            <button type="button" class="story-avatar story-avatar-add" id="addStoryBtn" aria-label="Add your story">
+              <div class="story-ring story-ring-add">
+                <img id="ownStoryAvatar" alt="Your avatar" src="/assets/img/avatar-placeholder.svg">
+                <span class="story-add-badge">+</span>
+              </div>
+              <span class="story-avatar-label">Your Story</span>
+            </button>
+            <div class="callout" id="storiesEmpty" role="status">No active stories yet — be the first!</div>
+          </div>
+          <div class="status-filter-bar" role="group" aria-label="Filter status updates">
+            <button type="button" data-story-filter="all" aria-pressed="true">All moments</button>
+            <button type="button" data-story-filter="friends" aria-pressed="false" hidden>Friends</button>
+            <button type="button" id="savedStoryToggle" class="btn ghost sm" data-story-filter="saved" aria-pressed="false" hidden>☆ Saved</button>
+          </div>
+          <section id="statusGallerySection" class="status-gallery-section" aria-labelledby="statusGalleryHeading" hidden>
+            <div class="status-gallery-heading">
+              <div><h2 id="statusGalleryHeading">Fresh moments</h2>
+                <p>Photos, videos and updates worth catching up on.</p></div>
             </div>
-            <span class="story-avatar-label">Your Story</span>
-          </button>
-          <div class="callout" id="storiesEmpty">No active stories yet — be the first!</div>
-        </div>
+            <div id="statusHighlights" class="status-gallery-grid" aria-live="polite"></div>
+            <button type="button" id="statusGalleryMore" class="status-gallery-more" hidden>Explore all moments</button>
+          </section>
+          <button type="button" id="storyLoadMore" class="status-gallery-more stories-load-more" hidden>Load more status updates</button>
+        </section>
 
         <div class="callout" id="storiesLoginNotice" style="display:none;">
           <a href="login.html?next=stories.html">Log in</a> to post or view stories.
