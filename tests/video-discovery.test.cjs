@@ -45,7 +45,7 @@ test("cold-start For You shows bounded public videos and caches the result", asy
  const {fetchVideoDiscoveryPage}=await helper;
  let rpcCalls=0, publicQueries=0;
  const sb={
-  rpc:async()=>{rpcCalls++;return {data:[],error:null};},
+  rpc:async(name)=>{rpcCalls++;return {data:name==="blipmood_feature_allowed"?true:[],error:null};},
   from(name){assert.equal(name,"videos");return {
     select(){return this;},eq(column,value){assert.equal(column,"is_public");assert.equal(value,true);return this;},
     order(){return this;},
@@ -55,7 +55,7 @@ test("cold-start For You shows bounded public videos and caches the result", asy
  const first=await fetchVideoDiscoveryPage(sb,{mode:"for-you",userId:"cold-user",force:true});
  const next=await fetchVideoDiscoveryPage(sb,{mode:"for-you",userId:"cold-user"});
  assert.equal(first.length,1);assert.equal(next.length,1);
- assert.equal(rpcCalls,1);assert.equal(publicQueries,1);
+ assert.equal(rpcCalls,2);assert.equal(publicQueries,1);
 });
 test("empty Following stays empty and is cached rather than turning into Latest", async () => {
  const {fetchVideoDiscoveryPage}=await helper;
@@ -69,4 +69,15 @@ test("unauthorized video rankings do not leak public fallback into Following", a
  const {fetchVideoDiscoveryPage}=await helper;
  const sb={rpc:async()=>({error:{code:"42501",message:"denied"}}),from:()=>{throw Error("No fallback permitted");}};
  await assert.rejects(fetchVideoDiscoveryPage(sb,{mode:"following",userId:"blocked-user"}),error=>error.code==="42501");
+});
+
+test("region-disabled For You does not fall back to Latest videos",async()=>{
+ const {fetchVideoDiscoveryPage}=await helper;
+ let publicQueries=0;
+ const sb={
+  rpc:async(name)=>({data:name==="blipmood_feature_allowed"?false:[],error:null}),
+  from:()=>{publicQueries++;throw Error("Disabled recommendations must not query video storage");}
+ };
+ const rows=await fetchVideoDiscoveryPage(sb,{mode:"for-you",userId:"blocked-region",force:true});
+ assert.deepEqual(rows,[]);assert.equal(publicQueries,0);
 });
