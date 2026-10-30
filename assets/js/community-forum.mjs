@@ -576,38 +576,47 @@ async function discardRejectedUpload(attachment){
  const {error}=await supabase.storage.from(privateMedia?"forum-private-media":"media").remove([attachment.path]);
  if(error)console.warn("Could not reclaim failed community upload:",error.message);
 }
+function threadPreviewHtml(thread){
+ const url=String(thread.media_url||"");
+ if(!url)return "";
+ if(url.startsWith("forum-private-media/"))return "<div class='forum-thread-thumb'><span>🔒 Members-only attachment</span></div>";
+ if(!isSafeUrl(url))return "";
+ if(thread.media_type==="video"||/\.(mp4|webm)(\?|$)/i.test(url))
+  return "<div class='forum-thread-thumb'><span aria-label='Video attached'>▶ Video</span></div>";
+ return "<div class='forum-thread-thumb'><img src='"+escape(url)+"' loading='lazy' decoding='async' alt='Preview of attached community image'></div>";
+}
 function threadCard(thread,{pinned=false}={}){
  const community=findCommunity(thread.community_id);
  const label=thread.kind==="question"?"Question":thread.kind==="guide"?"Guide":thread.kind==="news"?"News":
   thread.kind==="showcase"?"Project":thread.kind==="announcement"?"Official":"Discussion";
  const intro=String(thread.body||"").replace(/\s+/g," ").slice(0,220);
  return "<article class='forum-thread-card "+verifiedCommentClass(forumIdentity(thread.author_id))+"' data-thread-card='"+escape(thread.id)+"'>"+
-  "<div class='forum-vote-rail'>"+
-  "<button type='button' data-vote='1' data-id='"+escape(thread.id)+"' class='"+(state.votes.get(thread.id)===1?"selected":"")+"' aria-label='Upvote topic' aria-pressed='"+(state.votes.get(thread.id)===1)+"'>▲</button>"+
-  "<strong data-score='"+escape(thread.id)+"'>"+Number(thread.score||0)+"</strong>"+
-  "<button type='button' data-vote='-1' data-id='"+escape(thread.id)+"' class='"+(state.votes.get(thread.id)===-1?"selected":"")+"' aria-label='Downvote topic' aria-pressed='"+(state.votes.get(thread.id)===-1)+"'>▼</button></div>"+
-  "<div class='forum-thread-main'>"+
-  "<div class='forum-thread-meta'><span class='forum-topic-kind'>"+escape(label)+"</span>"+
+  "<div class='forum-thread-meta'>"+
+  "<span class='forum-community-icon' aria-hidden='true'>"+escape(community?.icon_emoji||"💬")+"</span>"+
+  (community?"<button type='button' data-open-community='"+escape(community.id)+"'>"+escape(community.title)+"</button>":"")+
+  "<span>· "+escape(preferredDate(thread.created_at))+"</span>"+
   (pinned||thread.is_pinned?"<span class='forum-topic-pinned'>📌 Pinned</span>":"")+
   (thread.is_locked?"<span>🔒 Locked</span>":"")+
-  (community?"<button type='button' data-open-community='"+escape(community.id)+"'>"+
-   escape(community.title)+"</button>":"")+
   (thread.flair?"<span class='forum-topic-flair'>"+escape(thread.flair)+"</span>":"")+
-  "<span>· "+escape(preferredDate(thread.created_at))+"</span></div>"+
+  "<span class='forum-topic-kind'>"+escape(label)+"</span></div>"+
+  "<div class='forum-thread-content'><div class='forum-thread-copy'>"+
   "<button class='forum-thread-title' data-open-thread='"+escape(thread.id)+"' type='button'>"+escape(thread.title)+"</button>"+
-  (state.mode==="personal"&&thread.ranking_reason?"<span class='forum-ranking-reason'>"+escape(thread.ranking_reason)+"</span>":"")+
   (intro?"<p>"+escape(intro)+"</p>":"")+
-  (thread.ranking_reason&&state.mode==="personal"?"<small class='forum-ranking-reason'>"+
-   escape(thread.ranking_reason)+"</small>":"")+
+  (state.mode==="personal"&&thread.ranking_reason?"<small class='forum-ranking-reason'>"+escape(thread.ranking_reason)+"</small>":"")+
   (thread.media_url?"<span class='forum-topic-media-indicator'>◈ Media attached</span>":"")+
-  "<div class='forum-thread-footer'><span>By</span>"+forumAuthor(thread.author_id,thread.author_name)+
-  "<button type='button' data-open-thread='"+escape(thread.id)+"'>"+
-   Number(thread.reply_count||0)+" replies</button>"+
-  "<button type='button' data-save-thread='"+escape(thread.id)+"' aria-pressed='"+state.saved.has(thread.id)+"'>"+
-   (state.saved.has(thread.id)?"★ Saved":"☆ Save")+"</button>"+
-  "<button type='button' data-copy-thread='"+escape(thread.id)+"'>↗ Share</button>"+
-  (state.mode==="personal"?"<button type='button' data-not-interested='"+escape(thread.id)+"'>Not interested</button>":"")+
-  "<button type='button' data-report-thread='"+escape(thread.id)+"'>Report</button></div></div></article>";
+  "</div>"+threadPreviewHtml(thread)+"</div>"+
+  "<div class='forum-thread-footer'>"+
+   "<div class='forum-vote-rail'>"+
+   "<button type='button' data-vote='1' data-id='"+escape(thread.id)+"' class='"+(state.votes.get(thread.id)===1?"selected":"")+"' aria-label='Upvote topic' aria-pressed='"+(state.votes.get(thread.id)===1)+"'>▲</button>"+
+   "<strong data-score='"+escape(thread.id)+"'>"+Number(thread.score||0)+"</strong>"+
+   "<button type='button' data-vote='-1' data-id='"+escape(thread.id)+"' class='"+(state.votes.get(thread.id)===-1?"selected":"")+"' aria-label='Downvote topic' aria-pressed='"+(state.votes.get(thread.id)===-1)+"'>▼</button></div>"+
+   "<button type='button' data-open-thread='"+escape(thread.id)+"'>▢ "+Number(thread.reply_count||0)+" replies</button>"+
+   "<button type='button' data-save-thread='"+escape(thread.id)+"' aria-pressed='"+state.saved.has(thread.id)+"'>"+
+    (state.saved.has(thread.id)?"★ Saved":"☆ Save")+"</button>"+
+   "<button type='button' data-copy-thread='"+escape(thread.id)+"'>↗ Share</button>"+
+   "<span class='forum-byline'>By "+forumAuthor(thread.author_id,thread.author_name)+"</span>"+
+   (state.mode==="personal"?"<button type='button' data-not-interested='"+escape(thread.id)+"'>Not interested</button>":"")+
+   "<button type='button' data-report-thread='"+escape(thread.id)+"'>Report</button></div></article>";
 }
 function renderPinned(){
  $("forumPinnedThreads").innerHTML=state.pinned.length?
