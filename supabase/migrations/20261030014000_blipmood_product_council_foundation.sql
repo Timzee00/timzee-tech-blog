@@ -153,8 +153,10 @@ alter table public.council_credits enable row level security;
 revoke all on public.council_credits from anon,authenticated;
 grant select on public.council_credits to anon;
 grant select,insert,update on public.council_credits to authenticated;
-create policy "Only published contribution credits are public" on public.council_credits
- for select to anon,authenticated using(published or (select public.council_can_manage()));
+create policy "Published council credits public" on public.council_credits
+ for select to anon using(published);
+create policy "Council credits visible to leadership" on public.council_credits
+ for select to authenticated using(published or (select public.council_can_manage()));
 create policy "Council managers document impact" on public.council_credits
  for insert to authenticated with check(
  (select public.council_can_manage()) and credited_by=(select auth.uid())
