@@ -10,9 +10,10 @@
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="assets/css/chat-v2.css">
     <link rel="stylesheet" href="assets/css/chat-fixes.css">
+    <link rel="stylesheet" href="assets/css/blipmood-chat-redesign.css">
     <script defer src="assets/js/theme-init.js"></script>
   </head>
-  <body class="chat-page">
+  <body class="chat-page blipmood-chat-redesign">
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header chat-site-header">
       <div class="container wrap">
@@ -49,7 +50,7 @@
         <aside class="chat-sidebar" data-reveal>
           <div class="chat-sidebar-header">
             <div>
-              <div class="chat-page-kicker">Messages</div>
+              <div class="chat-page-kicker">Blipmood</div>
               <h1>Chats</h1>
             </div>
             <div class="chat-sidebar-actions">
@@ -59,16 +60,18 @@
           </div>
           <div class="chat-search-shell">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-            <input type="search" id="chatSearch" placeholder="Search chats" autocomplete="off">
+            <input type="search" id="chatSearch" placeholder="Search conversations…" autocomplete="off" aria-label="Search conversations">
           </div>
           <div class="chat-tabs" role="tablist" aria-label="Chat filters">
             <button class="chat-tab active" type="button" data-tab="all" role="tab" aria-selected="true">All</button>
+            <button class="chat-tab" type="button" data-tab="dms" role="tab" aria-selected="false">DMs</button>
             <button class="chat-tab" type="button" data-tab="groups" role="tab" aria-selected="false">Groups <span class="chat-tab-badge" id="groupsBadge" hidden>0</span></button>
             <button class="chat-tab" type="button" data-tab="archived" role="tab" aria-selected="false">Archived <span class="chat-tab-badge" id="archivedBadge" hidden>0</span></button>
             <button class="chat-tab" type="button" data-tab="requests" role="tab" aria-selected="false">Requests <span class="chat-tab-badge" id="requestsBadge" hidden>0</span></button>
-            <button class="chat-tab" type="button" data-tab="blocked" role="tab" aria-selected="false">Blocked <span class="chat-tab-badge" id="blockedBadge" hidden>0</span></button>
+
           </div>
           <div class="chat-tab-panel" data-panel="all"><div class="chat-list" id="friendList"></div></div>
+          <div class="chat-tab-panel" data-panel="dms" hidden><div class="chat-list" id="dmsList"></div></div>
           <div class="chat-tab-panel" data-panel="groups" hidden><div class="chat-list" id="groupList"></div></div>
           <div class="chat-tab-panel" data-panel="archived" hidden><div class="chat-list" id="archivedList"></div></div>
           <div class="chat-tab-panel" data-panel="requests" hidden>
@@ -81,9 +84,16 @@
           <div class="chat-people-search" id="peopleSearchPanel" role="dialog" aria-modal="true" aria-labelledby="peopleSearchTitle" hidden>
             <div class="chat-people-float-heading"><div><span class="chat-page-kicker">DISCOVER & CONNECT</span><h2 id="peopleSearchTitle">Find people</h2></div><button type="button" class="chat-icon-btn" id="peopleSearchClose" aria-label="Close find people">✕</button></div>
             <div class="chat-section-label">Find people</div>
-            <div class="chat-search-shell"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input type="search" id="peopleSearch" placeholder="Name or username"></div>
+            <div class="chat-search-shell"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input type="search" id="peopleSearch" placeholder="Name or username" aria-label="Find by name or username"></div>
             <div class="chat-list" id="peopleResults"></div>
           </div>
+          <nav class="chat-mobile-nav" aria-label="Chat quick navigation">
+            <a href="index.html"><span aria-hidden="true">⌂</span>Home</a>
+            <a href="discussion.html"><span aria-hidden="true">⌕</span>Discover</a>
+            <a href="chat.html" aria-current="page"><span aria-hidden="true">◉</span>Chat</a>
+            <button type="button" id="chatMobileCreate"><span aria-hidden="true">✚</span>Create</button>
+            <a href="profile.html"><span aria-hidden="true">♙</span>Profile</a>
+          </nav>
         </aside>
 
         <section class="chat-pane" data-reveal>
@@ -99,7 +109,7 @@
               <span id="chatAvatarFrame" class="tz-avatar-verified tz-avatar-verified--md chat-header-avatar-frame"><img id="chatAvatar" class="chat-header-avatar" alt="" src="/assets/img/avatar-placeholder.svg"></span>
               <div class="chat-header-copy">
                 <div class="chat-header-name" id="chatName">Conversation</div>
-                <div class="chat-header-status-row"><span class="chat-live-dot" id="chatLiveDot"></span><span id="chatStatusText">Connecting…</span></div>
+                <div class="chat-header-status-row"><span class="chat-live-dot" id="chatLiveDot"></span><span id="chatStatusText">Connecting…</span><span class="chat-header-group-count" id="chatHeaderGroupCount" hidden></span></div>
               </div>
               <div class="chat-header-actions">
                 <button class="chat-icon-btn" id="chatInfoToggle" type="button" aria-label="Chat details" title="Chat details"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 10.5v5M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
@@ -176,8 +186,9 @@
             <div class="chat-info-actions" id="directInfoActions">
               <a class="btn ghost" id="chatProfileBtn" href="profile.html">View profile</a>
             </div>
+            <div class="chat-info-summary" id="chatInfoSummary" hidden></div>
             <section id="groupInfoSection" class="chat-info-section" hidden>
-              <div class="chat-info-section-head"><h3>Group</h3><button class="btn ghost sm" id="editGroupBtn" type="button">Edit</button></div>
+              <div class="chat-info-section-head"><h3>Group Settings</h3><button class="btn ghost sm" id="editGroupBtn" type="button">Edit</button></div>
               <div class="group-profile-editor" id="groupEditor" hidden>
                 <label class="group-avatar-upload"><img id="groupAvatarPreview" alt="Group photo" src="/assets/img/group-placeholder.svg"><input id="groupAvatarInput" type="file" accept="image/*" hidden><span>Change photo</span></label>
                 <input id="groupNameInput" class="input" type="text" maxlength="80" placeholder="Group name">
@@ -220,7 +231,7 @@
               <div class="chat-member-list" id="infoGroupMembers"></div>
             </section>
             <section class="chat-info-section">
-              <div class="chat-info-section-head"><h3>Recent shared media</h3></div>
+              <div class="chat-info-section-head"><h3>Media, Links and Files</h3></div>
               <div class="chat-info-media-grid" id="infoMediaGrid"><div class="callout">No media shared yet.</div></div>
             </section>
           </div>
