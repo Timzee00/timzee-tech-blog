@@ -1,3 +1,4 @@
+import {syncObservedRegion} from "./observed-region.mjs";
 // Page-local recommendation cache. Each viewer and feed mode is isolated.
 // An empty Following list is valid and must not be replaced with Latest.
 const MAX_CANDIDATES = 50;
@@ -80,6 +81,7 @@ export async function fetchVideoDiscoveryPage(supabase, {
     // The light RPC searches a compact 15-minute candidate pool rather than
     // recomputing whole-catalog engagement totals on every swipe.
     // Preserve the legacy feed only for deployments missing the new RPC.
+    if(userId)await syncObservedRegion(supabase);
     const quick = await supabase.rpc("blipmood_video_feed_ids", {
       p_mode: mode, p_limit: MAX_CANDIDATES
     });
