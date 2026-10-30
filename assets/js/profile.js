@@ -26,6 +26,7 @@ import { safeNotificationPath } from "./notification-links.mjs";
 import {verifiedName,verifiedAvatar,verifiedLevel,verifiedLabel,verifiedFrameClasses,verifiedFrameStyle,FRAME_OPTIONS,FRAME_STYLES} from "./verified-identity.mjs";
 import {mountReadingLibrary} from "./reader-library.mjs";
 import {FX_EFFECTS,DEFAULT_FX,normalizeFx,createProfileFxEngine} from "./profile-fx.mjs";
+import {syncObservedRegion} from "./observed-region.mjs";
 import "./nav.js";
 import { submitModerationReport } from "./moderation-reports.mjs";
 
@@ -765,6 +766,7 @@ async function setupProfileFx(){
   saving=true;repaint();feedback("Saving your effects securely…");
   try{
    const submitted=normalizeFx(draft);
+   await syncObservedRegion(supabase);
    const {data,error}=await supabase.from("member_profile_effects")
      .upsert({user_id:state.user.id,...submitted,updated_at:new Date().toISOString()},{onConflict:"user_id"})
      .select("cover_effect,avatar_effect,intensity,enabled").single();
