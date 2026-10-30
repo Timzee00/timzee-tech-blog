@@ -1,0 +1,382 @@
+/* Blipmood Neon Experience — homepage and profile only.
+   Reference: deep ocean-blue, luminous aqua, soft orbit trails, premium app cards.
+   No live content is replaced or simulated by this stylesheet. */
+body.blipmood-home {
+  --bm-navy:#061326;
+  --bm-panel:#0d2137;
+  --bm-raise:#17334a;
+  --bm-teal:#52e6eb;
+  --bm-sky:#80b9ff;
+  --bm-copy:#f1faff;
+  --bm-muted:#b2cde0;
+  --bg:#061326;
+  --bg-deep:#10283b;
+  --card:#0d2137;
+  --card-solid:#0d2137;
+  --color-bg:#061326;
+  --color-surface:#0d2137;
+  --color-surface-muted:#17334a;
+  --color-text:#f1faff;
+  --color-text-muted:#b2cde0;
+  --color-text-subtle:#a9c5d7;
+  --color-primary:#52e6eb;
+  --color-primary-hover:#8df9f1;
+  --color-secondary:#80b9ff;
+  --color-text-on-primary:#06222e;
+  --color-border:rgba(128,185,255,.19);
+  --color-border-strong:rgba(128,185,255,.35);
+  background:#061326;color:#f1faff;
+  background-image:radial-gradient(ellipse 58% 16% at 77% 4%,rgba(17,126,184,.21),transparent 95%),
+    radial-gradient(ellipse 48% 12% at 12% 20%,rgba(31,191,180,.095),transparent 95%),
+    linear-gradient(180deg,#061326,#081b2d 45%,#061326 100%);
+}
+body.blipmood-home::before{height:690px;background:radial-gradient(ellipse 47% 36% at 72% 32%,rgba(29,117,208,.17),transparent 80%);pointer-events:none}
+body.blipmood-home .site-header{
+  background:rgba(5,17,34,.93);border-bottom:1px solid rgba(97,206,232,.23);
+  box-shadow:0 9px 26px rgba(0,8,22,.18);
+}
+.blipmood-home .site-header .wrap{min-height:74px}
+.blipmood-home .site-header .nav-pill a,.blipmood-home .site-header .nav-more-toggle{color:#e1f3fa}
+.blipmood-home .site-header .nav-pill a:hover,.blipmood-home .site-header .nav-more-toggle:hover{color:#5ee8ed}
+.blipmood-home .site-header .search-box{border-color:rgba(114,209,238,.31);background:#0e263c}
+.blipmood-home .site-header .search-box input{color:#f0faff}
+.blipmood-home .site-header .search-box input::placeholder{color:#c0d7e5;opacity:.85}
+.blipmood-home .site-header .icon-btn{color:#e2f5ff;border-color:rgba(128,185,255,.23)}
+.blipmood-home .home-intro{
+  isolation:isolate;overflow:hidden;position:relative;
+  padding:clamp(38px,6vw,88px) 0 21px;
+  background:radial-gradient(ellipse 55% 73% at 78% 42%,rgba(17,149,209,.15),transparent 78%);
+}
+.blipmood-home .home-intro::before{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;opacity:.4;
+  background:radial-gradient(ellipse 48% 36% at 62% 82%,transparent 89%,rgba(60,239,235,.23) 90%,transparent 92%),
+    radial-gradient(ellipse 44% 40% at 72% 25%,transparent 87%,rgba(74,153,242,.20) 88%,transparent 91%);
+}
+.blipmood-home .bm-hero-split{
+  grid-template-columns:minmax(0,1fr) minmax(0,.95fr);
+  align-items:center;gap:clamp(22px,5vw,75px);
+}
+.blipmood-home .home-intro-copy{max-width:610px}
+.blipmood-home .home-intro .eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  width:max-content;max-width:100%;padding:8px 14px;
+  background:rgba(60,209,211,.11);border:1px solid rgba(73,224,225,.31);
+  color:#8cf7eb;border-radius:999px;
+  letter-spacing:.12em;font-size:clamp(10px,.9vw,12px);font-weight:850;margin-bottom:21px;
+}
+.blipmood-home .home-intro .eyebrow>span{box-shadow:0 0 0 4px rgba(74,230,220,.16),0 0 11px rgba(94,253,239,.36)}
+.blipmood-home .home-intro h1{
+  margin:0 0 18px;max-width:10ch;
+  font-size:clamp(50px,6vw,89px);line-height:1.025;letter-spacing:-.075em;
+  color:#f3faff;text-shadow:0 4px 38px rgba(36,124,183,.13);
+}
+.blipmood-home .bm-mood-line{
+  color:#52e6eb;background:linear-gradient(110deg,#f0feff 0%,#52e6eb 48%,#5aa2ff 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.blipmood-home .bm-hero-description{
+  max-width:48ch;color:#bed6e6;font-size:clamp(15px,1.5vw,18px);line-height:1.7;margin:0 0 24px;
+}
+.blipmood-home .cta .btn:first-child{
+  background:linear-gradient(120deg,#32d9e8,#56f4db);border-color:rgba(132,255,243,.35);
+  color:#062431;box-shadow:0 13px 28px rgba(35,220,227,.18);
+  border-radius:14px;
+}
+.blipmood-home .cta .btn.ghost{border-color:rgba(150,208,239,.48);border-radius:14px;background:rgba(16,39,61,.73);color:#f3faff}
+.blipmood-home .cta .btn.ghost:hover{background:#173b53}
+.blipmood-home .intro-note{color:#bdd9e6;font-size:.8rem;margin-top:21px}
+.blipmood-home .bm-hero-art{min-height:435px;isolation:isolate;display:grid;place-items:center}
+.blipmood-home .bm-hero-art::before{width:92%;aspect-ratio:1;filter:blur(2px);opacity:.8;
+  background:radial-gradient(circle,rgba(28,149,204,.36),rgba(17,124,169,.12) 43%,transparent 74%)}
+.blipmood-home .bm-hero-art::after{content:"";position:absolute;pointer-events:none;z-index:-1;
+  width:86%;height:73%;border:1px solid rgba(88,204,242,.23);border-radius:47% 53% 37% 63%;
+  transform:rotate(-27deg);box-shadow:0 0 40px rgba(41,139,236,.09)}
+.blipmood-home .bm-hero-art>img{
+  position:absolute;top:1%;right:-3%;z-index:3;width:clamp(94px,15vw,160px);
+  max-height:170px;aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 12px 25px rgba(13,214,238,.38));
+}
+.blipmood-home .bm-orbit-words{
+  z-index:3;bottom:7%;right:2%;font-size:clamp(11px,1.4vw,17px);
+  color:#8df9f1;text-shadow:0 3px 20px rgba(0,0,0,.8);
+}
+.blipmood-home .bm-orbit-words span:nth-child(2){color:#b8d7ff}
+.blipmood-home .bm-device-shell{
+  position:relative;z-index:2;justify-self:center;
+  width:min(248px,68%);min-height:396px;padding:18px 13px 12px;
+  border:2px solid #5e98c787;border-radius:33px;
+  background:linear-gradient(160deg,#122b49 0%,#08172c 75%);
+  box-shadow:0 0 0 7px rgba(39,124,186,.12),0 25px 56px rgba(0,6,18,.68),0 0 55px rgba(32,168,228,.22);
+  transform:rotate(-5deg);
+}
+.blipmood-home .bm-device-shell::before{
+  content:"";position:absolute;width:28%;height:15px;left:36%;top:7px;
+  border-radius:0 0 12px 12px;background:#030d1b;
+}
+.blipmood-home .bm-device-top{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;margin:7px 0 18px;
+  color:#d8f4ff;font-size:13px;font-weight:840;letter-spacing:-.02em;
+}
+.blipmood-home .bm-device-top .bm-device-mark{color:#56e9f0;font-weight:950;letter-spacing:-.05em}
+.blipmood-home .bm-device-status{display:flex;gap:4px}
+.blipmood-home .bm-device-status i{display:block;width:5px;height:5px;border-radius:50%;background:#75dbf0}
+.blipmood-home .bm-device-circles{display:flex;gap:9px;margin-bottom:18px}
+.blipmood-home .bm-device-circles span{width:40px;height:40px;flex:0 0 auto;
+  border:2px solid #56e6ed;border-radius:50%;box-shadow:inset 0 0 0 3px #0b2237;
+  background:radial-gradient(circle at 35% 30%,#a1dbff,#227da5 60%,#173453)}
+.blipmood-home .bm-device-circles span:nth-child(2){background:radial-gradient(circle at 40% 32%,#bcf8e0,#2b9d95 62%,#175065)}
+.blipmood-home .bm-device-circles span:nth-child(3){background:radial-gradient(circle at 35% 30%,#ead2ff,#8a6cba 70%,#274469)}
+.blipmood-home .bm-device-post{border:1px solid #7ac9f049;background:#152c48;border-radius:17px;padding:13px;display:grid;gap:10px}
+.blipmood-home .bm-device-post-heading{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#78e4eb;font-weight:820}
+.blipmood-home .bm-device-post strong{font-size:15px;line-height:1.25;color:#f5fcff}
+.blipmood-home .bm-device-post p{font-size:11px;line-height:1.6;margin:0;color:#b8d1e4}
+.blipmood-home .bm-device-preview-art{height:90px;border-radius:11px;
+  background:radial-gradient(circle at 80% 23%,#b3f2ed 1px,transparent 28px),
+    linear-gradient(145deg,transparent 45%,#0c557a 46% 55%,transparent 56%),
+    linear-gradient(25deg,transparent 35%,#2487a7 36% 53%,transparent 54%),
+    linear-gradient(180deg,#6ab4d8,#143553);
+  position:relative;overflow:hidden}
+.blipmood-home .bm-device-preview-art::after{content:"";position:absolute;inset:auto 0 0;height:31%;background:linear-gradient(135deg,#167884,#17395f)}
+.blipmood-home .bm-device-bottom{display:flex;justify-content:space-around;align-items:center;gap:6px;border-top:1px solid #8ccbe32c;margin-top:16px;padding-top:10px;color:#9bcadd;font-size:10px}
+.blipmood-home .bm-device-bottom span:first-child{color:#80f5e9}
+.blipmood-home .explore-panel{
+  border-color:rgba(98,204,239,.30);border-radius:23px;
+  background:linear-gradient(132deg,rgba(18,42,66,.97),rgba(11,31,53,.98));
+  box-shadow:0 20px 50px rgba(0,6,21,.30),inset 0 1px rgba(154,234,248,.07);
+  gap:12px;padding:18px;
+}
+.blipmood-home .explore-panel .eyebrow{color:#8fe9eb}
+.blipmood-home .explore-panel>a{
+  min-height:112px;border:1px solid rgba(106,180,224,.25);
+  background:linear-gradient(145deg,#19364f,#10263f);border-radius:16px;
+  transition:transform 180ms ease,border-color 180ms ease,box-shadow 180ms ease;
+}
+.blipmood-home .explore-panel>a:hover,.blipmood-home .explore-panel>a:focus-visible{
+  transform:translateY(-3px);border-color:#67e7ed;
+  box-shadow:0 12px 22px rgba(0,8,27,.35);
+}
+.blipmood-home .explore-panel strong{color:#effbff}
+.blipmood-home .explore-panel small{color:#b4cfdf}
+.blipmood-home .bm-explore-icon{
+  background:rgba(50,196,219,.13);border-color:rgba(80,225,233,.33);
+  color:#70edf1;border-radius:12px
+}
+.blipmood-home .bm-explore-icon.bm-icon-blue{color:#a5c7ff}
+.blipmood-home .explore-footer a{color:#abddef}
+.blipmood-home :is(#latestPosts .post-card,.people-card,.popular-card,.side-card,.tz-reader-home,#categories .board){
+  background:linear-gradient(155deg,#112940,#0b1f34);border-color:rgba(123,186,230,.23);
+  box-shadow:0 8px 26px rgba(0,9,25,.19);
+}
+.blipmood-home #latestPosts .post-card:hover,.blipmood-home .popular-card:hover{
+  border-color:#66d9e3;box-shadow:0 15px 34px rgba(1,14,33,.36)
+}
+.blipmood-home #categoryNav a{background:#152d46;border:1px solid rgba(125,191,229,.29);color:#d6eaf3}
+.blipmood-home #categoryNav a[aria-current="true"]{
+  background:#36dce9;color:#062230;border-color:#6af9ef;box-shadow:0 5px 18px rgba(31,212,228,.18)
+}
+.blipmood-home .bm-feed-heading .section-title,.blipmood-home .popular-top .section-title{color:#f2faff}
+.blipmood-home .bm-feed-eyebrow{color:#68e7eb}
+.blipmood-home .post-card-excerpt,.blipmood-home .popular-summary{color:#bdd6e4}
+.blipmood-home #latestPosts .post-card-cover{border-color:rgba(146,205,244,.3)}
+.blipmood-home .bm-sidebar-cta{
+  background:radial-gradient(ellipse at 100% 0%,rgba(51,212,220,.2),transparent 70%),#122d43;
+  border-color:rgba(83,222,230,.35)
+}
+.blipmood-home .bm-sidebar-cta a,.blipmood-home .bm-feed-all,.blipmood-home .tz-reader-interest-manage{color:#7cebf0}
+.blipmood-home .bm-feed-all{background:#17354a;border:1px solid rgba(120,210,233,.34)}
+.blipmood-home #trendingList .post-card{background:#152d45}
+.blipmood-home .footer{background:#071828;border-top:1px solid rgba(110,192,239,.23)}
+/* PROFILE: identical color language; real member data, cover, frames and tabs stay intact. */
+body.blipmood-profile{
+  --bg:#061326;--bg-deep:#0c2136;--ink:#f1faff;--muted:#b2cde0;
+  --card:#10253b;--card-solid:#10253b;--accent:#52e6eb;--accent-cool:#80b9ff;
+  --color-bg:#061326;--color-surface:#10253b;--color-surface-muted:#19334c;
+  --color-text:#f1faff;--color-text-muted:#b2cde0;--color-text-subtle:#a9c5d7;
+  --color-primary:#52e6eb;--color-primary-hover:#8df9f1;--color-secondary:#80b9ff;
+  --color-text-on-primary:#06222e;--color-border:rgba(128,185,255,.19);
+  --color-border-strong:rgba(128,185,255,.34);
+  background:#061326;color:#f1faff;
+  background-image:radial-gradient(ellipse 55% 16% at 72% 0%,rgba(25,120,177,.24),transparent 90%),
+    linear-gradient(180deg,#061326,#0a1d32 49%,#061326);
+  overflow-x:clip;
+}
+body.blipmood-profile .site-header{
+  background:#08192ded;border-bottom:1px solid rgba(109,205,238,.25);
+  box-shadow:0 8px 28px rgba(0,6,22,.2);
+}
+body.blipmood-profile .site-header :is(.nav-pill a,.nav-more-toggle,.icon-btn){color:#e6f4ff}
+body.blipmood-profile .site-header :is(.nav-pill a,.nav-more-toggle,.icon-btn):hover{color:#6fe8ed}
+body.blipmood-profile .profile-page{
+  --profile-accent:#63e9ee;--profile-ink:#f1faff;--profile-muted:#b3d2e3;
+  --profile-line:rgba(126,191,235,.27);--profile-surface:#10253b;--profile-soft:#19344d;
+  padding-top:clamp(18px,3.8vw,46px);
+}
+.blipmood-profile .profile-page .profile-masthead{margin-bottom:18px}
+.blipmood-profile .profile-page .profile-hero{
+  border:1px solid rgba(107,203,249,.4);border-radius:24px;
+  background:linear-gradient(150deg,#102b45 0%,#0b2035 78%);
+  box-shadow:0 26px 58px rgba(0,7,24,.4),inset 0 1px rgba(135,237,246,.06);
+}
+.blipmood-profile .profile-page .profile-cover{
+  min-height:205px;height:clamp(205px,26vw,328px);border-radius:23px 23px 0 0;
+  background:radial-gradient(ellipse 65% 75% at 77% 27%,rgba(32,173,220,.46),transparent 70%),
+    radial-gradient(ellipse 65% 80% at 9% 90%,rgba(17,206,187,.23),transparent 77%),
+    linear-gradient(125deg,#091c35 0%,#0e4765 55%,#081b35 100%);
+}
+.blipmood-profile .profile-page .profile-cover::before{
+  background:radial-gradient(ellipse 60% 62% at 55% 75%,transparent 86%,rgba(126,236,243,.19) 88%,transparent 90%),
+    linear-gradient(180deg,rgba(6,17,32,.12),rgba(4,13,27,.22));
+  z-index:2;pointer-events:none
+}
+.blipmood-profile .profile-page .profile-cover::after{
+  content:"";position:absolute;inset:auto 0 0;height:58%;z-index:2;
+  background:linear-gradient(180deg,transparent,rgba(7,17,32,.26));pointer-events:none;
+}
+.blipmood-profile .profile-page .profile-cover-open{z-index:1}
+.blipmood-profile .profile-page .profile-cover-overlay{pointer-events:none}
+.blipmood-profile .profile-page .profile-identity{margin-top:-64px;gap:20px}
+.blipmood-profile .profile-page .profile-avatar-wrap{
+  width:clamp(115px,13vw,154px);height:clamp(115px,13vw,154px);
+  border:5px solid #0f263f;border-radius:50%;
+  box-shadow:0 0 0 2px #5ddce8,0 11px 32px #0008,0 0 31px rgba(73,217,236,.17);
+}
+.blipmood-profile .profile-page .profile-body{min-width:0}
+.blipmood-profile .profile-page .profile-body h1{
+  color:#f5fcff;font-size:clamp(1.7rem,3.2vw,2.8rem);letter-spacing:-.045em;
+  text-shadow:0 2px 22px rgba(18,124,182,.2)
+}
+.blipmood-profile .profile-page .profile-handle{color:#72eaf1;font-weight:760}
+.blipmood-profile .profile-page .profile-headline{color:#c1d8e7}
+.blipmood-profile .profile-page .profile-bio{color:#e8f7fd;font-size:clamp(.87rem,1.5vw,.98rem);line-height:1.74}
+.blipmood-profile .profile-page #profileRole{
+  color:#8ff7ed;background:#123a4e;border:1px solid #5bdfe96c;
+  box-shadow:0 0 17px rgba(51,199,218,.1);letter-spacing:.08em
+}
+.blipmood-profile .profile-page .profile-actions .btn{
+  border-radius:12px;font-weight:770;min-height:43px;
+  background:linear-gradient(125deg,#41dce9,#6af9e8);color:#062638;border:1px solid #96fff557
+}
+.blipmood-profile .profile-page .profile-actions .btn.ghost,
+.blipmood-profile .profile-page .profile-actions .btn.secondary{
+  background:rgba(20,51,75,.95);color:#ebfaff;border-color:rgba(120,197,231,.44)
+}
+.blipmood-profile .profile-page .profile-spotlight-stats{gap:12px}
+.blipmood-profile .profile-page .profile-spotlight-stats>div{
+  border:1px solid rgba(120,202,236,.28);border-radius:16px;
+  background:linear-gradient(150deg,#1a3a52,#102942);
+  box-shadow:inset 0 1px rgba(204,255,255,.035)
+}
+.blipmood-profile .profile-page .profile-spotlight-stats strong{color:#f0faff;font-size:clamp(1.2rem,2vw,1.7rem)}
+.blipmood-profile .profile-page .profile-spotlight-stats span{color:#b6d9e6}
+.blipmood-profile .profile-page .profile-more-stats,
+.blipmood-profile .profile-page .tz-transparency{
+  background:#11283f;color:#e7f8ff;border-color:rgba(125,185,227,.26);
+  border-radius:13px
+}
+.blipmood-profile .profile-page :is(.profile-more-stats>summary,.tz-transparency>summary,.tz-reputation-help>summary){color:#bfdeea}
+.blipmood-profile .profile-page .profile-tabs{
+  border-radius:16px;background:#0d263e;border:1px solid rgba(112,186,227,.3);
+  gap:7px;padding:6px;box-shadow:0 7px 24px rgba(0,9,25,.15)
+}
+.blipmood-profile .profile-page .profile-tabs button{
+  min-height:44px;border-radius:10px;color:#c1d8e8;padding:11px clamp(13px,2vw,21px);
+  transition:background 160ms ease,color 160ms ease
+}
+.blipmood-profile .profile-page .profile-tabs button:hover{background:#204059;color:#fff}
+.blipmood-profile .profile-page .profile-tabs button.active{
+  background:linear-gradient(120deg,#32d8e8,#6de9f0);color:#061f30;
+  box-shadow:0 6px 18px rgba(39,203,219,.16)
+}
+.blipmood-profile .profile-page .profile-tabs button.active::after{display:none}
+.blipmood-profile .profile-page :is(.profile-posts-card,.profile-sidebar .profile-card,
+.profile-activity>.profile-card,.profile-settings>.discussion-card,.profile-video-section,
+.profile-media-section){background:#10253b;border-color:rgba(126,190,234,.24);
+  border-radius:18px;box-shadow:0 12px 32px rgba(0,7,21,.2)}
+.blipmood-profile .profile-page .profile-sidebar .profile-card{
+  background:linear-gradient(155deg,#142f48,#10243b)
+}
+.blipmood-profile .profile-page .profile-sidebar h3{color:#f2faff}
+.blipmood-profile .profile-page .profile-post-item{
+  background:linear-gradient(140deg,#19344c,#11283e);border-color:rgba(114,187,230,.21);
+  border-radius:15px;transition:border-color 170ms ease,transform 170ms ease
+}
+.blipmood-profile .profile-page .profile-post-item:hover{
+  border-color:rgba(79,220,233,.54);transform:translateY(-2px)
+}
+.blipmood-profile .profile-page .profile-post-title{color:#f5fcff}
+.blipmood-profile .profile-page .profile-post-excerpt,.blipmood-profile .profile-page .profile-post-footer{color:#bdd6e4}
+.blipmood-profile .profile-page .profile-content-eyebrow{color:#7beaf0}
+.blipmood-profile .profile-page .profile-media-item,.blipmood-profile .profile-page .profile-video-tile-media{
+  background:#142b43;border-color:rgba(126,195,231,.24)
+}
+.blipmood-profile .profile-page .profile-video-tile-title{color:#d9f2ff}
+.blipmood-profile .profile-page .about-item,.blipmood-profile .profile-page .activity-item{
+  background:#19344d;color:#e8f8ff;border-color:rgba(126,189,229,.23)
+}
+.blipmood-profile .profile-page .about-item span,.blipmood-profile .profile-page .topic-meta{color:#b4d1e4}
+.blipmood-profile .profile-page .profile-settings :is(input:not([type=checkbox]):not([type=radio]),textarea,select){
+  background:#11273e;color:#f4fcff;border:1px solid rgba(117,189,233,.39);border-radius:11px;
+}
+.blipmood-profile .profile-page .profile-settings :is(input,textarea)::placeholder{color:#b2c9d9;opacity:.82}
+.blipmood-profile .profile-page .profile-settings label{color:#deedf7}
+.blipmood-profile .profile-page .profile-settings fieldset{border-color:rgba(127,191,233,.25)}
+.blipmood-profile .profile-page .callout,.blipmood-profile .profile-page .profile-empty-state{
+  background:#173049;color:#bed8e6;border-color:rgba(116,191,231,.25)
+}
+.blipmood-profile .profile-page :is(a,.profile-community-link){text-underline-offset:3px}
+.blipmood-profile .profile-page :is(a,button,summary,input,textarea,select):focus-visible{
+  outline:3px solid #6af9e9;outline-offset:3px
+}
+body.blipmood-profile .footer{background:#071828;color:#d2e9f6;border-top:1px solid rgba(108,199,234,.22)}
+/* Both pages: strong mobile layout without fake data or heavy animation. */
+@media(max-width:1100px){
+  .blipmood-home .bm-device-shell{width:min(224px,75%)}
+  .blipmood-home .bm-hero-art{min-height:420px}
+}
+@media(max-width:800px){
+  .blipmood-home .bm-hero-split{gap:24px}
+  .blipmood-home .home-intro h1{font-size:clamp(45px,7vw,62px)}
+  .blipmood-home .bm-device-shell{width:min(208px,84%);transform:rotate(-3deg)}
+  .blipmood-home .bm-hero-art>img{right:-1%;width:104px}
+}
+@media(max-width:650px){
+  .blipmood-home .home-intro{padding-top:28px}
+  .blipmood-home .bm-hero-split{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+  .blipmood-home .home-intro h1{max-width:none;font-size:clamp(44px,10vw,60px);line-height:1.04}
+  .blipmood-home .home-intro-copy{width:100%;max-width:none}
+  .blipmood-home .bm-hero-art{
+    position:relative;inset:auto;right:auto;top:auto;display:grid;
+    width:100%;height:300px;min-height:300px;opacity:1;pointer-events:none;
+    margin:8px 0 0;
+  }
+  .blipmood-home .bm-device-shell{
+    width:181px;min-height:315px;transform:scale(.84) rotate(-4deg);
+    transform-origin:center center;padding:14px 11px 8px
+  }
+  .blipmood-home .bm-device-circles span{width:32px;height:32px}
+  .blipmood-home .bm-device-post{padding:10px;gap:7px}
+  .blipmood-home .bm-device-preview-art{height:65px}
+  .blipmood-home .bm-device-bottom{margin-top:10px}
+  .blipmood-home .bm-hero-art>img{top:3px;right:10%;width:105px;height:auto;opacity:1}
+  .blipmood-home .bm-orbit-words{bottom:6%;right:9%;font-size:11px}
+  .blipmood-home .explore-panel{padding:11px;gap:9px;margin-top:14px}
+  .blipmood-home .explore-panel>a{min-height:111px}
+  .blipmood-home .explore-panel strong{font-size:12px}
+  .blipmood-home .explore-panel small{font-size:10.5px}
+  body.blipmood-profile .profile-page{padding-top:18px}
+  .blipmood-profile .profile-page .profile-masthead .profile-cover{height:183px;min-height:183px;border-radius:15px 15px 0 0}
+  .blipmood-profile .profile-page .profile-identity{margin-top:-52px}
+  .blipmood-profile .profile-page .profile-avatar-wrap{width:108px;height:108px}
+  .blipmood-profile .profile-page .profile-spotlight-stats{gap:7px}
+  .blipmood-profile .profile-page .profile-spotlight-stats>div{padding:12px 5px}
+  .blipmood-profile .profile-page .profile-tabs{gap:4px;padding:4px}
+  .blipmood-profile .profile-page .profile-tabs button{padding:10px 13px;min-height:44px}
+}
+@media(max-width:380px){
+  .blipmood-home .home-intro h1{font-size:40px}
+  .blipmood-home .bm-device-shell{transform:scale(.77) rotate(-4deg)}
+  .blipmood-profile .profile-page .profile-actions .btn{font-size:.78rem;padding:9px 10px}
+  .blipmood-profile .profile-page .profile-spotlight-stats strong{font-size:1.04rem}
+}
+@media(prefers-reduced-motion:reduce){
+  .blipmood-home :is(.bm-device-shell,.explore-panel>a),
+  .blipmood-profile .profile-page .profile-post-item{transition:none!important;animation:none!important;transform:none!important}
+}
