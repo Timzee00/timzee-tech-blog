@@ -427,7 +427,8 @@
           }
           const author=document.createElement("span");author.className="status-moment-author";
           const avatar=document.createElement("img");avatar.alt="";
-          avatar.src=isSafeUrl(group.profile?.avatar_url)?group.profile.avatar_url:DEFAULT_AVATAR;
+          avatar.src=isSafeUrl(group.profile?.avatar_url)&&!/[<>"']/.test(group.profile.avatar_url)
+            ?group.profile.avatar_url:DEFAULT_AVATAR;
           const authorName=document.createElement("span");authorName.textContent=name+(group.profile?.is_verified?" ✓":"");
           author.append(avatar,authorName);card.appendChild(author);
           const info=document.createElement("span");info.className="status-moment-bottom";
@@ -469,7 +470,8 @@
           const ring = document.createElement("span");
           ring.className = "story-ring"+(profile?.is_verified?" story-verified-ring":"");
           const image = document.createElement("img");
-          image.src = isSafeUrl(profile?.avatar_url) ? profile.avatar_url : DEFAULT_AVATAR;
+          image.src = isSafeUrl(profile?.avatar_url) && !/[<>"']/.test(profile.avatar_url)
+            ? profile.avatar_url : DEFAULT_AVATAR;
           image.alt = "";
           ring.appendChild(image);
           const label = document.createElement("span");
@@ -641,7 +643,7 @@
         if (!story) return closeViewer();
 
         const profile = group.profile;
-        document.getElementById("viewerAvatar").src = isSafeUrl(profile?.avatar_url)
+        document.getElementById("viewerAvatar").src = isSafeUrl(profile?.avatar_url) && !/[<>"']/.test(profile.avatar_url)
           ? profile.avatar_url
           : DEFAULT_AVATAR;
         document.getElementById("viewerName").textContent = (profile?.username || profile?.display_name || "Member")+
