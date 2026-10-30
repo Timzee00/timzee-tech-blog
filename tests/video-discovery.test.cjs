@@ -5,10 +5,9 @@ const ONE="11111111-1111-4111-8111-111111111111", TWO="22222222-2222-4222-8222-2
 function mockFeed(reqs){
  return {
    rpc:async(name,args)=>{reqs.push({name,args});return {data:[
-     {content_type:"video",content_id:TWO},
-     {content_type:"video",content_id:ONE},
-     {content_type:"post",content_id:"ignore"},
-     {content_type:"video",content_id:TWO}
+     {video_id:TWO},
+     {video_id:ONE},
+     {video_id:TWO}
    ],error:null}},
    from(table){assert.equal(table,"videos");return {
      select(){return this},
@@ -25,8 +24,8 @@ test("For You clips retain ranked order without duplicating candidates",async()=
  const calls=[];
  const clips=await fetchVideoDiscoveryPage(mockFeed(calls),{mode:"for-you",userId:"member-a",force:true,limit:1,offset:0});
  assert.deepEqual(clips.map(x=>x.id),[TWO]);
- assert.equal(calls[0].name,"get_personalized_feed");
- assert.equal(calls[0].args.p_content_type,"video");
+ assert.equal(calls[0].name,"blipmood_video_feed_ids");
+ assert.equal(calls[0].args.p_mode,"for-you");
 });
 test("Following uses distinct RPC and cache partitions by member",async()=>{
  const {fetchVideoDiscoveryPage}=await helper;const calls=[];
@@ -34,7 +33,8 @@ test("Following uses distinct RPC and cache partitions by member",async()=>{
  await fetchVideoDiscoveryPage(client,{mode:"following",userId:"member-a",force:true});
  await fetchVideoDiscoveryPage(client,{mode:"following",userId:"member-b"});
  assert.equal(calls.length,2);
- assert.equal(calls[0].name,"get_following_feed");
+ assert.equal(calls[0].name,"blipmood_video_feed_ids");
+ assert.equal(calls[0].args.p_mode,"following");
 });
 test("Unknown mode fails closed",async()=>{
  const {fetchVideoDiscoveryPage}=await helper;
