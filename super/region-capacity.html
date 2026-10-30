@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Region & Capacity Control — Blipmood</title>
+<link rel="stylesheet" href="../assets/css/admin.css"><script defer src="../assets/js/theme-init.js"></script>
+<style>
+.rg-shell{max-width:1120px;width:calc(100% - 28px);margin:25px auto 64px;color:var(--color-text,#e8f3fa)}
+.rg-head{display:flex;align-items:start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.rg-head h1{font-size:clamp(1.5rem,4vw,2.1rem);margin:7px 0}
+.rg-intro{line-height:1.55;color:var(--color-text-muted,#a9c0c9);max-width:75ch}
+.rg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:17px;margin-top:20px}
+.rg-card{border:1px solid var(--color-border,#465964);border-radius:17px;background:var(--color-surface,#16313d);padding:clamp(15px,2.7vw,22px);display:grid;gap:12px;min-width:0}
+.rg-card h2{margin:0;font-size:1.16rem}.rg-card p,.rg-card small{line-height:1.55;color:var(--color-text-muted,#aabec7)}
+.rg-card form{display:grid;gap:11px}.rg-card label{display:grid;gap:5px;font-size:.87rem;font-weight:650}
+.rg-card :is(input,select,textarea){min-height:44px;width:100%;max-width:100%;border-radius:10px;border:1px solid var(--color-border,#536a7c);background:var(--color-surface-muted,#142934);color:var(--color-text,#eefaff);padding:9px 10px;font:inherit}
+.rg-card input[type=checkbox]{width:21px;height:21px;min-height:21px}
+.rg-card .rg-toggle{display:flex;align-items:center;gap:8px}
+.rg-card .rg-toggle input{flex:none}.rg-card button{min-height:44px}
+.rg-status{font-size:.85rem;overflow-wrap:anywhere}.rg-status[data-error=true]{color:#ffb9b9}
+.rg-cap{display:grid;gap:12px}.rg-meter{height:12px;width:100%;border-radius:12px;background:#687f8928;overflow:hidden}
+.rg-meter>span{display:block;height:100%;background:#4bc8b5;transition:width .2s}
+.rg-line{display:flex;justify-content:space-between;gap:8px}
+.rg-buckets{display:grid;gap:6px;font-size:.85rem}.rg-buckets>div{display:flex;justify-content:space-between;gap:8px}
+.rg-note{border-left:3px solid #8bcce4;padding:11px 13px;border-radius:4px;background:var(--color-surface-muted,#1b3640)}
+.rg-rule-status{font-size:.84rem;color:var(--color-text-muted,#a9c4c9)}
+[hidden]{display:none!important}@media(max-width:440px){.rg-shell{width:calc(100% - 18px)}}
+</style></head>
+<body class="admin-shell"><main class="rg-shell">
+<header class="rg-head"><div><small>BLIPMOOD · SUPER ADMIN</small><h1>Region & Capacity Manager</h1>
+<p class="rg-intro">Country-specific feature controls, stable staged rollouts, storage safeguards and measured database capacity. All changes are audited and validated server-side.</p></div>
+<a href="professional-panel.html" class="btn ghost">← Super Admin</a></header>
+<p id="rgGate" role="status" class="rg-note">Checking super-administrator permissions…</p>
+<div id="rgWorkspace" hidden>
+<p class="rg-note">Only a verified account region may authorize a restricted feature. IP location or VPN detection is informative, not proof of residence. Normal site features remain globally available unless you deliberately restrict them.</p>
+<div class="rg-grid">
+<section class="rg-card"><h2>Feature availability</h2>
+<form id="rgRuleForm">
+<label>Feature<select id="rgFeature" name="feature" required>
+<option value="video_uploads">Video uploads</option>
+<option value="fyp_recommendations">For You recommendations</option>
+<option value="marketplace">Marketplace</option>
+<option value="live_spaces">Live Spaces</option>
+<option value="profile_fx">Profile FX Studio</option>
+<option value="creator_monetization">Creator monetization (not launched)</option>
+</select></label>
+<label>Country code <input id="rgCountry" name="country" value="*" minlength="1" maxlength="2" required placeholder="* for all or NG, US, GH"></label>
+<small>* = global default. Country-specific overrides apply only to verified account regions.</small>
+<label class="rg-toggle"><input id="rgEnabled" type="checkbox" checked> Enabled</label>
+<label>Rollout percentage <input id="rgPercent" type="number" min="0" max="100" step="1" value="100"></label>
+<label>Starts at (optional) <input id="rgStart" type="datetime-local"></label>
+<label>Ends at (optional) <input id="rgEnd" type="datetime-local"></label>
+<button type="submit" class="btn">Save feature rule</button>
+<button type="button" id="rgRemove" class="btn ghost">Remove country override</button>
+</form><p class="rg-rule-status" id="rgEffective"></p><p id="rgRuleStatus" class="rg-status" role="status"></p>
+</section>
+<section class="rg-card"><h2>Verified account country</h2>
+<p>Record an account country only after a justified eligibility/residency review. This protects restricted features against easy VPN or browser-setting bypasses.</p>
+<form id="rgUserCountryForm">
+<label>Member username <input id="rgMember" placeholder="@username" required></label>
+<label>Verified country code <input id="rgMemberCountry" maxlength="2" minlength="2" placeholder="NG" required></label>
+<label>Evidence category<select id="rgEvidence"><option value="staff_review">Staff review</option><option value="verified_residency">Verified residency</option><option value="verified_billing">Verified billing country</option></select></label>
+<button type="submit" class="btn">Record reviewed region</button>
+</form><p id="rgUserStatus" class="rg-status" role="status"></p>
+</section>
+<section class="rg-card"><div class="rg-line"><h2>Storage & capacity</h2><button type="button" class="btn ghost sm" id="rgRefreshCapacity">Refresh</button></div>
+<div id="rgCapacity" class="rg-cap" role="status"><p>Choose Refresh to measure current usage.</p></div>
+<small>Database and storage are separate. Usage is a snapshot, not a real-time billing meter. No media is deleted automatically.</small>
+</section>
+<section class="rg-card"><h2>Upload safety limits</h2>
+<form id="rgLimitsForm">
+<label>Maximum video (MB) <input id="rgMaxVideo" type="number" min="1" max="100" step="1" required></label>
+<label>Maximum thumbnail (MB) <input id="rgMaxThumb" type="number" min="0.125" max="10" step=".125" required></label>
+<label>Media storage budget (MB) <input id="rgBudget" type="number" min="100" max="102400" step="1" required></label>
+<label>Storage warning (%) <input id="rgWarn" type="number" min="30" max="90" required></label>
+<label>Pause NEW video metadata at (%) <input id="rgPause" type="number" min="80" max="100" required></label>
+<button type="submit" class="btn">Save upload safeguards</button>
+</form><p id="rgLimitsStatus" role="status" class="rg-status"></p><p class="rg-note">No auto-deletion. Limits reject new uploads, not existing media. Browser checks are backed by database-side validation.</p>
+</section>
+</div></div>
+</main><script type="module" src="../assets/js/region-capacity-admin.mjs"></script></body></html>
