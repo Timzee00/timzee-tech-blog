@@ -1,7 +1,32 @@
-// Approximate country sync is only invoked on feature entry/actions.
-// 30-minute session cache avoids expensive server/auth calls per swipe.
+// Approximate country sync occurs only at restricted feature entry.
+// The public override-presence response is CDN-cached; no auth call on a
+// default global site. Never trust a browser-supplied country.
 const cache=new Map();
+let overrideCache={checked:0,required:true};
+let overrideRequest=null;
+async function needsRegionCheck(){
+ if(Date.now()-overrideCache.checked<120000)return overrideCache.required;
+ if(overrideRequest)return overrideRequest;
+ overrideRequest=(async()=>{
+  try{
+   const controller=new AbortController();
+   const timer=setTimeout(()=>controller.abort(),3200);
+   try{
+    const response=await fetch("/.netlify/functions/region-check",{method:"GET",
+      cache:"default",signal:controller.signal});
+    if(!response.ok)return true;
+    const json=await response.json();
+    if(typeof json?.overrides!=="boolean")return true;
+    overrideCache={checked:Date.now(),required:json.overrides};
+    return json.overrides;
+   }finally{clearTimeout(timer);}
+  }catch{return true;} // Failure never turns off country enforcement.
+ })();
+ try{return await overrideRequest;}finally{overrideRequest=null;}
+}
 export async function syncObservedRegion(supabase){
+ if(!supabase)return false;
+ if(!(await needsRegionCheck()))return true;
  if(!supabase?.auth?.getSession)return false;
  let session=null;
  try{
