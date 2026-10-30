@@ -301,15 +301,25 @@
         const params = new URLSearchParams(window.location.search);
         const targetUser = params.get("user");
         const targetStory = params.get("story");
-        if (targetStory) {
-          const groupIndex = state.groups.findIndex(group => group.stories.some(item => item.id === targetStory));
-          if (groupIndex >= 0) {
-            const storyIndex = state.groups[groupIndex].stories.findIndex(item => item.id === targetStory);
-            openViewer(groupIndex, storyIndex);
+        if ((targetStory||targetUser) && !state.groups.some(group =>
+          (targetStory?group.stories.some(story=>story.id===targetStory):group.userId===targetUser))) {
+          // A shared link can reference an active status outside the first feed page.
+          // Fetch only that RLS-permitted author's statuses rather than scanning all pages.
+          if (/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(targetUser||"")) {
+            const stories=await fetchUserStories(targetUser);
+            if(stories.length){
+              const {data:profile}=await supabase.from("public_profiles")
+                .select("id,username,avatar_url,is_verified").eq("id",targetUser).maybeSingle();
+              state.groups.push({userId:targetUser,profile:profile||null,stories});
+            }
           }
-        } else if (targetUser) {
-          const index = state.groups.findIndex(group => group.userId === targetUser);
-          if (index >= 0) openViewer(index);
+        }
+        if (targetStory) {
+          const index=state.groups.findIndex(group=>group.stories.some(story=>story.id===targetStory));
+          if(index>=0)openViewer(index,state.groups[index].stories.findIndex(story=>story.id===targetStory));
+        } else if(targetUser) {
+          const index=state.groups.findIndex(group=>group.userId===targetUser);
+          if(index>=0)openViewer(index);
         }
 
         setupComposer();
@@ -637,7 +647,7 @@
         musicControls.hidden=true;
         const social=document.getElementById("storyViewerSocial");
         if(social)void showStoryInteractions(story,state.user,social,{
-          onReshare:async()=>{state.allGroups=await fetchStoriesFeed();await applySavedFilter();}
+          onReshare:async()=>{await refreshStoryDiscovery();}
         });
 
         const isOwn = state.user && story.user_id === state.user.id;
@@ -1043,8 +1053,7 @@
 
           closeComposer();
           try {
-            state.allGroups = await fetchStoriesFeed();
-            await applySavedFilter();
+            await refreshStoryDiscovery();
           } catch (error) {
             console.warn("Story posted, but refreshing stories failed:", error);
             window.appUI?.toast?.("Your story was posted, but the feed could not refresh. Reload to see it.", {
