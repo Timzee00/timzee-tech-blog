@@ -99,7 +99,7 @@ else void reportVisit();
   },1000);
   window.addEventListener("scroll",()=>{
     if(window.scrollY>120)markInteraction();
-  },{passive:true,once:true});
+  },{passive:true});
   document.addEventListener("pointerdown",markInteraction,{passive:true,once:true});
   document.addEventListener("keydown",markInteraction,{once:true});
   document.addEventListener("click",(event)=>{
