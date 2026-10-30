@@ -728,6 +728,8 @@ function updateGroupControlVisibility(){
     !(owner||(role==='admin'&&settings.allow_admin_invite_links!==false));
   $("groupLeaveBtn").hidden=owner;
   $("groupUnbanBtn").hidden=!(owner||role==='admin');
+  const notify=$("groupNotifyBtn");
+  if(notify){notify.textContent=isMuted(g.id)?"Unmute alerts":"Notifications";notify.setAttribute("aria-pressed",String(isMuted(g.id)));}
   const mayEdit=owner||(role==='admin'&&settings.allow_admin_manage_settings===true);
   $("groupPermissionsPanel").hidden=!mayEdit;
   $("groupAllowAdminSettingsLabel").hidden=!owner;
@@ -1453,6 +1455,7 @@ function setupEvents(){
   $("groupLeaveBtn")?.addEventListener('click',()=>void leaveCurrentGroup().catch(e=>reportAppError(e,'Unable to leave group')));
   $("groupAddMembersBtn")?.addEventListener('click',()=>void addPeopleToGroup().catch(e=>reportAppError(e,'Unable to add people')));
   $("groupShareInviteBtn")?.addEventListener('click',()=>void shareGroupInvite().catch(e=>reportAppError(e,'Invite link unavailable')));
+  $("groupNotifyBtn")?.addEventListener('click',()=>void toggleChatMemberFlag('mute').then(()=>updateGroupControlVisibility()).catch(e=>reportAppError(e,'Unable to update notifications')));
   $("groupUnbanBtn")?.addEventListener('click',()=>void unbanGroupMember().catch(e=>reportAppError(e,'Unable to unban member')));
   $("saveGroupPermissions")?.addEventListener("click",()=>void saveGroupPermissions()
     .catch(error=>reportAppError(error,"Unable to save group permissions")));
