@@ -477,12 +477,24 @@ function renderPinnedMessages(){
   if(!bar)return;
   const items=state.pinnedMessages;
   bar.hidden=!items.length;
-  if(!items.length){bar.replaceChildren();return;}
+  if(!items.length){bar.replaceChildren();renderInfoPinned();return;}
   bar.innerHTML=items.map((m,index)=>{
     const snippet=escapeHTML((m.body|| (m.media_type?'📎 '+m.media_type:'Pinned message')).slice(0,95));
     return `<button type="button" class="chat-pinned-link" data-pinned-id="${m.id}" title="Go to pinned message">
       <span aria-hidden="true">📌</span><span class="chat-pinned-text"><strong>${index===0?'Pinned message':`Pinned ${index+1}`}</strong><small>${snippet}</small></span></button>`;
   }).join("");
+  renderInfoPinned();
+}
+function renderInfoPinned(){
+ const section=$("infoPinnedSection"),list=$("infoPinnedList"),count=$("chatInfoPinnedCount");
+ if(!section||!list)return;
+ const pinned=state.pinnedMessages;
+ section.hidden=!pinned.length;
+ if(count)count.textContent=String(pinned.length);
+ list.innerHTML=pinned.map(m=>
+  '<button type="button" class="chat-info-pinned-item" data-pinned-id="'+escapeHTML(m.id)+'">'+
+  '<span aria-hidden="true">📌</span><span>'+escapeHTML(String(m.body||m.media_type||"Pinned message").slice(0,120))+'</span></button>'
+ ).join("");
 }
 async function loadPinnedMessages(threadId){
   if(!threadId)return;
@@ -1397,7 +1409,34 @@ function setupTabs(){
  $("chatBlockedToggle")?.addEventListener('click',()=>activateChatTab('blocked'));
  $("chatMobileCreate")?.addEventListener('click',()=>{$("newGroupBtn")?.click();});
 }
+
+function setupChatEmojiMenu(){
+ const button=$("chatEmojiToggle"),menu=$("chatEmojiMenu"),field=$("chatBody");
+ if(!button||!menu||!field)return;
+ const choices=["😀","😊","😂","🥰","❤️","👍","🔥","🎉","🙏","💯","✨","😎","😢","🙌","💚","👏","🤔","🚀"];
+ menu.replaceChildren(...choices.map(emoji=>{
+  const item=document.createElement("button");item.type="button";item.textContent=emoji;
+  item.className="chat-emoji-item";item.setAttribute("aria-label","Insert "+emoji);
+  item.addEventListener("click",()=>{
+   const start=field.selectionStart??field.value.length,end=field.selectionEnd??start;
+   field.setRangeText(emoji,start,end,"end");field.focus();
+   field.dispatchEvent(new Event("input",{bubbles:true}));menu.hidden=true;button.setAttribute("aria-expanded","false");
+  });return item;
+ }));
+ button.addEventListener("click",()=>{
+  menu.hidden=!menu.hidden;button.setAttribute("aria-expanded",String(!menu.hidden));
+  if(!menu.hidden)menu.querySelector("button")?.focus();
+ });
+ menu.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){menu.hidden=true;button.setAttribute("aria-expanded","false");button.focus();}
+ });
+ document.addEventListener("pointerdown",e=>{
+  if(menu.hidden||menu.contains(e.target)||button.contains(e.target))return;
+  menu.hidden=true;button.setAttribute("aria-expanded","false");
+ });
+}
 function setupEvents(){
+  setupChatEmojiMenu();
   $("loadOlderMessages")?.addEventListener("click", () => loadOlderMessages().catch(error => reportAppError(error, "Unable to load older messages")));
   setupMentionInput($("chatBody"));
   setupMentionInput($("chatEditBody"));
@@ -1418,8 +1457,20 @@ function setupEvents(){
   $("saveGroupPermissions")?.addEventListener("click",()=>void saveGroupPermissions()
     .catch(error=>reportAppError(error,"Unable to save group permissions")));
   $("chatPinnedBar")?.addEventListener("click",e=>{const b=e.target.closest("[data-pinned-id]");if(b)void jumpToPinned(b.dataset.pinnedId).catch(err=>reportAppError(err,"Pinned message unavailable"));});
+  $("infoPinnedList")?.addEventListener("click",event=>{
+   const id=event.target.closest("[data-pinned-id]")?.dataset.pinnedId;if(!id)return;
+   if(window.innerWidth<1180)$("chatInfoPanel")?.close();
+   void jumpToPinned(id).catch(err=>reportAppError(err,"Pinned message unavailable"));
+  });
   $("chatSearch")?.addEventListener('input',async e=>{state.searchTerm=e.target.value||'';await renderFriends();renderGroups();}); bindSearch($("peopleSearch"), searchPeople);
-  $("friendList")?.addEventListener('click',e=>{const r=e.target.closest('[data-friend-id]');if(r)selectFriend(r.dataset.friendId).catch(err=>reportAppError(err,'Chat open failed'));}); $("groupList")?.addEventListener('click',e=>{const r=e.target.closest('[data-group-id]');if(r)selectGroup(r.dataset.groupId).catch(err=>reportAppError(err,'Group open failed'));});
+  for(const listId of ["friendList","dmsList","groupList"]){
+   $(listId)?.addEventListener('click',event=>{
+    const friend=event.target.closest('[data-friend-id]')?.dataset.friendId;
+    const group=event.target.closest('[data-group-id]')?.dataset.groupId;
+    if(friend)void selectFriend(friend).catch(err=>reportAppError(err,'Chat open failed'));
+    if(group)void selectGroup(group).catch(err=>reportAppError(err,'Group open failed'));
+   });
+  }
   $("archivedList")?.addEventListener('click',e=>{
     const friend=e.target.closest('[data-friend-id]')?.dataset.friendId;
     const group=e.target.closest('[data-group-id]')?.dataset.groupId;
