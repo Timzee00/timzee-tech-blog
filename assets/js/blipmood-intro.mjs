@@ -7,7 +7,7 @@ let loading=null;
 const currentIsHome=()=>location.pathname==="/"||location.pathname==="/index.html";
 const skipForAccessibility=()=>{
   if(document.documentElement.dataset.reduceMotion==="true")return true;
-  if(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches)return true;
+  if(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches)return true;
   const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
   return !!(connection?.saveData||/(?:slow-2g|2g)/.test(connection?.effectiveType||""));
 };
