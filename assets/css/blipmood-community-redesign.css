@@ -324,3 +324,14 @@ body.blipmood-community-redesign .forum-discover-results>button small{
 }
 body.blipmood-community-redesign .forum-discover-results>button strong{font-size:.79rem}
 body.blipmood-community-redesign .forum-discover-results>button small{font-size:.69rem;color:var(--color-text-muted,#64778d)}
+
+/* Theme-aware text on teal; #fff on the mint dark-theme accent is low contrast. */
+body.blipmood-community-redesign .forum-button.primary,
+body.blipmood-community-redesign .forum-create-post,
+body.blipmood-community-redesign .forum-sidebar-signup a,
+body.blipmood-community-redesign .forum-category-filters button[aria-pressed="true"],
+body.blipmood-community-redesign .forum-filter-buttons button[aria-pressed="true"],
+body.blipmood-community-redesign .forum-filter-buttons button.active,
+body.blipmood-community-redesign .forum-guide-row span{
+ color:var(--color-text-on-primary,#fff);
+}
