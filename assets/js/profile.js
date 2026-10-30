@@ -54,7 +54,8 @@ const state = {
   adminRequest: null,
   profilePosts: [], profileMedia: [], profilePostOffset: 0,
   profilePostHasMore: false, profilePostsLoaded: false, profilePostsLoading: false,
-  profilePostsError: false
+  profilePostsError: false,
+  profileVideoMedia: [], profileVideoMediaLoaded: false
 };
 
 function sanitizeUsername(value = "") {
@@ -986,10 +987,10 @@ function renderProfileMedia(){
  const host=document.getElementById("profileMediaGallery"),more=document.getElementById("profileMoreMedia");
  if(!host)return;
  host.replaceChildren();host.setAttribute("aria-busy",String(state.profilePostsLoading&&!state.profilePostsLoaded));
- if(!state.profilePostsLoaded||!state.profileMedia.length){
+ if(!state.profilePostsLoaded||!state.profileVideoMediaLoaded||(!state.profileMedia.length&&!state.profileVideoMedia.length)){
   const p=document.createElement("p");p.className="profile-empty-state";
-  p.textContent=state.profilePostsLoaded
-   ?"No visible photos or videos in these community posts.":"Loading media…";
+  p.textContent=state.profilePostsLoaded&&state.profileVideoMediaLoaded
+   ?"No public photos or videos found for this creator.":"Loading media…";
   host.append(p);
  }
  for(const asset of state.profileMedia){
@@ -1001,7 +1002,34 @@ function renderProfileMedia(){
   }
   host.append(card);
  }
+ // The unified Media view also shows this creator's public video uploads.
+ for(const video of state.profileVideoMedia){
+  const link=document.createElement("a");link.className="profile-media-item";
+  link.href="video.html?id="+encodeURIComponent(video.id);
+  link.setAttribute("aria-label","Watch "+String(video.title||"creator video"));
+  if(video.thumbnail_url&&isSafeUrl(video.thumbnail_url)){
+   const img=document.createElement("img");img.src=video.thumbnail_url;
+   img.alt="";img.loading="lazy";img.decoding="async";link.append(img);
+  }else{
+   const mark=document.createElement("span");mark.className="profile-media-play";
+   mark.textContent="▶ Watch video";link.append(mark);
+  }
+  const badge=document.createElement("span");badge.className="profile-media-badge";
+  badge.textContent="▶ Video";link.append(badge);host.append(link);
+ }
  if(more){more.hidden=!state.profilePostHasMore;more.disabled=state.profilePostsLoading;}
+}
+async function loadProfileVideoMedia(){
+ if(!state.viewingId)return;
+ try{
+  const {data,error}=await supabase.from("videos")
+   .select("id,title,thumbnail_url,created_at")
+   .eq("user_id",state.viewingId).eq("is_public",true)
+   .order("created_at",{ascending:false}).limit(12);
+  if(error)throw error;
+  state.profileVideoMedia=data||[];
+ }catch(error){console.warn("Creator media videos unavailable:",error);}
+ finally{state.profileVideoMediaLoaded=true;renderProfileMedia();}
 }
 async function loadProfilePosts({append=false}={}){
  if(state.profilePostsLoading||!state.viewingId)return;
@@ -1913,6 +1941,7 @@ async function boot() {
   document.getElementById("profileVideoUpload").hidden = !state.user || state.user.id !== state.viewingId;
   setupProfileTabs();
   void loadProfilePosts();
+  void loadProfileVideoMedia();
   void setupProfileFx();
   setupNotificationTabs();
   renderProfileActions();
