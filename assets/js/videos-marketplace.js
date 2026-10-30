@@ -479,6 +479,7 @@ export async function createMarketplaceItem({
   images = []
 } = {}) {
   try {
+    await syncObservedRegion(supabase);
     return await supabase.from("marketplace_items").insert({
     id: crypto.randomUUID(),
     user_id: userId,
