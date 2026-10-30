@@ -144,6 +144,46 @@
         </div>
       </section>
 
+            <section class="container" id="latest">
+        <div class="content-grid">
+          <div>
+            <div class="bm-feed-heading">
+              <div><span class="bm-feed-eyebrow">THE DISCOVERY FEED</span><h2 class="section-title">Fresh on Blipmood</h2>
+                <p>New articles, ideas and updates worth your attention. Browse more only when you choose.</p>
+              </div>
+              <a href="my-tech.html" class="bm-feed-all">Explore My Tech <span aria-hidden="true">↗</span></a>
+            </div>
+            <nav class="nav-pill category-filter-pill" id="categoryNav" aria-label="Filter by category"></nav>
+            <details class="bm-feed-filter-details"><summary>Filter by tag <span aria-hidden="true">⌄</span></summary><div class="filter-bar">
+              <div class="filter-group">
+                <label for="tagFilter">Filter by tag</label>
+                <select id="tagFilter">
+                  <option value="">All tags</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <button class="btn ghost" id="tagClearBtn" type="button">Clear filters</button>
+              </div>
+            </div>
+            </details>
+            <div id="latestPosts" class="post-list" aria-live="polite" aria-busy="false"></div>
+            <button type="button" class="btn ghost" id="loadMorePostsBtn" hidden>Show 9 more</button>
+            <p id="loadMorePostsStatus" role="status" aria-live="polite"></p>
+          </div>
+          <aside class="side-card" data-reveal>
+            <h3>Trending now</h3>
+            <div id="trendingList" class="post-list"></div>
+            <h3 style="margin-top:16px;">🏆 2026 Leaderboard</h3>
+            <small class="leaderboard-year-hint">Annual scores reset on January 1 · lifetime XP remains</small>
+            <div id="leaderboardList" class="leaderboard-list"></div>
+            <details class="leaderboard-history"><summary>Past winners · Hall of Fame</summary><div id="annualChampions" aria-live="polite">Loading champions…</div></details>
+            <div class="ad-slot" id="homeTopAd" hidden></div>
+            <div class="ad-slot" id="homeSidebarAd" hidden></div>
+            <div class="bm-sidebar-cta"><strong>Every voice counts.</strong><p>Find your people and join conversations that matter.</p><a href="discussion.html">Explore communities →</a></div>
+          </aside>
+        </div>
+      </section>
+
       <section class="container" id="suggestedPeopleSection" style="display:none;">
         <div class="section-header-row">
           <div>
@@ -182,40 +222,6 @@
           <p>Follow a creator, save what matters and pick up where you left off.</p>
           <div><a class="btn ghost sm" href="#latest">Discover articles</a>
           <a class="btn ghost sm" href="settings.html#interests">Choose your interests</a></div>
-        </div>
-      </section>
-
-      <section class="container" id="latest">
-        <div class="content-grid">
-          <div>
-            <h2 class="section-title">Fresh from the community</h2>
-            <nav class="nav-pill category-filter-pill" id="categoryNav" aria-label="Filter by category"></nav>
-            <div class="filter-bar">
-              <div class="filter-group">
-                <label for="tagFilter">Filter by tag</label>
-                <select id="tagFilter">
-                  <option value="">All tags</option>
-                </select>
-              </div>
-              <div class="filter-group">
-                <button class="btn ghost" id="tagClearBtn" type="button">Clear filters</button>
-              </div>
-            </div>
-            <div id="latestPosts" class="post-list"></div>
-            <button type="button" class="btn ghost" id="loadMorePostsBtn" hidden>Load more posts</button>
-            <p id="loadMorePostsStatus" role="status" aria-live="polite"></p>
-          </div>
-          <aside class="side-card" data-reveal>
-            <h3>Hot This Week</h3>
-            <div id="trendingList" class="post-list"></div>
-            <h3 style="margin-top:16px;">🏆 2026 Leaderboard</h3>
-            <small class="leaderboard-year-hint">Annual scores reset on January 1 · lifetime XP remains</small>
-            <div id="leaderboardList" class="leaderboard-list"></div>
-            <details class="leaderboard-history"><summary>Past winners · Hall of Fame</summary><div id="annualChampions" aria-live="polite">Loading champions…</div></details>
-            <div class="ad-slot" id="homeTopAd" hidden></div>
-            <div class="ad-slot" id="homeSidebarAd" hidden></div>
-            <div class="callout">Share posts to boost visibility and reactions.</div>
-          </aside>
         </div>
       </section>
 
@@ -258,17 +264,17 @@
 
     <footer class="footer">
       <div class="container">
-        <div>Powered by Timzee-Tech for live posts, comments, and community data.</div>
-        <div style="margin-top:6px;">Admin tools are hidden unless you log in.</div>
+        <div>Blipmood · Real people. Real interests. Your world, your mood.</div>
+        <div style="margin-top:6px;">A social space by Timzee Corp.</div>
         <div class="footer-links">
           <a href="support.html">Support</a>
           <a href="contact.html">Contact Us</a>
           <a href="newsletter.html">Newsletter</a>
           <a href="ads.html">Advertise</a>
           <a href="discussion.html">Discussion</a>
-          <a href="#siteName">Back To Top</a>
+          <a href="#main-content">Back to top</a>
         </div>
-        <div>Created by Timzee-Tech on <b>9th of September, 2026</b>.</div>
+        <div>© 2026 Blipmood. Powered by Timzee Corp.</div>
       </div>
     </footer>
 
