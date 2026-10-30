@@ -376,7 +376,6 @@ function renderCategories() {
   }
   grid.innerHTML = state.categories
     .map((cat) => {
-      const postCount = state.posts.filter((post) => post.category_id === cat.id).length;
       return `
         <a class="category-card" href="#latest" data-category="${escapeHTML(cat.id)}" data-reveal>
           <h3>${escapeHTML(cat.name)}</h3>
@@ -505,7 +504,7 @@ async function loadMoreHomePosts() {
     console.warn("Additional posts failed:", error);
   } finally {
     state.loadingMorePosts = false;
-    if (button) { button.disabled = false; button.textContent = "Load more posts"; }
+    if (button) { button.disabled = false; button.textContent = "Show 9 more"; }
   }
 }
 
