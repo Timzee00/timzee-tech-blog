@@ -88,7 +88,7 @@ test("public surfaces use account handles while profile retains full-name displa
  assert.match(nav,/from\("public_profiles"\)\.select\("username"\)/);
  assert.match(app,/publicHandles: new Map\(\)/);
  assert.match(chat,/profile\.username/);
- assert.match(story,/profile\?\.username \|\| "Member"/);
+ assert.match(story,/profile\?\.username \|\| profile\?\.display_name \|\| "Member"/);
  assert.match(article,/publicIdentityName\(profile\)/);
  assert.match(forum,/publicAuthorName\(message\.author_id\)/);
  assert.match(profile,/state\.profile\?\.display_name/);
