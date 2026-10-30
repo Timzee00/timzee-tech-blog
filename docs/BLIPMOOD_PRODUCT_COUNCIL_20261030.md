@@ -23,7 +23,7 @@ To grant an official Blipmood affiliation:
 Note: New Council appointments alone never create affiliation, verification, moderator privileges or automatic account recommendations.
 
 ## Database migration
-`20261030014000_blipmood_product_council_foundation.sql`:
+`20261030040000_blipmood_product_council_foundation.sql`:
 - Adds five RLS-protected public relations: items, comments, votes, beta invitations and credits.
 - Adds immutable provenance guards and private audit trails.
 - Reuses the existing four Council appointment types and adds five new approved appointment types.
