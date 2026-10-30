@@ -31,17 +31,21 @@ export async function showStoryInteractions(story,user,container,{onReshare=()=>
  const menu=document.createElement("section");menu.className="story-social-panel";
  menu.setAttribute("aria-label","Status interactions");
  menu.innerHTML=`<div class="story-social-actions">
-   <button type="button" data-action="like">♡ Like</button>
-   <button type="button" data-action="save">☆ Save</button>
-   <button type="button" data-action="share">↗ Forward</button>
-   <button type="button" data-action="reshare" ${story.allow_reshare===false||story.visibility!=="public"?"disabled":""}>⟳ Reshare</button>
-   <button type="button" data-action="reply" ${own?"disabled":""}>↩ Private reply</button>
-   ${own?'<button type="button" data-action="poll">+ Poll</button>':''}
+   <button type="button" data-action="like" aria-label="Like this status">♡ Like</button>
+   <button type="button" data-action="reply" ${own?"disabled":""} aria-label="Send a private reply">↩ Reply</button>
+   <button type="button" data-action="share" aria-label="Forward status">↗ Send</button>
+   <details class="story-extra-menu"><summary aria-label="More status actions">••• More</summary>
+    <div class="story-extra-actions">
+     <button type="button" data-action="save">☆ Save</button>
+     <button type="button" data-action="reshare" ${story.allow_reshare===false||story.visibility!=="public"?"disabled":""}>⟳ Reshare</button>
+     ${own?'<button type="button" data-action="poll">+ Poll</button>':''}
+    </div>
+   </details>
  </div>
  <div class="story-status-feedback" role="status" aria-live="polite"></div>
  <div class="story-social-metrics" aria-live="polite" data-story-metrics></div>
  <div class="story-social-poll" data-story-poll></div>
- ${canComment?`<details class="story-comments-panel"><summary>Public comments <span data-comment-count></span></summary>
+ ${canComment?`<details class="story-comments-panel"><summary>💬 Comments <span data-comment-count></span></summary>
   <div class="story-comments-feed" data-comments-feed></div>
   <form data-comment-form><input maxlength="600" placeholder="Leave a public comment…" aria-label="Public status comment" required><button type="submit">Post</button></form>
  </details>`:'<p class="story-comments-off">Public comments are off for this status.</p>'}
