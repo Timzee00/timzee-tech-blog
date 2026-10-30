@@ -1894,6 +1894,8 @@ async function boot() {
     return;
   }
 
+  // Paint identity, real cover and verified frame before optional social/activity requests.
+  renderProfile();
   await loadFriendship();
   if(state.user && state.viewingId!==state.user.id){
     const permission=await supabase.rpc("can_start_staff_dm");
