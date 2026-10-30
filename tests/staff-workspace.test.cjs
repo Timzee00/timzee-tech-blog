@@ -39,3 +39,14 @@ test("Request inbox supports full details and replies, rather than truncated row
  assert.match(source,/showModal\(\)/);
  assert.match(source,/Reply with Brevo/);
 });
+
+test("Consent-based traffic tracking retries transient failures and reports configuration faults",()=>{
+ const collector=root("assets/js/visitor-analytics.js");
+ const report=root("netlify/functions/site-traffic-report.js");
+ assert.match(collector,/if\(response\.ok\)/);
+ assert.match(collector,/inFlight=false/);
+ assert.match(collector,/window\.addEventListener\("online"/);
+ assert.doesNotMatch(collector,/sessionStorage\.setItem\(UNAVAILABLE_KEY/);
+ assert.match(report,/ANALYTICS_HMAC_SECRET/);
+ assert.match(report,/Visitor tracking is not configured/);
+});
