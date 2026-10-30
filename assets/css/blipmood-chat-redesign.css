@@ -1,0 +1,388 @@
+/* Blipmood Chat redesign: visual layer over the existing secure messaging UI.
+ * The approved reference is layout-only; all content and permissions remain real.
+ */
+body.chat-page.blipmood-chat-redesign{
+ --chat-ink:#142d3b;--chat-brand:#087f73;--chat-soft:#edf5f6;
+ --chat-line:var(--color-border,#e1e9ef);
+ --chat-sky:#eff5fa;--chat-self:#d1f9e8;
+ --chat-self-ink:#123d32;
+ background:var(--color-bg,#f6f9fa);
+}
+body.chat-page.blipmood-chat-redesign .chat-site-header{display:none}
+body.chat-page.blipmood-chat-redesign{height:100dvh;min-height:0;overflow:hidden}
+body.chat-page.blipmood-chat-redesign .chat-main{min-height:0;flex:1 1 0;display:flex;width:100%;overflow:hidden}
+body.chat-page.blipmood-chat-redesign .chat-app-shell{
+ display:grid;position:relative;min-height:0;height:100%;width:100%;
+ max-width:none;grid-template-columns:minmax(294px,350px) minmax(0,1fr);
+ border:0;background:var(--color-surface,#fff);overflow:hidden;
+}
+body.chat-page.blipmood-chat-redesign .chat-app-shell:has(>dialog.chat-info-panel[open]){
+ grid-template-columns:minmax(275px,332px) minmax(0,1fr) minmax(280px,320px);
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar{
+ grid-column:1;grid-row:1;min-width:0;border-right:1px solid var(--chat-line);
+ box-shadow:none;background:var(--color-surface,#fff);z-index:2;
+}
+body.chat-page.blipmood-chat-redesign .chat-pane{
+ grid-column:2;grid-row:1;min-width:0;background:var(--chat-sky);border:0;
+}
+body.chat-page.blipmood-chat-redesign .chat-inbox-brand{
+ display:flex;align-items:center;gap:9px;padding:17px 19px 6px;
+ font-size:1.22rem;font-weight:850;color:var(--color-text,#152d3a);text-decoration:none;
+ letter-spacing:-.045em
+}
+body.chat-page.blipmood-chat-redesign .chat-inbox-mark{
+ display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;
+ color:#fff;border-radius:9px;background:linear-gradient(135deg,#007d80,#1d93bb);
+ font-size:1.15rem;font-weight:700
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar-header{padding:7px 16px 12px;min-height:47px}
+body.chat-page.blipmood-chat-redesign .chat-page-kicker{display:none}
+body.chat-page.blipmood-chat-redesign .chat-sidebar-header h1{
+ font-size:.91rem;letter-spacing:-.02em;font-weight:770;color:var(--color-text-muted,#527284)
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar-actions{gap:6px}
+body.chat-page.blipmood-chat-redesign .chat-icon-btn{
+ display:grid;place-items:center;border-radius:50%;border:0;background:transparent;
+ color:var(--color-text,#163343);width:37px;height:37px;min-width:37px;
+}
+body.chat-page.blipmood-chat-redesign .chat-icon-btn:hover,
+body.chat-page.blipmood-chat-redesign .chat-mobile-back:hover{
+ background:var(--color-surface-muted,#eff3f6)
+}
+body.chat-page.blipmood-chat-redesign .chat-search-shell{
+ border:1px solid var(--chat-line);background:var(--color-surface-muted,#eff3f6);
+ border-radius:10px;box-shadow:none;min-height:40px;margin:0 16px 12px;
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-search-shell{
+ max-width:calc(100% - 32px);margin-inline:16px
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-search-shell>input[type="search"]{
+ font-size:14px!important;min-height:42px
+}
+body.chat-page.blipmood-chat-redesign .chat-tabs,
+body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tabs{
+ display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;
+ gap:5px;overflow-x:auto;scrollbar-width:thin;border:0;border-radius:0;
+ background:transparent;margin:0 14px 12px;padding:0 0 4px;
+ max-width:calc(100% - 28px);
+}
+body.chat-page.blipmood-chat-redesign .chat-tab,
+body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab{
+ flex:0 0 auto;width:auto;min-width:0;min-height:36px;
+ padding:8px 11px;font-size:.73rem;font-weight:700;
+ border:0;border-radius:9px;white-space:nowrap;
+ background:var(--color-surface-muted,#f1f5f7);
+ color:var(--color-text-muted,#526779);box-shadow:none;
+}
+body.chat-page.blipmood-chat-redesign .chat-tab.active,
+body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab.active{
+ background:var(--chat-brand);color:#fff;box-shadow:0 3px 9px #086b682a
+}
+body.chat-page.blipmood-chat-redesign .chat-tab-badge{
+ background:var(--color-surface,#fff);color:var(--chat-brand);border:1px solid var(--chat-line)
+}
+body.chat-page.blipmood-chat-redesign .chat-tab-panel{
+ flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 9px 12px;
+ scrollbar-width:thin;
+}
+body.chat-page.blipmood-chat-redesign .chat-list{gap:1px}
+body.chat-page.blipmood-chat-redesign .chat-list-row{
+ position:relative;grid-template-columns:48px minmax(0,1fr) auto;
+ gap:10px;padding:12px 10px;min-height:69px;border-radius:10px;
+ transition:background-color .14s ease,box-shadow .14s ease;
+}
+body.chat-page.blipmood-chat-redesign .chat-list-row.active{
+ border:1px solid color-mix(in srgb,var(--chat-brand) 22%,transparent);
+ background:color-mix(in srgb,var(--chat-brand) 7%,var(--color-surface,#fff))
+}
+body.chat-page.blipmood-chat-redesign .chat-list-row.active:before{
+ content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;
+ border-radius:8px;background:var(--chat-brand)
+}
+body.chat-page.blipmood-chat-redesign .chat-list-avatar,
+body.chat-page.blipmood-chat-redesign .chat-list-row .tz-avatar-verified{
+ width:46px;min-width:46px;height:46px;object-fit:cover;border-radius:50%
+}
+body.chat-page.blipmood-chat-redesign .chat-list-copy{gap:4px}
+body.chat-page.blipmood-chat-redesign .chat-list-copy strong{
+ font-size:.85rem;font-weight:800;line-height:1.3
+}
+body.chat-page.blipmood-chat-redesign .chat-list-copy small{
+ font-size:.73rem;line-height:1.3;min-width:0;
+}
+body.chat-page.blipmood-chat-redesign .chat-list-time{
+ display:flex;flex-direction:column;align-items:flex-end;gap:7px;
+ font-size:.65rem;line-height:1.3
+}
+body.chat-page.blipmood-chat-redesign .chat-unread-count{
+ min-width:20px;height:20px;padding:2px 5px;display:grid;place-items:center;
+ border-radius:999px;background:var(--chat-brand);color:#fff;
+ font-size:.67rem;font-weight:800
+}
+body.chat-page.blipmood-chat-redesign .chat-row-pin{font-size:.72rem;color:var(--chat-brand)}
+body.chat-page.blipmood-chat-redesign .chat-sidebar-footer{
+ padding:9px 17px 10px;flex:0 0 auto;border-top:1px solid var(--chat-line)
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar-footer button{
+ border:0;background:transparent;color:var(--color-text-muted,#536a80);
+ padding:7px 4px;font-size:.76rem;font-weight:700;cursor:pointer
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar-footer button:hover{color:var(--chat-brand)}
+body.chat-page.blipmood-chat-redesign .chat-mobile-nav{display:none}
+body.chat-page.blipmood-chat-redesign .chat-conversation-header{
+ min-height:76px;padding:11px 21px;border:0;border-bottom:1px solid var(--chat-line);
+ background:var(--color-surface,#fff);gap:10px;z-index:2
+}
+body.chat-page.blipmood-chat-redesign .chat-header-avatar-frame{
+ flex:0 0 auto
+}
+body.chat-page.blipmood-chat-redesign .chat-header-name{
+ font-size:.96rem;font-weight:850;letter-spacing:-.015em
+}
+body.chat-page.blipmood-chat-redesign .chat-header-status-row{
+ font-size:.72rem;color:var(--color-text-muted,#627789)
+}
+body.chat-page.blipmood-chat-redesign .chat-header-group-count:before{content:" • "}
+body.chat-page.blipmood-chat-redesign .chat-header-actions{gap:3px}
+body.chat-page.blipmood-chat-redesign .chat-header-menu{
+ right:7px;top:45px;border-radius:14px;box-shadow:0 14px 35px #09263b2b
+}
+body.chat-page.blipmood-chat-redesign .chat-messages{
+ min-height:0;padding:28px clamp(12px,3.6vw,50px) 16px;
+ gap:10px;background-color:var(--chat-sky);
+ background-image:radial-gradient(circle at 12px 12px,rgba(41,108,144,.045) 2px,transparent 2.4px),
+ radial-gradient(circle at 44px 50px,rgba(41,108,144,.035) 3px,transparent 3.4px);
+ background-size:88px 88px,105px 108px;scroll-behavior:smooth
+}
+body.chat-page.blipmood-chat-redesign .chat-message{
+ max-width:min(590px,81%);padding:10px 13px 8px;border-radius:15px;
+ border:1px solid color-mix(in srgb,var(--chat-line) 72%,transparent);
+ box-shadow:0 2px 4px #16394c09;
+ background:var(--color-surface,#fff);color:var(--color-text,#183747)
+}
+body.chat-page.blipmood-chat-redesign .chat-message.received{border-top-left-radius:5px}
+body.chat-page.blipmood-chat-redesign .chat-message.self{
+ background:var(--chat-self);color:var(--chat-self-ink);
+ border:1px solid #b8eed8;border-top-right-radius:5px;
+}
+body.chat-page.blipmood-chat-redesign .chat-message.self .chat-message-author{
+ color:#286457
+}
+body.chat-page.blipmood-chat-redesign .chat-message-body{line-height:1.55;font-size:calc(.89rem * var(--timzee-chat-message-scale,1))}
+body.chat-page.blipmood-chat-redesign .chat-message-meta{
+ color:inherit;opacity:.68;font-size:.67rem;margin-top:6px
+}
+body.chat-page.blipmood-chat-redesign .chat-message-actions{
+ color:inherit;border:0;background:transparent;min-width:30px;min-height:25px
+}
+body.chat-page.blipmood-chat-redesign .chat-message-reactions{
+ margin-top:6px;gap:4px
+}
+body.chat-page.blipmood-chat-redesign .chat-reaction-chip{
+ min-height:27px;min-width:35px;font-size:.75rem;
+ background:var(--color-surface,#fff);color:var(--color-text,#19384d);
+ border:1px solid var(--chat-line);padding:3px 8px
+}
+body.chat-page.blipmood-chat-redesign .chat-message.self .chat-reaction-chip{
+ color:#1d4a40;background:#f0fff8;border-color:#a8dfd0
+}
+body.chat-page.blipmood-chat-redesign .chat-message.self .chat-message-meta{
+ color:#20655b;opacity:.86
+}
+body.chat-page.blipmood-chat-redesign .chat-pinned-bar:not([hidden]){
+ display:flex;align-items:center;gap:10px;background:var(--color-surface,#fff);
+ border-bottom:1px solid var(--chat-line);padding:10px 16px;
+ min-height:50px;font-size:.75rem;line-height:1.35
+}
+body.chat-page.blipmood-chat-redesign .chat-composer{
+ border-top:1px solid var(--chat-line);background:var(--color-surface,#fff);
+ padding:10px 12px 12px
+}
+body.chat-page.blipmood-chat-redesign .chat-composer-row{
+ border:1px solid var(--chat-line);background:var(--color-surface,#fff);
+ box-shadow:none;border-radius:999px;padding:4px 6px;gap:5px;align-items:center;
+ max-width:1050px
+}
+body.chat-page.blipmood-chat-redesign .chat-composer-row textarea{
+ min-height:37px;max-height:112px;padding:8px 12px;
+ font-size:.86rem;border-radius:15px
+}
+body.chat-page.blipmood-chat-redesign .chat-composer-btn{
+ width:36px;height:36px;min-width:36px;border:0;
+}
+body.chat-page.blipmood-chat-redesign .chat-attach-toggle{
+ background:var(--color-surface-muted,#f3f6f7)
+}
+body.chat-page.blipmood-chat-redesign .chat-send-btn{
+ background:var(--chat-brand);color:#fff;border-radius:50%;
+ width:37px;height:37px;min-width:37px;border:0
+}
+body.chat-page.blipmood-chat-redesign .chat-send-btn:hover{background:#07685f}
+body.chat-page.blipmood-chat-redesign .chat-attachment-preview:not(:empty){padding:10px;border-radius:13px;background:var(--color-surface-muted,#f5f8fa)}
+body.chat-page.blipmood-chat-redesign dialog.chat-info-panel{
+ border-left:1px solid var(--chat-line);background:var(--color-surface,#fff);
+ color:var(--color-text,#163343);box-shadow:-8px 0 25px #09263b0a
+}
+body.chat-page.blipmood-chat-redesign .chat-info-header{
+ border-bottom:0;min-height:66px;padding:17px 18px 8px
+}
+body.chat-page.blipmood-chat-redesign .chat-info-header h2{
+ font-size:1rem;font-weight:850
+}
+body.chat-page.blipmood-chat-redesign .chat-info-body{
+ padding:7px 18px 28px;scrollbar-width:thin;display:flex;flex-direction:column;gap:0
+}
+body.chat-page.blipmood-chat-redesign .chat-info-profile{
+ order:0;background:transparent;border:0;border-radius:0;
+ padding:5px 0 14px;text-align:center
+}
+body.chat-page.blipmood-chat-redesign .chat-info-avatar{width:87px;height:87px}
+body.chat-page.blipmood-chat-redesign .chat-info-name{
+ font-size:1.04rem;font-weight:880;margin-top:9px
+}
+body.chat-page.blipmood-chat-redesign .chat-info-status{
+ font-size:.75rem;line-height:1.55;max-width:265px;margin:7px auto 0
+}
+body.chat-page.blipmood-chat-redesign #directInfoActions{order:1;justify-content:center}
+body.chat-page.blipmood-chat-redesign #groupMembershipControls{
+ order:2;border-bottom:1px solid var(--chat-line);padding:7px 0 13px
+}
+body.chat-page.blipmood-chat-redesign #groupMembershipControls .chat-info-section-head{display:none}
+body.chat-page.blipmood-chat-redesign .chat-group-actions{
+ margin:4px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px
+}
+body.chat-page.blipmood-chat-redesign .chat-group-actions .btn{
+ min-height:65px;display:flex;flex-direction:column;align-items:center;
+ justify-content:center;text-align:center;padding:8px 3px;
+ background:var(--color-surface-muted,#f4f7f8);
+ border:1px solid var(--chat-line);border-radius:12px;
+ font-size:.68rem;line-height:1.3
+}
+body.chat-page.blipmood-chat-redesign #groupLeaveBtn{grid-column:1/-1;min-height:38px}
+body.chat-page.blipmood-chat-redesign #groupUnbanBtn{grid-column:1/-1;min-height:38px}
+body.chat-page.blipmood-chat-redesign #groupMembersSection{
+ order:4;margin-top:8px;border-bottom:1px solid var(--chat-line);padding-bottom:12px
+}
+body.chat-page.blipmood-chat-redesign #groupInfoSection{
+ order:5;margin-top:12px
+}
+body.chat-page.blipmood-chat-redesign .chat-info-section:has(> .chat-info-media-grid){
+ order:3;margin-top:10px;padding-bottom:12px;border-bottom:1px solid var(--chat-line)
+}
+body.chat-page.blipmood-chat-redesign .chat-info-section-head h3{
+ font-weight:850;font-size:.87rem
+}
+body.chat-page.blipmood-chat-redesign .chat-info-section-head{margin-bottom:7px}
+body.chat-page.blipmood-chat-redesign .chat-info-media-grid{
+ grid-template-columns:repeat(3,minmax(0,1fr));gap:7px
+}
+body.chat-page.blipmood-chat-redesign .chat-info-media-grid a{border-radius:11px}
+body.chat-page.blipmood-chat-redesign .group-member-row{
+ display:flex;align-items:center;gap:9px;padding:9px 0;flex-wrap:wrap
+}
+body.chat-page.blipmood-chat-redesign .group-member-row .group-member-copy{flex:1 1 120px;min-width:0}
+body.chat-page.blipmood-chat-redesign .chat-info-section[hidden],
+body.chat-page.blipmood-chat-redesign .chat-info-summary[hidden]{display:none!important}
+body.chat-page.blipmood-chat-redesign .chat-info-summary{
+ order:1;border-bottom:1px solid var(--chat-line);padding:10px 0 12px;
+ color:var(--color-text-muted,#536779);font-size:.76rem
+}
+body.chat-page.blipmood-chat-redesign .chat-info-summary strong{color:var(--color-text,#172b32)}
+body.chat-page.blipmood-chat-redesign :is(button,a,input,textarea,select):focus-visible{
+ outline:2px solid var(--chat-brand);outline-offset:3px
+}
+@media(min-width:1180px){
+ body.chat-page.blipmood-chat-redesign dialog.chat-info-panel[open]:not(:modal){
+  position:relative;inset:auto;margin:0;max-width:none;min-width:0;
+  grid-column:3;grid-row:1;width:100%;height:100%;max-height:100%;
+  z-index:3;border-radius:0;transform:none;overflow:hidden;
+ }
+ body.chat-page.blipmood-chat-redesign dialog.chat-info-panel[open]:not(:modal)::backdrop{display:none}
+}
+@media(max-width:1179px){
+ body.chat-page.blipmood-chat-redesign .chat-app-shell:has(>dialog.chat-info-panel[open]){
+  grid-template-columns:minmax(280px,330px) minmax(0,1fr)
+ }
+ body.chat-page.blipmood-chat-redesign dialog.chat-info-panel[open]{
+  position:fixed;inset:0 0 0 auto;margin:0;width:min(385px,100vw);
+  height:100dvh;max-height:100dvh;z-index:90
+ }
+}
+@media(max-width:760px){
+ body.chat-page.blipmood-chat-redesign .chat-app-shell,
+ body.chat-page.blipmood-chat-redesign .chat-app-shell:has(>dialog.chat-info-panel[open]){
+  display:block;height:100%;min-height:0
+ }
+ body.chat-page.blipmood-chat-redesign .chat-sidebar{
+  z-index:20;inset:0;width:100%;height:100%;padding-bottom:0
+ }
+ body.chat-page.blipmood-chat-redesign .chat-pane{z-index:25;inset:0;width:100%;height:100%}
+ body.chat-page.blipmood-chat-redesign .chat-inbox-brand{padding:12px 16px 3px}
+ body.chat-page.blipmood-chat-redesign .chat-sidebar-header{padding:5px 15px 8px}
+ body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tabs{overflow-x:auto;grid-template-columns:none;flex-wrap:nowrap;gap:7px}
+ body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab{
+  min-height:36px;padding:7px 12px;font-size:.74rem;white-space:nowrap
+ }
+ body.chat-page.blipmood-chat-redesign .chat-tab-panel{padding-bottom:3px}
+ body.chat-page.blipmood-chat-redesign .chat-mobile-nav{
+  display:flex;flex:0 0 auto;align-items:center;justify-content:space-around;
+  gap:2px;padding:7px 4px max(7px,env(safe-area-inset-bottom));
+  border-top:1px solid var(--chat-line);background:var(--color-surface,#fff)
+ }
+ body.chat-page.blipmood-chat-redesign .chat-mobile-nav :is(a,button){
+  display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;
+  flex:1 1 0;min-width:0;min-height:44px;border:0;background:transparent;
+  font-weight:700;font-size:.62rem;text-decoration:none;color:var(--color-text-muted,#657783);
+ }
+ body.chat-page.blipmood-chat-redesign .chat-mobile-nav :is(a,button)>span{font-size:1.24rem;line-height:1.1}
+ body.chat-page.blipmood-chat-redesign .chat-mobile-nav [aria-current="page"]{
+  color:var(--chat-brand)
+ }
+ body.chat-page.blipmood-chat-redesign .chat-conversation-header{
+  min-height:65px;padding:8px 10px;gap:7px
+ }
+ body.chat-page.blipmood-chat-redesign .chat-header-name{font-size:.86rem}
+ body.chat-page.blipmood-chat-redesign .chat-mobile-back{
+  display:grid;width:34px;height:34px;min-width:34px;border:0;background:transparent
+ }
+ body.chat-page.blipmood-chat-redesign .chat-header-copy{max-width:none;flex:1}
+ body.chat-page.blipmood-chat-redesign .chat-header-avatar{width:38px;height:38px}
+ body.chat-page.blipmood-chat-redesign .chat-header-actions .chat-icon-btn{
+  width:33px;height:33px;min-width:33px
+ }
+ body.chat-page.blipmood-chat-redesign .chat-message{
+  max-width:87%;padding:9px 11px
+ }
+ body.chat-page.blipmood-chat-redesign .chat-messages{padding:16px 12px 12px}
+ body.chat-page.blipmood-chat-redesign .chat-composer{padding:6px 7px max(8px,env(safe-area-inset-bottom))}
+ body.chat-page.blipmood-chat-redesign .chat-composer-row{padding:4px;gap:3px}
+ body.chat-page.blipmood-chat-redesign .chat-composer-row textarea{font-size:16px;min-height:38px;padding:8px}
+ body.chat-page.blipmood-chat-redesign dialog.chat-info-panel[open]{
+  width:100vw;max-width:100vw;height:100dvh;z-index:110
+ }
+ body.chat-page.blipmood-chat-redesign .chat-sidebar-footer{padding:4px 14px}
+}
+@media(max-width:370px){
+ body.chat-page.blipmood-chat-redesign .chat-header-actions{gap:0}
+ body.chat-page.blipmood-chat-redesign .chat-header-actions #chatMessageSearchToggle{display:none}
+ body.chat-page.blipmood-chat-redesign .chat-list-row{padding:9px 7px}
+}
+html[data-theme="dark"] body.chat-page.blipmood-chat-redesign{
+ --chat-ink:#e6f2f3;--chat-soft:#21343e;--chat-line:#304650;
+ --chat-sky:#10232d;--chat-self:#245a4f;--chat-self-ink:#e8fff4;
+}
+html[data-theme="dark"] body.chat-page.blipmood-chat-redesign .chat-message.self{
+ background:var(--chat-self);color:var(--chat-self-ink);border-color:#2d7364
+}
+html[data-theme="dark"] body.chat-page.blipmood-chat-redesign .chat-message.self .chat-message-meta,
+html[data-theme="dark"] body.chat-page.blipmood-chat-redesign .chat-message.self .chat-message-author{color:#cefbed}
+html[data-theme="dark"] body.chat-page.blipmood-chat-redesign .chat-message.self .chat-reaction-chip{
+ background:#214e47;color:#f1fffc;border-color:#4a8275
+}
+html[data-theme="dark"] body.chat-page.blipmood-chat-redesign .chat-tab.active{
+ color:#fff;background:#087f73
+}
+@media(prefers-reduced-motion:reduce){
+ body.chat-page.blipmood-chat-redesign *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
