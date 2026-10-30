@@ -77,18 +77,32 @@ export async function fetchVideoDiscoveryPage(supabase, {
   let entry = cache.get(key);
 
   if (force || !entry || Date.now() - entry.time >= TTL_MS) {
-    const functionName = mode === "following" ? "get_following_feed" : "get_personalized_feed";
-    const { data, error } = await supabase.rpc(functionName, {
-      p_limit: MAX_CANDIDATES, p_content_type: "video"
+    // The light RPC searches a compact 15-minute candidate pool rather than
+    // recomputing whole-catalog engagement totals on every swipe.
+    // Preserve the legacy feed only for deployments missing the new RPC.
+    const quick = await supabase.rpc("blipmood_video_feed_ids", {
+      p_mode: mode, p_limit: MAX_CANDIDATES
     });
-
-    if (error && !(mode === "for-you" && isMissingFeedFunction(error))) {
-      throw error; // Never turn denied Following requests into public video lists.
+    const useQuick = !quick.error;
+    let error = quick.error;
+    let data = [];
+    if (!useQuick) {
+      if (!isMissingFeedFunction(quick.error)) throw quick.error;
+      const functionName = mode === "following" ? "get_following_feed" : "get_personalized_feed";
+      const legacy = await supabase.rpc(functionName, {
+        p_limit: MAX_CANDIDATES, p_content_type: "video"
+      });
+      error = legacy.error;
+      data = legacy.data || [];
+      if (error && !(mode === "for-you" && isMissingFeedFunction(error))) {
+        throw error; // Never turn denied Following requests into public video lists.
+      }
     }
-
-    const ids = [...new Set((data || [])
-      .filter(row => row?.content_type === "video" && typeof row.content_id === "string")
-      .map(row => row.content_id))].slice(0, MAX_CANDIDATES);
+    const ids = [...new Set((useQuick ? (quick.data || [])
+      .map(row => row?.video_id) : data
+      .filter(row => row?.content_type === "video")
+      .map(row => row.content_id))
+      .filter(id => typeof id === "string"))].slice(0, MAX_CANDIDATES);
 
     let rows;
     if (mode === "for-you" && (!ids.length || isMissingFeedFunction(error))) {
@@ -105,7 +119,7 @@ export async function fetchVideoDiscoveryPage(supabase, {
       rows = ids.map(id => byId.get(id)).filter(Boolean);
     }
 
-    if(mode==="for-you"&&rows.length>1){
+    if(mode==="for-you"&&!useQuick&&rows.length>1){
       // Stored videos.like_count/comment_count can lag behind actual
       // reactions. Read the same live aggregate used by the visible reel
       // counters before ranking. A failing aggregate must not hide videos.
