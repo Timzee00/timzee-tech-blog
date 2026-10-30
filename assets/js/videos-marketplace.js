@@ -106,16 +106,32 @@ export function captureVideoThumbnail(file, seekTime = 0.5) {
 export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, videoData = {}) {
   if (!userId || !videoFile) return { error: "Missing required fields" };
   if (!isSupportedVideoFile(videoFile)) return { error: "Please select a non-empty video, not a photo." };
-  if (thumbnailFile && (!String(thumbnailFile.type||"").startsWith("image/") || thumbnailFile.size>10*1024*1024))
-    return { error: "The cover must be an image under 10 MB." };
-
+  // Check before uploading bytes. This RPC gives the current allowed limits
+  // without exposing private bucket inventory. Server checks again on insert.
+  let limits;
+  try {
+    const [feature,policy]=await Promise.all([
+      supabase.rpc("blipmood_feature_allowed",{p_feature:"video_uploads"}),
+      supabase.rpc("blipmood_media_upload_policy")
+    ]);
+    if(feature.error||feature.data!==true) return {error:"Video uploading is unavailable for this account or region."};
+    if(policy.error||!policy.data) return {error:"Upload capacity settings are unavailable. Please retry."};
+    limits=policy.data;
+  }catch{return {error:"Upload capacity check unavailable. Please retry."};}
+  const maxVideo=Number(limits.max_video_upload_bytes)||20*1024*1024;
+  const maxThumb=Number(limits.max_thumbnail_bytes)||2*1024*1024;
+  if(videoFile.size>maxVideo)
+    return {error:"Video too large. Please compress it to "+Math.round(maxVideo/1048576)+" MB or less before uploading."};
+  if(thumbnailFile && (!String(thumbnailFile.type||"").startsWith("image/")||thumbnailFile.size>maxThumb))
+    return {error:"Please use an image cover under "+Math.round(maxThumb/1048576)+" MB."};
+  let videoPath=null,thumbnailPath=null,metadataSaved=false;
   try {
     const videoId = crypto.randomUUID();
     const timestamp = Date.now();
     const safeVideoName = toSafeFileName(videoFile.name || "video");
     
     // Upload video to storage
-    const videoPath = `videos/${userId}/${timestamp}-${safeVideoName}`;
+    videoPath = `videos/${userId}/${timestamp}-${safeVideoName}`;
 
     const videoResult = await supabase.storage
       .from("media")
@@ -132,7 +148,8 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
     thumbnailFile = thumbnailFile || await captureVideoThumbnail(videoFile);
     if (thumbnailFile) {
       const safeThumbnailName = toSafeFileName(thumbnailFile.name || "thumbnail.jpg");
-      const thumbnailPath = `video-thumbnails/${userId}/${timestamp}-${safeThumbnailName}`;
+      thumbnailPath = `video-thumbnails/${userId}/${timestamp}-${safeThumbnailName}`;
+      if(thumbnailFile.size>maxThumb)throw Error("Generated cover exceeds the upload image limit.");
       const thumbnailResult = await supabase.storage
         .from("media")
         .upload(
@@ -192,9 +209,19 @@ export async function uploadVideo(userId, authorName, videoFile, thumbnailFile, 
       throw new Error(`Database insert failed: ${result.error.message}`);
     }
 
+    metadataSaved=true;
     return result;
   } catch (error) {
     console.error("uploadVideo exception:", error);
+    // Do not leave a paid-storage orphan when the metadata insert fails.
+    // Only remove paths belonging to this upload, never older user media.
+    if(!metadataSaved && videoPath){
+      const paths=[videoPath,thumbnailPath].filter(Boolean);
+      try{
+        const {error:cleanupError}=await supabase.storage.from("media").remove(paths);
+        if(cleanupError)console.warn("Orphan upload cleanup needs review:",cleanupError.message);
+      }catch(cleanupError){console.warn("Orphan upload cleanup unavailable:",cleanupError?.message);}
+    }
     return { error: error.message || "Video upload failed" };
   }
 }
