@@ -201,7 +201,7 @@
 
     <script type="module">
       import { getCurrentUser, getDisplayName } from "./assets/js/supabase.js";
-      import { fetchStoriesFeed, fetchUserStories, createStory, deleteStory } from "./assets/js/stories.js";
+      import { fetchStoriesFeedPage, fetchUserStories, createStory, deleteStory } from "./assets/js/stories.js";
       import { escapeHTML, isSafeUrl, timeAgo } from "./assets/js/utils.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
       import {showStoryInteractions} from "./assets/js/story-interactions.mjs";
@@ -213,7 +213,8 @@
 
       const state = {
         user: null,
-        groups: [], allGroups: [], savedOnly:false, // [{ userId, profile, stories: [] }]
+        groups: [], allGroups: [], savedOnly:false, viewFilter:"all", friendIds:new Set(),
+        galleryExpanded:false, storyNextCursor:null, storyHasMore:false, storyLoadingMore:false,
         activeGroupIndex: -1,
         activeStoryIndex: 0,
         timerId: null,
@@ -224,14 +225,36 @@
 
       async function init() {
         state.user = await getCurrentUser();
-        if(state.user){
-          const toggle=document.getElementById("savedStoryToggle");toggle.hidden=false;
-          toggle.addEventListener('click',async()=>{
-            state.savedOnly=!state.savedOnly;
-            toggle.textContent=state.savedOnly?'★ Saved statuses · Show all':'☆ Saved statuses';
-            toggle.setAttribute('aria-pressed',String(state.savedOnly));
+        document.querySelectorAll("[data-story-filter]").forEach(button=>{
+          const filter=button.dataset.storyFilter;
+          button.hidden=filter!=="all"&&!state.user;
+          button.addEventListener("click",async()=>{
+            if(filter!=="all"&&!state.user)return;
+            state.viewFilter=filter;
+            state.savedOnly=filter==="saved";
+            state.galleryExpanded=false;
+            document.querySelectorAll("[data-story-filter]").forEach(el=>
+              el.setAttribute("aria-pressed",String(el.dataset.storyFilter===filter)));
             await applySavedFilter();
           });
+        });
+        document.getElementById("statusGalleryMore").addEventListener("click",()=>{
+          state.galleryExpanded=!state.galleryExpanded;renderGallery();
+        });
+        document.getElementById("storyLoadMore").addEventListener("click",loadMoreStories);
+        if(state.user){
+          try{
+            const {data,error}=await supabase.from("friendships")
+              .select("requester_id,addressee_id").eq("status","accepted")
+              .or(`requester_id.eq.${state.user.id},addressee_id.eq.${state.user.id}`).limit(500);
+            if(error)throw error;
+            state.friendIds=new Set((data||[]).map(row=>
+              row.requester_id===state.user.id?row.addressee_id:row.requester_id).filter(Boolean));
+          }catch(error){
+            console.warn("Friends filter unavailable",error?.message||error);
+            const button=document.querySelector('[data-story-filter="friends"]');
+            button.disabled=true;button.title="Friends filter is temporarily unavailable";
+          }
         }
         if(state.user){
           const {data}=await supabase.from('profiles').select('is_verified').eq('id',state.user.id).maybeSingle();
@@ -264,8 +287,7 @@
         }
 
         try {
-          state.allGroups = await fetchStoriesFeed();
-          state.groups=state.allGroups;
+          await refreshStoryDiscovery();
         } catch (error) {
           state.groups = [];
           const empty = document.getElementById("storiesEmpty");
