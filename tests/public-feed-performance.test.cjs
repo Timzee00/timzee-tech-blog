@@ -142,3 +142,28 @@ test("home discovery renders only nine stories first and category changes fetch 
  assert.match(css,/#latestPosts\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
  assert.match(css,/@media\(max-width:600px\)/);
 });
+
+test("neon showcase does not replace the data-driven homepage or navigation",()=>{
+ const html=read("index.html"),css=read("assets/css/blipmood-neon-experience.css");
+ const app=read("assets/js/app.js");
+ assert.match(html,/href="assets\/css\/blipmood-neon-experience\.css"/);
+ assert.match(html,/<body class="blipmood-home">/);
+ assert.match(html,/<div class="bm-hero-art" aria-hidden="true">/);
+ assert.match(html,/<div class="bm-device-shell">/);
+ assert.match(html,/<h1 id="bmHeroTitle">/);
+ assert.equal((html.match(/<h1\b/g)||[]).length,1);
+ for(const id of ["searchInput","searchBtn","categoryNav","tagFilter","latestPosts",
+  "loadMorePostsBtn","trendingList","leaderboardList","popularTrack","categoryGrid"])
+  assert.ok(html.includes('id="'+id+'"'),"Existing home control lost: "+id);
+ for(const href of ["discussion.html","videos.html","stories.html","marketplace.html",
+  "chat.html","fyp.html","login.html?view=signup"])
+  assert.ok(html.includes('href="'+href+'"'),"Missing real destination: "+href);
+ assert.match(app,/const POSTS_PAGE_SIZE = 9;/);
+ assert.match(css,/body\.blipmood-home \{/);
+ assert.match(css,/\.blipmood-home \.bm-device-shell/);
+ assert.match(css,/\.blipmood-home \.explore-panel>a/);
+ assert.match(css,/@media\(max-width:650px\)/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+ const bodyRules=css.match(/(?:^|\n)body\.blipmood-home\s*\{/g)||[];
+ assert.equal(bodyRules.length,1);
+});
