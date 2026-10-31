@@ -65,6 +65,10 @@
   white-space: nowrap;
 }
 
+/* Unified metadata icons across videos and novels. */
+.bm-meta-icon { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+.bm-meta-icon svg { width:16px; height:16px; flex:none; display:block; stroke-width:1.8; }
+
 .video-meta { font-size: var(--text-xs, 12px); color: var(--color-text-muted, #666); display: flex; gap: var(--space-2, 8px); margin-top: var(--space-2, 8px); }
 
 .upload-area {
