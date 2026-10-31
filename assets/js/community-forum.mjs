@@ -2,6 +2,7 @@ import {supabase,getCurrentUser,getDisplayName,signOut} from "./supabase.js";
 import {loadUserPreferences} from "./user-preferences.js";
 import {escapeHTML,timeAgo,reportAppError,isSafeUrl} from "./utils.js";
 import {setupMentionInput} from "./mentions.js";
+import {icon} from "./icons.js";
 import {renderCommunityMarkdown,insertCommunityFormatting} from "./community-markdown.mjs";
 import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap} from "./verified-identity.mjs";
 import {communityRankCursor,appendUniqueCommunityRows,isCommunitySnapshotStale} from "./community-feed-pagination.mjs";
@@ -12,7 +13,8 @@ const escape=value=>escapeHTML(String(value??""));
 const validId=value=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(String(value||""));
 const categories=["All","AI & ML","Programming","Gadgets","Cybersecurity","Tech Jobs","Gaming","Startups","Learning","Technology","Project Showcase","Sports","Entertainment","World Affairs","General"];
 const PAGE_SIZE=20;
-const categoryIcons={"All":"⌂","AI & ML":"✧","Programming":"⌘","Gadgets":"▣","Cybersecurity":"⬡","Tech Jobs":"✦","Gaming":"♟","Startups":"▤","Learning":"✎","Technology":"▧","Project Showcase":"✺","Sports":"⚽","Entertainment":"♫","World Affairs":"◎","General":"☰"};
+const categoryIcons={"All":"home","AI & ML":"fyp","Programming":"edit","Gadgets":"video","Cybersecurity":"lock","Tech Jobs":"users","Gaming":"play","Startups":"upload","Learning":"book-open","Technology":"settings","Project Showcase":"star","Sports":"star","Entertainment":"music","World Affairs":"discussion","General":"discussion"};
+const communityIcon=community=>icon(categoryIcons[String(community?.category||"")]||"users");
 let liveRepliesChannel=null;
 const state={
  user:null,verifiedIdentityCache:new Map(),verifiedIdentities:new Map(),platformStaff:false,recommendationsEnabled:true,liveUpdates:true,reportTarget:null,interests:new Set(),communities:[],communityPage:0,hasMoreCommunities:false,
@@ -101,7 +103,7 @@ async function loadMemberships(){
 function renderCategories(){
  $("forumCategories").innerHTML=categories.map(name=>
   "<button type='button' data-category='"+escape(name)+"' aria-pressed='"+(state.selectedCategory===name?"true":"false")+"'>"+
-   "<span aria-hidden='true'>"+escape(categoryIcons[name]||"◈")+"</span>"+escape(name)+"</button>").join("");
+   "<span aria-hidden='true'>"+icon(categoryIcons[name]||"discussion")+"</span>"+escape(name)+"</button>").join("");
  const select=$("forumCommunityCategory");
  select.innerHTML=categories.filter(x=>x!=="All").map(x=>
   "<option value='"+escape(x)+"'>"+escape(x)+"</option>").join("");
@@ -131,7 +133,7 @@ function renderCommunityList(){
  list.innerHTML=state.communities.length?state.communities.map(c=>
   "<button type='button' class='forum-community-item "+(state.activeCommunity?.id===c.id?"active":"")+
   "' data-open-community='"+escape(c.id)+"'>"+
-  "<span class='forum-community-icon' aria-hidden='true'>"+escape(c.icon_emoji||"💬")+"</span>"+
+  "<span class='forum-community-icon' aria-hidden='true'>"+communityIcon(c)+"</span>"+
   "<span><strong>"+escape(c.title)+"</strong><small>"+escape(c.category||"Technology")+
   " · "+Number(c.member_count||0).toLocaleString()+" members</small></span></button>").join(""):
   "<p class='forum-muted'>No communities found in this category.</p>";
@@ -144,7 +146,7 @@ function renderCommunityList(){
     Number(state.communities.length).toLocaleString()+(state.hasMoreCommunities?"+":"")+" found</span></div>"+
     (state.communities.length?state.communities.slice(0,10).map(c=>
      "<button type='button' data-open-community='"+escape(c.id)+"'><span class='forum-community-icon' aria-hidden='true'>"+
-      escape(c.icon_emoji||"💬")+"</span><span><strong>"+escape(c.title)+"</strong><small>"+
+      communityIcon(c)+"</span><span><strong>"+escape(c.title)+"</strong><small>"+
       Number(c.member_count||0).toLocaleString()+" members</small></span></button>").join(""):
      "<p class='forum-muted'>No communities matched. Try a different search or category.</p>");
   }
@@ -154,7 +156,7 @@ function renderSuggestions(){
  $("forumSuggestions").innerHTML=state.communities.slice(0,5).map(c=>
   "<div class='forum-suggestion-item'><button type='button' data-open-community='"+escape(c.id)+
   "' aria-label='View "+escape(c.title)+" community'><span class='forum-suggestion-icon' aria-hidden='true'>"+
-  escape(c.icon_emoji||"💬")+"</span><span><strong>"+escape(c.title)+"</strong><small>"+
+  communityIcon(c)+"</span><span><strong>"+escape(c.title)+"</strong><small>"+
   Number(c.member_count||0).toLocaleString()+" members</small></span></button>"+
   "<button type='button' class='forum-join-suggestion' data-suggested-join='"+escape(c.id)+
   "' aria-label='"+(state.joined.has(c.id)?"View joined ":"Join ")+escape(c.title)+"'>"+
@@ -391,7 +393,7 @@ function mediaHtml(url,type,kind="thread",itemId="",position=0){
  if(String(url).startsWith("forum-private-media/")){
   return "<div class='forum-attachment forum-private-attachment' data-private-kind='"+escape(kind)+
    "' data-private-id='"+escape(itemId)+"' data-private-position='"+Number(position)+
-   "' data-media-type='"+escape(type||"image")+"'><span>🔒 Loading member-only media…</span></div>";
+   "' data-media-type='"+escape(type||"image")+"'><span>Member-only media loading…</span></div>";
  }
  if(!isSafeUrl(url))return "";
  const safeUrl=escape(url);
@@ -425,7 +427,7 @@ async function hydratePrivateForumMedia(root){
    else{element.loading="lazy";element.decoding="async";element.alt="Private community attachment";}
    node.replaceChildren(element);
   }catch(error){
-   node.textContent="🔒 "+(error.message||"Unable to load private media");
+   node.textContent=""+(error.message||"Unable to load private media");
   }
  }
 }
@@ -593,7 +595,7 @@ async function discardRejectedUpload(attachment){
 function threadPreviewHtml(thread){
  const url=String(thread.media_url||"");
  if(!url)return "";
- if(url.startsWith("forum-private-media/"))return "<div class='forum-thread-thumb'><span>🔒 Members-only attachment</span></div>";
+ if(url.startsWith("forum-private-media/"))return "<div class='forum-thread-thumb'><span>Members-only attachment</span></div>";
  if(!isSafeUrl(url))return "";
  if(thread.media_type==="video"||/\.(mp4|webm)(\?|$)/i.test(url))
   return "<div class='forum-thread-thumb'><span aria-label='Video attached'>▶ Video</span></div>";
@@ -603,31 +605,31 @@ function threadCard(thread,{pinned=false}={}){
  const community=findCommunity(thread.community_id);
  const label=thread.kind==="question"?"Question":thread.kind==="guide"?"Guide":thread.kind==="news"?"News":
   thread.kind==="showcase"?"Project":thread.kind==="announcement"?"Official":"Discussion";
- const intro=String(thread.body||"").replace(/\s+/g," ").slice(0,220);
+ const intro=String(thread.body||"").replace(/\s+/g," ").slice(0,280);
  return "<article class='forum-thread-card "+verifiedCommentClass(forumIdentity(thread.author_id))+"' data-thread-card='"+escape(thread.id)+"'>"+
   "<div class='forum-thread-meta'>"+
-  "<span class='forum-community-icon' aria-hidden='true'>"+escape(community?.icon_emoji||"💬")+"</span>"+
+  "<span class='forum-community-icon' aria-hidden='true'>"+communityIcon(community)+"</span>"+
   (community?"<button type='button' data-open-community='"+escape(community.id)+"'>"+escape(community.title)+"</button>":"")+
   "<span>· "+escape(preferredDate(thread.created_at))+"</span>"+
-  (pinned||thread.is_pinned?"<span class='forum-topic-pinned'>📌 Pinned</span>":"")+
-  (thread.is_locked?"<span>🔒 Locked</span>":"")+
+  (pinned||thread.is_pinned?"<span class='forum-topic-pinned'>"+icon("pin")+" Pinned</span>":"")+
+  (thread.is_locked?"<span>"+icon("lock")+" Locked</span>":"")+
   (thread.flair?"<span class='forum-topic-flair'>"+escape(thread.flair)+"</span>":"")+
   "<span class='forum-topic-kind'>"+escape(label)+"</span></div>"+
   "<div class='forum-thread-content'><div class='forum-thread-copy'>"+
   "<button class='forum-thread-title' data-open-thread='"+escape(thread.id)+"' type='button'>"+escape(thread.title)+"</button>"+
-  (intro?"<p>"+escape(intro)+"</p>":"")+
+  (intro?"<div class='forum-thread-excerpt forum-markdown'>"+renderCommunityMarkdown(intro)+"</div>":"")+
   (state.mode==="personal"&&thread.ranking_reason?"<small class='forum-ranking-reason'>"+escape(thread.ranking_reason)+"</small>":"")+
-  (thread.media_url?"<span class='forum-topic-media-indicator'>◈ Media attached</span>":"")+
+  (thread.media_url?"<span class='forum-topic-media-indicator'>"+icon("image")+" Media attached</span>":"")+
   "</div>"+threadPreviewHtml(thread)+"</div>"+
   "<div class='forum-thread-footer'>"+
    "<div class='forum-vote-rail'>"+
-   "<button type='button' data-vote='1' data-id='"+escape(thread.id)+"' class='"+(state.votes.get(thread.id)===1?"selected":"")+"' aria-label='Upvote topic' aria-pressed='"+(state.votes.get(thread.id)===1)+"'>▲</button>"+
+   "<button type='button' data-vote='1' data-id='"+escape(thread.id)+"' class='"+(state.votes.get(thread.id)===1?"selected":"")+"' aria-label='Upvote topic' aria-pressed='"+(state.votes.get(thread.id)===1)+"'>"+icon("arrow-up")+"</button>"+
    "<strong data-score='"+escape(thread.id)+"'>"+Number(thread.score||0)+"</strong>"+
-   "<button type='button' data-vote='-1' data-id='"+escape(thread.id)+"' class='"+(state.votes.get(thread.id)===-1?"selected":"")+"' aria-label='Downvote topic' aria-pressed='"+(state.votes.get(thread.id)===-1)+"'>▼</button></div>"+
-   "<button type='button' data-open-thread='"+escape(thread.id)+"'>▢ "+Number(thread.reply_count||0)+" replies</button>"+
+   "<button type='button' data-vote='-1' data-id='"+escape(thread.id)+"' class='"+(state.votes.get(thread.id)===-1?"selected":"")+"' aria-label='Downvote topic' aria-pressed='"+(state.votes.get(thread.id)===-1)+"'>"+icon("arrow-down")+"</button></div>"+
+   "<button type='button' data-open-thread='"+escape(thread.id)+"'>"+icon("comment")+" "+Number(thread.reply_count||0)+" replies</button>"+
    "<button type='button' data-save-thread='"+escape(thread.id)+"' aria-pressed='"+state.saved.has(thread.id)+"'>"+
-    (state.saved.has(thread.id)?"★ Saved":"☆ Save")+"</button>"+
-   "<button type='button' data-copy-thread='"+escape(thread.id)+"'>↗ Share</button>"+
+    (icon("bookmark")+(state.saved.has(thread.id)?" Saved":" Save"))+"</button>"+
+   "<button type='button' data-copy-thread='"+escape(thread.id)+"'>"+icon("share")+" Share</button>"+
    "<span class='forum-byline'>By "+forumAuthor(thread.author_id,thread.author_name)+"</span>"+
    (state.mode==="personal"?"<button type='button' data-not-interested='"+escape(thread.id)+"'>Not interested</button>":"")+
    "<button type='button' data-report-thread='"+escape(thread.id)+"'>Report</button></div></article>";
@@ -749,7 +751,7 @@ async function toggleSave(id){
   const {error}=await operation;if(error)throw error;
   if(saved)state.saved.delete(id);else state.saved.add(id);
   document.querySelectorAll("[data-save-thread='"+id+"']").forEach(button=>{
-    button.textContent=saved?"☆ Save":"★ Saved";
+    button.innerHTML=icon("bookmark")+(saved?" Save":" Saved");
     button.setAttribute("aria-pressed",String(!saved));
   });
   notify(saved?"Removed from saved topics.":"Saved for later.");
@@ -810,11 +812,11 @@ async function openThread(id,{push=true}={}){
  void hydratePrivateForumMedia($("forumThreadBody"));
  void renderCommunityPoll(data.id);
  $("forumThreadActions").innerHTML=
-  "<button type='button' data-vote='1' data-id='"+id+"'>▲</button>"+
+  "<button type='button' data-vote='1' data-id='"+id+"'>"+icon("arrow-up")+"</button>"+
   "<strong data-score='"+id+"'>"+Number(data.score||0)+"</strong>"+
-  "<button type='button' data-vote='-1' data-id='"+id+"'>▼</button>"+
-  "<button type='button' data-save-thread='"+id+"'>☆ Save</button>"+
-  "<button type='button' data-copy-thread='"+id+"'>↗ Share</button>"+
+  "<button type='button' data-vote='-1' data-id='"+id+"'>"+icon("arrow-down")+"</button>"+
+  "<button type='button' data-save-thread='"+id+"'>"+icon("bookmark")+" Save</button>"+
+  "<button type='button' data-copy-thread='"+id+"'>"+icon("share")+" Share</button>"+
   "<button type='button' data-report-thread='"+id+"'>Report</button>"+
   (staff?"<select id='forumModerateAction' aria-label='Moderate this topic'><option value=''>Moderate…</option>"+
     ["pin","unpin","lock","unlock","remove"].map(v=>"<option value='"+v+"'>"+v+"</option>").join("")+
@@ -833,7 +835,7 @@ async function openThread(id,{push=true}={}){
   b.setAttribute("aria-pressed",String(Number(b.dataset.vote)===vote));
  });
  const save=$("forumThreadActions").querySelector("[data-save-thread]");
- if(save){save.textContent=state.saved.has(data.id)?"★ Saved":"☆ Save";save.setAttribute("aria-pressed",String(state.saved.has(data.id)));}
+ if(save){save.innerHTML=icon("bookmark")+(state.saved.has(data.id)?" Saved":" Save");save.setAttribute("aria-pressed",String(state.saved.has(data.id)));}
  if(push)setUrl();
  await loadReplies(true);
  startLiveReplies(data.id);
@@ -900,10 +902,10 @@ function renderReplies(){
    mediaHtml(r.media_url,r.media_type,"reply",r.id)+
    "<div class='forum-reply-actions'>"+
    "<button type='button' data-vote-reply='"+escape(r.id)+"' data-reply-vote-value='1' "+
-      "aria-pressed='"+(state.replyVotes.get(r.id)?.mine===1)+"'>▲</button>"+
+      "aria-pressed='"+(state.replyVotes.get(r.id)?.mine===1)+"'>"+icon("arrow-up")+"</button>"+
    "<span class='forum-reply-score'>"+Number(state.replyVotes.get(r.id)?.score||0)+"</span>"+
    "<button type='button' data-vote-reply='"+escape(r.id)+"' data-reply-vote-value='-1' "+
-      "aria-pressed='"+(state.replyVotes.get(r.id)?.mine===-1)+"'>▼</button>"+
+      "aria-pressed='"+(state.replyVotes.get(r.id)?.mine===-1)+"'>"+icon("arrow-down")+"</button>"+
    "<button type='button' data-reply-to='"+escape(r.id)+"'>Reply</button>"+
    "<button type='button' data-copy-reply='"+escape(r.id)+"'>Copy link</button>"+
    "<button type='button' data-report-reply='"+escape(r.id)+"'>Report</button>"+
@@ -1486,6 +1488,7 @@ async function openCreatorDraft(){
  }
 }
 async function boot(){
+ document.querySelectorAll("[data-bm-icon]").forEach(slot=>{slot.innerHTML=icon(slot.dataset.bmIcon);slot.setAttribute("aria-hidden","true");});
  renderCategories();bindEvents();
  try{
    state.user=await getCurrentUser();
