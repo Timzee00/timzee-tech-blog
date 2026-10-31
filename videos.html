@@ -307,8 +307,8 @@
                 ${verifiedName(publicIdentityName(videoCreatorProfiles.get(v.user_id)),videoCreatorProfiles.get(v.user_id),{compact:true})}
               </div>` : ""}
               <div class="video-meta">
-                <span>👁 ${escapeHTML(String(v.view_count || 0))}</span>
-                <span>❤ ${escapeHTML(String(v.like_count || 0))}</span>
+                <span class="bm-meta-icon">${icon("eye")} ${escapeHTML(String(v.view_count || 0))}</span>
+                <span class="bm-meta-icon">${icon("heart")} ${escapeHTML(String(v.like_count || 0))}</span>
               </div>
             </div>
           </a>
