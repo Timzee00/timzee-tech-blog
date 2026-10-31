@@ -1,5 +1,5 @@
 import { getCurrentUser } from "./supabase.js";
-import { loadUserPreferences, mergePreferences } from "./user-preferences.js";
+import { loadUserPreferences, mergePreferences, readLocalPreferences } from "./user-preferences.js";
 
 const DEFAULT_READER = { fontSize: "medium", readerWidth: "comfortable", rememberPosition: true };
 
@@ -110,7 +110,9 @@ function applyMarketplacePreferences(preferences) {
 
 async function boot() {
   const user = await getCurrentUser();
-  const preferences = mergePreferences(await loadUserPreferences(user));
+  const preferences = user
+    ? mergePreferences(await loadUserPreferences(user))
+    : readLocalPreferences("guest");
   applySiteDataSaver(preferences);
   if (!user) return;
   applyAppearancePreferences(preferences);
