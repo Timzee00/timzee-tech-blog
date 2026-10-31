@@ -1,0 +1,43 @@
+/* Home-only first-page shared CSS. Other routes retain all global styles. */
+@import url("variables.css");
+@import url("base.css");
+@import url("navbar.css");
+@import url("buttons.css");
+@import url("forms.css");
+@import url("avatars.css");
+/* chat.css is not used on the public homepage. */
+/* chat-context-menu.css is not used on the public homepage. */
+/* marketplace.css is not used on the public homepage. */
+/* discussion.css is not used on the public homepage. */
+/* discussion-enhancements.css is not used on the public homepage. */
+/* novels.css is not used on the public homepage. */
+/* stories.css is not used on the public homepage. */
+@import url("content-pages.css");
+@import url("home.css");
+/* fyp.css is not used on the public homepage. */
+/* settings.css is not used on the public homepage. */
+@import url("animations.css");
+@import url("utilities.css");
+@import url("responsive.css");
+@import url("design-system.css");
+@import url("mobile-acceptance-fixes.css");
+@import url("viewport-guard.css");
+@import url("verified-identity.css");
+@import url("reader-journey.css");
+@import url("feature-launches.css");
+@import url("blipmood-brand.css");
+/* Profile-specific polish must override broad responsive defaults, not the other way around. */
+/* profile.css is not used on the public homepage. */
+
+html[data-reader-font="small"] .reader-content{font-size:.95rem;}
+html[data-reader-font="medium"] .reader-content{font-size:1.05rem;}
+html[data-reader-font="large"] .reader-content{font-size:1.2rem;}
+html[data-reader-font="xlarge"] .reader-content{font-size:1.35rem;}
+html[data-reader-width="compact"] .reader-content{max-width:700px;margin-inline:auto;}
+html[data-reader-width="comfortable"] .reader-content{max-width:820px;margin-inline:auto;}
+html[data-reader-width="wide"] .reader-content{max-width:1000px;margin-inline:auto;}
+
+html[data-reduce-motion="true"] *,html[data-reduce-motion="true"] *::before,html[data-reduce-motion="true"] *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important;}
+html[data-high-contrast="true"]{filter:contrast(1.08);}
+html[data-high-contrast="true"] :where(button,a,input,select,textarea){border-color:var(--color-text,#16181d);}
+html[data-high-contrast="true"] :where(.card,.post-card,.popular-card,.feature-card,.side-card,.post-shell,.board,.hero-card,.stats-card,.category-card){border-color:var(--color-text,#16181d);}
