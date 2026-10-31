@@ -270,6 +270,12 @@ function setupMoreDropdown() {
 
 setupGlobalErrorHandlers();
 setupMobileMenu();
+// Static pages can declare icon slots without duplicating SVG markup or loading icon fonts.
+document.querySelectorAll("[data-bm-icon]").forEach((slot) => {
+  const name = slot.getAttribute("data-bm-icon");
+  slot.innerHTML = icon(name);
+  slot.setAttribute("aria-hidden", "true");
+});
 document.querySelectorAll(".header-actions .icon-btn").forEach(link => {
   const name = new URL(link.href).pathname.split("/").pop().replace(".html", "");
   link.innerHTML = icon(name);
