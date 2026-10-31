@@ -1030,7 +1030,7 @@ function renderReplyPreview(){
   if(!preview)return;
   preview.hidden=!reply;
   if(!reply)return;
-  $("chatReplyAuthor").textContent=reply.author||"Member";
+  $("chatReplyAuthor").textContent=reply.author||"Unknown user";
   $("chatReplyExcerpt").textContent=reply.excerpt||"Attachment";
 }
 function cancelReply(){
