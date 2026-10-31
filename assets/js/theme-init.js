@@ -19,6 +19,15 @@
     applyTheme(next);
   }
   applyTheme(saved() || (system.matches ? "dark" : "light"));
+  // Respect the device's bandwidth preference before page enhancements start.
+  const dataSaverKey="blipmood:data-saver";
+  function syncEarlyDataSaver(){
+    let enabled=Boolean(navigator.connection?.saveData);
+    try{enabled=enabled||localStorage.getItem(dataSaverKey)==="1";}catch{}
+    document.documentElement.dataset.dataSaver=String(enabled);
+  }
+  syncEarlyDataSaver();
+  window.addEventListener("storage",event=>{if(event.key===dataSaverKey)syncEarlyDataSaver();});
   const APPEARANCE_KEY = "timzee-ui-appearance";
   function applyAppearance(options) {
     document.documentElement.dataset.reduceMotion = options?.reduceMotion === true ? "true" : "false";
