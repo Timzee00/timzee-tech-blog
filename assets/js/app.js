@@ -861,7 +861,7 @@ function renderLeaderboard() {
       const level = profile.level || deriveLevel(profile.points || 0).label;
       return `
         <div class="leaderboard-item">
-          <a href="profile.html?id=${encodeURIComponent(profile.id || '')}" aria-label="View profile"><img src="${avatar}" alt="member avatar"></a>
+          <a href="profile.html?id=${encodeURIComponent(profile.id || '')}" aria-label="View profile"><img src="${avatar}" alt="member avatar" width="48" height="48" loading="lazy" decoding="async" fetchpriority="low"></a>
           <div>
             <div><strong>${verifiedName(name,profile,{compact:true})}</strong></div>
             <div class="leaderboard-meta">
