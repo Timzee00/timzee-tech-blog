@@ -42,6 +42,19 @@ function synchronizeBrandImages() {
   document.querySelectorAll("img[data-bm-logo]").forEach(img => {
     const kind=img.dataset.bmLogo;
     if(!Object.hasOwn(BRAND_IMAGES,kind))return;
+    if(kind==="emblem"&&img.dataset.bmResponsiveHero==="true"){
+      // Keep responsive variants in the selected site theme: don't replace
+      // a 180px mobile image with the oversized original PNG during hydration.
+      const version=img.getAttribute("srcset")?.match(/\?v=([a-f0-9]{16})/)?.[1]||
+        img.getAttribute("src")?.match(/\?v=([a-f0-9]{16})/)?.[1]||"";
+      const suffix=version?"?v="+version:"";
+      const root="/assets/brand/blipmood-emblem-"+theme+"-";
+      const src=root+"420.png"+suffix;
+      const srcset=root+"180.png"+suffix+" 180w, "+root+"420.png"+suffix+" 420w";
+      if(img.getAttribute("srcset")!==srcset)img.setAttribute("srcset",srcset);
+      if(img.getAttribute("src")!==src)img.setAttribute("src",src);
+      return;
+    }
     const src=BRAND_IMAGES[kind][theme];
     if(img.getAttribute("src")!==src)img.setAttribute("src",src);
   });
