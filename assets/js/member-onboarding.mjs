@@ -1,10 +1,46 @@
 import {supabase,getCurrentUser} from "./supabase.js";
 import {saveUserPreferences} from "./user-preferences.js";
+import {captureReferralCode,pendingReferralCode,clearPendingReferralCode,validReferralCode,normalizeReferralCode} from "./referral-capture.mjs";
 const $=id=>document.getElementById(id);
 const form=$("setupForm"),status=$("setupMessage");
 const stages=[...document.querySelectorAll(".setup-stage")];
-let step=1,saving=false,person=null,existing=null;
+let step=1,saving=false,person=null,existing=null,referralsOpen=false;
+const REFERRAL_ENDPOINT="/.netlify/functions/blip-earn";
 const feedback=text=>{status.textContent=text||"";};
+function syncReferralSection() {
+ const section=$("setupReferralSection"), input=$("setupReferralCode");
+ if(!section||!input)return;
+ const age=Number($("setupAge")?.value);
+ // Do not market referral incentives to minor accounts.
+ section.hidden=!referralsOpen||!Number.isInteger(age)||age<18;
+ if(!section.hidden && !input.value)input.value=pendingReferralCode();
+}
+$("setupAge")?.addEventListener("input",syncReferralSection);
+async function loadReferralOffer() {
+ try {
+  const r=await fetch(REFERRAL_ENDPOINT+"?view=public",{cache:"no-store"});
+  if(!r.ok)throw Error("Unavailable");
+  const data=await r.json();
+  referralsOpen=data?.program?.accepting_referrals===true;
+ }catch {referralsOpen=false;}
+ syncReferralSection();
+}
+async function submitReferralCode(code) {
+ const {data:{session}}=await supabase.auth.getSession();
+ if(!session?.access_token)return;
+ const r=await fetch(REFERRAL_ENDPOINT,{method:"POST",
+  headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
+  body:JSON.stringify({action:"claim",code})});
+ let data={};try{data=await r.json();}catch{}
+ if(r.ok && ["pending","already_recorded"].includes(data.status)){
+  clearPendingReferralCode();
+  return;
+ }
+ // Non-blocking: onboarding is already saved and other account features must work.
+ // The signed-in member can retry the code from Blip Earn within the signup window.
+ console.warn("Referral code not yet applied:",r.status);
+}
+
 const nextTarget=()=>{
  const next=new URLSearchParams(location.search).get("next")||"index.html";
  try{const url=new URL(next,location.origin);
@@ -32,6 +68,11 @@ function validateStep(n){
   if(!/^[a-zA-Z0-9_]{3,32}$/.test(username)){feedback("Choose a username of 3–32 letters, numbers or underscores.");$("setupUsername").focus();return false;}
   if(!Number.isInteger(age)||age<13||age>120){feedback("Enter your age (13 or older).");$("setupAge").focus();return false;}
   if(!["female","male","prefer_not_to_say"].includes(gender)){feedback("Choose a gender option.");$("setupGender").focus();return false;}
+  const referral=$("setupReferralCode")?.value?.trim()||"";
+  if(!$("setupReferralSection")?.hidden && referral && !validReferralCode(referral)){
+    feedback("Enter a valid invitation code or leave it empty.");
+    $("setupReferralCode")?.focus();return false;
+  }
   const avatar=avatarSelection();
   if(!allowedStarterAvatar(gender,avatar)){
     feedback("Choose an avatar available for your selected gender.");$("setupGender").focus();return false;
@@ -120,6 +161,12 @@ form.addEventListener("submit",async event=>{
   });
   const saved=await supabase.from("member_onboarding").upsert(onboarding,{onConflict:"user_id"});
   if(saved.error)throw saved.error;
+  const code=normalizeReferralCode($("setupReferralCode")?.value||"");
+  if(referralsOpen && !$("setupReferralSection")?.hidden && validReferralCode(code)){
+    try{await submitReferralCode(code);}catch(error){
+      console.warn("Referral attribution deferred:",error?.message||"network");
+    }
+  }
   location.replace(nextTarget());
  }catch(error){console.error("Onboarding failed",error);feedback(error?.message||"We couldn't save your settings. Please try again.");}
  finally{saving=false;submit.disabled=false;submit.textContent="Start exploring ✨";form.setAttribute("aria-busy","false");}
@@ -142,6 +189,8 @@ async function boot(){
  const radio=form.querySelector('input[name="avatar"][value="'+avatar+'"]');
  if(radio)radio.checked=true;
  syncStarterAvatar();
+ captureReferralCode();
+ await loadReferralOffer();
  for(const interest of o.data?.interests||[]){
   const target=[...form.querySelectorAll('[name="interests"]')].find(x=>x.value===interest);
   if(target)target.checked=true;
