@@ -14,3 +14,11 @@
 
 /.netlify/functions/*
   Cache-Control: no-store
+
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Content-Type: text/javascript; charset=utf-8
+
+/app.webmanifest
+  Cache-Control: no-cache, must-revalidate
+  Content-Type: application/manifest+json; charset=utf-8
