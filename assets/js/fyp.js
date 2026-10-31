@@ -7,6 +7,7 @@ import { diversifyFeed, feedCacheKey, cachedFeed } from "./feed-diversity.mjs";
 import {setupMentionInput} from "./mentions.js";
 import {incrementVideoView} from "./videos-marketplace.js";
 import {renderSocialText} from "./social-rich-text.mjs";
+import {icon} from "./icons.js";
 
 const state = { user: null, preferences: mergePreferences(), type: "all", mode: "for-you", loading: false };
 const feedCache = new Map();
@@ -51,7 +52,7 @@ function renderRow(row) {
       ' src="'+escapeHTML(mediaUrl)+'" aria-label="'+escapeHTML(row.title||"Community video")+'"></video>'+
       '<div class="fyp-video-gestures" data-fyp-video-gestures role="button" tabindex="0" aria-label="Tap to pause or play; double tap to like"></div>'+
       '<div class="fyp-video-flash" aria-hidden="true"></div>'+
-      '<button type="button" class="fyp-fullscreen" data-fyp-action="fullscreen" aria-label="Watch video in fullscreen">⛶ Fullscreen</button>'+
+      '<button type="button" class="fyp-fullscreen" data-fyp-action="fullscreen" aria-label="Watch video in fullscreen">'+icon("maximize")+' Fullscreen</button>'+
     '</div>' :
     '<a class="fyp-media" href="'+contentHref(row)+'" aria-label="Open '+escapeHTML(typeLabel(type))+'">'+image+'</a>';
   const creator=feedIdentityMap.get(row.author_id)||null;
@@ -66,8 +67,8 @@ function renderRow(row) {
   const body=clampText(stripHTML(row.excerpt||""),270);
   const interact=["post","video","discussion"].includes(type);
   const social=interact?'<div class="fyp-social-actions">'+
-    '<button type="button" class="btn ghost sm fyp-like" aria-pressed="false" data-fyp-action="like">♡ Like</button>'+
-    '<button type="button" class="btn ghost sm" data-fyp-action="comments" aria-expanded="false">Comments'+(type==='video'?' <span class="fyp-comment-count">'+Number(row.comment_count||0)+'</span>':'')+'</button>'+
+    '<button type="button" class="btn ghost sm fyp-like" aria-pressed="false" data-fyp-action="like">'+icon("heart")+' Like</button>'+
+    '<button type="button" class="btn ghost sm" data-fyp-action="comments" aria-expanded="false">'+icon("comment")+' Comments'+(type==='video'?' <span class="fyp-comment-count">'+Number(row.comment_count||0)+'</span>':'')+'</button>'+
     '<a class="btn ghost sm" href="'+contentHref(row)+'">View full '+(type==="video"?"video":type==="discussion"?"discussion":"post")+'</a></div>'+
     '<section class="fyp-comments" hidden><h3>'+(type==="discussion"?"Discussion replies":"Comments")+'</h3><div class="fyp-comment-list"></div>'+
     '<form class="fyp-comment-form"><label for="fyp-comment-'+escapeHTML(row.content_id)+'">Add a comment</label>'+
@@ -113,7 +114,7 @@ async function hydrateLikes(root){
       if(!btn)return;
       const active=liked.has(card.dataset.contentId);
       btn.setAttribute("aria-pressed",String(active));
-      btn.textContent=active?"♥ Liked":"♡ Like";
+      btn.innerHTML=icon("heart")+(active?" Liked":" Like");
     });
   }));
 }
@@ -129,7 +130,7 @@ async function toggleLike(card,button){
     const {error}=await query;
     if(error)throw error;
     button.setAttribute("aria-pressed",String(!active));
-    button.textContent=active?"♡ Like":"♥ Liked";
+    button.innerHTML=icon("heart")+(active?" Like":" Liked");
     feedCache.clear();
   }catch(error){
     const feedback=card.querySelector(".fyp-comment-status");
@@ -177,7 +178,7 @@ async function loadInlineComments(card){
       const social=likeIndex.get(comment.id),count=Number(social?.like_count||0);
       const like=document.createElement("button");like.type="button";like.className="btn ghost sm";
       like.dataset.fypCommentLike=comment.id;like.setAttribute("aria-pressed",String(social?.viewer_liked===true));
-      like.textContent=(social?.viewer_liked?"♥ Liked":"♡ Like")+" · "+count;
+      like.innerHTML=icon("heart")+(social?.viewer_liked?" Liked":" Like")+" · "+count;
       article.append(like);
     }
     list.append(article);
@@ -368,7 +369,7 @@ function bindFypVideoGestures(root){
     video.addEventListener("ended",()=>clearTimeout(watchTimer));
     const showIcon=value=>{
       if(!flash)return;
-      flash.textContent=value;flash.classList.remove("show");
+      flash.innerHTML=icon(value);flash.dataset.icon=value;flash.classList.remove("show");
       void flash.offsetWidth;flash.classList.add("show");
     };
     const handleTap=event=>{
@@ -377,12 +378,12 @@ function bindFypVideoGestures(root){
         clearTimeout(pending);pending=null;lastTap=0;
         const button=card.querySelector('[data-fyp-action="like"]');
         if(button && button.getAttribute("aria-pressed")!=="true")void toggleLike(card,button);
-        showIcon("♥");return;
+        showIcon("heart");return;
       }
       lastTap=now;
       pending=setTimeout(()=>{
-        if(video.paused){video.play().catch(()=>{});showIcon("▶");}
-        else{video.pause();showIcon("Ⅱ");}
+        if(video.paused){video.play().catch(()=>{});showIcon("play");}
+        else{video.pause();showIcon("pause");}
       },360);
     };
     zone.addEventListener("click",handleTap);
