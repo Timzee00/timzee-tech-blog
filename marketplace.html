@@ -275,7 +275,8 @@
       import { uploadMedia } from "./assets/js/media.js";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import { formatMarketplacePrice } from "./assets/js/marketplace-currency.mjs";
-      import {verifiedName,verifiedAvatar,loadVerifiedIdentityMap} from "./assets/js/verified-identity.mjs";
+      import {verifiedName,verifiedAvatar,verifiedLevel,loadVerifiedIdentityMap} from "./assets/js/verified-identity.mjs";
+      import {readLocalPreferences,loadUserPreferences,saveUserPreferences} from "./assets/js/user-preferences.js";
 
       const MAX_PHOTOS = 8;
       const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -288,8 +289,13 @@
         sort: "newest",
         limit: 20,
         selectedPhotos: [],
-        editingListing: null
+        editingListing: null,
+        location: "",
+        verifiedOnly: false,
+        viewMode: "grid"
       };
+      let favoriteIds = new Set();
+      try { favoriteIds = new Set(JSON.parse(localStorage.getItem("blipmood:market:favorites") || "[]").filter(value => typeof value === "string")); } catch {}
 
       function normalizeWhatsapp(raw) {
         return String(raw || "").replace(/[\s()\-]/g, "");
@@ -529,7 +535,7 @@
         notice.textContent="Finding listings…";
         try{
           const rows=await (query?searchMarketplace:fetchMarketplaceItems)({
-            query,category,sort:state.sort,limit:state.limit+1,offset,onlyAvailable:true
+            query,category,location:state.location,sort:state.sort,limit:state.limit+1,offset,onlyAvailable:true
           });
           if(version!==listVersion)return;
           const hasNext=rows.length>state.limit,page=rows.slice(0,state.limit);
@@ -540,7 +546,7 @@
           state.listings=page;sellerIdentityMap=identities;renderListings();
           previous.hidden=offset===0;more.hidden=!hasNext;more.style.display=hasNext?"inline-flex":"none";
           indicator.textContent="Page "+(Math.floor(offset/state.limit)+1);
-          notice.textContent=page.length?"Showing "+(offset+1)+"–"+(offset+page.length)+(hasNext?" · more available":""):"No matching listings";
+          notice.textContent=page.length?"Showing "+(offset+1)+"–"+(offset+page.length)+(hasNext?" · more available":"")+(state.verifiedOnly?" · verified creators on this page":""):"No matching listings";
           if(!page.length&&offset>0){state.offset=Math.max(0,offset-state.limit);void loadListings();return;}
         }catch(error){
           if(version!==listVersion)return;
