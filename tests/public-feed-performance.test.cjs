@@ -164,8 +164,14 @@ test("homepage retains its original hero emblem without a decorative phone mocku
  assert.match(css,/body\.blipmood-home \{/);
  assert.doesNotMatch(css,/bm-device-/);
  assert.match(css,/\.blipmood-home \.bm-hero-art>img/);
- assert.match(css,/\.blipmood-home \.bm-hero-split\{display:block;position:relative\}/);
- assert.match(css,/\.blipmood-home \.bm-hero-art\{[\s\S]*?position:absolute;right:0;top:28px/);
+ assert.match(css,/@media\(max-width:650px\)\{[\s\S]*?\.blipmood-home \.bm-hero-split\{[\s\S]*?display:grid;position:relative/);
+ assert.match(css,/grid-template-columns:minmax\(0,1fr\) minmax\(0,\.66fr\)/);
+ assert.match(css,/\.blipmood-home \.home-intro-copy\{display:contents\}/);
+ assert.match(css,/\.blipmood-home \.home-intro h1\{[\s\S]*?grid-column:1;grid-row:2/);
+ assert.match(css,/\.blipmood-home \.bm-hero-art\{[\s\S]*?grid-column:2;grid-row:2;position:relative;inset:auto/);
+ assert.match(css,/\.blipmood-home \.home-intro-copy>\.bm-hero-description\{grid-column:1\/-1;grid-row:3\}/);
+ assert.match(css,/\.blipmood-home \.home-intro-copy>\.cta\{grid-column:1\/-1;grid-row:4\}/);
+ assert.doesNotMatch(css.slice(css.indexOf("@media(max-width:650px)")),/\.bm-hero-art\{[\s\S]*?position:absolute/);
  assert.match(css,/\.blipmood-home \.explore-panel>a/);
  assert.match(css,/@media\(max-width:650px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
