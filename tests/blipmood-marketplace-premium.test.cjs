@@ -52,3 +52,14 @@ test("marketplace controls have unique IDs and defined destination paths",()=>{
   assert.match(html,/href="profile\.html\?id=/);
   assert.equal((css.match(/\{/g)||[]).length,(css.match(/\}/g)||[]).length);
 });
+
+test("poster previews keep original proportions in both grid and compact list views",()=>{
+  assert.match(css,/\.listing-image img\{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:100%;object-fit:contain;object-position:center/);
+  assert.match(css,/\.market-list-mode \.listing-image\{aspect-ratio:4\/5;height:auto;min-height:0/);
+  assert.doesNotMatch(css,/\.market-list-mode \.listing-image\{[^}]*height:100%/);
+  assert.match(css,/\.market-list-mode \.listing-card\{[^}]*align-items:center/);
+  assert.match(css,/\.marketplace-grid\{[^}]*align-items:start/);
+  assert.match(css,/@media\(max-width:600px\)\{[^\n]*\.listing-image\{aspect-ratio:4\/5\}/);
+  assert.match(html,/class="market-card-photo-link"/);
+  assert.match(html,/class="listing-image"/);
+});
