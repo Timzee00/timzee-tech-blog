@@ -342,6 +342,9 @@
         font-size: 20px;
         transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
       }
+      .reel-mute svg, .reel-chip-icon svg { display:block; width:22px; height:22px; stroke-width:1.8; }
+      .reel-chip[data-action="like"].active .reel-chip-icon svg { fill:currentColor; }
+      .reel-heart-burst svg { display:block; width:90px; height:90px; fill:currentColor; stroke:currentColor; }
       .reel-chip.active .reel-chip-icon {
         background: var(--reel-gradient);
         border-color: transparent;
@@ -733,7 +736,7 @@
         </nav>
         <div class="reel-nav-actions">
           <button type="button" class="reel-nav-create" id="reelOpenUpload" aria-haspopup="dialog" aria-controls="reelUploadDialog" aria-label="Create and upload a reel" title="Create a reel">+</button>
-          <button type="button" class="reel-mute" id="reelHeaderMute" aria-label="Toggle sound" title="Mute or unmute videos">🔊</button>
+          <button type="button" class="reel-mute" id="reelHeaderMute" aria-label="Toggle sound" title="Mute or unmute videos"></button>
         </div>
       </header>
       <div id="reelRoot"></div>
@@ -835,6 +838,7 @@
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
       import { fetchVideoDiscoveryPage } from "./assets/js/video-discovery.mjs";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
+      import { icon } from "./assets/js/icons.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
       import {renderSocialText} from "./assets/js/social-rich-text.mjs";
       import {mountPoll,openPollComposer} from "./assets/js/content-polls.mjs";
@@ -897,7 +901,7 @@
 
       const headerMute = document.getElementById("reelHeaderMute");
       function syncHeaderMute() {
-        headerMute.textContent = state.sessionMuted ? "🔇" : "🔊";
+        headerMute.innerHTML = icon(state.sessionMuted ? "volume-x" : "volume-2");
         headerMute.setAttribute("aria-label", state.sessionMuted ? "Unmute videos" : "Mute videos");
         headerMute.setAttribute("aria-pressed", String(state.sessionMuted));
       }
@@ -1188,26 +1192,26 @@
               </div>
               <div class="reel-rail">
                 <button type="button" aria-label="Like video" class="reel-chip" data-action="like" data-id="${escapeHTML(video.id)}" data-index="${index}">
-                  <div class="reel-chip-icon">♥</div>
+                  <div class="reel-chip-icon">${icon("heart")}</div>
                   <span class="reel-chip-count" id="likecount-${index}">${video.like_count ?? 0}</span>
                 </button>
                 <button type="button" aria-label="View video comments" class="reel-chip" data-action="comment" data-id="${escapeHTML(video.id)}">
-                  <div class="reel-chip-icon">💬</div>
+                  <div class="reel-chip-icon">${icon("comment")}</div>
                   <span class="reel-chip-count" id="commentcount-${index}">${Number(video.comment_count||0)}</span>
                 </button>
                 <button type="button" aria-label="Rewind video 10 seconds" class="reel-chip" data-action="rewind" data-index="${index}">
-                  <div class="reel-chip-icon">↺</div><span class="reel-chip-count">10s back</span>
+                  <div class="reel-chip-icon">${icon("rewind")}</div><span class="reel-chip-count">10s back</span>
                 </button>
                 <button type="button" aria-label="Share video" class="reel-chip" data-action="share" data-id="${escapeHTML(video.id)}">
-                  <div class="reel-chip-icon">↗</div>
+                  <div class="reel-chip-icon">${icon("share")}</div>
                   <span class="reel-chip-count">Share</span>
                 </button>
                 <button type="button" aria-label="Save video" class="reel-chip" data-action="download" ${video.allow_download===false?"hidden":""} data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(video.video_url || '')}" data-title="${escapeHTML(video.title || 'video')}">
-                  <div class="reel-chip-icon">⬇</div>
+                  <div class="reel-chip-icon">${icon("download")}</div>
                   <span class="reel-chip-count">Save</span>
                 </button>
                 <div class="reel-chip">
-                  <div class="reel-chip-icon" style="font-size:15px;">👁</div>
+                  <div class="reel-chip-icon">${icon("eye")}</div>
                   <span class="reel-chip-count" id="viewcount-${index}">${Math.max(0,Number(video.view_count)||0)}</span>
                 </div>
               </div>
@@ -1345,7 +1349,7 @@
           heart.className = "reel-heart-burst";
           heart.style.left = `${x}px`;
           heart.style.top = `${y}px`;
-          heart.textContent = "❤";
+          heart.innerHTML = icon("heart");
           zone.appendChild(heart);
           heart.addEventListener("animationend", () => heart.remove());
 
