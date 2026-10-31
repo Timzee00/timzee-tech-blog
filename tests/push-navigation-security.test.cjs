@@ -72,7 +72,7 @@ test("service worker still supplies safe push URLs and isolates static/offline c
   assert.match(source,/DEFAULT_NOTIFICATION_URL="\/profile\.html\?tab=notifications"/);
   assert.match(source,/OFFLINE_PAGE="\/offline\.html"/);
  assert.match(source,/if\(request\.method!=="GET"\)return/);
- assert.match(source,/ALLOWED_STATIC_PREFIXES/);
+ assert.match(source,/OFFLINE_BRAND_ASSETS/);
  assert.match(source,/request\.headers\.has\("Authorization"\)/);
  assert.match(source,/request\.mode==="navigate"/);
 });
