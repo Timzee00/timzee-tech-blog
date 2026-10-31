@@ -266,3 +266,45 @@
   .profile-page .profile-masthead .profile-hero *,
   .profile-page .profile-post-item{animation:none!important;transition:none!important}
 }
+
+/* Long verified names stay readable; badge remains part of the name line. */
+.profile-page .profile-masthead #profileName{
+  max-width:100%;min-width:0;margin:4px 0;
+  font-size:clamp(1.3rem,4.8vw,2.1rem);
+  line-height:1.22;letter-spacing:-.025em;overflow-wrap:anywhere;
+}
+.profile-page .profile-masthead #profileName.profile-long-name{
+  font-size:clamp(1.18rem,4.2vw,1.8rem)
+}
+.profile-page #profileName>.tz-identity-name{
+  display:inline;max-width:100%;white-space:normal;
+  line-height:inherit;overflow-wrap:anywhere;
+}
+.profile-page #profileName>.tz-identity-name.tz-nameplate{
+  padding:.04em .18em;border-radius:.28em;box-decoration-break:clone;
+  -webkit-box-decoration-break:clone;
+}
+.profile-page #profileName .tz-verified-badge,
+.profile-page #profileName .tz-affiliation-badge{
+  display:inline-flex;vertical-align:middle;align-items:center;
+  white-space:nowrap;margin-inline-start:.15em
+}
+/* Portal menu lives outside the clipped hero for safe mobile positioning. */
+body.blipmood-profile .profile-action-floating-menu{
+  box-sizing:border-box;position:fixed;z-index:16000;
+  display:grid;gap:7px;padding:10px;
+  border-radius:14px;border:1px solid var(--color-border,#507083);
+  background:var(--color-surface,#132936);
+  color:var(--color-text,#f4ffff);
+  box-shadow:0 14px 45px rgba(0,0,0,.36);
+  max-width:calc(100vw - 24px);
+  max-height:calc(100dvh - 24px);
+  overflow:auto;
+}
+body.blipmood-profile .profile-action-floating-menu[hidden]{display:none!important}
+body.blipmood-profile .profile-action-floating-menu .btn{
+  width:100%;min-height:44px;
+  padding:10px 13px;border-radius:10px;
+  justify-content:flex-start;text-align:left;
+  white-space:normal;overflow-wrap:anywhere
+}
