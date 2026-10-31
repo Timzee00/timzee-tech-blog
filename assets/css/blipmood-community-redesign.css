@@ -335,3 +335,16 @@ body.blipmood-community-redesign .forum-filter-buttons button.active,
 body.blipmood-community-redesign .forum-guide-row span{
  color:var(--color-text-on-primary,#fff);
 }
+
+/* Shared 24px line icons throughout forum navigation, votes and categories. */
+body.blipmood-community-redesign .forum-page .bm-icon{display:inline-block;width:19px;height:19px;max-width:100%;flex:0 0 auto;vertical-align:-.23em;stroke:currentColor;stroke-width:1.8}
+body.blipmood-community-redesign .forum-community-icon .bm-icon,
+body.blipmood-community-redesign .forum-suggestion-icon .bm-icon,
+body.blipmood-community-redesign .forum-community-big-icon .bm-icon{width:23px;height:23px}
+body.blipmood-community-redesign :is(.forum-nav-home,.forum-nav-item,.forum-category-filters button,.forum-thread-footer button,.forum-thread-actions button,.forum-topic-pinned,.forum-topic-media-indicator){align-items:center}
+body.blipmood-community-redesign :is(.forum-nav-home,.forum-nav-item,.forum-category-filters button) .bm-icon{margin-right:5px}
+body.blipmood-community-redesign :is(.forum-thread-excerpt,.forum-markdown) a{color:var(--color-primary,#59e5dc);text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+body.blipmood-community-redesign .forum-thread-excerpt{min-width:0;overflow-wrap:anywhere;line-height:1.55}
+body.blipmood-community-redesign .forum-thread-excerpt p{margin:0}
+body.blipmood-community-redesign .forum-thread-footer button .bm-icon{width:17px;height:17px;margin-right:4px}
+body.blipmood-community-redesign .forum-vote-rail button .bm-icon{margin-right:0}
