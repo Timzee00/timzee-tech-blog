@@ -96,10 +96,12 @@ html[data-reduce-motion="true"] .site-header .brand .bm-brand-display > .bm-word
  .bm-has-unified-rail .bm-rail-brand.bm-animated-ready>img[data-bm-logo="wordmark"]{
    visibility:hidden;
  }
- @media(prefers-reduced-motion:reduce){
-   .bm-has-unified-rail .bm-rail-brand>blipmood-logo{display:none!important}
-   .bm-has-unified-rail .bm-rail-brand>img[data-bm-logo="wordmark"]{visibility:visible!important}
- }
+}
+@media(min-width:1190px) and (prefers-reduced-motion:reduce){
+ .bm-has-unified-rail .bm-rail-brand>blipmood-logo{display:none!important}
+ .bm-has-unified-rail .bm-rail-brand>img[data-bm-logo="wordmark"]{visibility:visible!important}
+}
+@media(min-width:1190px){
  html[data-reduce-motion="true"] .bm-has-unified-rail .bm-rail-brand>blipmood-logo{display:none!important}
  html[data-reduce-motion="true"] .bm-has-unified-rail .bm-rail-brand>img[data-bm-logo="wordmark"]{visibility:visible!important}
 }
