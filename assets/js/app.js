@@ -33,7 +33,7 @@ import {
   reportAppError
 } from "./utils.js";
 import { setupReveal } from "./reveal.js";
-import {mountReaderHome} from "./reader-home.mjs";
+// Reader personalization is imported only for signed-in members.
 import {verifiedAvatar,verifiedName} from "./verified-identity.mjs";
 import { icon } from "./icons.js";
 import "./nav.js";
@@ -1075,7 +1075,10 @@ async function boot() {
   syncCommunityJoinLinks();
   showAdminLinks();
   if(state.user?.id){
-    void mountReaderHome(state.user,{posts:state.posts,categories:state.categories});
+    // No reader-personalization bundle or related DB work for anonymous traffic.
+    void import("./reader-home.mjs").then(({mountReaderHome})=>
+      mountReaderHome(state.user,{posts:state.posts,categories:state.categories})
+    ).catch(error=>console.warn("Reader home unavailable:",error));
   }
 
   // Secondary widgets are deliberately separated from the article render.
