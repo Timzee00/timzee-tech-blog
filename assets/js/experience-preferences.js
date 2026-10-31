@@ -28,7 +28,9 @@ function applyNovelPreferences(preferences) {
 let saverObserver=null;
 function applySiteDataSaver(preferences){
   const networkSave=Boolean(navigator.connection?.saveData);
-  const enabled=preferences?.performance?.dataSaver===true||networkSave;
+  let locallyEnabled=false;
+  try{locallyEnabled=localStorage.getItem("blipmood:data-saver")==="1";}catch{}
+  const enabled=preferences?.performance?.dataSaver===true||networkSave||locallyEnabled;
   document.documentElement.dataset.dataSaver=String(enabled);
   if(!enabled){saverObserver?.disconnect();saverObserver=null;return;}
   const applyToNode=node=>{
