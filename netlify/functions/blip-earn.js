@@ -176,6 +176,7 @@ function requestError(error, fallback) {
     "Founder reward cap reached",
     "Only an HTTPS winners-channel URL is allowed",
     "Choose a currently verified active staff account",
+    "Configure a verified Blipmood staff chat before enabling manual rewards",
     "Referral does not exist",
     "Reward record unavailable"
   ];
