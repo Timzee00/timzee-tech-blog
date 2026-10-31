@@ -30,6 +30,85 @@ async function post(action,rest={}) {
   if(!r.ok)throw Error(data.error||"Request could not be completed.");
   return data;
 }
+function renderRewards(data){
+ const host=$("beRewardsList"),notice=$("beRewardsHelp"),contact=$("beOfficialChat");
+ host.replaceChildren();
+ const awards=Array.isArray(data.awards)?data.awards:[];
+ const funded=data.reward_program?.manual_funding_open===true;
+ notice.textContent=funded
+  ?"Founder-funded rewards are enabled with a fixed budget cap. Every 10 approved referrals may qualify for ₦1,000, subject to remaining funds and staff verification."
+  :"Founder-funded cash or airtime awards are paused. Previously approved awards remain recorded and may still be requested.";
+ if(!awards.length){
+   const empty=document.createElement("p");empty.textContent="No ₦1,000 manual awards have been approved for your account yet.";
+   host.append(empty);
+ }
+ for(const award of awards){
+   const card=document.createElement("article");card.className="be-award";
+   const label=document.createElement("strong");
+   label.textContent="Milestone "+Number(award.milestone_no||0)+" · ₦"+Number(award.amount_naira||1000).toLocaleString();
+   const status=document.createElement("p");
+   const descriptions={
+     available:"Approved for manual claim · not yet paid",
+     requested:"Your request is awaiting the founder's personal payment",
+     paid:"Marked paid by Blipmood staff"
+   };
+   status.textContent=descriptions[award.status]||"Status pending";
+   card.append(label,status);
+   if(award.status==="available"){
+     const choose=document.createElement("select");choose.className="be-select";choose.setAttribute("aria-label","Choose payout type");
+     for(const [key,value] of [["bank","Bank transfer"],["airtime","Airtime"]]){
+       const item=document.createElement("option");item.value=key;item.textContent=value;choose.append(item);
+     }
+     const consentLabel=document.createElement("label");
+     const consent=document.createElement("input");consent.type="checkbox";consent.checked=false;
+     const consentText=document.createElement("span");
+     consentText.textContent="If the founder pays me, I allow my public @username and ₦1,000 award to appear on Blipmood's winners board.";
+     consentLabel.append(consent,consentText);
+     const button=document.createElement("button");button.type="button";button.className="be-button";
+     button.textContent="Request manual payment";
+     const msg=document.createElement("small");msg.className="be-mini-status";msg.setAttribute("role","status");
+     button.addEventListener("click",async()=>{
+       if(button.disabled)return;
+       if(!confirm("Request manual "+(choose.value==="airtime"?"airtime":"bank transfer")+" from Blipmood? Do not send bank details or OTPs here."))return;
+       button.disabled=true;msg.textContent="Sending your manual reward request…";
+       try{
+         await post("member-request",{award_id:award.id,method:choose.value,public_consent:consent.checked});
+         await reload();
+       }catch(error){msg.textContent=error.message||"Request failed.";button.disabled=false;}
+     });
+     card.append(choose,consentLabel,button,msg);
+   }
+   if(award.status==="requested"||award.status==="paid"){
+     const setting=document.createElement("button");setting.type="button";setting.className="be-button secondary";
+     const opted=Boolean(award.public_consent_at);
+     setting.textContent=opted?"Withdraw winner-list permission":"Allow showing my @username if paid";
+     const msg=document.createElement("small");msg.className="be-mini-status";msg.setAttribute("role","status");
+     setting.addEventListener("click",async()=>{
+       const nowOptIn=!opted;
+       if(opted&&!confirm("Remove permission for public winner announcements? Your entry will be removed from Blipmood's board."))return;
+       setting.disabled=true;
+       try{await post("member-consent",{award_id:award.id,public_consent:nowOptIn});await reload();}
+       catch(error){msg.textContent=error.message||"Could not update consent.";setting.disabled=false;}
+     });
+     card.append(setting,msg);
+     if(award.status==="requested"){
+       const prompt=document.createElement("p");prompt.className="be-footnote";
+       prompt.textContent="Use only the official staff chat shown below to arrange the cash or airtime payment. Never send an OTP, PIN or password.";
+       card.append(prompt);
+     }
+   }
+   host.append(card);
+ }
+ contact.replaceChildren();
+ const official=data.official_chat;
+ if(official?.link?.startsWith("/chat.html?user=") && typeof official.username==="string"){
+   const link=document.createElement("a");link.href=official.link;link.className="be-home";
+   link.textContent="Open verified Blipmood staff chat · @"+official.username;
+   contact.append(link);
+ }else{
+   contact.textContent="No verified payout support account is configured yet. Please do not send bank details to random accounts.";
+ }
+}
 function render(data) {
   program = data.program || {};
   storedCode = data.code || null;
@@ -52,6 +131,7 @@ function render(data) {
   $("beCodeHint").textContent=program.accepting_referrals
     ?"Your unique link can be shared while Blipmood accepts new invitations."
     :"Your existing code stays on record. New invitation attributions are paused.";
+  renderRewards(data);
   showStatus(program.status_message||"Referral availability is being checked.");
   $("beWorkspace").hidden=false;
 }
