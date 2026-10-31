@@ -67,8 +67,12 @@ test("click falls back to opening the inbox when no matching tab exists",async()
   await h.dispatch("notificationclick",{notification:{data:{url:"https://evil.example"},close(){}}});
   assert.deepEqual(h.opened,["https://blipmood.netlify.app/profile.html?tab=notifications"]);
 });
-test("service worker performs no background caching and supplies a safe URL",()=>{
+test("service worker still supplies safe push URLs and isolates static/offline caching",()=>{
   assert.match(source,/parsed\.origin!==self\.location\.origin/);
   assert.match(source,/DEFAULT_NOTIFICATION_URL="\/profile\.html\?tab=notifications"/);
-  assert.doesNotMatch(source,/caches\.open\(|\.cache\.add/);
+  assert.match(source,/OFFLINE_PAGE="\/offline\.html"/);
+ assert.match(source,/if\(request\.method!=="GET"\)return/);
+ assert.match(source,/ALLOWED_STATIC_PREFIXES/);
+ assert.match(source,/request\.headers\.has\("Authorization"\)/);
+ assert.match(source,/request\.mode==="navigate"/);
 });
