@@ -58,6 +58,9 @@ export const DEFAULT_USER_PREFERENCES = {
     mutedByDefault: true,
     dataSaver: false
   },
+  performance: {
+    dataSaver: false
+  },
   ai: {
     assistantContext: true
   }
