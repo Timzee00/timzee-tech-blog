@@ -90,9 +90,14 @@ test("Worker opens a real usable offline page and never caches member HTML or AP
  assert.equal(await w.visit({pathname:"/.netlify/functions/private",mode:"cors",destination:"",method:"POST"}),null);
  assert.equal(await w.visit({pathname:"/assets/user/private-chat.png",mode:"no-cors",destination:"image"}),null);
  const source=read("sw.js");
- assert.match(source,/ALLOWED_STATIC_PREFIXES/);
- assert.match(source,/STATIC_MAX_ENTRIES=120/);
- assert.match(source,/response\.type==="basic"/);
+ assert.match(source,/OFFLINE_BRAND_ASSETS/);
+ assert.doesNotMatch(source,/await cache\.put\(request,response\.clone\(\)\)/);
+ assert.match(source,/isSafeOfflineBrandRequest/);
+ assert.equal(await w.visit({pathname:"/assets/css/styles.css",mode:"cors",destination:"style"}),null);
+ assert.equal(await w.visit({pathname:"/assets/js/app.js",mode:"cors",destination:"script"}),null);
+ const logo=await w.visit({pathname:"/assets/brand/blipmood-pwa-192.png",mode:"no-cors",destination:"image"});
+ assert.ok(logo,"pre-cached public PWA image should still work offline");
+ assert.match(await logo.text(),/Offline cached/);
  assert.match(source,/request\.headers\.has\("Authorization"\)/);
  assert.match(source,/showNotification\("Blipmood"/);
  assert.match(source,/notificationclick/);
