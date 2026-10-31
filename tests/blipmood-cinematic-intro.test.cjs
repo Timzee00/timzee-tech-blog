@@ -37,16 +37,21 @@ test("intro respects returning visitors, accessibility, data saving and manual r
  assert.match(css,/prefers-reduced-motion:reduce/);
 });
 
-test("home page launches intro only once and prevents the legacy welcome popup stacking",()=>{
+test("home page keeps cinematic replay while deferring automatic mobile takeovers",()=>{
  const shell=read("assets/js/site-shell.js");
- const pos=shell.indexOf('if(currentSitePath()==="index.html"){');
+ const pos=shell.indexOf("function scheduleHomeCampaign(){");
  assert.ok(pos>=0);
  const block=shell.slice(pos);
  assert.match(block,/let introPlanned=false/);
  assert.match(block,/import\("\.\/blipmood-intro[.]mjs"\)/);
  assert.match(block,/if\(introPlanned\)/);
- assert.match(block,/\}\s*else\s*\{\s*\/\/ The site already has a guest welcome campaign/);
+ assert.match(block,/if\(!constrained\)afterFirstPaint/);
  assert.match(block,/import\("\.\/blipmood-welcome[.]mjs"\)/);
+ assert.match(block,/\(max-width: 900px\)/);
+ assert.match(block,/navigator\.deviceMemory/);
+ assert.match(block,/userInteracted\|\|document\.visibilityState/);
+ assert.match(block,/#timzee-consent-banner\.is-visible/);
+ assert.match(shell,/if\(currentSitePath\(\)==="index.html"\)scheduleHomeCampaign\(\)/);
  assert.doesNotMatch(shell,/^import "\.\/blipmood-intro[.]mjs";/m);
 });
 
