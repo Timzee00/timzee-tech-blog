@@ -212,7 +212,8 @@ $("befRewardForm").addEventListener("submit",async event=>{
    max_awards=Number($("befAwardCap").value);
  const reason=$("befRewardReason").value.trim();
  if(!Number.isSafeInteger(max_awards)||max_awards<0||max_awards>1000||
-    (enabled&&max_awards===0)||reason.length<12||reason.length>500){
+    (enabled&&max_awards===0)||(enabled&&!$("befVerifiedChat").value.trim())||
+    reason.length<12||reason.length>500){
     status($("befRewardFeedback"),"Select an explicit award cap and enter a 12–500 character audit reason.",true);return;
  }
  if(!confirm("Save personal reward funding? Maximum commitment is ₦"+
