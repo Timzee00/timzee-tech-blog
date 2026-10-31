@@ -66,3 +66,44 @@ test("chat client remains valid JavaScript after personal control handlers",()=>
  assert.match(js,/clearCurrentChat\(\)\.catch/);
  assert.match(js,/toggleCurrentArchive\(\)\.catch/);
 });
+
+test("Blipmood chat keeps all five tabs legible and the approved wordmark",()=>{
+ const html=read("chat.html"),css=read("assets/css/blipmood-chat-redesign.css");
+ assert.match(html,/class="chat-inbox-wordmark" data-bm-logo="wordmark"/);
+ assert.doesNotMatch(html,/class="chat-inbox-mark"/);
+ assert.match(html,/class="chat-status-shortcut"/);
+ assert.match(html,/href="stories.html" aria-label="Open Status"/);
+ for(const name of ["all","dms","groups","archived","requests"])
+   assert.match(html,new RegExp('data-tab="'+name+'"'));
+ assert.match(css,/\.chat-sidebar \.chat-tabs\{[\s\S]*?flex:0 0 auto/);
+ assert.match(css,/grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
+ assert.match(css,/\.chat-tab:nth-of-type\(4\)/);
+ assert.match(css,/\.chat-tab:nth-of-type\(5\)/);
+ assert.match(css,/\.chat-tab-panel:not\(\[hidden\]\)/);
+ assert.match(css,/\.chat-tab-badge\[hidden\]\{display:none!important\}/);
+});
+
+test("people search and friend requests are visible, wired and accessible",()=>{
+ const html=read("chat.html"),js=read("assets/js/chat-v2.js");
+ assert.match(html,/id="chatFindPeopleButton"/);
+ assert.match(html,/Find people &amp; send requests/);
+ assert.match(html,/id="peopleSearchPanel" role="dialog"/);
+ assert.match(html,/id="peopleSearch" placeholder="Name or username"/);
+ assert.match(js,/bindSearch\(\$\("peopleSearch"\), searchPeople\)/);
+ assert.match(js,/\$\("chatFindPeopleButton"\)\?\.addEventListener\("click",togglePeopleSearch\)/);
+ assert.match(js,/for\(const id of \["peopleSearchToggle","chatFindPeopleButton"\]\)/);
+ assert.match(js,/\.from\('friendships'\)\.insert\(/);
+ assert.match(js,/\.or\(`display_name\.ilike\.\$\{pattern\},username\.ilike\.\$\{pattern\}`\)/);
+});
+
+test("group badge is not membership count and known profiles render public names",()=>{
+ const js=read("assets/js/chat-v2.js"),html=read("chat.html");
+ assert.match(js,/function chatProfileLabel\(profile\)/);
+ assert.match(js,/profile\?\.username\|\|profile\?\.display_name/);
+ assert.match(js,/return name\.slice\(0,80\)\|\|'Unknown user'/);
+ assert.match(js,/badge\.textContent='';badge\.hidden=true/);
+ assert.doesNotMatch(js,/badge\.textContent=String\(state\.groups\.filter/);
+ assert.doesNotMatch(js,/\|\|['"]Member['"]/);
+ assert.match(js,/verifiedName\(chatProfileLabel\(p\),p,\{compact:true\}\)/);
+ assert.match(html,/id="groupsBadge" hidden/);
+});
