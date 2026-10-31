@@ -25,6 +25,38 @@ function applyNovelPreferences(preferences) {
   });
 }
 
+let saverObserver=null;
+function applySiteDataSaver(preferences){
+  const networkSave=Boolean(navigator.connection?.saveData);
+  const enabled=preferences?.performance?.dataSaver===true||networkSave;
+  document.documentElement.dataset.dataSaver=String(enabled);
+  if(!enabled){saverObserver?.disconnect();saverObserver=null;return;}
+  const applyToNode=node=>{
+    if(!(node instanceof Element))return;
+    const images=node.matches("img")?[node]:[];
+    images.push(...node.querySelectorAll("img"));
+    for(const image of images){
+      // Keep the critical header, cover and active viewer images immediate.
+      if(image.closest(".site-header,.profile-cover,.profile-avatar-wrap,.story-viewer,.reel-uploader"))continue;
+      if(image.loading!=="eager")image.loading="lazy";
+      image.decoding="async";
+    }
+    const videos=node.matches("video")?[node]:[];
+    videos.push(...node.querySelectorAll("video"));
+    for(const video of videos){
+      if(video.closest(".story-viewer,.status-video-editor"))continue;
+      video.preload=video.classList.contains("reel-video")?"metadata":"none";
+    }
+  };
+  if(document.body)applyToNode(document.body);
+  if(!saverObserver&&document.body&&"MutationObserver" in window){
+    saverObserver=new MutationObserver(records=>{
+      for(const record of records)for(const node of record.addedNodes)applyToNode(node);
+    });
+    saverObserver.observe(document.body,{childList:true,subtree:true});
+  }
+}
+
 function applyVideoPreferences(preferences) {
   const prepared = new WeakSet();
   const settings = preferences.videos || {};
@@ -76,8 +108,9 @@ function applyMarketplacePreferences(preferences) {
 
 async function boot() {
   const user = await getCurrentUser();
-  if (!user) return;
   const preferences = mergePreferences(await loadUserPreferences(user));
+  applySiteDataSaver(preferences);
+  if (!user) return;
   applyAppearancePreferences(preferences);
   const path = window.location.pathname.toLowerCase();
   if (path.endsWith("/novel.html")) applyNovelPreferences(preferences);
@@ -90,6 +123,7 @@ async function boot() {
 if (typeof window !== "undefined") {
   window.addEventListener("timzee:preferences", event => {
     applyAppearancePreferences(event.detail);
+    applySiteDataSaver(event.detail);
     window.timzeePreferences = event.detail;
   });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => void boot(), { once: true });
