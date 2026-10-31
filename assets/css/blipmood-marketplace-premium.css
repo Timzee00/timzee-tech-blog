@@ -162,3 +162,24 @@ body.market-premium .market-seller-summary-info .tz-identity-name{display:inline
 body.market-premium .market-seller-summary-info .tz-verified-badge{flex:0 0 auto}
 body.market-premium .market-view-buttons button:focus-visible{outline:3px solid #4bf3e3;outline-offset:3px}
 @media(max-width:600px){body.market-premium .market-saver-card{gap:11px}body.market-premium .market-saver-card small{font-size:.73rem}body.market-premium .market-page{overflow-x:clip}body.market-premium .market-list-mode .listing-card{grid-template-columns:clamp(104px,32%,134px) minmax(0,1fr)}body.market-premium .market-list-mode .listing-info{padding:9px 10px;gap:3px}body.market-premium .market-list-mode .listing-seller{gap:4px}body.market-premium .market-list-mode .market-seller-name{font-size:.69rem}}
+
+
+/* Marketplace mobile stability v2 — compact cards, no forced vertical growth. */
+body.market-premium .marketplace-grid{align-items:start;grid-auto-rows:max-content}
+body.market-premium .marketplace-grid .listing-card{align-self:start;height:auto;min-height:0;display:flex;flex-direction:column}
+body.market-premium .marketplace-grid .listing-info{display:flex;flex-direction:column;justify-content:flex-start;flex:0 0 auto;height:auto;min-height:0;gap:8px}
+body.market-premium .marketplace-grid .listing-title{min-height:0}
+body.market-premium .marketplace-grid .listing-image{aspect-ratio:1/1;min-height:0;height:auto}
+body.market-premium .marketplace-grid .listing-image img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center}
+body.market-premium .marketplace-grid .market-card-photo-link{height:auto;min-height:0;align-self:stretch}
+body.market-premium .market-list-mode .marketplace-grid .listing-card{display:grid;grid-template-columns:clamp(104px,30%,152px) minmax(0,1fr);align-items:center}
+body.market-premium .market-list-mode .marketplace-grid .listing-image{aspect-ratio:1/1;height:auto;min-height:0}
+body.market-premium .market-list-mode .marketplace-grid .listing-info{gap:5px}
+@media(max-width:600px){
+ body.market-premium .marketplace-grid{gap:10px}
+ body.market-premium .marketplace-grid .listing-info{padding:10px;gap:7px}
+ body.market-premium .market-list-mode .marketplace-grid .listing-card{grid-template-columns:clamp(99px,32%,130px) minmax(0,1fr)}
+ body.market-premium .market-list-mode .marketplace-grid .listing-info{padding:8px;gap:4px}
+ body.market-premium .marketplace-grid .listing-meta{font-size:.68rem}
+ body.market-premium .marketplace-grid .market-card-compact-actions{margin-top:4px}
+}
