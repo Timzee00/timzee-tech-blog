@@ -1,23 +1,123 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex,nofollow">
-  <title>You’re offline — Blipmood</title>
-  <style>
-    :root { color-scheme: light dark; --bg:#f5f7fb; --card:#fff; --ink:#16181d; --muted:#626a78; --accent:#2563eb; --border:#dfe4ec; }
-    @media (prefers-color-scheme: dark) { :root { --bg:#0d1117; --card:#151b23; --ink:#eef2f7; --muted:#9aa5b5; --border:#26303c; } }
-    *{box-sizing:border-box} body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.card{width:min(560px,calc(100vw - 32px));padding:32px;background:var(--card);border:1px solid var(--border);border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.1)}.chip{display:inline-block;padding:6px 10px;border:1px solid var(--border);border-radius:999px;font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}h1{margin:16px 0 10px;font-size:clamp(1.8rem,5vw,2.5rem)}p{margin:0 0 22px;color:var(--muted)}button{min-height:44px;padding:0 16px;border:0;border-radius:11px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
-  </style>
-</head>
-<body>
-    <a class="skip-link" href="#main-content">Skip to main content</a>
-  <main id="main-content" class="card" role="main">
-    <span class="chip">Connection unavailable</span>
-    <h1>You’re offline</h1>
-    <p>Blipmood can’t reach the server right now. Your device may still be able to reconnect without losing your place.</p>
-    <button type="button" onclick="location.reload()">Try again</button>
-  </main>
-</body>
-</html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d2331"><meta name="robots" content="noindex,nofollow">
+<title>Offline workspace · Blipmood</title>
+<style>
+:root{color-scheme:dark;--bg:#0d2331;--panel:#143444;--panel2:#102e3b;--ink:#eafffa;--muted:#c0d9da;--line:#417271;--mint:#69d3c1;--blue:#89bce9}
+*{box-sizing:border-box}html{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;scroll-behavior:smooth}body{margin:0;min-height:100dvh;background:radial-gradient(circle at 10% 0%,#186b683c,transparent 40%),radial-gradient(circle at 100% 0%,#2368a22b,transparent 40%),var(--bg);color:var(--ink)}
+a{color:var(--blue)}a:focus-visible,button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--mint);outline-offset:3px}
+.skip{position:absolute;top:-90px;left:10px;background:var(--mint);color:#0b2732;padding:8px;border-radius:7px}.skip:focus{top:10px}
+main{width:min(970px,calc(100% - 28px));margin:0 auto;padding:22px 0 max(42px,env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink);font-size:1.12rem;font-weight:850}.brand img{width:48px;height:48px;object-fit:contain}.state{font-size:.78rem;color:#e1f7f3;border-radius:99px;border:1px solid var(--line);padding:8px 12px}
+h1{font-size:clamp(1.9rem,6vw,3.1rem);line-height:1.12;letter-spacing:-.04em;margin:26px 0 10px}.lead{line-height:1.65;font-size:1rem;color:var(--muted);max-width:70ch}
+.notice{background:#18454a70;border:1px solid var(--line);padding:12px 14px;border-radius:12px;color:#e5f7f3;margin:16px 0;line-height:1.55;font-size:.87rem}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:22px}.card{min-width:0;background:linear-gradient(145deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:17px;padding:18px;box-shadow:0 12px 27px #03161d33}
+.card h2{font-size:1.12rem;margin:0 0 8px}.card p{color:var(--muted);font-size:.83rem;line-height:1.6;margin:0 0 11px}
+textarea,input{width:100%;border-radius:10px;border:1px solid #7caca881;background:#0c2936;color:var(--ink);font:inherit}
+textarea{min-height:150px;resize:vertical;padding:12px;line-height:1.6}textarea::placeholder,input::placeholder{color:#acc6c8}
+input{min-height:44px;padding:10px 12px}button{font:700 .89rem system-ui;min-height:44px;border-radius:9px;border:1px solid var(--mint);padding:10px 13px;background:var(--mint);color:#092935;cursor:pointer}
+button.secondary{background:transparent;color:var(--mint);border-color:#81bfb7}button.danger{background:transparent;color:#f8bbbc;border-color:#b47881}
+.buttons{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}.buttons button{flex:0 0 auto}
+small.msg{display:block;min-height:1.6em;margin:8px 0 0;color:#b4eee2;font-size:.79rem}
+.todo{grid-column:1/-1}.new-task{display:flex;gap:8px}.new-task input{flex:1 1 0;min-width:0}.new-task button{flex:0 0 auto}
+ul{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:7px}.task{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:#183d48;border:1px solid #56888866;min-height:44px}.task label{display:flex;align-items:center;gap:10px;flex:1 1 auto;overflow-wrap:anywhere;font-size:.9rem}.task input{width:20px;height:20px;min-height:0;accent-color:var(--mint)}.task.done label span{text-decoration:line-through;color:#b6cbc8}.task button{min-height:34px;padding:5px 10px}
+.footer{font-size:.82rem;line-height:1.7;color:var(--muted);margin-top:24px}
+@media(max-width:670px){.cards{grid-template-columns:1fr}.todo{grid-column:auto}main{padding-top:16px}.card{padding:15px}h1{margin-top:18px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head><body><a class="skip" href="#main-content">Skip to offline tools</a>
+<main id="main-content">
+<header class="top"><a class="brand" href="/index.html" aria-label="Blipmood home">
+<img src="https://d2ol7oe51mr4n9.cloudfront.net/user_3JR5g6OD2PPsWciJ9XxM8Ue05wO/cb2e26bb-2d48-471d-80fc-67d8ffc1b06b.png" width="48" height="48" alt="">
+<span>Blipmood</span></a><span class="state" id="networkState" role="status">Offline workspace</span></header>
+<h1>Still creating, even without data.</h1>
+<p class="lead">You can write post drafts, jot down ideas and manage a checklist while disconnected. Everything stays on this device until you decide to copy it into Blipmood when you reconnect.</p>
+<p class="notice"><strong>Private-device notice:</strong> Drafts and notes are stored only in this browser, not encrypted or backed up to your Blipmood account. Anyone using this browser profile may see them. Avoid sensitive information, and clear your notes before sharing a device. These tools never publish or send messages automatically.</p>
+<div class="cards">
+<section class="card" aria-labelledby="draftTitle"><h2 id="draftTitle">Post draft</h2>
+<p>Write a caption, community idea or article opening. It will not publish until you do so yourself.</p>
+<label for="offlineDraft">Your draft</label>
+<textarea id="offlineDraft" maxlength="12000" placeholder="What's on your mind? Write something for later…"></textarea>
+<div class="buttons"><button type="button" id="saveDraft">Save on device</button><button type="button" class="secondary" id="copyDraft">Copy</button><button type="button" class="danger" id="clearDraft">Clear</button></div>
+<small class="msg" id="draftStatus" aria-live="polite" role="status"></small></section>
+<section class="card" aria-labelledby="notesTitle"><h2 id="notesTitle">Quick notes</h2>
+<p>Capture ideas, video concepts or reminders. They are separate from your post draft.</p>
+<label for="offlineNotes">Your notes</label>
+<textarea id="offlineNotes" maxlength="12000" placeholder="Ideas, reminders, things to remember…"></textarea>
+<div class="buttons"><button type="button" id="saveNotes">Save on device</button><button type="button" class="secondary" id="copyNotes">Copy</button><button type="button" class="danger" id="clearNotes">Clear</button></div>
+<small class="msg" id="notesStatus" aria-live="polite" role="status"></small></section>
+<section class="card todo" aria-labelledby="checkTitle"><h2 id="checkTitle">Offline checklist</h2>
+<p>Add up to 20 simple tasks. Tick them off as you go; they remain on this browser only.</p>
+<form id="taskForm" class="new-task"><label class="sr-only" for="taskInput">New task</label><input id="taskInput" maxlength="90" placeholder="A task for later…" aria-label="New task" required><button type="submit">Add</button></form>
+<ul id="taskList" aria-label="Your offline tasks"></ul><small class="msg" id="taskStatus" aria-live="polite" role="status"></small>
+</section></div>
+<p class="footer">Need live messages, videos or publishing? Those require an internet connection. <a href="/index.html" id="reconnectLink">Try opening Blipmood</a>. Your work saved here remains available if you visit this offline workspace again, unless your browser clears its storage.</p>
+</main>
+<script>
+(()=>{
+"use strict";
+const KEY="blipmood.offline.workspace.v1";
+const $=id=>document.getElementById(id);
+const empty={draft:"",notes:"",tasks:[]};
+let data={...empty};
+try{
+ const parsed=JSON.parse(localStorage.getItem(KEY)||"null");
+ if(parsed&&typeof parsed==="object"&&!Array.isArray(parsed)){
+  data.draft=typeof parsed.draft==="string"?parsed.draft.slice(0,12000):"";
+  data.notes=typeof parsed.notes==="string"?parsed.notes.slice(0,12000):"";
+  data.tasks=Array.isArray(parsed.tasks)?parsed.tasks.slice(0,20).filter(t=>
+   t&&typeof t.text==="string"&&typeof t.done==="boolean").map(t=>
+   ({text:t.text.slice(0,90),done:t.done})):[];
+ }
+}catch{$("draftStatus").textContent="Browser storage is unavailable. You can still type and copy your work.";}
+$("offlineDraft").value=data.draft;$("offlineNotes").value=data.notes;
+function store(messageId){
+ try{localStorage.setItem(KEY,JSON.stringify(data));$(messageId).textContent="Saved to this device.";return true;}
+ catch{$(messageId).textContent="Not saved: browser storage is unavailable or full. Copy your work instead.";return false;}
+}
+async function copy(text,statusId){
+ if(!text.trim()){$(statusId).textContent="Nothing to copy yet.";return;}
+ try{await navigator.clipboard.writeText(text);$(statusId).textContent="Copied. Paste into Blipmood when online.";}
+ catch{$(statusId).textContent="Copy unavailable on this browser. Select the text and copy manually.";}
+}
+for(const [type,input,statusId] of [["draft","offlineDraft","draftStatus"],["notes","offlineNotes","notesStatus"]]){
+ const label=type==="draft"?"Draft":"Notes";
+ $("save"+label).addEventListener("click",()=>{data[type]=$(input).value.slice(0,12000);store(statusId);});
+ $("copy"+label).addEventListener("click",()=>void copy($(input).value,statusId));
+ $("clear"+label).addEventListener("click",()=>{
+  if(!confirm("Delete saved "+type+" on this device?"))return;
+  data[type]="";$(input).value="";store(statusId);
+ });
+ $(input).addEventListener("input",()=>{$(statusId).textContent="Unsaved changes — choose Save on device.";});
+}
+function showTasks(){
+ const host=$("taskList");host.replaceChildren();
+ if(!data.tasks.length){const li=document.createElement("li");li.textContent="No tasks yet.";host.append(li);return;}
+ data.tasks.forEach((task,index)=>{
+  const li=document.createElement("li");li.className="task"+(task.done?" done":"");
+  const label=document.createElement("label");
+  const cb=document.createElement("input");cb.type="checkbox";cb.checked=task.done;
+  const name=document.createElement("span");name.textContent=task.text;
+  cb.addEventListener("change",()=>{task.done=cb.checked;store("taskStatus");showTasks();});
+  label.append(cb,name);
+  const remove=document.createElement("button");remove.type="button";remove.className="danger";
+  remove.textContent="Remove";remove.setAttribute("aria-label","Remove task: "+task.text);
+  remove.addEventListener("click",()=>{data.tasks.splice(index,1);store("taskStatus");showTasks();});
+  li.append(label,remove);host.append(li);
+ });
+}
+$("taskForm").addEventListener("submit",event=>{
+ event.preventDefault();const value=$("taskInput").value.trim().slice(0,90);
+ if(!value)return;
+ if(data.tasks.length>=20){$("taskStatus").textContent="20-task limit reached. Remove a completed task first.";return;}
+ data.tasks.push({text:value,done:false});$("taskInput").value="";store("taskStatus");showTasks();
+});
+showTasks();
+function network(){
+ $("networkState").textContent=navigator.onLine?"Network detected · live features need internet":"Offline · local tools ready";
+}
+window.addEventListener("online",network);window.addEventListener("offline",network);network();
+})();
+</script>
+</body></html>
