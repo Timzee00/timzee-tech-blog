@@ -95,7 +95,7 @@ test("Worker opens a real usable offline page and never caches member HTML or AP
  assert.match(source,/isSafeOfflineBrandRequest/);
  assert.equal(await w.visit({pathname:"/assets/css/styles.css",mode:"cors",destination:"style"}),null);
  assert.equal(await w.visit({pathname:"/assets/js/app.js",mode:"cors",destination:"script"}),null);
- const logo=await w.visit({pathname:"/assets/brand/blipmood-pwa-192.png",mode:"no-cors",destination:"image"});
+ const logo=await w.visit({pathname:"/assets/brand/blipmood-emblem-light.png",mode:"no-cors",destination:"image"});
  assert.ok(logo,"pre-cached public PWA image should still work offline");
  assert.match(await logo.text(),/Offline cached/);
  assert.match(source,/request\.headers\.has\("Authorization"\)/);
