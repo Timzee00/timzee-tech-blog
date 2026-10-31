@@ -147,9 +147,12 @@ export async function createStory({
     if(error)throw error;
     return {data,error:null};
   }catch(error){
-    await cleanupFailedStoryUploads(uploaded,userId);
     const detail=String(error?.message||"");
     const networkFailure=/failed to fetch|networkerror|network request failed|load failed|fetch failed|failed to connect/i.test(detail);
+    // If publication's response is lost, the server may have created the
+    // status. Do not delete its uploaded media and leave a broken story behind.
+    if(stage!=="publishing your status"||!networkFailure)
+      await cleanupFailedStoryUploads(uploaded,userId);
     const interrupted=typeof navigator!=="undefined"&&navigator.onLine===false;
     const message=(networkFailure||interrupted)
       ? "Could not reach Blipmood while "+stage+". Check your connection and try again. Your media and caption are still here."
