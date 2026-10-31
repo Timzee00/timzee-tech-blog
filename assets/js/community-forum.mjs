@@ -235,7 +235,7 @@ function enterFeed({mode="home",community=null,push=true,sort=null}={}){
  if(community){
   const role=state.memberRoles.get(community.id);
   details.innerHTML="<div class='forum-community-presentation'><span class='forum-community-big-icon' aria-hidden='true'>"+
-  escape(community.icon_emoji||"💬")+"</span><div><span>"+escape(community.category)+
+  communityIcon(community)+"</span><div><span>"+escape(community.category)+
   " · "+Number(community.member_count||0)+" members</span><p>"+
   escape(community.description||"Join this community to discuss technology.")+"</p></div></div>"+
   "<section class=\'forum-rule-card\' aria-label=\'Community rules\'><h3>Community rules</h3>"+communityRulesHtml(community.rules)+"<p class=\'forum-muted\'>Community rules cannot override the <a href=\'content-policy.html\'>Blipmood Content Policy</a>.</p></section>"+
