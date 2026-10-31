@@ -91,7 +91,8 @@ test("Published winners require payment and explicit revocable consent, with pub
  assert.match(winners,/<title>Verified Blip Earn Winners/);
  assert.match(winnersJs,/textContent="@"/);
  assert.match(memberJs,/Withdraw winner-list permission/);
- assert.match(adminJs,/Copy approved winner announcements/);
+ assert.match(admin,/Copy approved winner announcements/);
+ assert.match(adminJs,/navigator\.clipboard\.writeText/);
 });
 test("Verified official payout chat is staff-only, and external winner channel must use HTTPS",()=>{
  assert.match(schema,/p\.role in \('super','admin'\) and p\.account_status='active' and p\.is_verified is true/);
