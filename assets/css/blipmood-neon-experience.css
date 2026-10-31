@@ -309,18 +309,35 @@ body.blipmood-profile .footer{background:#071828;color:#d2e9f6;border-top:1px so
 }
 @media(max-width:650px){
   .blipmood-home .home-intro{padding-top:28px}
-  .blipmood-home .bm-hero-split{display:block;position:relative}
-  .blipmood-home .home-intro h1{max-width:85%;font-size:clamp(35px,10vw,49px);line-height:1.04}
-  .blipmood-home .home-intro-copy{width:100%;max-width:none}
+  /* The headline and Blip emblem occupy different grid cells on mobile.
+     Keep the description and CTAs full-width below their shared row. */
+  .blipmood-home .bm-hero-split{
+    display:grid;position:relative;
+    grid-template-columns:minmax(0,1fr) minmax(0,.66fr);
+    column-gap:clamp(5px,1.7vw,12px);row-gap:0;align-items:center;
+  }
+  .blipmood-home .home-intro-copy{display:contents}
+  .blipmood-home .home-intro-copy>.eyebrow{
+    grid-column:1/-1;grid-row:1;justify-self:start;
+  }
+  .blipmood-home .home-intro h1{
+    grid-column:1;grid-row:2;position:relative;z-index:1;
+    width:100%;max-width:none;min-width:0;
+    margin:0 0 15px;font-size:clamp(35px,9vw,49px);line-height:1.04;
+  }
   .blipmood-home .bm-hero-art{
-    position:absolute;right:0;top:28px;left:auto;bottom:auto;
-    display:grid;place-items:center;width:36%;height:auto;min-height:0;
-    opacity:.68;pointer-events:none;margin:0;
+    grid-column:2;grid-row:2;position:relative;inset:auto;
+    display:grid;place-items:center;align-self:center;
+    width:100%;height:auto;min-height:0;aspect-ratio:1;
+    margin:0;opacity:.86;pointer-events:none;
   }
   .blipmood-home .bm-hero-art::before,
   .blipmood-home .bm-hero-art::after{display:none}
   .blipmood-home .bm-hero-art>img{inset:auto;width:100%;height:auto;max-height:none;opacity:1}
   .blipmood-home .bm-orbit-words{display:none}
+  .blipmood-home .home-intro-copy>.bm-hero-description{grid-column:1/-1;grid-row:3}
+  .blipmood-home .home-intro-copy>.cta{grid-column:1/-1;grid-row:4}
+  .blipmood-home .home-intro-copy>.intro-note{grid-column:1/-1;grid-row:5}
   .blipmood-home .explore-panel{padding:11px;gap:9px;margin-top:14px}
   .blipmood-home .explore-panel>a{min-height:111px}
   .blipmood-home .explore-panel strong{font-size:12px}
@@ -335,7 +352,7 @@ body.blipmood-profile .footer{background:#071828;color:#d2e9f6;border-top:1px so
   .blipmood-profile .profile-page .profile-tabs button{padding:10px 13px;min-height:44px}
 }
 @media(max-width:380px){
-  .blipmood-home .home-intro h1{font-size:40px}
+  .blipmood-home .home-intro h1{font-size:clamp(31px,9vw,35px)}
   .blipmood-profile .profile-page .profile-actions .btn{font-size:.78rem;padding:9px 10px}
   .blipmood-profile .profile-page .profile-spotlight-stats strong{font-size:1.04rem}
 }
