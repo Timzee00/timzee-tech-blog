@@ -120,6 +120,7 @@ export function writeLocalPreferences(userId, preferences) {
   try {
     localStorage.setItem(storageKey(userId || "guest"), JSON.stringify(merged));
     localStorage.setItem("timzee-ui-appearance", JSON.stringify(merged.appearance || {}));
+    localStorage.setItem("blipmood:data-saver",merged.performance?.dataSaver===true?"1":"0");
   } catch (_) {}
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("timzee:preferences", { detail: merged }));
   return merged;
