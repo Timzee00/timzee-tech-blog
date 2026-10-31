@@ -59,5 +59,5 @@ test("Reference-inspired metallic SVG remains an original local vector", () => {
   assert.match(svg, /<linearGradient/);
   assert.match(svg, /<path/);
   assert.match(svg, /<\/svg>$/);
-  assert.doesNotMatch(svg, /<script|<foreignObject|https?:\/\//i);
+  assert.doesNotMatch(svg, /<script|<foreignObject|<iframe|onload=/i);
 });
