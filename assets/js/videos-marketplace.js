@@ -237,6 +237,7 @@ export async function fetchVideos({ category = null, limit = 20, offset = 0, use
       .order("created_at", { ascending: false });
 
     if (category) query = query.eq("category", category);
+    if (location) query = query.ilike("location", `%${String(location).replace(/[%_]/g,"")}%`);
     if (userId) query = query.eq("user_id", userId);
 
     query = query.range(offset, offset + limit - 1);
@@ -505,6 +506,7 @@ export async function createMarketplaceItem({
 
 export async function fetchMarketplaceItems({ 
   category = null, 
+  location = null,
   limit = 20, 
   offset = 0,
   userId = null,
@@ -565,7 +567,7 @@ async function attachSellerVerification(items) {
   }
 }
 
-export async function searchMarketplace({ query, category = null, limit = 20, offset = 0, sort = "newest" } = {}) {
+export async function searchMarketplace({ query, category = null, location = null, limit = 20, offset = 0, sort = "newest" } = {}) {
   if (!query) return [];
   try {
     let request = supabase
@@ -578,6 +580,7 @@ export async function searchMarketplace({ query, category = null, limit = 20, of
       : request.order("created_at",{ascending:false}).order("id",{ascending:false});
 
     if (category) request = request.eq("category", category);
+    if (location) request = request.ilike("location", `%${String(location).replace(/[%_]/g,"")}%`);
 
     request = request.range(offset, offset + limit - 1);
     const result = await request;
