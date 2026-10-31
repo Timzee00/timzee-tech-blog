@@ -312,7 +312,11 @@
   text-decoration: none;
 }
 
-.post-icon { font-size: 15px; line-height: 1; }
+/* Uniform 24px-grid SVG actions: crisp at all screen densities and color via currentColor. */
+.post-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex: 0 0 20px; line-height: 1; }
+.post-icon svg { width: 20px; height: 20px; display: block; stroke-width: 1.8; }
+.post-icon-btn[data-action="like"].active .post-icon svg { fill: currentColor; }
+.post-icon-btn:focus-visible { outline: 2px solid var(--color-primary, #0f766e); outline-offset: 2px; }
 
 .post-icon-btn.active {
   color: var(--color-primary, #0f766e);
