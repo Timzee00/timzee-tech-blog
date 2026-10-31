@@ -15,6 +15,13 @@ import { getChatMediaPath } from "./chat-media-path.mjs";
 import { loadUserPreferences, saveUserPreferences } from "./user-preferences.js";
 import { escapeHTML, isSafeUrl, timeAgo, reportAppError } from "./utils.js";
 import { submitModerationReport } from "./moderation-reports.mjs";
+import { icon } from "./icons.js";
+
+// Render the shared monochrome SVG set for attachment and toolbar controls.
+document.querySelectorAll("[data-bm-icon]").forEach((slot) => {
+  slot.innerHTML = icon(slot.getAttribute("data-bm-icon"));
+  slot.setAttribute("aria-hidden", "true");
+});
 
 const DEFAULT_AVATAR = "/assets/img/avatar-placeholder.svg";
 const DEFAULT_GROUP_AVATAR = "/assets/img/group-placeholder.svg";
