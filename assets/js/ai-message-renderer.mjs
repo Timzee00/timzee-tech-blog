@@ -2,17 +2,27 @@
 const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node};
 function inline(node,input){
  const value=String(input||"");
- const tokens=/(\*\*[^*\n]+\*\*|`[^`\n]+`|\[[^\]\n]+\]\(https:\/\/[^\s)]+\))/g;
+ const tokens=/(\*\*[^*\n]+\*\*|~~[^~\n]+~~|\*[^*\n]+\*|`[^`\n]+`|\[[^\]\n]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>"']+)/g;
  let offset=0;
  for(const item of value.matchAll(tokens)){
   if(item.index>offset)node.append(document.createTextNode(value.slice(offset,item.index)));
   const word=item[0];
   if(word.startsWith("**"))node.append(el("strong",word.slice(2,-2)));
+  else if(word.startsWith("~~"))node.append(el("del",word.slice(2,-2)));
+  else if(word.startsWith("*"))node.append(el("em",word.slice(1,-1)));
   else if(word.startsWith("`"))node.append(el("code",word.slice(1,-1)));
-  else {
-   const m=/^\[([^\]]+)\]\((https:\/\/[^)]+)\)$/.exec(word);
-   if(m){const a=el("a",m[1]);a.href=m[2];a.target="_blank";a.rel="noopener noreferrer";node.append(a)}
-   else node.append(document.createTextNode(word));
+  else{
+   const match=/^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/.exec(word);
+   const rawUrl=match?.[2]||word;
+   const url=match?rawUrl:rawUrl.replace(/[.,!?:;]+$/,"");
+   try{
+    const parsed=new URL(url);
+    if(!["https:","http:"].includes(parsed.protocol)||parsed.username||parsed.password)throw Error("Unsafe URL");
+    const a=el("a",match?.[1]||url);
+    a.href=parsed.href;a.target="_blank";a.rel="noopener noreferrer nofollow ugc";
+    node.append(a);
+    if(!match&&url.length<rawUrl.length)node.append(document.createTextNode(rawUrl.slice(url.length)));
+   }catch{node.append(document.createTextNode(word))}
   }
   offset=item.index+word.length;
  }
@@ -20,10 +30,10 @@ function inline(node,input){
 }
 const rowCells=line=>line.trim().replace(/^\||\|$/g,"").split("|").map(s=>s.trim());
 const tableSeparator=line=>/^\s*\|?\s*:?-{3,}:?(\s*\|\s*:?-{3,}:?)*\s*\|?\s*$/.test(line||"");
-const listType=line=>/^\s*\d+[.)]\s+/.test(line)?"ol":/^\s*[-*+]\s+/.test(line)?"ul":"";
-const blockStart=line=>/^\s*(?:#{1,4}\s+|>|```|[-*+]\s+|\d+[.)]\s+)/.test(line);
+const listType=line=>/^\s*\d+[.)]\s+/.test(line)?"ol":/^\s*[-*+•]\s+/.test(line)?"ul":"";
+const blockStart=line=>/^\s*(?:#{1,4}\s+|>|```|[-*+•]\s+|\d+[.)]\s+)/.test(line);
 export function renderAssistantMessage(container,raw){
- const lines=String(raw||"").replace(/\r\n?/g,"\n").split("\n").slice(0,2400);
+ const lines=String(raw||"").replace(/<br\s*\/?\s*>|&lt;br\s*\/?\s*&gt;/gi,"\n").replace(/\r\n?/g,"\n").split("\n").slice(0,2400);
  const body=el("div");body.className="ai-rich-content";
  let i=0;
  while(i<lines.length){
@@ -62,7 +72,7 @@ export function renderAssistantMessage(container,raw){
   if(kind){
    const list=el(kind);let count=0;
    while(i<lines.length&&listType(lines[i].trim())===kind&&count++<150){
-    const child=el("li");inline(child,lines[i++].trim().replace(/^(?:[-*+]\s+|\d+[.)]\s+)/,""));list.append(child);
+    const child=el("li");inline(child,lines[i++].trim().replace(/^(?:[-*+•]\s+|\d+[.)]\s+)/,""));list.append(child);
    }
    body.append(list);continue;
   }
