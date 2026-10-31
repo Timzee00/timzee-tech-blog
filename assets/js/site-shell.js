@@ -169,30 +169,75 @@ export function ensureSiteFooter() {
 }
 async function loadPageEnhancements(){const path=currentSitePath();const imports=[import("./experience-preferences.js"),import("./launch-context.mjs")];if(path==="discussion.html")imports.push(import("./discussion-discovery.js"));if(path==="chat.html")imports.push(import("./chat-context-menu.js"));if(path==="ai-chat.html")imports.push(import("./ai-context.js"));if(imports.length)await Promise.allSettled(imports);}
 function scheduleIdle(task){if(typeof window.requestIdleCallback==="function")window.requestIdleCallback(task,{timeout:900});else window.setTimeout(task,220);}
-if(typeof window!=="undefined"){const start=()=>{ensureBlipmoodHeader();ensureProductNavigation();ensureSiteFooter();synchronizeBrandImages();new MutationObserver(synchronizeBrandImages).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});void import("./privacy-consent.js");scheduleIdle(()=>{
-  void loadPageEnhancements();
-  void import("./visitor-analytics.js").catch(()=>{});
-  void import("./animated-brand.mjs").then(module=>module.enhanceAnimatedHeader()).catch(()=>{});
-});
-if(currentSitePath()==="index.html"){
-  // The cinematic brand introduction plays for the first browser visit only.
-  // Existing members can replay it from the footer. Skip on slow connections
-  // and when motion is reduced; do not compete with the older welcome popup.
-  let introPlanned=false;
-  try {
-    const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
-    introPlanned=localStorage.getItem("blipmood:intro:seen:v1")!=="1"
-      &&document.documentElement.dataset.reduceMotion!=="true"
-      &&!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
-      &&!connection?.saveData
-      &&!/(?:slow-2g|2g)/.test(connection?.effectiveType||"");
-  } catch { /* Don't block navigation when storage is unavailable. */ }
-  if(introPlanned){
-    void import("./blipmood-intro.mjs").then(mod=>mod.playIntro()).catch(()=>{});
-  } else {
-    // The site already has a guest welcome campaign. Never stack it on top
-    // of the cinematic intro during the first visit.
-    window.setTimeout(()=>{if(document.visibilityState==="visible")
-      void import("./blipmood-welcome.mjs").catch(()=>{});},4300);
-  }
-}};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();}
+/* The large animated SVG/WebP logo is optional. Defer its network and
+ * decoding cost until after first paint; on mobile keep the verified static
+ * wordmark so the homepage remains lightweight and readable. */
+function scheduleDecorativeBrand() {
+ const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+ if(window.matchMedia?.("(max-width: 900px)")?.matches ||
+    connection?.saveData || /(?:slow-2g|2g)/.test(connection?.effectiveType||"") ||
+    document.documentElement.dataset.reduceMotion==="true")return;
+ const afterLoad=()=>window.setTimeout(()=>{
+   if(document.visibilityState!=="visible")return;
+   scheduleIdle(()=>void import("./animated-brand.mjs")
+     .then(module=>module.enhanceAnimatedHeader()).catch(()=>{}));
+ },7000);
+ if(document.readyState==="complete")afterLoad();
+ else window.addEventListener("load",afterLoad,{once:true});
+}
+function scheduleHomeCampaign(){
+ const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+ const constrained=Boolean(window.matchMedia?.("(max-width: 900px)")?.matches ||
+   (Number.isFinite(navigator.deviceMemory)&&navigator.deviceMemory<=4) ||
+   connection?.saveData || /(?:slow-2g|2g)/.test(connection?.effectiveType||""));
+ let introPlanned=false;
+ try{
+   introPlanned=!constrained&&localStorage.getItem("blipmood:intro:seen:v1")!=="1"
+     &&document.documentElement.dataset.reduceMotion!=="true"
+     &&!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+ }catch{ /* Storage is optional: never block the homepage. */ }
+ let userInteracted=false;
+ const markInteraction=()=>{userInteracted=true};
+ window.addEventListener("pointerdown",markInteraction,{once:true,passive:true});
+ window.addEventListener("keydown",markInteraction,{once:true,passive:true});
+ const afterFirstPaint=(callback,delay)=>{
+  const run=()=>window.setTimeout(()=>{
+   // No animation takeover while consent is open or the visitor is interacting.
+   if(userInteracted||document.visibilityState!=="visible" ||
+      document.querySelector("#timzee-consent-banner.is-visible"))return;
+   scheduleIdle(callback);
+  },delay);
+  if(document.readyState==="complete")run();
+  else window.addEventListener("load",run,{once:true});
+ };
+ if(introPlanned){
+   // Optional one-time cinematic on capable desktop devices after the page
+   // has finished loading; the footer Replay intro works on mobile too.
+   afterFirstPaint(()=>void import("./blipmood-intro.mjs")
+     .then(mod=>mod.playIntro()).catch(()=>{}),6500);
+ }else{
+   // The site already has a guest welcome campaign. Never stack it on top
+   // of the cinematic intro or cookie consent. Skip auto popups on mobile.
+   if(!constrained)afterFirstPaint(()=>void import("./blipmood-welcome.mjs")
+     .catch(()=>{}),9000);
+ }
+}
+if(typeof window!=="undefined"){
+ const start=()=>{
+   ensureBlipmoodHeader();
+   ensureProductNavigation();
+   ensureSiteFooter();
+   synchronizeBrandImages();
+   new MutationObserver(synchronizeBrandImages)
+     .observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+   void import("./privacy-consent.js");
+   scheduleIdle(()=>{
+      void loadPageEnhancements();
+      void import("./visitor-analytics.js").catch(()=>{});
+   });
+   scheduleDecorativeBrand();
+   if(currentSitePath()==="index.html")scheduleHomeCampaign();
+ };
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});
+ else start();
+}
