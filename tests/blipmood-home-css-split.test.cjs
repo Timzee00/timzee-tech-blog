@@ -32,3 +32,11 @@ test("homepage-only CSS bundle is compiled, versioned and doesn't replace shared
  assert.match(build,/contents=contents\.replace\(fullCss,'href="assets\/css\/styles-home\.css"'\)/);
  assert.match(build,/const versioned = contents\.replace/);
 });
+
+test("guest homepage does not eagerly download personalized reader modules",()=>{
+ const app=read("assets/js/app.js");
+ assert.doesNotMatch(app,/^import \{mountReaderHome\} from "\.\/reader-home\.mjs";/m);
+ assert.match(app,/if\(state\.user\?\.id\)\{\s*\/\/ No reader-personalization/);
+ assert.match(app,/import\("\.\/reader-home\.mjs"\)\.then\(\(\{mountReaderHome\}\)=>/);
+ assert.match(app,/mountReaderHome\(state\.user,\{posts:state\.posts,categories:state\.categories\}\)/);
+});
