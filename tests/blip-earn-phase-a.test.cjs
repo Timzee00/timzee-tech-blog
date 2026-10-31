@@ -82,3 +82,28 @@ test("Responsive member and staff pages exist with working navigation links",()=
  assert.match(earn,/src="assets\/js\/blip-earn-dashboard\.mjs"/);
  assert.match(admin,/src="\.\.\/assets\/js\/blip-earn-admin\.mjs"/);
 });
+
+test("New invitation codes are minted atomically and cannot bypass founder pause",()=>{
+ const mint=read("supabase/migrations/20261031125800_blip_earn_atomic_code_issue.sql");
+ assert.match(mint,/function public\.blip_referral_issue_code\(p_user uuid,p_code text\)/);
+ assert.match(mint,/for update/);
+ assert.match(mint,/not cfg\.enabled/);
+ assert.match(mint,/cfg\.target_activated_members>0/);
+ assert.match(mint,/revoke all on function public\.blip_referral_issue_code/);
+ assert.match(api,/db\.rpc\("blip_referral_issue_code"/);
+ assert.doesNotMatch(api,/\.from\("blip_referral_codes"\)\.insert\(/);
+});
+test("Private change history is visible only through bounded Super Admin endpoint",()=>{
+ const authFix=read("supabase/migrations/20261031124500_blip_earn_admin_role_fix.sql");
+ const audit=read("supabase/migrations/20261031130500_blip_earn_admin_audit_history.sql");
+ const ui=read("assets/js/blip-earn-admin.mjs");
+ assert.match(authFix,/v_actor_role is distinct from 'super'/);
+ assert.match(audit,/v_actor_role is distinct from 'super'/);
+ assert.match(audit,/from private\.blip_referral_settings_audit/);
+ assert.match(audit,/limit 15/);
+ assert.match(audit,/revoke all on function public\.blip_referral_recent_changes/);
+ assert.match(api,/db\.rpc\("blip_referral_recent_changes"/);
+ assert.match(admin,/id="befAuditHistory"/);
+ assert.match(ui,/history\.replaceChildren\(\)/);
+ assert.match(ui,/reason\.textContent=/);
+});
