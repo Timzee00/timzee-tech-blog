@@ -620,11 +620,55 @@
         button.classList.add("active");
         button.setAttribute("aria-pressed", "true");
         state.category = button.dataset.category || "all";
+        const preset=button.dataset.marketPresetSearch;
+        if(preset) document.getElementById("marketplaceSearch").value=preset;
+        else if(["gaming","phone"].includes(document.getElementById("marketplaceSearch").value.trim().toLowerCase()))document.getElementById("marketplaceSearch").value="";
+        const more=document.querySelector(".market-more");if(more)more.open=false;
         state.offset = 0;
         loadListings();
       });
 
       bindSearch(document.getElementById("marketplaceSearch"),()=>{state.offset=0;void loadListings();});
+      document.getElementById("marketLocation").addEventListener("change",event=>{
+        const selected=event.target.value;
+        state.location=["","Lagos","Abuja","Ibadan","Port Harcourt","Kano","Benin"].includes(selected)?selected:"";
+        state.offset=0;void loadListings();
+      });
+      document.getElementById("marketVerifiedOnly").addEventListener("change",event=>{
+        state.verifiedOnly=event.target.checked;
+        if(!state.verifiedOnly){void loadListings();return;}
+        renderListings();document.getElementById("marketResultsStatus").textContent+=" · this page only";
+      });
+      try{state.viewMode=localStorage.getItem("blipmood:market:view")==="list"?"list":"grid";}catch{}
+      function syncMarketView(){
+        document.getElementById("marketBrowseColumn").classList.toggle("market-list-mode",state.viewMode==="list");
+        document.querySelectorAll("[data-market-view]").forEach(button=>{
+          const yes=button.dataset.marketView===state.viewMode;
+          button.classList.toggle("active",yes);button.setAttribute("aria-pressed",String(yes));
+        });
+      }
+      document.querySelectorAll("[data-market-view]").forEach(button=>button.addEventListener("click",()=>{
+        state.viewMode=button.dataset.marketView==="list"?"list":"grid";
+        try{localStorage.setItem("blipmood:market:view",state.viewMode);}catch{}
+        syncMarketView();renderListings();
+      }));
+      syncMarketView();
+      const saverToggle=document.getElementById("marketDataSaver");
+      function syncSaver(preferences=null){
+        let cached=false;try{cached=localStorage.getItem("blipmood:data-saver")==="1";}catch{}
+        const preferred=preferences?.performance?.dataSaver??readLocalPreferences(state.user?.id||"guest").performance?.dataSaver;
+        saverToggle.checked=Boolean(preferred||cached||navigator.connection?.saveData);
+      }
+      syncSaver();
+      saverToggle.addEventListener("change",async()=>{
+        const before=!saverToggle.checked,checked=saverToggle.checked;
+        saverToggle.disabled=true;
+        try{
+          await saveUserPreferences(state.user?.id||null,{performance:{dataSaver:checked}});
+          document.documentElement.dataset.dataSaver=String(Boolean(checked||navigator.connection?.saveData));
+        }catch(error){saverToggle.checked=before;window.siteToast?.("Could not save Data Saver.",{type:"error"});}
+        finally{saverToggle.disabled=false;}
+      });
       document.getElementById("marketSort").addEventListener("change",event=>{
         state.sort=event.target.value==="popular"?"popular":"newest";state.offset=0;void loadListings();
       });
