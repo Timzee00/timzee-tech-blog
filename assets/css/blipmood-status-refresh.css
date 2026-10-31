@@ -119,3 +119,53 @@ body.blipmood-status{--status-ink:var(--color-text,#17272b);--status-muted:var(-
 /* Leave the lower part of native video players unobstructed by tap navigation. */
 .blipmood-status .story-viewer:has(.story-viewer-media video) .story-tap-zone{bottom:42%}
 .blipmood-status .story-viewer .story-tap-zone{touch-action:manipulation}
+
+/* Native mobile Story video editor — on-device trim/mute. */
+.status-video-editor{
+  position:fixed;inset:0;margin:auto;width:min(96vw,540px);max-width:540px;
+  max-height:min(92dvh,840px);padding:0;overflow:auto;
+  border:1px solid var(--color-border,rgba(129,168,176,.4));
+  border-radius:21px;background:var(--color-surface,#102834);
+  color:var(--color-text,#f5ffff);box-shadow:0 20px 70px #0008;
+  z-index:12050;
+}
+.status-video-editor::backdrop{background:rgba(1,13,22,.84);backdrop-filter:blur(5px)}
+.status-video-editor-inner{display:grid;gap:14px;padding:18px}
+.status-video-editor header,.status-video-editor footer{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.status-video-editor header strong{font-size:1.2rem}
+.status-video-editor header button,.status-video-editor footer button{
+  border:1px solid var(--color-border,rgba(129,168,176,.4));
+  border-radius:11px;padding:10px 14px;color:inherit;
+  background:var(--color-surface-muted,#203a47);font-weight:700;cursor:pointer
+}
+.status-video-editor footer button[data-save]{
+  background:#59d4c3;color:#07332e;border-color:#59d4c3;
+}
+.status-video-editor button:disabled{opacity:.5;cursor:not-allowed}
+.status-video-editor video{
+  display:block;width:100%;max-height:min(45dvh,360px);
+  background:#06121b;border-radius:12px;object-fit:contain
+}
+.status-video-editor-times{display:grid;gap:14px}
+.status-video-editor-times label{
+  display:grid;grid-template-columns:50px minmax(0,1fr) 48px;
+  gap:11px;align-items:center;font-size:.86rem;font-weight:700
+}
+.status-video-editor-times input{min-width:0;width:100%;accent-color:#55d1c3}
+.status-video-editor-times output{text-align:right;font-variant-numeric:tabular-nums}
+.status-video-editor-mute{display:flex;gap:10px;align-items:center;font-weight:650}
+.status-video-editor-mute input{width:19px;height:19px;accent-color:#55d1c3}
+.status-video-editor-hint,.status-video-editor [data-status]{
+  margin:0;font-size:.78rem;line-height:1.5;color:var(--color-text-muted,#b3d0d9)
+}
+.status-video-editor [data-status]{min-height:1.5em}
+.status-video-editor :is(button,input):focus-visible{
+  outline:3px solid #55d1c3;outline-offset:2px
+}
+@media(max-width:600px){
+  .status-video-editor{width:calc(100vw - 20px);max-height:94dvh;border-radius:18px}
+  .status-video-editor-inner{padding:15px;gap:12px}
+  .status-video-editor footer button{min-height:44px}
+}
