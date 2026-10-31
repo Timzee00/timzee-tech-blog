@@ -48,21 +48,25 @@
     <main id="main-content" class="chat-main">
       <div class="chat-app-shell" id="chatLayout" data-view="list">
         <aside class="chat-sidebar" data-reveal>
-          <a class="chat-inbox-brand" href="index.html" aria-label="Blipmood home"><span class="chat-inbox-mark" aria-hidden="true">◩</span> Blipmood</a>
+          <a class="chat-inbox-brand" href="index.html" aria-label="Blipmood home">
+            <img class="chat-inbox-wordmark" data-bm-logo="wordmark" src="https://d2ol7oe51mr4n9.cloudfront.net/user_3JR5g6OD2PPsWciJ9XxM8Ue05wO/1edfccf6-fdc1-409c-b9c5-162b23657600.png" alt="" width="210" height="70" decoding="async">
+          </a>
           <div class="chat-sidebar-header">
             <div>
               <div class="chat-page-kicker">Blipmood</div>
               <h1>Chats</h1>
             </div>
             <div class="chat-sidebar-actions">
-              <button class="chat-icon-btn" id="peopleSearchToggle" type="button" aria-label="Find people" title="Find people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+              <a class="chat-icon-btn chat-status-shortcut" href="stories.html" aria-label="Open Status" title="View or create a status"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h4l1.7-2h4.6L16 7h4v12H4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></a>
+              <button class="chat-icon-btn" id="peopleSearchToggle" aria-controls="peopleSearchPanel" aria-haspopup="dialog" aria-expanded="false" type="button" aria-label="Find people" title="Find people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
               <button class="chat-icon-btn" id="newGroupBtn" type="button" aria-label="Create group" title="Create group"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
             </div>
           </div>
           <div class="chat-search-shell">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-            <input type="search" id="chatSearch" placeholder="Search conversations…" autocomplete="off" aria-label="Search conversations">
+            <input type="search" id="chatSearch" placeholder="Search chats and groups…" autocomplete="off" aria-label="Search conversations">
           </div>
+          <button class="chat-find-people-button" id="chatFindPeopleButton" type="button" aria-haspopup="dialog" aria-controls="peopleSearchPanel" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 20v-2c0-3 2.5-5 6-5 1.8 0 3.2.4 4.2 1.2M18 14v7m-3.5-3.5h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Find people &amp; send requests</span><span aria-hidden="true">→</span></button>
           <div class="chat-tabs" role="tablist" aria-label="Chat filters">
             <button class="chat-tab active" type="button" data-tab="all" role="tab" aria-selected="true">All</button>
             <button class="chat-tab" type="button" data-tab="dms" role="tab" aria-selected="false">DMs</button>
