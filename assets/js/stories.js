@@ -155,7 +155,7 @@ export async function createStory({
       await cleanupFailedStoryUploads(uploaded,userId);
     const interrupted=typeof navigator!=="undefined"&&navigator.onLine===false;
     const message=(networkFailure||interrupted)
-      ? "Could not reach Blipmood while "+stage+". Check your connection and try again. Your media and caption are still here."
+      ? (stage==="publishing your status" ? "The connection dropped while publishing. Your story may already be posted: check My Stories before retrying to avoid duplicates." : "Could not reach Blipmood while "+stage+". Check your connection and try again. Your media and caption are still here.")
       : detail||"Status upload failed. Please try again.";
     console.warn("Story error during "+stage,error);
     return {error:{message}};
