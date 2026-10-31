@@ -8,7 +8,7 @@ import { injectSiteShell } from "./inject-site-shell.mjs";
 import { injectSocialDefaults } from "./inject-social-meta.mjs";
 import { previewIndexingHeaders } from "./preview-indexing.mjs";
 import {downloadBrandAssets,useLocalBrandAssetUrls} from "./brand-assets.mjs";
-import {createPwaIcons} from "./build-pwa-icons.mjs";
+import {createPwaIcons,createResponsiveEmblemAssets} from "./build-pwa-icons.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const output = resolve(root, "dist");
@@ -104,6 +104,7 @@ for (const file of files.filter(path => path.endsWith(".html"))) {
 // Source media is checksum-pinned: never ship a truncated or tampered image.
 await downloadBrandAssets(output);
 await createPwaIcons(output);
+await createResponsiveEmblemAssets(output);
 // Replace the immutable media sources with first-party URLs after copying assets.
 // In source mode, remote URLs remain valid for local previews and link validation.
 for (const file of await filesIn(output)) {
@@ -120,10 +121,35 @@ const assetVersion = hash.digest("hex").slice(0, 16);
 const workerPath=resolve(output,"sw.js");
 await writeFile(workerPath,(await readFile(workerPath,"utf8"))
   .replaceAll("__BLIPMOOD_ASSET_VERSION__",assetVersion));
+// The homepage uses the original verified emblem, resized for narrow phones.
+// Source HTML keeps canonical artwork URLs for prebuild link verification.
+function optimizeHomeHero(html,version){
+ const attrs='sizes="(max-width:760px) 39vw, (max-width:1200px) 35vw, 420px"';
+ const srcset=[
+   '/assets/brand/blipmood-emblem-dark-180.png?v='+version+' 180w',
+   '/assets/brand/blipmood-emblem-dark-420.png?v='+version+' 420w'
+ ].join(', ');
+ const imagePattern=/<img\b(?=[^>]*data-bm-logo="emblem")(?=[^>]*fetchpriority="high")[^>]*>/i;
+ if(!imagePattern.test(html))throw new Error("Homepage LCP emblem missing.");
+ html=html.replace(imagePattern,tag=>{
+  if(!/src="\/assets\/brand\/blipmood-emblem-dark\.png"/.test(tag))
+   throw new Error("Homepage hero must use the verified dark emblem.");
+  return tag.replace('src="/assets/brand/blipmood-emblem-dark.png"',
+   'src="/assets/brand/blipmood-emblem-dark-420.png?v='+version+
+   '" data-bm-responsive-hero="true" srcset="'+srcset+'" '+attrs);
+ });
+ const preload=/<link rel="preload" href="\/assets\/brand\/blipmood-emblem-dark\.png" as="image" fetchpriority="high">/;
+ if(!preload.test(html))throw new Error("Homepage emblem preload missing.");
+ return html.replace(preload,
+  '<link rel="preload" as="image" href="/assets/brand/blipmood-emblem-dark-420.png?v='+
+  version+'" imagesrcset="'+srcset+'" imagesizes="(max-width:760px) 39vw, (max-width:1200px) 35vw, 420px" fetchpriority="high">');
+}
+
 // Old deployments marked stable URLs immutable for a year. Version every local
 // JS/CSS reference (including module and CSS imports) to escape those caches.
 for (const file of publishedFiles.filter(path => /\.(?:html|js|mjs|css)$/.test(path))) {
-  const contents = await readFile(file, "utf8");
+  let contents = await readFile(file, "utf8");
+  if (file === resolve(output,"index.html")) contents=optimizeHomeHero(contents,assetVersion);
   const versioned = contents.replace(/(["'])([^"'\s<>]+\.(?:js|mjs|css|png|svg|webp))\1/g, (match, quote, path) => {
     if (/^(?:[a-z]+:|\/\/)/i.test(path)) return match;
     const local = path.startsWith("/") ? resolve(output, `.${path}`) : resolve(dirname(file), path);
