@@ -93,13 +93,13 @@
             <div class="chat-search-shell"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input type="search" id="peopleSearch" placeholder="Name or username" aria-label="Find by name or username"></div>
             <div class="chat-list" id="peopleResults"></div>
           </div>
-          <div class="chat-sidebar-footer"><button id="chatBlockedToggle" type="button" aria-label="Open blocked contacts">⚑ Blocked contacts <span id="chatBlockedFooterCount"></span></button></div>
+          <div class="chat-sidebar-footer"><button id="chatBlockedToggle" type="button" aria-label="Open blocked contacts"><span data-bm-icon="flag" aria-hidden="true"></span> Blocked contacts <span id="chatBlockedFooterCount"></span></button></div>
           <nav class="chat-mobile-nav" aria-label="Chat quick navigation">
             <a href="index.html"><span aria-hidden="true">⌂</span>Home</a>
             <a href="discussion.html"><span aria-hidden="true">⌕</span>Discover</a>
             <a href="chat.html" aria-current="page"><span aria-hidden="true">◉</span>Chat</a>
-            <button type="button" id="chatMobileCreate"><span aria-hidden="true">✚</span>Create</button>
-            <a href="profile.html"><span aria-hidden="true">♙</span>Profile</a>
+            <button type="button" id="chatMobileCreate"><span aria-hidden="true" data-bm-icon="plus"></span>Create</button>
+            <a href="profile.html"><span aria-hidden="true" data-bm-icon="profile"></span>Profile</a>
           </nav>
         </aside>
 
@@ -162,17 +162,17 @@
               </div>
               <div class="chat-attachment-preview" id="chatMediaPreview" aria-live="polite"></div>
               <div class="chat-attach-menu" id="chatAttachMenu" role="menu" aria-label="Choose attachment type" hidden>
-                <button type="button" role="menuitem" data-attach-kind="photo"><span aria-hidden="true">🖼️</span><span>Photo or video</span></button>
-                <button type="button" role="menuitem" data-attach-kind="camera"><span aria-hidden="true">📷</span><span>Camera</span></button>
-                <button type="button" role="menuitem" data-attach-kind="audio"><span aria-hidden="true">🎵</span><span>Audio</span></button>
-                <button type="button" role="menuitem" data-attach-kind="document"><span aria-hidden="true">📄</span><span>Document or file</span></button>
+                <button type="button" role="menuitem" data-attach-kind="photo"><span aria-hidden="true" data-bm-icon="image"></span><span>Photo or video</span></button>
+                <button type="button" role="menuitem" data-attach-kind="camera"><span aria-hidden="true" data-bm-icon="camera"></span><span>Camera</span></button>
+                <button type="button" role="menuitem" data-attach-kind="audio"><span aria-hidden="true" data-bm-icon="music"></span><span>Audio</span></button>
+                <button type="button" role="menuitem" data-attach-kind="document"><span aria-hidden="true" data-bm-icon="file-text"></span><span>Document or file</span></button>
               </div>
               <div id="chatEmojiMenu" class="chat-emoji-menu" role="group" aria-label="Choose a message emoji" hidden></div>
               <div class="chat-composer-row">
                 <button class="chat-composer-btn" id="chatAttachToggle" type="button" title="Choose attachment" aria-label="Choose attachment" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 6.7-6.7a3.2 3.2 0 0 1 4.5 4.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 <input type="file" id="chatMedia" accept="*/*" hidden>
                 <textarea id="chatBody" rows="1" placeholder="Write a message… @mention someone" autocomplete="off" class="resize-none"></textarea>
-                <button class="chat-composer-btn chat-emoji-toggle" id="chatEmojiToggle" type="button" title="Choose emoji" aria-label="Choose emoji" aria-haspopup="true" aria-expanded="false">☺</button>
+                <button class="chat-composer-btn chat-emoji-toggle" id="chatEmojiToggle" type="button" title="Choose emoji" aria-label="Choose emoji" aria-haspopup="true" aria-expanded="false"><span data-bm-icon="smile" aria-hidden="true"></span></button>
                 <button class="chat-composer-btn" id="recordVoiceBtn" type="button" title="Record voice" aria-label="Record voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="3" width="7" height="12" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 11.5a7 7 0 0 0 14 0M12 18.5v3M8.5 21.5h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
                 <button class="chat-send-btn" type="submit" title="Send message" aria-label="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5 20 12 4 19.5l3-7.5-3-7.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
               </div>
