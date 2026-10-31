@@ -163,63 +163,82 @@ export function ensureSiteFooter() {
         .catch(()=>{window.appUI?.showToast?.("Intro unavailable right now.");});
     });
     legal.append(replay);
+    const welcome=document.createElement("button");
+    welcome.type="button";
+    welcome.className="footer-cookie-settings";
+    welcome.textContent="Replay welcome";
+    welcome.addEventListener("click",()=>{
+      void import("./blipmood-welcome.mjs").then(mod=>{
+        if(!mod.openWelcome({force:true}))window.appUI?.showToast?.("Close the other dialog first to replay the welcome.");
+      }).catch(()=>{window.appUI?.showToast?.("Welcome unavailable right now.");});
+    });
+    legal.append(welcome);
   }
   container.append(legal);
   const brand = document.createElement("small"); brand.className = "footer-brand"; brand.textContent = BRAND_TEXT; container.append(brand);
 }
 async function loadPageEnhancements(){const path=currentSitePath();const imports=[import("./experience-preferences.js"),import("./launch-context.mjs")];if(path==="discussion.html")imports.push(import("./discussion-discovery.js"));if(path==="chat.html")imports.push(import("./chat-context-menu.js"));if(path==="ai-chat.html")imports.push(import("./ai-context.js"));if(imports.length)await Promise.allSettled(imports);}
 function scheduleIdle(task){if(typeof window.requestIdleCallback==="function")window.requestIdleCallback(task,{timeout:900});else window.setTimeout(task,220);}
-/* The large animated SVG/WebP logo is optional. Defer its network and
- * decoding cost until after first paint; on mobile keep the verified static
- * wordmark so the homepage remains lightweight and readable. */
+/* Preserve the approved animated site name on mobile AND desktop.
+ * Load it after first paint instead of downloading the layered artwork in
+ * the render-critical path. Respect explicit reduced-motion/data-saving. */
 function scheduleDecorativeBrand() {
  const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
- if(window.matchMedia?.("(max-width: 900px)")?.matches ||
-    connection?.saveData || /(?:slow-2g|2g)/.test(connection?.effectiveType||"") ||
-    document.documentElement.dataset.reduceMotion==="true")return;
- const afterLoad=()=>window.setTimeout(()=>{
-   if(document.visibilityState!=="visible")return;
+ if(connection?.saveData || /(?:slow-2g|2g)/.test(connection?.effectiveType||"") ||
+   document.documentElement.dataset.reduceMotion==="true" ||
+   window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches)return;
+ window.setTimeout(()=>{
    scheduleIdle(()=>void import("./animated-brand.mjs")
      .then(module=>module.enhanceAnimatedHeader()).catch(()=>{}));
- },7000);
- if(document.readyState==="complete")afterLoad();
- else window.addEventListener("load",afterLoad,{once:true});
+ },1200);
 }
+/* On first visit, restore the original cinematic intro on mobile too.
+ * Existing cookie consent and official graphic announcements take priority,
+ * but dismissing those prompts resumes rather than permanently cancels the
+ * welcome sequence. Only one full-screen experience is shown at once. */
 function scheduleHomeCampaign(){
  const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
- const constrained=Boolean(window.matchMedia?.("(max-width: 900px)")?.matches ||
-   (Number.isFinite(navigator.deviceMemory)&&navigator.deviceMemory<=4) ||
-   connection?.saveData || /(?:slow-2g|2g)/.test(connection?.effectiveType||""));
+ if(connection?.saveData || /(?:slow-2g|2g)/.test(connection?.effectiveType||"") ||
+    document.documentElement.dataset.reduceMotion==="true" ||
+    window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches)return;
  let introPlanned=false;
- try{
-   introPlanned=!constrained&&localStorage.getItem("blipmood:intro:seen:v1")!=="1"
-     &&document.documentElement.dataset.reduceMotion!=="true"
-     &&!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
- }catch{ /* Storage is optional: never block the homepage. */ }
- let userInteracted=false;
- const markInteraction=()=>{userInteracted=true};
- window.addEventListener("pointerdown",markInteraction,{once:true,passive:true});
- window.addEventListener("keydown",markInteraction,{once:true,passive:true});
- const afterFirstPaint=(callback,delay)=>{
-  const run=()=>window.setTimeout(()=>{
-   // No animation takeover while consent is open or the visitor is interacting.
-   if(userInteracted||document.visibilityState!=="visible" ||
-      document.querySelector("#timzee-consent-banner.is-visible"))return;
-   scheduleIdle(callback);
-  },delay);
-  if(document.readyState==="complete")run();
-  else window.addEventListener("load",run,{once:true});
- };
+ try{introPlanned=localStorage.getItem("blipmood:intro:seen:v1")!=="1";}
+ catch{/* If private storage is blocked, manual Replay intro remains available. */}
+ function whenOverlayClear(action,delay){
+   let done=false;
+   const retry=()=>window.setTimeout(check,180);
+   const blocked=()=>document.visibilityState==="hidden" ||
+     Boolean(document.querySelector("#timzee-consent-banner.is-visible, #timzee-cookie-settings-modal[open], #siteAnnouncementBackdrop, #bm-cinema-intro, #bmWelcomeModal"));
+   function check(){
+     if(done||blocked())return;
+     done=true;
+     window.removeEventListener("timzee:consent",retry);
+     document.removeEventListener("click",retry);
+     document.removeEventListener("visibilitychange",retry);
+     scheduleIdle(action);
+   }
+   window.addEventListener("timzee:consent",retry);
+   document.addEventListener("click",retry);
+   document.addEventListener("visibilitychange",retry);
+   window.setTimeout(check,delay);
+ }
+ const welcome=()=>whenOverlayClear(()=>{
+   void import("./blipmood-welcome.mjs")
+     .then(module=>module.openWelcome()).catch(()=>{});
+ },1400);
  if(introPlanned){
-   // Optional one-time cinematic on capable desktop devices after the page
-   // has finished loading; the footer Replay intro works on mobile too.
-   afterFirstPaint(()=>void import("./blipmood-intro.mjs")
-     .then(mod=>mod.playIntro()).catch(()=>{}),6500);
+   whenOverlayClear(()=>{
+     void import("./blipmood-intro.mjs")
+       .then(module=>module.playIntro())
+       .then(played=>{
+         // Wait for the original 3.9-second cinematic and exit transition
+         // before introducing the optional guest welcome banner.
+         if(played)window.setTimeout(welcome,5100);
+         else welcome();
+       }).catch(welcome);
+   },1500);
  }else{
-   // The site already has a guest welcome campaign. Never stack it on top
-   // of the cinematic intro or cookie consent. Skip auto popups on mobile.
-   if(!constrained)afterFirstPaint(()=>void import("./blipmood-welcome.mjs")
-     .catch(()=>{}),9000);
+   welcome();
  }
 }
 if(typeof window!=="undefined"){
