@@ -2,12 +2,13 @@
 const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node};
 function inline(node,input){
  const value=String(input||"");
- const tokens=/(\*\*[^*\n]+\*\*|~~[^~\n]+~~|\*[^*\n]+\*|`[^`\n]+`|\[[^\]\n]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>"']+)/g;
+ const tokens=/(\u2028|\*\*[^*\n]+\*\*|~~[^~\n]+~~|\*[^*\n]+\*|`[^`\n]+`|\[[^\]\n]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>"']+)/g;
  let offset=0;
  for(const item of value.matchAll(tokens)){
   if(item.index>offset)node.append(document.createTextNode(value.slice(offset,item.index)));
   const word=item[0];
-  if(word.startsWith("**"))node.append(el("strong",word.slice(2,-2)));
+  if(word==="\u2028")node.append(el("br"));
+  else if(word.startsWith("**"))node.append(el("strong",word.slice(2,-2)));
   else if(word.startsWith("~~"))node.append(el("del",word.slice(2,-2)));
   else if(word.startsWith("*"))node.append(el("em",word.slice(1,-1)));
   else if(word.startsWith("`"))node.append(el("code",word.slice(1,-1)));
@@ -33,7 +34,7 @@ const tableSeparator=line=>/^\s*\|?\s*:?-{3,}:?(\s*\|\s*:?-{3,}:?)*\s*\|?\s*$/.t
 const listType=line=>/^\s*\d+[.)]\s+/.test(line)?"ol":/^\s*[-*+•]\s+/.test(line)?"ul":"";
 const blockStart=line=>/^\s*(?:#{1,4}\s+|>|```|[-*+•]\s+|\d+[.)]\s+)/.test(line);
 export function renderAssistantMessage(container,raw){
- const lines=String(raw||"").replace(/<br\s*\/?\s*>|&lt;br\s*\/?\s*&gt;/gi,"\n").replace(/\r\n?/g,"\n").split("\n").slice(0,2400);
+ const lines=String(raw||"").replace(/<br\s*\/?\s*>|&lt;br\s*\/?\s*&gt;/gi,"\u2028").replace(/\r\n?/g,"\n").split("\n").slice(0,2400);
  const body=el("div");body.className="ai-rich-content";
  let i=0;
  while(i<lines.length){
