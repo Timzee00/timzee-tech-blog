@@ -43,3 +43,21 @@ test("static brand remains accessible with responsive and reduced-motion fallbac
  assert.match(injection,/BLIPMOOD_WORDMARK/);
  assert.match(injection,/bm-wordmark-image/);
 });
+
+
+test("approved animated brand is shown in the visible mobile header or desktop rail",()=>{
+ const shell=root("assets/js/site-shell.js");
+ const animated=root("assets/js/animated-brand.mjs");
+ const brandCss=root("assets/css/blipmood-brand.css");
+ const menu=root("assets/js/blipmood-unified-menu.mjs");
+ assert.match(shell,/function scheduleDecorativeBrand\(\)/);
+ assert.match(shell,/window\.setTimeout\(\(\)=>\{/);
+ assert.match(shell,/scheduleIdle\(\(\)=>void import\("\.\/animated-brand\.mjs"\)/);
+ assert.doesNotMatch(shell,/if\(window\.matchMedia\?\.\("\(max-width: 900px\)"\)\?\.matches/);
+ assert.match(animated,/const desktop=window\.matchMedia\?\.\("\(min-width: 1190px\)"\)/);
+ assert.match(animated,/\.bm-has-unified-rail \.bm-rail-brand/);
+ assert.match(animated,/img\[data-bm-logo='wordmark'\]/);
+ assert.match(menu,/@media\(max-width:1189px\)/);
+ assert.match(brandCss,/\.bm-rail-brand\.bm-animated-ready>blipmood-logo/);
+ assert.match(brandCss,/\.bm-rail-brand\.bm-animated-ready>img\[data-bm-logo="wordmark"\]/);
+});
