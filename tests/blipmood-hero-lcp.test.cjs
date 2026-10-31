@@ -52,3 +52,14 @@ test("public static resources cache for repeat visits but private pages, push an
  assert.match(read("sw.js"),/request\.mode==="navigate"/);
  assert.match(read("sw.js"),/request\.headers\.has\("Authorization"\)/);
 });
+
+
+test("below-the-fold paint skipping leaves the interactive hero and first article feed untouched",()=>{
+ const css=read("assets/css/blipmood-home.css");
+ assert.match(css, /@supports \(content-visibility: auto\)/);
+ assert.match(css, /:is\(#popular,#popularTopics,#categories\)/);
+ assert.match(css, /content-visibility: auto/);
+ assert.match(css, /contain-intrinsic-size: auto 380px/);
+ const selector=css.match(/\.blipmood-home :is\(([^)]+)\)/)?.[1]||"";
+ assert.doesNotMatch(selector,/home-intro|latest|main-content|bm-hero-art/);
+});
