@@ -6,6 +6,7 @@
     <title>Marketplace - Blipmood</title>
     <meta name="description" content="Buy and sell tech products and services">
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/blipmood-marketplace-premium.css">
     <script defer src="assets/js/theme-init.js"></script>
   <style>
 .market-inquiry-inbox[hidden]{display:none!important}
@@ -35,7 +36,7 @@
 .market-owner-actions .danger{border-color:#bb6666;color:#f09b9b}
 </style>
 <style>.market-card-photo-link{display:block;text-decoration:none;max-width:100%;overflow:hidden}.market-card-photo-link:focus-visible{outline:3px solid #37cdb0;outline-offset:3px}.market-card-photo-link:hover .listing-image img{transform:scale(1.045);transition:transform .18s ease}@media(prefers-reduced-motion:reduce){.market-card-photo-link:hover .listing-image img{transform:none;transition:none}}</style></head>
-  <body>
+  <body class="market-premium">
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="container wrap">
@@ -60,9 +61,7 @@
           </div>
         </nav>
         <div class="header-actions">
-          <div class="search-box">
-            <input type="search" id="marketplaceSearch" placeholder="Search listings...">
-          </div>
+          <a class="icon-btn market-header-search-link" href="#marketplaceSearch" aria-label="Search marketplace">⌕</a>
           <a class="btn" href="#createSection" id="createBtnHeader" style="display: none;">Sell Item</a>
           <a class="icon-btn" href="stories.html" data-label="Stories" aria-label="Stories" title="Stories">&#128247;</a>
           <a class="icon-btn" href="chat.html" data-label="Chat" aria-label="Chat" title="Chat">&#128172;</a>
@@ -71,10 +70,30 @@
       </div>
     </header>
 
-    <main id="main-content" class="page-shell">
-      <div class="container">
-        <h1>Marketplace</h1>
-        <p class="tagline">Discover tech products, services, and gear from our community</p>
+    <main id="main-content" class="page-shell market-page">
+      <div class="container market-shell">
+        <section class="market-promo" aria-labelledby="marketplaceTitle">
+          <div class="market-promo-copy">
+            <p class="market-promo-label"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><rect x="6" y="13" width="28" height="23" rx="4"/><path d="M13 15V11a7 7 0 0 1 14 0v4"/></svg> Discover the exceptional</p>
+            <h1 id="marketplaceTitle">Marketplace</h1>
+            <p>Buy, sell and discover tech products, services and more from the Blipmood community.</p>
+          </div>
+          <svg class="market-bag-art" viewBox="0 0 350 270" role="img" aria-label="Colorful shopping bags"><defs>
+            <linearGradient id="bagBlue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#29b0fb"/><stop offset="1" stop-color="#1355ba"/></linearGradient>
+            <linearGradient id="bagPurple" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c478ff"/><stop offset="1" stop-color="#5631a8"/></linearGradient>
+            <linearGradient id="bagCyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#56e9f2"/><stop offset="1" stop-color="#0781b7"/></linearGradient>
+          </defs><g transform="translate(58 41) rotate(-8 120 130)"><path d="M12 68 164 52l-12 159L27 225Z" fill="url(#bagBlue)" stroke="#80e9ff" stroke-width="3"/><path d="M43 70V44a34 34 0 0 1 68 0v22" fill="none" stroke="#6df0ff" stroke-width="9" stroke-linecap="round"/><path d="M164 52 192 81 179 221 152 211Z" fill="#203d87"/></g>
+            <g transform="translate(143 16) rotate(13 110 135)"><path d="M22 87 143 69l18 153-154-12Z" fill="url(#bagPurple)" stroke="#c7abff" stroke-width="3"/><path d="M53 86V55a32 32 0 0 1 64 0v22" fill="none" stroke="#d1adff" stroke-width="9" stroke-linecap="round"/><path d="M144 68 167 91 179 209 161 222Z" fill="#57349b"/></g>
+            <g transform="translate(15 72)"><path d="M34 53 109 55l12 139L18 192Z" fill="url(#bagCyan)" stroke="#82eeef" stroke-width="3"/><path d="M50 58V43a20 20 0 0 1 40 0v15" fill="none" stroke="#aafffa" stroke-width="6" stroke-linecap="round"/></g></svg>
+        </section>
+        <div class="market-quick-actions" aria-label="Marketplace actions">
+          <button id="marketSellQuick" class="market-primary-action" type="button"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg><span>Sell an Item</span></button>
+          <button type="button" data-market-workspace="listings"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg><span>My Listings</span></button>
+          <button type="button" data-market-workspace="inquiries"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18v12H3zM3 7l9 7 9-7"/></svg><span>Inquiries</span></button>
+          <button type="button" data-market-workspace="sales"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V4h8v3M3 13h18"/></svg><span>Sales</span></button>
+        </div>
+        <section id="market-workspace-area" class="market-workspace-area" hidden aria-label="Marketplace seller workspace">
+          <div class="market-workspace-head"><h2 id="marketWorkspaceTitle">Seller workspace</h2><button id="marketWorkspaceClose" class="market-workspace-close" type="button">✕ Close</button></div>
         <details id="sellerInquiryInbox" class="market-inquiry-inbox" hidden>
           <summary>✉ Seller inquiries <span id="sellerInquiryCount">View messages from interested buyers</span></summary>
           <div class="market-inquiry-inbox-body">
@@ -94,16 +113,26 @@
          <div class="market-owner-heading"><div><span class="market-owner-eyebrow">SELLER STUDIO</span><h2>My listings</h2><p>Manage live and hidden items in one place.</p></div>
           <button type="button" class="btn ghost sm" id="refreshMyListings">Refresh</button>
          </div>
+         <div class="market-seller-tabs" id="marketSellerTabs" role="group" aria-label="My listing status">
+           <button type="button" data-market-listing-status="all" class="active" aria-pressed="true">All</button>
+           <button type="button" data-market-listing-status="live" aria-pressed="false">Live</button>
+           <button type="button" data-market-listing-status="hidden" aria-pressed="false">Hidden</button>
+         </div>
          <div id="myMarketList" role="status" aria-live="polite">Loading your listings…</div>
         </section>
 
-        <div class="category-filter" id="categoryFilter">
-          <button class="filter-btn active" aria-pressed="true" data-category="all">All</button>
-          <button class="filter-btn" aria-pressed="false" data-category="electronics">Electronics</button>
-          <button class="filter-btn" aria-pressed="false" data-category="software">Software</button>
-          <button class="filter-btn" aria-pressed="false" data-category="hardware">Hardware</button>
-          <button class="filter-btn" aria-pressed="false" data-category="services">Services</button>
-          <button class="filter-btn" aria-pressed="false" data-category="other">Other</button>
+        </section>
+        <div class="market-workspace-grid">
+          <div class="market-browse-column" id="marketBrowseColumn">
+        <div class="category-filter market-category-filter" id="categoryFilter">
+          <button class="filter-btn active" aria-pressed="true" data-category="all"><span class="market-chip-icon" aria-hidden="true">▦</span> All</button>
+          <button class="filter-btn" aria-pressed="false" data-category="electronics"><span class="market-chip-icon" aria-hidden="true">♫</span> Electronics</button>
+          <button class="filter-btn" aria-pressed="false" data-category="software"><span class="market-chip-icon" aria-hidden="true">⌘</span> Software</button>
+          <button class="filter-btn" aria-pressed="false" data-category="hardware"><span class="market-chip-icon" aria-hidden="true">▤</span> Hardware</button>
+          <button class="filter-btn" aria-pressed="false" data-category="services"><span class="market-chip-icon" aria-hidden="true">▣</span> Services</button>
+          <button class="filter-btn" aria-pressed="false" data-market-preset-search="gaming"><span class="market-chip-icon" aria-hidden="true">🎮</span> Gaming</button>
+          <button class="filter-btn" aria-pressed="false" data-market-preset-search="phone"><span class="market-chip-icon" aria-hidden="true">▯</span> Phones</button>
+          <details class="market-more"><summary class="market-more-summary">More <span aria-hidden="true">⌄</span></summary><div class="market-more-options"><button class="filter-btn" aria-pressed="false" data-category="other">Other listings</button></div></details>
         </div>
 
         <div id="createSection" class="market-panel" style="display: none;">
@@ -184,11 +213,29 @@
           </form>
         </div>
 
-        <section class="market-browse-toolbar" aria-label="Browse listings"><div class="market-browse-heading"><strong>Explore listings</strong><span id="marketResultsStatus" role="status" aria-live="polite">Loading listings…</span></div><label for="marketSort">Sort <select id="marketSort"><option value="newest">Newest first</option><option value="popular">Most viewed</option></select></label></section><div id="listingsContainer">
+        <section class="market-browse-toolbar" aria-label="Browse listings">
+          <label class="market-browse-search" for="marketplaceSearch">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15.5 15.5 6 6"/></svg>
+            <input type="search" id="marketplaceSearch" maxlength="120" autocomplete="off" placeholder="Search listings, brands, or services…" aria-label="Search marketplace">
+          </label>
+          <label class="market-select-label" for="marketSort">Sort <select id="marketSort"><option value="newest">Newest</option><option value="popular">Most viewed</option></select></label>
+          <label class="market-select-label" for="marketLocation">⌖ Location <select id="marketLocation"><option value="">All</option><option value="Lagos">Lagos</option><option value="Abuja">Abuja</option><option value="Ibadan">Ibadan</option><option value="Port Harcourt">Port Harcourt</option><option value="Kano">Kano</option><option value="Benin">Benin</option></select></label>
+          <label class="market-toggle-label" for="marketVerifiedOnly">Verified only <input id="marketVerifiedOnly" type="checkbox" aria-describedby="marketVerifiedHint"></label>
+        </section>
+        <p id="marketResultsStatus" class="market-results-caption" role="status" aria-live="polite">Loading listings…</p>
+        <span id="marketVerifiedHint" class="tz-sr-only">Shows verified creators within the current results page, not a sitewide verified seller search.</span><div id="listingsContainer">
           <div class="callout">Loading marketplace...</div>
         </div>
 
-        <nav class="market-load-more market-pagination" aria-label="Marketplace pages"><button type="button" class="btn ghost" id="prevPageBtn" hidden>← Previous</button><span id="marketPageIndicator" aria-live="polite">Page 1</span><button type="button" class="btn ghost" id="loadMoreBtn" hidden>Next 20 →</button></nav>
+        <nav class="market-load-more market-pagination" aria-label="Marketplace pages"><button type="button" class="btn ghost" id="prevPageBtn" hidden>‹ Previous</button><span id="marketPageIndicator" aria-live="polite">Page 1</span><button type="button" class="btn ghost" id="loadMoreBtn" hidden>Next ›</button></nav>
+          </div>
+          <aside class="market-controls-column" aria-label="Marketplace tools">
+            <section id="marketSellerSummaryCard" class="market-control-card" hidden><h2>Your seller profile</h2><div class="market-seller-summary" id="marketSellerSummary"></div></section>
+            <section class="market-control-card market-saver-card"><svg viewBox="0 0 48 48" fill="none" stroke="#5dfff0" stroke-width="2.5" aria-hidden="true"><rect x="6" y="7" width="36" height="34" rx="8"/><path d="M32 14C20 14 15 22 14 32c11 0 21-7 18-18Z"/><path d="M16 32c5-7 11-12 17-15"/></svg><div><strong>Data Saver</strong><small>Use less data by lazy-loading images and reducing background media.</small></div><label class="market-toggle-label" for="marketDataSaver"><span class="tz-sr-only">Enable Data Saver</span><input type="checkbox" id="marketDataSaver"></label></section>
+            <section class="market-control-card"><h2>Display listings</h2><div class="market-view-buttons" role="group" aria-label="Listing layout"><button type="button" class="active" data-market-view="grid" aria-pressed="true">▦ Grid</button><button type="button" data-market-view="list" aria-pressed="false">☷ List</button></div></section>
+            <section class="market-control-card"><h2>Buy and sell safely</h2><p style="font-size:.81rem;line-height:1.55;color:#b6d2da;margin:0">Check item details and seller history. Blipmood identity verification is not a guarantee of a sale or delivery.</p></section>
+          </aside>
+        </div>
       </div>
     </main>
 
