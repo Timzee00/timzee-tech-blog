@@ -1,0 +1,56 @@
+{
+  "name": "Blipmood — Your world. Your mood.",
+  "short_name": "Blipmood",
+  "description": "Discover communities, creators and conversations. Keep writing offline.",
+  "id": "/",
+  "start_url": "/index.html?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#0d2331",
+  "theme_color": "#0d2331",
+  "lang": "en",
+  "orientation": "any",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/assets/brand/blipmood-pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/brand/blipmood-pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/brand/blipmood-pwa-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Write offline",
+      "short_name": "Offline notes",
+      "description": "Write and save a draft on this device without internet.",
+      "url": "/offline.html"
+    },
+    {
+      "name": "Chats",
+      "short_name": "Chats",
+      "url": "/chat.html"
+    },
+    {
+      "name": "Communities",
+      "short_name": "Communities",
+      "url": "/discussion.html"
+    }
+  ]
+}
