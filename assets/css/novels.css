@@ -81,6 +81,13 @@
   margin-bottom: var(--space-2, 8px);
 }
 
+/* Standard Blipmood SVG accents: crisp in cards, cover placeholders and buttons. */
+.novel-cover > svg, .novel-cover-img > svg { width:52px; height:52px; color:currentColor; stroke-width:1.8; }
+.novel-cover-img > svg { width:64px; height:64px; color:var(--color-primary,#0f766e); }
+.novel-cover-img [data-bm-icon] svg { width:64px; height:64px; color:var(--color-primary,#0f766e); }
+.novel-stat svg, .btn-icon svg { display:block; flex:none; width:18px; height:18px; stroke-width:1.8; }
+.btn-icon.active svg { color:currentColor; }
+
 .novel-meta { display: flex; gap: var(--space-3, 12px); font-size: var(--text-xs, 12px); color: var(--color-text-subtle, #999); }
 
 .novel-create-btn {
