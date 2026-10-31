@@ -131,3 +131,26 @@ body.market-premium .market-page [hidden]{display:none!important}
 @media(max-width:600px){body.market-premium .market-page{padding-top:16px}body.market-premium .market-promo{min-height:170px;padding:22px 19px}body.market-premium .market-promo h1{font-size:1.9rem}body.market-premium .market-promo-copy{max-width:76%}body.market-premium .market-bag-art{right:-6%;width:39%;opacity:.9}body.market-premium .market-quick-actions{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}body.market-premium .market-quick-actions button{flex-direction:column;min-height:71px;padding:9px 5px;font-size:.72rem;line-height:1.2;text-align:center;border-radius:12px}body.market-premium .market-quick-actions button svg{width:21px;height:21px}body.market-premium .market-quick-actions .market-primary-action{grid-column:span 1}body.market-premium .market-category-filter{gap:8px}body.market-premium .market-category-filter .filter-btn,body.market-premium .market-category-filter .market-more-summary{padding:8px 11px;min-height:40px;font-size:.74rem}body.market-premium .market-controls-column{grid-template-columns:minmax(0,1fr)}body.market-premium .marketplace-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}body.market-premium .listing-image{aspect-ratio:1.12}body.market-premium .listing-info{padding:9px;gap:5px}body.market-premium .listing-title{font-size:.8rem}body.market-premium .listing-price{font-size:1rem}body.market-premium .listing-meta{font-size:.67rem}body.market-premium .listing-seller{font-size:.7rem}body.market-premium .market-card-compact-actions a{font-size:.68rem}body.market-premium .market-browse-toolbar .market-select-label{flex:1;justify-content:space-between}body.market-premium .market-browse-search{flex-basis:100%}}
 @media(max-width:340px){body.market-premium .market-quick-actions{grid-template-columns:repeat(2,1fr)}body.market-premium .market-promo-copy{max-width:100%}body.market-premium .market-bag-art{opacity:.24;width:63%}body.market-premium .marketplace-grid{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){body.market-premium .market-page *{scroll-behavior:auto!important;transition:none!important}}
+
+/* Final alignment: the page remains navy even when global theme is light. */
+body.market-premium .site-header{--color-text:#eefaff;--color-text-muted:#b4d0de;--color-surface:#091c2c;--color-surface-muted:#0e2b40;--color-border:#294b63;--color-primary:#49e9da;color:#f0faff}
+body.market-premium .site-header .menu-toggle,
+body.market-premium .site-header .icon-btn{background:#0d263b;color:#ecf9ff;border:1px solid #4a687d}
+body.market-premium .site-header .nav-pill a,
+body.market-premium .site-header .nav-more-toggle{color:#e0edf5}
+body.market-premium .site-header .auth-actions a,
+body.market-premium .site-header .auth-actions button{color:#eaf9fc}
+body.market-premium .footer{background:#071a28;color:#d8eef6;border-top:1px solid #2b4d61}
+body.market-premium .footer a{color:#a9d8ec}
+body.market-premium .bottom-tab-bar{background:#071a2b;border-top:1px solid #315468}
+body.market-premium .bottom-tab{color:#bfd7e6}
+body.market-premium .bottom-tab.active{color:#51e8dd;background:#173748}
+body.market-premium .listing-card{position:relative}
+body.market-premium .market-more:not([open]) .market-more-options{display:none!important}
+body.market-premium .market-inquiry-inbox:not([open]) .market-inquiry-inbox-body{display:none!important}
+body.market-premium .market-step-actions button[hidden],
+body.market-premium .market-page .market-owner-workspace[hidden]{display:none!important}
+body.market-premium .market-seller-summary-info .tz-identity-name{display:inline-flex;align-items:center;gap:4px;max-width:100%;overflow-wrap:anywhere}
+body.market-premium .market-seller-summary-info .tz-verified-badge{flex:0 0 auto}
+body.market-premium .market-view-buttons button:focus-visible{outline:3px solid #4bf3e3;outline-offset:3px}
+@media(max-width:600px){body.market-premium .market-saver-card{gap:11px}body.market-premium .market-saver-card small{font-size:.73rem}body.market-premium .market-page{overflow-x:clip}}
