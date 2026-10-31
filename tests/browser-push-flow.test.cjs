@@ -13,7 +13,10 @@ test("browser push is explicit opt in with service worker and unsubscribing",()=
  assert.match(client,/subscription\.unsubscribe\(\)/);
  assert.match(worker,/showNotification/);
  assert.match(worker,/notificationclick/);
- assert.doesNotMatch(worker,/\.cache\.add|caches\.open/);
+ assert.match(worker,/ALLOWED_STATIC_PREFIXES/);
+ assert.match(worker,/request\.mode==="navigate"/);
+ assert.match(worker,/isSafeStaticRequest/);
+ assert.match(worker,/OFFLINE_CACHE/);
 });
 test("push is server signed, encrypted, RLS secured and disabled until configured",()=>{
  const api=read("netlify/functions/push-subscriptions.js");
