@@ -345,6 +345,9 @@
       .reel-mute svg, .reel-chip-icon svg { display:block; width:22px; height:22px; stroke-width:1.8; }
       .reel-chip[data-action="like"].active .reel-chip-icon svg { fill:currentColor; }
       .reel-heart-burst svg { display:block; width:90px; height:90px; fill:currentColor; stroke:currentColor; }
+      .reel-empty-icon svg { width:36px; height:36px; display:block; margin:0 auto 10px; }
+      .reel-staff svg,.reel-edit-caption svg,.comment-like-btn svg { width:16px; height:16px; display:inline-block; vertical-align:middle; }
+      .comment-like-btn[aria-pressed="true"] svg { fill:currentColor; }
       .reel-chip.active .reel-chip-icon {
         background: var(--reel-gradient);
         border-color: transparent;
@@ -1137,7 +1140,7 @@
         root.innerHTML = `
           <div class="reel-empty">
             <div>
-              <div style="font-size:32px; margin-bottom:10px;">📹</div>
+              <div class="reel-empty-icon" aria-hidden="true">${icon("videos")}</div>
               <div>${state.mode==="following" ? "Follow video creators to see their posts here." : "No recommended videos yet. Explore recent uploads."}</div>
               <a href="videos.html" style="color:#7dd3fc; display:inline-block; margin-top:10px;">← Back to Videos</a>
             </div>
@@ -1156,7 +1159,7 @@
         const uploaderMarkup=verifiedName("@"+uploaderName,profile,{compact:true})
           .replace(/^(<span\b[^>]*>)([^<]*)/, '$1<span class="reel-handle-text">$2</span>');
         const staff = video.uploader_staff_pick
-          ? '<span class="reel-staff">★ Staff Pick</span>'
+          ? '<span class="reel-staff">'+icon("star")+' Staff Pick</span>'
           : '';
         const tags = (video.tags || [])
           .filter(t=>/^[a-z0-9_]{1,32}$/i.test(String(t)))
@@ -1180,7 +1183,7 @@
               <div class="reel-meta">
                 <div class="reel-creator-flags" aria-label="Recognition and editing controls">
                   ${staff}
-                  ${state.user?.id===video.user_id?'<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">✎ Edit</button>':''}
+                  ${state.user?.id===video.user_id?'<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">${icon("edit")} Edit</button>':''}
                 </div>
                 <div class="reel-uploader">
                   <a class="reel-avatar-frame" href="profile.html?id=${encodeURIComponent(video.user_id || '')}" aria-label="View uploader profile">${avatarMarkup}</a>
@@ -1732,7 +1735,7 @@
                 <p>${renderSocialText(c.body || "")}</p>
                 <div class="reel-comment-actions">
                   <button class="comment-reply-btn" data-reply-id="${c.id}" data-reply-name="${escapeHTML(publicIdentityName(commentProfiles.get(c.user_id),c.author_name))}">Reply</button>
-                  <button class="comment-like-btn" data-comment-like="${c.id}" aria-pressed="${c.viewer_liked===true}" aria-label="Like comment" type="button">${c.viewer_liked?"♥ Liked":"♡ Like"} <span>${Number(c.like_count||0)}</span></button>
+                  <button class="comment-like-btn" data-comment-like="${c.id}" aria-pressed="${c.viewer_liked===true}" aria-label="Like comment" type="button">${icon("heart")} ${c.viewer_liked?"Liked":"Like"} <span>${Number(c.like_count||0)}</span></button>
                 </div>
                 ${nested}
               </div>
@@ -1797,7 +1800,7 @@
               row.viewer_liked=!was;
               row.like_count=Math.max(0,Number(row.like_count||0)+(was?-1:1));
               btn.setAttribute("aria-pressed",String(row.viewer_liked));
-              btn.innerHTML=(row.viewer_liked?"♥ Liked":"♡ Like")+" <span>"+row.like_count+"</span>";
+              btn.innerHTML=icon("heart")+(row.viewer_liked?" Liked":" Like")+" <span>"+row.like_count+"</span>";
             }catch(error){console.warn("Comment like failed",error);}
             finally{btn.disabled=false;}
           });
