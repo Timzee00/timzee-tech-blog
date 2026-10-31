@@ -46,6 +46,14 @@ self.addEventListener("fetch",event=>{
  if(request.method!=="GET")return;
  const url=new URL(request.url);
  if(url.origin!==self.location.origin)return;
+ if(url.pathname==="/app.webmanifest"){
+  event.respondWith((async()=>{
+   try{return await fetch(request);}
+   catch{return await caches.match("/app.webmanifest") ||
+    new Response("{}",{status:503,headers:{"content-type":"application/manifest+json"}});}
+  })());
+  return;
+ }
  if(request.mode==="navigate"){
   // Navigation is always network-first. NEVER cache account HTML or dynamic
   // content; offline users see a working local-first drafting workspace.
@@ -62,8 +70,10 @@ self.addEventListener("fetch",event=>{
  }
  if(!isSafeStaticRequest(request,url))return;
  event.respondWith((async()=>{
-  const cache=await caches.open(STATIC_CACHE);
-  const hit=await cache.match(request);
+  let cache;
+  try{cache=await caches.open(STATIC_CACHE);}
+  catch{return fetch(request);}
+  const hit=(await cache.match(request))||(await caches.match(request));
   if(hit)return hit;
   const response=await fetch(request);
   if(response.ok&&response.type==="basic"&&
