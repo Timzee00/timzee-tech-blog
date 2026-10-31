@@ -37,20 +37,25 @@ test("intro respects returning visitors, accessibility, data saving and manual r
  assert.match(css,/prefers-reduced-motion:reduce/);
 });
 
-test("home page keeps cinematic replay while deferring automatic mobile takeovers",()=>{
+test("mobile and desktop both get the first-visit intro, welcome and explicit replays",()=>{
  const shell=read("assets/js/site-shell.js");
+ const welcome=read("assets/js/blipmood-welcome.mjs");
  const pos=shell.indexOf("function scheduleHomeCampaign(){");
  assert.ok(pos>=0);
  const block=shell.slice(pos);
  assert.match(block,/let introPlanned=false/);
  assert.match(block,/import\("\.\/blipmood-intro[.]mjs"\)/);
  assert.match(block,/if\(introPlanned\)/);
- assert.match(block,/if\(!constrained\)afterFirstPaint/);
  assert.match(block,/import\("\.\/blipmood-welcome[.]mjs"\)/);
- assert.match(block,/\(max-width: 900px\)/);
- assert.match(block,/navigator\.deviceMemory/);
- assert.match(block,/userInteracted\|\|document\.visibilityState/);
+ assert.match(block,/module\.openWelcome\(\)/);
+ assert.match(block,/whenOverlayClear/);
+ assert.match(block,/timzee:consent/);
  assert.match(block,/#timzee-consent-banner\.is-visible/);
+ assert.doesNotMatch(block,/if\(!constrained\)|userInteracted|window\.addEventListener\("load"/);
+ assert.match(shell,/Replay welcome/);
+ assert.match(shell,/openWelcome\(\{force:true\}\)/);
+ assert.match(welcome,/export function openWelcome\(\{force=false\}/);
+ assert.match(welcome,/document\.getElementById\("bm-cinema-intro"\)/);
  assert.match(shell,/if\(currentSitePath\(\)==="index.html"\)scheduleHomeCampaign\(\)/);
  assert.doesNotMatch(shell,/^import "\.\/blipmood-intro[.]mjs";/m);
 });
