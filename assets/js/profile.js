@@ -1341,9 +1341,54 @@ async function unblockUser() {
   renderProfileActions();
 }
 
+let disposeProfileActionMenu=()=>{};
+function attachProfileFloatingMenu(details,trigger,menu){
+  // Render outside the clipped profile cover / frame stacking contexts.
+  menu.hidden=true;
+  menu.classList.add("profile-action-floating-menu");
+  menu.setAttribute("role","group");
+  menu.setAttribute("aria-label","More account actions");
+  document.body.appendChild(menu);
+  const place=()=>{
+    if(!details.open || menu.hidden)return;
+    const anchor=trigger.getBoundingClientRect();
+    const width=Math.min(260,Math.max(176,window.innerWidth-24));
+    menu.style.width=width+"px";
+    const left=Math.max(12,Math.min(anchor.left,window.innerWidth-width-12));
+    menu.style.left=left+"px";
+    const height=menu.offsetHeight;
+    const above=anchor.bottom+height+10>window.innerHeight-12 && anchor.top>height+16;
+    menu.style.top=(above?anchor.top-height-8:Math.max(12,Math.min(anchor.bottom+8,window.innerHeight-height-12)))+"px";
+  };
+  const onToggle=()=>{
+    menu.hidden=!details.open;
+    trigger.setAttribute("aria-expanded",String(details.open));
+    if(details.open)requestAnimationFrame(place);
+  };
+  const onOutside=event=>{
+    if(details.open&&!details.contains(event.target)&&!menu.contains(event.target))details.open=false;
+  };
+  const onEscape=event=>{if(event.key==="Escape"&&details.open){details.open=false;trigger.focus();}};
+  details.addEventListener("toggle",onToggle);
+  document.addEventListener("pointerdown",onOutside,true);
+  document.addEventListener("keydown",onEscape);
+  window.addEventListener("scroll",place,true);
+  window.addEventListener("resize",place);
+  disposeProfileActionMenu=()=>{
+    details.removeEventListener("toggle",onToggle);
+    document.removeEventListener("pointerdown",onOutside,true);
+    document.removeEventListener("keydown",onEscape);
+    window.removeEventListener("scroll",place,true);
+    window.removeEventListener("resize",place);
+    menu.remove();
+  };
+}
+
 function renderProfileActions() {
   const actions = document.getElementById("profileActions");
   if (!actions) return;
+  disposeProfileActionMenu();
+  disposeProfileActionMenu=()=>{};
   actions.innerHTML = "";
   if (!state.user) {
     const login = document.createElement("a");
@@ -1407,9 +1452,10 @@ function renderProfileActions() {
   summary.setAttribute("aria-label","More account actions");
   const moreMenu=document.createElement("div");
   moreMenu.className="profile-action-more-menu";
-  more.append(summary,moreMenu);
+  more.append(summary);
   moreMenu.append(reportUserBtn);
   actions.append(more);
+  attachProfileFloatingMenu(more,summary,moreMenu);
   const allowRequests = state.profile?.allow_requests !== false;
   const allowMessages = state.profile?.allow_messages !== false;
 
