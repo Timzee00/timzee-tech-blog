@@ -382,6 +382,7 @@
       }
       function editMyListing(item){
         state.editingListing=item;
+        setMarketStep(1);
         for(const key of marketFieldIds){
           const element=document.getElementById("listing"+key);
           if(element)element.value=item[key.toLowerCase()]??"";
@@ -680,6 +681,7 @@
 
       document.getElementById("createForm").addEventListener("submit", async (event) => {
         event.preventDefault();
+        if(marketStep!==3){document.getElementById("marketStepNext").click();return;}
         if (!state.user) {
           window.location.href = `login.html?next=${encodeURIComponent('marketplace.html')}`;
           return;
@@ -791,7 +793,72 @@
         void loadListings();document.getElementById("marketResultsStatus").scrollIntoView({block:"start"});
       });
 
+
+      let marketStep=1;
+      function setMarketStep(step){
+        marketStep=Math.min(3,Math.max(1,Number(step)||1));
+        document.querySelectorAll("[data-market-step]").forEach(section=>{
+          section.hidden=Number(section.dataset.marketStep)!==marketStep;
+        });
+        document.querySelectorAll("[data-step-indicator]").forEach(chip=>{
+          chip.classList.toggle("active",Number(chip.dataset.stepIndicator)===marketStep);
+        });
+        document.getElementById("marketStepBack").hidden=marketStep===1;
+        document.getElementById("marketStepNext").hidden=marketStep===3;
+        if(marketStep===3){
+          const value=id=>document.getElementById(id)?.value?.trim()||"Not specified";
+          document.getElementById("marketReviewSummary").textContent=[
+            "Title: "+value("listingTitle"),"Category: "+value("listingCategory"),
+            "Price: "+value("listingCurrency")+" "+value("listingPrice"),
+            "Condition: "+value("listingCondition"),"Location: "+value("listingLocation"),
+            "Contact: "+value("marketplaceWhatsapp"),"New photos: "+state.selectedPhotos.length
+          ].join("\n");
+        }
+      }
+      document.getElementById("marketStepBack").addEventListener("click",()=>setMarketStep(marketStep-1));
+      document.getElementById("marketStepNext").addEventListener("click",()=>{
+        if(marketStep===1){
+          for(const field of document.querySelectorAll('[data-market-step="1"] [required]')){
+            if(!field.checkValidity()){field.reportValidity();return;}
+          }
+          const phone=document.getElementById("marketplaceWhatsapp");
+          if(!isValidWhatsapp(phone.value)){
+            phone.setCustomValidity("Enter a valid WhatsApp number with country code.");
+            phone.reportValidity();return;
+          }
+          phone.setCustomValidity("");
+        }
+        setMarketStep(marketStep+1);
+      });
+      document.getElementById("marketplaceWhatsapp").addEventListener("input",event=>event.target.setCustomValidity(""));
+      function openMarketEditor(){
+        if(!state.user){location.href="login.html?next="+encodeURIComponent("marketplace.html");return;}
+        const editor=document.getElementById("createSection");
+        editor.style.display="block";setMarketStep(1);
+        editor.scrollIntoView({block:"start",behavior:"smooth"});
+        document.getElementById("listingTitle").focus({preventScroll:true});
+      }
+      document.getElementById("marketSellQuick").addEventListener("click",openMarketEditor);
+      document.getElementById("createBtnHeader").addEventListener("click",event=>{event.preventDefault();openMarketEditor();});
+      document.getElementById("cancelCreate").addEventListener("click",()=>setMarketStep(1));
+      const workArea=document.getElementById("market-workspace-area");
+      document.getElementById("marketWorkspaceClose").addEventListener("click",()=>{workArea.hidden=true;});
+      document.querySelectorAll("[data-market-workspace]").forEach(button=>button.addEventListener("click",()=>{
+        if(!state.user){location.href="login.html?next="+encodeURIComponent("marketplace.html");return;}
+        const kind=button.dataset.marketWorkspace;
+        workArea.hidden=false;
+        document.getElementById("sellerInquiryInbox").hidden=kind!=="inquiries";
+        document.getElementById("myMarketListings").hidden=kind!=="listings";
+        document.getElementById("marketPurchaseRequests").hidden=kind!=="sales";
+        document.getElementById("marketWorkspaceTitle").textContent=
+          kind==="listings"?"My Listings":kind==="inquiries"?"Seller inquiries":"Sales and purchase confirmations";
+        if(kind==="listings")void loadMyListings();
+        if(kind==="sales")void loadPurchaseConfirmations();
+        if(kind==="inquiries")document.getElementById("sellerInquiryInbox").open=true;
+        workArea.scrollIntoView({block:"start",behavior:"smooth"});
+      }));
       await setupAuth();
+      void loadUserPreferences(state.user).then(prefs=>syncSaver(prefs)).catch(()=>{});
       await loadListings();
     </script>
   </body>
