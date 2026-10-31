@@ -138,7 +138,9 @@
         <div id="createSection" class="market-panel" style="display: none;">
           <h2 id="marketFormHeading">Create Listing</h2>
           <p class="market-help">Your WhatsApp number is used only for marketplace buyer contact and can be updated from your seller profile.</p>
+          <div id="marketStepIndicator" class="market-stepper" aria-label="Create listing steps"><span data-step-indicator="1" class="active">1 Details</span><span data-step-indicator="2">2 Media</span><span data-step-indicator="3">3 Review</span></div>
           <form novalidate id="createForm">
+          <section class="market-step" data-market-step="1" aria-label="Listing details">
             <div class="market-form-row">
               <div>
                 <label for="listingTitle"><strong>Title</strong></label>
@@ -198,6 +200,8 @@
               </div>
             </div>
 
+          </section>
+          <section class="market-step" data-market-step="2" aria-label="Listing photos" hidden>
             <div>
               <label for="listingPhotos"><strong>Photos</strong></label>
               <input type="file" id="listingPhotos" multiple accept="image/*">
@@ -205,11 +209,17 @@
               <div id="photoSelection" class="market-photo-selection" aria-live="polite"></div>
             </div>
 
+          </section>
+          <section class="market-step" data-market-step="3" aria-label="Review listing" hidden>
+            <h3>Review your listing</h3><p>Confirm the details below before publishing. No changes are saved until you select Publish.</p>
+            <div id="marketReviewSummary" class="market-review-summary" aria-live="polite"></div>
             <div id="createStatus" class="market-status" style="display: none;"></div>
             <div class="market-form-actions">
               <button class="btn" id="saveListingBtn" type="submit">Create Listing</button>
               <button class="btn ghost market-cancel-btn" type="button" id="cancelCreate">Cancel</button>
             </div>
+          </section>
+          <div class="market-step-actions"><button type="button" id="marketStepBack" hidden>← Back</button><button type="button" id="marketStepNext" class="market-step-next">Continue →</button></div>
           </form>
         </div>
 
