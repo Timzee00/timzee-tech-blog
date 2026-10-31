@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#071b27">
+<title>Blip Earn — Super Admin | Blipmood</title>
+<link rel="stylesheet" href="../assets/css/admin.css">
+<style>
+body.bef-body{background:radial-gradient(circle at 4% 4%,#16695e23,transparent 40%),#091b27;color:#e9fafb;min-height:100dvh}
+.bef-main{width:calc(100% - 32px);max-width:1000px;margin:36px auto 95px}
+.bef-main h1{font-size:clamp(1.7rem,4vw,2.5rem);margin:6px 0 9px}
+.bef-main h2{margin:0 0 11px;font-size:1.16rem}
+.bef-main p{line-height:1.65;color:#c4d7dd}
+.bef-head{display:flex;align-items:start;justify-content:space-between;gap:17px;flex-wrap:wrap}
+.bef-head small{color:#8be7d9;font-weight:800;letter-spacing:.06em}
+.bef-back{border:1px solid #85d6cf68;border-radius:11px;color:#d3faf5;padding:10px 15px;text-decoration:none}
+.bef-back:hover{background:#69d3c117}
+.bef-alert{border:1px solid #70d3c257;border-radius:12px;padding:14px 17px;background:#1d455144;color:#e0f7f2;line-height:1.65;margin:16px 0}
+.bef-alert[data-error=true]{border-color:#e9a29a78;color:#ffd4ce}
+.bef-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;margin-top:22px}
+.bef-card{padding:clamp(17px,3vw,25px);border:1px solid #78b8c64a;border-radius:17px;background:#153142e6;box-shadow:0 15px 35px #06192530}
+.bef-card h2{color:#f6ffff}
+.bef-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.bef-count{border:1px solid #6bbeb94c;background:#65d4c213;border-radius:13px;padding:14px}
+.bef-count strong{font-size:clamp(1.45rem,3vw,2rem);color:#8be8d9;display:block;font-variant-numeric:tabular-nums}
+.bef-count span{color:#d3e4e9;font-size:.8rem;line-height:1.5;display:block;margin-top:5px}
+.bef-card form{display:grid;gap:15px}
+.bef-field{display:grid;gap:7px}
+.bef-field label{font-weight:700;font-size:.92rem}
+.bef-field input:not([type=checkbox]),.bef-field textarea{width:100%;border:1px solid #90b7c266;border-radius:11px;background:#0c2937;color:#f3fffe;min-height:46px;padding:11px 13px;font:inherit;box-sizing:border-box}
+.bef-field textarea{min-height:95px;resize:vertical}
+.bef-toggle{display:flex;align-items:center;gap:11px;cursor:pointer;padding:15px;border-radius:13px;border:1px solid #69d3c165;background:#69d3c10b}
+.bef-toggle input{width:24px;height:24px;flex:none;accent-color:#69d3c1}
+.bef-toggle span{font-weight:700}
+.bef-button{border:1px solid #c4fff5;border-radius:10px;background:linear-gradient(110deg,#9df5e3,#69d3c1,#89bce9);color:#073343;padding:12px 20px;min-height:47px;font:800 1rem system-ui,sans-serif;cursor:pointer}
+.bef-button:disabled{opacity:.55;cursor:not-allowed}
+.bef-button:focus-visible,.bef-back:focus-visible,.bef-field :focus-visible{outline:3px solid #96f5df;outline-offset:3px}
+.bef-help{font-size:.82rem;line-height:1.6;color:#bed0d6}
+.bef-note{border-left:3px solid #89bce9;border-radius:8px;padding:11px 14px;background:#89bce90b}
+.bef-wide{grid-column:1/-1}
+[hidden]{display:none!important}
+@media(max-width:710px){.bef-main{width:calc(100% - 22px);margin:24px auto 70px}.bef-grid{grid-template-columns:1fr}.bef-wide{grid-column:1}}
+</style></head><body class="admin-shell bef-body">
+<main class="bef-main" id="referralAdminApp">
+<header class="bef-head"><div><small>BLIPMOOD · SUPER ADMIN</small><h1>Blip Earn Controls</h1><p>Manage the invitation program, limit new referrals when your member goal is met, and protect existing attribution records.</p></div><a class="bef-back" href="professional-panel.html">Back to Super Admin</a></header>
+<div id="befGate" class="bef-alert" role="status" aria-live="polite">Verifying Super Admin access…</div>
+<section id="befWorkspace" hidden class="bef-grid" aria-label="Referral program administration">
+<div class="bef-card"><h2>Verified member overview</h2>
+<div class="bef-counts"><div class="bef-count"><strong id="befActivated">0</strong><span>Email-confirmed, onboarded, active-profile members</span></div>
+<div class="bef-count"><strong id="befRecent">0</strong><span>Members who signed in during the last 30 days</span></div>
+<div class="bef-count"><strong id="befAttributed">0</strong><span>Recorded referral attributions</span></div>
+<div class="bef-count"><strong id="befPending">0</strong><span>Pending referral reviews</span></div></div>
+<p class="bef-help">Verified onboarding is not the same as daily active users. The optional automatic cutoff uses the verified-onboarded count. The 30-day figure reflects sign-ins, not every background session.</p>
+</div>
+<div class="bef-card"><h2>Referral acceptance controls</h2>
+<form id="befSettingsForm">
+<label class="bef-toggle"><input type="checkbox" id="befEnabled"><span>Accept NEW referral invitations</span></label>
+<div class="bef-field"><label for="befTarget">Auto-pause at this many verified-onboarded members</label><input id="befTarget" type="number" min="0" max="10000000" step="1" value="0" required><small class="bef-help">0 = manual control only. When the goal is reached, new referral attribution is stopped server-side automatically.</small></div>
+<div class="bef-field"><label for="befReason">Reason for this change (audit record)</label><textarea id="befReason" required minlength="12" maxlength="500" placeholder="Why are you turning referrals on or off? Include the reason for your member target."></textarea></div>
+<button class="bef-button" id="befSave" type="submit">Save referral settings</button>
+<p class="bef-help" id="befUpdated">No updates loaded yet.</p></form>
+</div>
+<div class="bef-card bef-wide"><h2>Program state and safeguards</h2>
+<p id="befProgramStatus">Checking…</p>
+<div class="bef-note"><strong>Tracking only.</strong> Cash payouts, airtime, withdrawal requests and automatic awards are disabled. Switching referrals ON activates invitation tracking, not a ₦1,000 payment promise. All setting changes are written to a private database audit log.</div>
+<p>Pausing stops new code claims and prevents new invitation codes from being issued. Existing referral records and codes remain saved, and users can still use the rest of Blipmood normally.</p>
+<a class="bef-back" href="../blip-earn.html">View member dashboard</a>
+</div>
+</section></main><script type="module" src="../assets/js/blip-earn-admin.mjs"></script>
+</body></html>
