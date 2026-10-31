@@ -31,6 +31,29 @@ function render(data){
   :state.target_reached
   ?"Automatically paused: the verified-onboarded member target has been met. Raise the target or disable the program manually."
   :"New referrals are paused. Existing records remain intact.";
+ const history=$("befAuditHistory");
+ if(history){
+   history.replaceChildren();
+   const events=Array.isArray(data.history)?data.history:[];
+   if(!events.length){
+     const empty=document.createElement("li");
+     empty.textContent="No configuration changes recorded yet.";
+     history.append(empty);
+   }
+   for(const entry of events.slice(0,15)){
+     const item=document.createElement("li");
+     const heading=document.createElement("strong");
+     heading.textContent=entry.enabled?"Referrals switched on":"Referrals paused";
+     const details=document.createElement("small");
+     const timestamp=Number.isFinite(Date.parse(entry.at))?new Date(entry.at).toLocaleString():"Unknown time";
+     const target=Number.isInteger(Number(entry.target))?Number(entry.target):0;
+     details.textContent=timestamp+" · Goal: "+(target?target.toLocaleString()+" verified members":"manual only");
+     const reason=document.createElement("small");
+     reason.textContent="Reason: "+String(entry.reason||"Not provided").slice(0,500);
+     item.append(heading,details,reason);
+     history.append(item);
+   }
+ }
  $("befWorkspace").hidden=false;
  gate("Super Admin access confirmed. Changes to this switch are audited in the database.");
 }
