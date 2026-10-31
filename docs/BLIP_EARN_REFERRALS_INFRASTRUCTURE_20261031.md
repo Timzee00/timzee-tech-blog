@@ -1,6 +1,6 @@
 # Blip Earn: Referral and Monetization Infrastructure Audit
 
-**Status:** DESIGN ONLY — NOT LIVE, NOT A PAYMENT PROMISE.  
+**Status:** PHASE A BUILT (code + Supabase schema); referral acceptance OFF by default; qualification, cash and airtime NOT LIVE.  
 **Scope:** Existing Blipmood static frontend, Supabase, and Netlify Functions.  
 **Decision:** Start with a limited, manually reviewed referral pilot; do not enable cash or airtime rewards until the control gates below pass.
 

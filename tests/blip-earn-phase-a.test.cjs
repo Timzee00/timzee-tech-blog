@@ -1,6 +1,6 @@
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs");
 const read=file=>fs.readFileSync(file,"utf8");
-const sql=read("supabase/migrations/20261031123500_blip_earn_referral_phase_a.sql");
+const sql=read("supabase/migrations/20261031115549_blip_earn_referral_phase_a.sql");
 const api=read("netlify/functions/blip-earn.js");
 const setup=read("assets/js/member-onboarding.mjs");
 const html=read("welcome.html");
@@ -84,7 +84,7 @@ test("Responsive member and staff pages exist with working navigation links",()=
 });
 
 test("New invitation codes are minted atomically and cannot bypass founder pause",()=>{
- const mint=read("supabase/migrations/20261031125800_blip_earn_atomic_code_issue.sql");
+ const mint=read("supabase/migrations/20261031121053_blip_earn_atomic_code_issue.sql");
  assert.match(mint,/function public\.blip_referral_issue_code\(p_user uuid,p_code text\)/);
  assert.match(mint,/for update/);
  assert.match(mint,/not cfg\.enabled/);
@@ -94,8 +94,8 @@ test("New invitation codes are minted atomically and cannot bypass founder pause
  assert.doesNotMatch(api,/\.from\("blip_referral_codes"\)\.insert\(/);
 });
 test("Private change history is visible only through bounded Super Admin endpoint",()=>{
- const authFix=read("supabase/migrations/20261031124500_blip_earn_admin_role_fix.sql");
- const audit=read("supabase/migrations/20261031130500_blip_earn_admin_audit_history.sql");
+ const authFix=read("supabase/migrations/20261031120659_blip_earn_admin_role_fix.sql");
+ const audit=read("supabase/migrations/20261031121139_blip_earn_admin_audit_history.sql");
  const ui=read("assets/js/blip-earn-admin.mjs");
  assert.match(authFix,/v_actor_role is distinct from 'super'/);
  assert.match(audit,/v_actor_role is distinct from 'super'/);
@@ -109,7 +109,7 @@ test("Private change history is visible only through bounded Super Admin endpoin
 });
 
 test("Referral guess-attempt records have bounded retention on the small database plan",()=>{
- const cleanup=read("supabase/migrations/20261031131200_blip_earn_bounded_attempt_retention.sql");
+ const cleanup=read("supabase/migrations/20261031121525_blip_earn_bounded_attempt_retention.sql");
  assert.match(cleanup,/attempt_day < current_date-14/);
  assert.match(cleanup,/limit 10000/);
  assert.match(cleanup,/cron\.schedule\('blip-earn-prune-attempts'/);
