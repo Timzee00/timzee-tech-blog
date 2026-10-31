@@ -107,3 +107,11 @@ test("Private change history is visible only through bounded Super Admin endpoin
  assert.match(ui,/history\.replaceChildren\(\)/);
  assert.match(ui,/reason\.textContent=/);
 });
+
+test("Referral guess-attempt records have bounded retention on the small database plan",()=>{
+ const cleanup=read("supabase/migrations/20261031131200_blip_earn_bounded_attempt_retention.sql");
+ assert.match(cleanup,/attempt_day < current_date-14/);
+ assert.match(cleanup,/limit 10000/);
+ assert.match(cleanup,/cron\.schedule\('blip-earn-prune-attempts'/);
+ assert.match(cleanup,/revoke all on function private\.blip_referral_prune_attempts/);
+});
