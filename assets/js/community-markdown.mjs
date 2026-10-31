@@ -1,15 +1,37 @@
 // Safe Markdown: no raw HTML or arbitrary embeds.
 import {escapeHTML} from "./utils.js";
 const tick=String.fromCharCode(96);
-function inline(text){
- let encoded=escapeHTML(String(text||""));
+function formatInlineText(input){
+ let encoded=escapeHTML(String(input||""));
  encoded=encoded.replace(new RegExp(tick+"([^"+tick+"<>\\n]{1,120})"+tick,"g"),"<code>$1</code>");
  encoded=encoded.replace(/\*\*([^*\n]{1,400})\*\*/g,"<strong>$1</strong>");
  encoded=encoded.replace(/(^|[^\w])\*([^*\n]{1,400})\*(?!\w)/g,"$1<em>$2</em>");
  encoded=encoded.replace(/~~([^~\n]{1,400})~~/g,"<del>$1</del>");
- encoded=encoded.replace(/\[([^\]\n]{1,90})\]\((https:\/\/[^\s<>()"']{1,500})\)/g,
- (_,label,url)=>'<a rel="noopener noreferrer nofollow ugc" target="_blank" href="'+url+'">'+label+'</a>');
  return encoded;
+}
+function safeLink(url,label){
+ try{
+  const parsed=new URL(url);
+  if(!["https:","http:"].includes(parsed.protocol)||parsed.username||parsed.password)return formatInlineText(label);
+  return '<a rel="noopener noreferrer nofollow ugc" target="_blank" href="'+escapeHTML(parsed.href)+'">'+escapeHTML(label)+'</a>';
+ }catch{return formatInlineText(label);}
+}
+// Both [friendly text](https://example.com) and plain https:// URLs work.
+// All URL tokens are validated before they become clickable markup.
+function inline(text){
+ const raw=String(text||"");
+ const links=/\[([^\]\n]{1,90})\]\((https?:\/\/[^\s<>()"'\]]{1,500})\)|(https?:\/\/[^\s<>()"'\]]{1,500})/g;
+ let result="",previous=0;
+ for(const found of raw.matchAll(links)){
+  result+=formatInlineText(raw.slice(previous,found.index));
+  const label=found[1],rawUrl=found[2]||found[3];
+  if(label){result+=safeLink(rawUrl,label);previous=found.index+found[0].length;continue;}
+  const url=rawUrl.replace(/[.,!?:;]+$/,"");
+  result+=safeLink(url,url);
+  result+=formatInlineText(rawUrl.slice(url.length));
+  previous=found.index+found[0].length;
+ }
+ return result+formatInlineText(raw.slice(previous));
 }
 export function renderCommunityMarkdown(raw){
  const source=String(raw||"").slice(0,12000).replace(/\r\n/g,"\n");
