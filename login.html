@@ -95,7 +95,7 @@
         </section>
 
         <section class="auth-cards">
-          <a class="auth-v7-brand" href="index.html" aria-label="Blipmood — back to home"><img src="assets/brand/blipmood-mark.svg" alt="" width="37" height="37">blip<em>mood</em></a>
+          <a class="auth-v7-brand" href="index.html" aria-label="Blipmood — back to home"><img src="assets/brand/blipmood-wordmark-dark.png" alt="Blipmood" width="238" height="79" decoding="async"></a>
           <div class="auth-switcher" data-view="login">
             <div class="auth-card auth-panel auth-panel-login">
               <h2>Welcome <span>Back</span></h2>
@@ -176,6 +176,11 @@
                       <button type="button" class="password-toggle" data-password-toggle="signupPasswordConfirm" aria-label="Show confirmation password" title="Show confirmation password"></button>
                     </div>
                   </div>
+                </div>
+                <div class="auth-password-feedback">
+                  <div class="auth-password-bars" id="signupPasswordBars" data-strength="0" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+                  <p class="auth-password-description" id="signupPasswordStrength">Use at least 8 characters. A longer, unique password is safer.</p>
+                  <p class="auth-password-description" id="signupPasswordMatch" role="status" aria-live="polite"></p>
                 </div>
                 <label class="auth-v7-check" for="signupTerms">
                   <input type="checkbox" id="signupTerms" required>
