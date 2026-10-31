@@ -91,6 +91,9 @@
 .forum-empty p{font-size:.81rem}
 .forum-empty button{border:1px solid var(--color-border-strong,#aabac0);border-radius:8px;background:var(--color-surface-muted,#eff7f4);color:var(--color-text,#24313c);padding:9px 13px;font-weight:700}
 .forum-guide-row{display:flex;align-items:start;gap:10px;border-top:1px solid var(--color-border,#edf0f1);padding:9px 0}
+.forum-guide-row [data-bm-icon] svg{width:14px;height:14px;display:block;stroke-width:2.2}
+.forum-nav-item [data-bm-icon] svg{width:20px;height:20px;display:block}
+.forum-button [data-bm-icon] svg{width:17px;height:17px;display:inline-block;vertical-align:middle}
 .forum-guide-row span{font-size:.7rem;color:var(--color-primary,#087f73);font-weight:900}
 .forum-guide-row p,.forum-quick-guide>p,.forum-conduct>p{margin:0;font-size:.78rem;line-height:1.6;color:var(--color-text-muted,#667583)}
 .forum-quick-guide>p{margin-bottom:12px}
