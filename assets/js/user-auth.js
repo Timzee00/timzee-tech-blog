@@ -317,6 +317,18 @@ async function boot() {
   const resetMessage = document.getElementById("resetMessage");
   const googleSignIn = document.getElementById("googleSignIn");
   const appleSignIn = document.getElementById("appleSignIn");
+  const googleSignUp = document.getElementById("googleSignUp");
+  const appleSignUp = document.getElementById("appleSignUp");
+  const loginRemember = document.getElementById("loginRemember");
+  // Remembering an email is opt-in. Passwords/tokens are never written here.
+  try {
+    const savedEmail = localStorage.getItem("blipmood:remember-email");
+    if (savedEmail && loginRemember) {
+      const emailField = document.getElementById("loginEmail");
+      if (emailField) emailField.value = savedEmail;
+      loginRemember.checked = true;
+    }
+  } catch { /* Storage may be unavailable in private browsing. */ }
   const recoveryRedirect = new URL(makeAuthRedirect(getAuthRedirectOrigin(window.location.origin, SITE_URL)));
   recoveryRedirect.searchParams.set("recovery", "1");
   const redirectTo = recoveryRedirect.toString();
@@ -415,26 +427,50 @@ async function boot() {
   if (appleSignIn) {
     appleSignIn.addEventListener("click", () => handleOAuthSignIn("apple", appleSignIn, loginMessage, nextUrl));
   }
+  // Sign-up social controls use the identical OAuth flow and account provisioning.
+  if (googleSignUp) {
+    googleSignUp.addEventListener("click", () => handleOAuthSignIn("google", googleSignUp, signupMessage, nextUrl));
+  }
+  if (appleSignUp) {
+    appleSignUp.addEventListener("click", () => handleOAuthSignIn("apple", appleSignUp, signupMessage, nextUrl));
+  }
 
   if (loginForm) {
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (!loginForm.reportValidity()) return;
       const email = document.getElementById("loginEmail").value.trim();
-      const password = document.getElementById("loginPassword").value.trim();
-      const result = await signIn(email, password);
-      if (result.error) {
-        setMessage(loginMessage, normalizeAuthError(result.error, "login"));
-        return;
+      // Passwords are never trimmed: leading/trailing spaces may be intentional.
+      const password = document.getElementById("loginPassword").value;
+      const submit = loginForm.querySelector('button[type="submit"]');
+      if (submit?.disabled) return;
+      if (submit) submit.disabled = true;
+      setMessage(loginMessage, "", false);
+      try {
+        const result = await signIn(email, password);
+        if (result.error) {
+          setMessage(loginMessage, normalizeAuthError(result.error, "login"));
+          return;
+        }
+        const user = await getCurrentUser();
+        await ensureProfileRecord(user);
+        const profileCheck = await fetchProfileStatus();
+        if (profileCheck?.blocked) {
+          setMessage(loginMessage, profileCheck.message || "Account access is restricted.");
+          await signOut();
+          return;
+        }
+        // Email-only convenience; Supabase continues to manage the actual session.
+        try {
+          if (loginRemember?.checked) localStorage.setItem("blipmood:remember-email", email);
+          else localStorage.removeItem("blipmood:remember-email");
+        } catch { /* Storage is optional. */ }
+        window.location.href = await nextAfterMemberSetup(user,nextUrl);
+      } catch (error) {
+        setMessage(loginMessage, normalizeAuthError(error, "login"));
+      } finally {
+        if (submit) submit.disabled = false;
       }
-      const user = await getCurrentUser();
-      await ensureProfileRecord(user);
-      const profileCheck = await fetchProfileStatus();
-      if (profileCheck?.blocked) {
-        setMessage(loginMessage, profileCheck.message || "Account access is restricted.");
-        await signOut();
-        return;
-      }
-      window.location.href = await nextAfterMemberSetup(user,nextUrl);
     });
   }
 
@@ -472,21 +508,61 @@ async function boot() {
   if (signupForm) {
     signupForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const name = document.getElementById("signupName").value.trim();
-      const email = document.getElementById("signupEmail").value.trim();
-      const password = document.getElementById("signupPassword").value.trim();
-      const result = await signUp(email, password, name);
-      if (result.error) {
-        setMessage(signupMessage, normalizeAuthError(result.error, "signup"));
+      const nameField = document.getElementById("signupName");
+      const emailField = document.getElementById("signupEmail");
+      const passwordField = document.getElementById("signupPassword");
+      const confirmField = document.getElementById("signupPasswordConfirm");
+      const terms = document.getElementById("signupTerms");
+      const name = nameField?.value.trim() || "";
+      const email = emailField?.value.trim() || "";
+      const password = passwordField?.value || "";
+      const confirm = confirmField?.value || "";
+      setMessage(signupMessage, "", false);
+      if (!name || name.length < 2) {
+        setMessage(signupMessage, "Please enter your name (at least 2 characters).");
+        nameField?.focus();
         return;
       }
-      const requiresConfirmation = !result.data?.session;
-      if (requiresConfirmation) {
-        setMessage(signupMessage, "Account created. Confirm your email from your inbox/spam before signing in.");
-      } else {
-        setMessage(signupMessage, "Account created successfully. You can sign in now.");
+      if (!emailField?.checkValidity()) { emailField?.reportValidity(); return; }
+      if (password.length < 8) {
+        setMessage(signupMessage, "Use a password with at least 8 characters.");
+        passwordField?.focus();
+        return;
       }
-      await signOut();
+      if (password !== confirm) {
+        setMessage(signupMessage, "Your passwords don't match.");
+        confirmField?.setAttribute("aria-invalid", "true");
+        confirmField?.focus();
+        return;
+      }
+      confirmField?.removeAttribute("aria-invalid");
+      if (!terms?.checked) {
+        setMessage(signupMessage, "Please accept the Terms and Privacy Policy to create an account.");
+        terms?.focus();
+        return;
+      }
+      const submit = signupForm.querySelector('button[type="submit"]');
+      if (submit?.disabled) return;
+      if (submit) submit.disabled = true;
+      try {
+        const result = await signUp(email, password, name);
+        if (result.error) {
+          setMessage(signupMessage, normalizeAuthError(result.error, "signup"));
+          return;
+        }
+        const requiresConfirmation = !result.data?.session;
+        setMessage(signupMessage, requiresConfirmation
+          ? "Account created. Confirm your email from your inbox/spam before signing in."
+          : "Account created successfully. You can sign in now.");
+        await signOut();
+      } catch (error) {
+        setMessage(signupMessage, normalizeAuthError(error, "signup"));
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+    document.getElementById("signupPasswordConfirm")?.addEventListener("input", (event) => {
+      event.target.removeAttribute("aria-invalid");
     });
   }
 
