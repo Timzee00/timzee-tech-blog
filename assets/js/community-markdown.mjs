@@ -1,5 +1,7 @@
 // Safe Markdown: no raw HTML or arbitrary embeds.
-import {escapeHTML} from "./utils.js";
+// Use the dependency-free text escaper: Markdown never needs DOMPurify or DOM access.
+// This keeps the renderer safe and testable before build-site creates vendor bundles.
+import {escapeSocial as escapeHTML} from "./social-rich-text.mjs";
 const tick=String.fromCharCode(96);
 function formatInlineText(input){
  let encoded=escapeHTML(String(input||""));
