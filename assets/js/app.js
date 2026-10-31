@@ -35,6 +35,7 @@ import {
 import { setupReveal } from "./reveal.js";
 import {mountReaderHome} from "./reader-home.mjs";
 import {verifiedAvatar,verifiedName} from "./verified-identity.mjs";
+import { icon } from "./icons.js";
 import "./nav.js";
 
 // The homepage is a curated discovery preview rather than an archive.
@@ -299,18 +300,18 @@ function buildPostCard(post, compact = false) {
       </div>${image}</div>
       <div class="tag-list">${tags}</div>
       <div class="post-icon-row">
-        <button class="post-icon-btn${liked ? " active" : ""}" data-action="like" data-id="${post.id}" data-like-button="${post.id}" aria-label="${liked ? "Unlike" : "Like"} ${likeCount} likes">
-          <span class="post-icon" aria-hidden="true">${liked ? "&#10084;" : "&#9825;"}</span>
+        <button class="post-icon-btn${liked ? " active" : ""}" data-action="like" data-id="${post.id}" data-like-button="${post.id}" aria-label="${liked ? "Unlike" : "Like"} ${likeCount} likes" aria-pressed="${liked}">
+          <span class="post-icon" aria-hidden="true">${icon("heart")}</span>
           <span data-like-count-inline="${post.id}">${likeCount}</span>
         </button>
         <a class="post-icon-btn" data-action="comment" href="post.html?id=${post.id}#comments" aria-label="${commentCount} comments">
-          <span class="post-icon" aria-hidden="true">&#128172;</span>${commentCount}
+          <span class="post-icon" aria-hidden="true">${icon("comment")}</span>${commentCount}
         </a>
         <button class="post-icon-btn" data-action="share" data-id="${post.id}" aria-label="Share">
-          <span class="post-icon" aria-hidden="true">&#8663;</span>Share
+          <span class="post-icon" aria-hidden="true">${icon("share")}</span>Share
         </button>
         <span class="post-icon-btn post-icon-views" aria-label="${post.views || 0} views">
-          <span class="post-icon" aria-hidden="true">&#128065;</span>${post.views || 0}
+          <span class="post-icon" aria-hidden="true">${icon("eye")}</span>${post.views || 0}
         </span>
       </div>
     </article>
@@ -520,8 +521,8 @@ function updateLikeDisplays(postId) {
   });
   document.querySelectorAll(`[data-like-button="${postId}"]`).forEach((btn) => {
     btn.classList.toggle("active", liked);
-    const icon = btn.querySelector(".post-icon");
-    if (icon) icon.innerHTML = liked ? "&#10084;" : "&#9825;";
+    btn.setAttribute("aria-pressed", String(liked));
+    btn.setAttribute("aria-label", `${liked ? "Unlike" : "Like"} ${likeCount} likes`);
   });
   document.querySelectorAll(`[data-like-label="${postId}"]`).forEach((el) => {
     el.textContent = liked ? "Liked" : "Like";
