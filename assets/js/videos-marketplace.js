@@ -508,13 +508,16 @@ export async function fetchMarketplaceItems({
   limit = 20, 
   offset = 0,
   userId = null,
-  onlyAvailable = true
+  onlyAvailable = true,
+  sort = "newest"
 } = {}) {
   try {
     let query = supabase
       .from("marketplace_items")
-      .select("*")
-      .order("created_at", { ascending: false });
+       .select("*");
+    query = sort === "popular"
+      ? query.order("view_count",{ascending:false}).order("created_at",{ascending:false}).order("id",{ascending:false})
+      : query.order("created_at",{ascending:false}).order("id",{ascending:false});
 
     if (onlyAvailable) query = query.eq("is_available", true);
     if (category) query = query.eq("category", category);
@@ -562,15 +565,17 @@ async function attachSellerVerification(items) {
   }
 }
 
-export async function searchMarketplace({ query, category = null, limit = 20, offset = 0 } = {}) {
+export async function searchMarketplace({ query, category = null, limit = 20, offset = 0, sort = "newest" } = {}) {
   if (!query) return [];
   try {
     let request = supabase
       .from("marketplace_items")
       .select("*")
-      .textSearch("search_vector", query, { type: "websearch", config: "english" })
-      .eq("is_available", true)
-      .order("created_at", { ascending: false });
+       .textSearch("search_vector", query, { type: "websearch", config: "english" })
+      .eq("is_available", true);
+    request = sort === "popular"
+      ? request.order("view_count",{ascending:false}).order("created_at",{ascending:false}).order("id",{ascending:false})
+      : request.order("created_at",{ascending:false}).order("id",{ascending:false});
 
     if (category) request = request.eq("category", category);
 
