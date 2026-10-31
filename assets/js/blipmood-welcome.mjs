@@ -4,12 +4,16 @@ const KEY="blipmood:welcome:v2";
 const current=location.pathname.split("/").pop()||"index.html";
 const DURATION=14*24*60*60*1000;
 const before=()=>{try{return Number(localStorage.getItem(KEY)||0)}catch{return 0}};
-function build(){
- // Returning signed-in members already have a home; don't interrupt them.
- if(document.querySelector('#authActions a[href*="profile.html"]'))return;
- if(current!=="index.html"||Date.now()-before()<DURATION||
+function build({force=false}={}){
+ // Don't interrupt returning signed-in members automatically; an explicit
+ // "Replay welcome" click can always open the approved welcome design.
+ if(!force&&document.querySelector('#authActions a[href*="profile.html"]'))return false;
+ if(current!=="index.html"||(!force&&Date.now()-before()<DURATION)||
    document.getElementById("bmWelcomeModal")||
-   document.getElementById("siteAnnouncementBanner"))return;
+   document.getElementById("bm-cinema-intro")||
+   document.getElementById("siteAnnouncementBackdrop")||
+   document.querySelector("#timzee-consent-banner.is-visible")||
+   document.querySelector("#timzee-cookie-settings-modal[open]"))return false;
  const backdrop=document.createElement("div");backdrop.className="bm-welcome-backdrop";backdrop.id="bmWelcomeBackdrop";
  const dialog=document.createElement("div");dialog.className="bm-welcome-hero";dialog.id="bmWelcomeModal";
  dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-labelledby","bmWelcomeHeading");
@@ -40,6 +44,7 @@ function build(){
  document.addEventListener("keydown",escape);
  document.body.append(backdrop,dialog);document.body.classList.add("bm-welcome-open");
  dialog.querySelector(".bm-welcome-close").focus();
+ return true;
 }
 const style=document.createElement("style");style.id="bm-welcome-styles";style.textContent=`
 .bm-welcome-open{overflow:hidden}
@@ -97,4 +102,8 @@ const style=document.createElement("style");style.id="bm-welcome-styles";style.t
 @media(prefers-reduced-motion:reduce){.bm-welcome-hero,.bm-welcome-backdrop{scroll-behavior:auto}}
 `;
 document.head.appendChild(style);
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(build,1800),{once:true});else setTimeout(build,1800);
+// The homepage shell coordinates intro, consent and welcome sequencing.
+// Export an explicit action instead of starting a second uncoordinated timer.
+export function openWelcome({force=false}={}){
+ return build({force});
+}
