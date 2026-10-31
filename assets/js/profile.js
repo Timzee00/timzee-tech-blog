@@ -395,6 +395,8 @@ function renderProfile() {
   }
   if (name) {
     const displayName = plainDisplayName(state.profile?.display_name || "Member");
+    name.classList.toggle("profile-long-name",displayName.length>23);
+    name.title=displayName;
     name.innerHTML = verifiedName(displayName,state.profile);
   }
   const handle=document.getElementById("profileHandle");
