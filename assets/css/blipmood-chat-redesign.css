@@ -565,3 +565,131 @@ body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab-panel:not([hidden]
     width:33px;min-width:33px;height:38px;
   }
 }
+
+/* Inbox viewport space recovery (mobile + desktop).
+ * Earlier shared chat.css capped each conversation panel at 46vh, leaving
+ * unused height while actual conversations were clipped behind the footer.
+ * Keep the approved Blipmood design, with the list as the only scroll area. */
+body.chat-page.blipmood-chat-redesign .chat-sidebar{
+  min-height:0;
+  overflow:hidden;
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab-panel:not([hidden]){
+  flex:1 1 0;
+  max-height:none; /* Overrides old shared .chat-tab-panel { max-height:46vh } */
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;
+  align-content:start;
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-list{
+  align-content:start;
+}
+@media(max-width:760px){
+  body.chat-page.blipmood-chat-redesign .chat-sidebar{
+    display:flex;
+    flex-direction:column;
+    height:100%;
+    min-height:0;
+    padding-bottom:0;
+  }
+  /* Retain the actual approved wordmark, just reduce its empty framing. */
+  body.chat-page.blipmood-chat-redesign .chat-inbox-brand{
+    flex:0 0 54px;
+    min-height:54px;
+    height:54px;
+    padding:3px 14px 1px;
+    overflow:hidden;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-inbox-wordmark{
+    width:154px;
+    max-width:calc(100vw - 32px);
+    height:50px;
+    max-height:50px;
+    object-fit:contain;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar-header{
+    flex:0 0 auto;
+    min-height:46px;
+    padding:4px 14px 6px;
+    gap:8px;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar-header h1{
+    font-size:1rem;
+    line-height:1.25;
+  }
+  /* Readable search with a 44px touch/input height, less wasted margin. */
+  body.chat-page.blipmood-chat-redesign .chat-sidebar>.chat-search-shell{
+    flex:0 0 auto;
+    min-height:44px;
+    margin:0 12px 7px;
+    max-width:calc(100% - 24px);
+    padding-inline:12px!important;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar>.chat-search-shell>input[type="search"]{
+    min-height:44px!important;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-find-people-button{
+    flex:0 0 auto;
+    min-height:44px;
+    margin:0 12px 7px;
+    padding:7px 12px;
+  }
+  /* Keep all five approved filters visible, in a compact 3 + 2 layout. */
+  body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tabs{
+    flex:0 0 auto;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    align-content:start;
+    min-height:0;
+    max-height:none;
+    gap:5px;
+    margin:0 12px 7px;
+    padding:0;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab:not(.chat-tab-secondary){
+    min-height:40px;
+    padding:6px 5px;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab-panel:not([hidden]){
+    flex:1 1 0;
+    max-height:none;
+    min-height:0;
+    padding:0 8px 6px;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-list{
+    gap:4px;
+    padding-bottom:10px;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-list-row{
+    min-height:70px;
+    padding:10px 9px;
+    border-radius:12px;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar-footer{
+    flex:0 0 auto;
+    min-height:42px;
+    padding:0 12px;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar-footer button{
+    min-height:42px;
+    padding:6px 4px;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-mobile-nav{
+    flex:0 0 auto;
+    min-height:56px;
+    padding:3px 6px max(3px,env(safe-area-inset-bottom));
+  }
+  body.chat-page.blipmood-chat-redesign .chat-mobile-nav :is(a,button){
+    min-height:44px;
+  }
+}
+/* On short phones the header's labelled Find-people button already opens
+ * the same dialog: avoid duplicating a large CTA above the conversation list. */
+@media(max-width:760px) and (max-height:730px){
+  body.chat-page.blipmood-chat-redesign .chat-find-people-button{
+    display:none;
+  }
+}
