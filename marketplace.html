@@ -567,17 +567,21 @@
       }
       function renderListings() {
         const container = document.getElementById("listingsContainer");
-        if (!state.listings.length) {
-          container.innerHTML = `<div class="callout">No listings here yet. Try another category or come back soon.</div>`;
+        document.getElementById("marketBrowseColumn").classList.toggle("market-list-mode",state.viewMode==="list");
+        const visibleListings = state.verifiedOnly ? state.listings.filter(item=>Boolean(verifiedLevel(sellerIdentityMap.get(item.user_id)))) : state.listings;
+        if (!visibleListings.length) {
+          container.innerHTML = `<div class="callout">${state.verifiedOnly && state.listings.length ? "No verified creators on this page. Select another page or turn off the verified filter." : "No listings here yet. Try another category or come back soon."}</div>`;
           return;
         }
 
-        container.innerHTML = `<div class="marketplace-grid">${state.listings.map((item) => `
+        container.innerHTML = `<div class="marketplace-grid">${visibleListings.map((item) => `
           <article class="listing-card" data-id="${encodeURIComponent(item.id)}">
+            <button type="button" class="market-card-save" data-favorite-item="${encodeURIComponent(item.id)}" aria-pressed="${favoriteIds.has(item.id)}" aria-label="${favoriteIds.has(item.id) ? "Remove saved listing" : "Save listing on this browser"}" title="Saved on this browser only">${favoriteIds.has(item.id) ? "♥" : "♡"}</button>
             <a class="market-card-photo-link" href="listing.html?id=${encodeURIComponent(item.id)}" aria-label="View ${escapeHTML(item.title || 'listing')} photos">
               <div class="listing-image">
                 ${item.images?.[0] && isSafeUrl(item.images[0]) ? `<img src="${escapeHTML(item.images[0])}" alt="${escapeHTML(item.title || '')}" loading="lazy" decoding="async" fetchpriority="low">` : `<div class="listing-image-placeholder" aria-hidden="true">${icon("stories")}<span>No photo yet</span></div>`}
                 ${item.condition ? `<div class="listing-badge">${escapeHTML(item.condition)}</div>` : ''}
+                ${verifiedLevel(sellerIdentityMap.get(item.user_id)) ? '<span class="market-photo-verify">✓ Verified creator</span>' : ''}
               </div>
             </a>
             <div class="listing-info">
@@ -585,8 +589,8 @@
               <h2 class="listing-title"><a href="listing.html?id=${encodeURIComponent(item.id)}">${escapeHTML(item.title || 'Untitled listing')}</a></h2>
               <div class="listing-price">${escapeHTML(formatMarketplacePrice(item.price, item.currency))}</div>
               <div class="listing-meta">
-                <span>Views ${escapeHTML(String(item.view_count || 0))}</span>
-                <span>${escapeHTML(item.location || 'Online')}</span>
+                <span>◉ ${escapeHTML(String(item.view_count || 0))} views</span>
+                <span>⌖ ${escapeHTML(item.location || 'Online')}</span>
               </div>
               <div class="listing-seller">
                 <a class="tz-market-seller-avatar" href="profile.html?id=${encodeURIComponent(item.user_id || '')}" aria-label="View seller profile">${verifiedAvatar(sellerIdentityMap.get(item.user_id)?.avatar_url,sellerIdentityMap.get(item.user_id),{size:"sm",alt:""})}</a>
@@ -596,11 +600,17 @@
                 <a class="btn ghost sm" href="listing.html?id=${encodeURIComponent(item.id)}">View details</a>
                 <a class="btn sm" href="listing.html?id=${encodeURIComponent(item.id)}&contact=1">Contact seller</a>
               </div>
+              <div class="market-card-compact-actions"><a href="listing.html?id=${encodeURIComponent(item.id)}">Details</a><a href="listing.html?id=${encodeURIComponent(item.id)}&contact=1">Contact</a></div>
             </div>
           </article>
         `).join("")}</div>`;
-
-
+        container.querySelectorAll("[data-favorite-item]").forEach(button=>button.addEventListener("click",()=>{
+          const id=decodeURIComponent(button.dataset.favoriteItem||"");
+          if(!id)return;
+          if(favoriteIds.has(id))favoriteIds.delete(id);else favoriteIds.add(id);
+          try{localStorage.setItem("blipmood:market:favorites",JSON.stringify([...favoriteIds].slice(-500)));}catch{}
+          renderListings();
+        }));
       }
 
       document.getElementById("categoryFilter").addEventListener("click", (event) => {
