@@ -1,6 +1,10 @@
 /* Blipmood Chat redesign: visual layer over the existing secure messaging UI.
  * The approved reference is layout-only; all content and permissions remain real.
  */
+/* Vector icon sizing; reactions chosen by members remain emoji. */
+body.chat-page .chat-attach-menu [data-bm-icon] svg,
+body.chat-page .chat-emoji-toggle [data-bm-icon] svg{width:20px;height:20px;display:block;stroke-width:1.8}
+body.chat-page [data-bm-icon] svg{stroke-width:1.8}
 body.chat-page.blipmood-chat-redesign{
  --chat-ink:#142d3b;--chat-brand:#087f73;--chat-soft:#edf5f6;
  --chat-line:var(--color-border,#e1e9ef);
