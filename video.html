@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Watch - Blipmood</title>
-    <meta name="description" content="Watch tech videos from the Timzee community">
+    <meta name="description" content="Watch creator videos from the Blipmood community">
     <meta name="theme-color" content="#05050a">
     <link rel="stylesheet" href="assets/css/styles.css">
     <script defer src="assets/js/theme-init.js"></script>
@@ -690,14 +690,40 @@
       .reel-upload-status { margin:0; min-height:18px; overflow-wrap:anywhere; font-size:13px; }
       .reel-upload-signin a { color:#99ecf7; font-weight:700; }
       @media (prefers-reduced-motion:reduce) { .reel-nav-create { transition:none; } }
-    </style>
+    
+      /* Slim recognition above creator name, with verification on the name line. */
+      .reel-creator-flags{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px}
+      .reel-creator-flags:empty{display:none}
+      .reel-creator-flags .reel-staff{
+        margin:0;padding:4px 7px;font-size:10px;line-height:1;border-radius:6px;box-shadow:none
+      }
+      .reel-creator-flags .reel-edit-caption{
+        margin:0;min-width:0;min-height:26px;padding:4px 9px;
+        border-radius:6px;font-size:10px;line-height:1.1;box-shadow:none
+      }
+      .reel-uploader{display:flex;align-items:center;gap:7px;min-width:0;max-width:100%;margin-bottom:5px}
+      .reel-uploader .reel-username{display:block;min-width:0;max-width:min(62vw,270px);font-size:13px}
+      .reel-uploader .tz-identity-name{
+        display:inline-flex;align-items:center;flex-wrap:nowrap;max-width:100%;
+        gap:4px;white-space:nowrap;font-size:inherit;line-height:1.2
+      }
+      .reel-uploader .tz-identity-name.tz-nameplate{
+        padding:2px 5px;border-radius:7px;background:rgba(14,25,36,.65);box-shadow:none
+      }
+      .reel-uploader .tz-verified-badge{flex:0 0 auto;vertical-align:middle}
+      .reel-bottom .reel-meta{min-width:0;max-width:calc(100% - 72px)}
+      @media(max-width:420px){
+        .reel-bottom{gap:6px;padding-inline:10px}
+        .reel-uploader .reel-username{max-width:min(58vw,235px)}
+      }
+</style>
   </head>
   <body class="reel-mode">
     <a class="skip-link" href="#main-content">Skip to videos</a>
     <script type="module" src="assets/js/nav.js"></script>
 
-    <main id="main-content" aria-label="Timzee Reels">
-      <h1 class="visually-hidden">Timzee Reels</h1>
+    <main id="main-content" aria-label="Blipmood Reels">
+      <h1 class="visually-hidden">Blipmood Reels</h1>
       <header class="reel-nav" aria-label="Reels controls">
         <a class="reel-back" id="reelHeaderBack" href="videos.html" aria-label="Back to videos" title="Back">←</a>
         <nav class="reel-feed-modes" aria-label="Video feed">
@@ -732,7 +758,7 @@
         <button type="button" class="reel-upload-close" id="reelUploadClose" aria-label="Close uploader">×</button>
       </div>
       <div class="reel-upload-signin" id="reelUploadSignin" hidden>
-        <p>Sign in to share your video with the Timzee community.</p>
+        <p>Sign in to share your video with the Blipmood community.</p>
         <a id="reelUploadLogin" href="login.html">Sign in to upload</a>
       </div>
       <form id="reelUploadForm" class="reel-upload-form" novalidate>
@@ -1146,11 +1172,13 @@
 
             <div class="reel-bottom">
               <div class="reel-meta">
+                <div class="reel-creator-flags" aria-label="Recognition and editing controls">
+                  ${staff}
+                  ${state.user?.id===video.user_id?'<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">✎ Edit</button>':''}
+                </div>
                 <div class="reel-uploader">
                   <a class="reel-avatar-frame" href="profile.html?id=${encodeURIComponent(video.user_id || '')}" aria-label="View uploader profile">${avatarMarkup}</a>
                   <span class="reel-username">${uploaderMarkup}</span>
-                  ${staff}
-                  ${state.user?.id===video.user_id?'<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">✎ Edit</button>':''}
                 </div>
                 <p class="reel-caption" id="caption-${index}">${renderSocialText(video.title || "")}${video.description ? " — " + renderSocialText(video.description) : ""}</p>
                 <button type="button" class="reel-caption-more" data-action="expand-caption" data-index="${index}" aria-expanded="false">More caption</button>
