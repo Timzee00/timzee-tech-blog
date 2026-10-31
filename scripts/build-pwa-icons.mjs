@@ -79,3 +79,45 @@ export async function createPwaIcons(output){
   await writeFile(resolve(output,`assets/brand/blipmood-pwa-${suffix}.png`),render(image,size,padding));
  }
 }
+
+
+// Responsive hero artwork keeps the exact approved transparent emblem,
+// preserving colors and alpha without introducing a new design or dependency.
+function resizeTransparent(source,targetWidth){
+ const width=targetWidth;
+ const height=Math.max(1,Math.round(targetWidth*source.height/source.width));
+ const result=Buffer.alloc(width*height*4);
+ const factorX=source.width/width,factorY=source.height/height;
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+  const sx=Math.max(0,Math.min(source.width-1,(x+.5)*factorX-.5));
+  const sy=Math.max(0,Math.min(source.height-1,(y+.5)*factorY-.5));
+  const x0=Math.floor(sx),y0=Math.floor(sy);
+  const x1=Math.min(x0+1,source.width-1),y1=Math.min(y0+1,source.height-1);
+  const fx=sx-x0,fy=sy-y0;
+  const p=[(y0*source.width+x0)*4,(y0*source.width+x1)*4,
+           (y1*source.width+x0)*4,(y1*source.width+x1)*4];
+  const weights=[(1-fx)*(1-fy),fx*(1-fy),(1-fx)*fy,fx*fy];
+  let alpha=0,r=0,g=0,b=0;
+  for(let i=0;i<4;i++){
+   const a=source.pixels[p[i]+3]/255*weights[i];
+   alpha+=a;r+=source.pixels[p[i]]*a;
+   g+=source.pixels[p[i]+1]*a;b+=source.pixels[p[i]+2]*a;
+  }
+  const out=(y*width+x)*4;
+  result[out]=alpha?Math.round(r/alpha):0;
+  result[out+1]=alpha?Math.round(g/alpha):0;
+  result[out+2]=alpha?Math.round(b/alpha):0;
+  result[out+3]=Math.round(alpha*255);
+ }
+ return encodePng(width,height,result);
+}
+export async function createResponsiveEmblemAssets(output){
+ const brandFolder=resolve(output,"assets/brand");
+ for(const theme of ["light","dark"]){
+  const src=decodePng(await readFile(resolve(brandFolder,"blipmood-emblem-"+theme+".png")));
+  for(const width of [180,420]){
+   const file=resolve(brandFolder,"blipmood-emblem-"+theme+"-"+width+".png");
+   await writeFile(file,resizeTransparent(src,width));
+  }
+ }
+}
