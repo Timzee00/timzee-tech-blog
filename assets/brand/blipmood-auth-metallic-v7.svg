@@ -1,31 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
 <defs>
- <linearGradient id="back" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#040408"/><stop offset=".4" stop-color="#181219"/><stop offset=".7" stop-color="#07060c"/><stop offset="1" stop-color="#181015"/></linearGradient>
+ <linearGradient id="back" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06141d"/><stop offset=".4" stop-color="#102733"/><stop offset=".7" stop-color="#081923"/><stop offset="1" stop-color="#0e2732"/></linearGradient>
  <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
   <stop stop-color="#040407"/><stop offset=".11" stop-color="#26242c"/><stop offset=".18" stop-color="#c2c1c9"/><stop offset=".25" stop-color="#39343d"/><stop offset=".45" stop-color="#100c13"/><stop offset=".6" stop-color="#55515d"/><stop offset=".69" stop-color="#0b0b0f"/><stop offset=".81" stop-color="#a19ba2"/><stop offset="1" stop-color="#08070c"/>
  </linearGradient>
- <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-  <stop stop-color="#24120b"/><stop offset=".16" stop-color="#684019"/><stop offset=".27" stop-color="#ffc976"/><stop offset=".32" stop-color="#fff3a4"/><stop offset=".4" stop-color="#956024"/><stop offset=".61" stop-color="#20100b"/><stop offset=".77" stop-color="#b47729"/><stop offset=".89" stop-color="#f2ad4b"/><stop offset="1" stop-color="#1b0e0a"/>
+ <linearGradient id="brand" x1="0" y1="0" x2="0" y2="1">
+  <stop stop-color="#091b23"/><stop offset=".16" stop-color="#195b68"/><stop offset=".27" stop-color="#70d2cb"/><stop offset=".32" stop-color="#d0fff5"/><stop offset=".4" stop-color="#2f8fa2"/><stop offset=".61" stop-color="#09222b"/><stop offset=".77" stop-color="#297e9d"/><stop offset=".89" stop-color="#89bce9"/><stop offset="1" stop-color="#0b2230"/>
  </linearGradient>
- <linearGradient id="edge" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#8d5418"/><stop offset=".5" stop-color="#ffc36b"/><stop offset="1" stop-color="#7a4216"/></linearGradient>
+ <linearGradient id="accent-edge" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#165c6d"/><stop offset=".5" stop-color="#8ce8db"/><stop offset="1" stop-color="#2368a2"/></linearGradient>
  <filter id="soft"><feGaussianBlur stdDeviation="10"/></filter>
  <filter id="glow"><feGaussianBlur stdDeviation="3"/></filter>
 </defs>
 <rect width="1440" height="900" fill="url(#back)"/>
 <path d="M-320 -340 C50 -140 245 115 465 285 S990 594 1770 780" stroke="#010106" stroke-width="260" fill="none" opacity=".96"/>
 <path d="M-380 -210 C50 -10 238 183 460 372 S1080 800 1690 930" stroke="url(#metal)" stroke-width="175" fill="none" opacity=".85"/>
-<path d="M-420 -140 C0 55 202 250 422 413 S1010 802 1640 890" stroke="#d6d2d8" stroke-width="7" fill="none" opacity=".35"/>
-<path d="M-330 -195 C75 20 227 239 435 375 S1080 810 1690 930" stroke="#030207" stroke-width="15" fill="none" opacity=".8"/>
-<path d="M-280 26 C90 260 232 351 409 475 S940 795 1570 860" stroke="url(#gold)" stroke-width="63" fill="none" opacity=".87"/>
-<path d="M-280 4 C115 258 260 365 440 494 S950 809 1600 881" stroke="#ffc778" stroke-width="4" fill="none" opacity=".72"/>
-<path d="M-200 -160 C250 160 505 292 730 376 S1310 539 1680 680" stroke="#020106" stroke-width="135" fill="none" opacity=".8"/>
-<path d="M-130 -100 C285 158 516 260 763 352 S1293 533 1745 650" stroke="url(#gold)" stroke-width="44" fill="none" opacity=".74"/>
-<path d="M-150 -123 C270 132 520 250 776 344 S1288 524 1720 639" stroke="#fbd490" stroke-width="3" fill="none" opacity=".76"/>
-<path d="M-150 370 C160 482 330 560 560 644 S1030 828 1535 980" stroke="#020106" stroke-width="118" fill="none" opacity=".7"/>
+<path d="M-420 -140 C0 55 202 250 422 413 S1010 802 1640 890" stroke="#a1d5e4" stroke-width="7" fill="none" opacity=".35"/>
+<path d="M-330 -195 C75 20 227 239 435 375 S1080 810 1690 930" stroke="#04151d" stroke-width="15" fill="none" opacity=".8"/>
+<path d="M-280 26 C90 260 232 351 409 475 S940 795 1570 860" stroke="url(#brand)" stroke-width="63" fill="none" opacity=".87"/>
+<path d="M-280 4 C115 258 260 365 440 494 S950 809 1600 881" stroke="#8debdc" stroke-width="4" fill="none" opacity=".72"/>
+<path d="M-200 -160 C250 160 505 292 730 376 S1310 539 1680 680" stroke="#061723" stroke-width="135" fill="none" opacity=".8"/>
+<path d="M-130 -100 C285 158 516 260 763 352 S1293 533 1745 650" stroke="url(#brand)" stroke-width="44" fill="none" opacity=".74"/>
+<path d="M-150 -123 C270 132 520 250 776 344 S1288 524 1720 639" stroke="#b3ecfb" stroke-width="3" fill="none" opacity=".76"/>
+<path d="M-150 370 C160 482 330 560 560 644 S1030 828 1535 980" stroke="#061723" stroke-width="118" fill="none" opacity=".7"/>
 <path d="M-150 370 C190 485 347 562 570 652 S1090 842 1580 979" stroke="url(#metal)" stroke-width="57" fill="none" opacity=".56"/>
-<path d="M-80 745 C280 580 460 395 635 267 S1080 61 1480 -22" stroke="#020006" stroke-width="145" fill="none" opacity=".9"/>
+<path d="M-80 745 C280 580 460 395 635 267 S1080 61 1480 -22" stroke="#04141d" stroke-width="145" fill="none" opacity=".9"/>
 <path d="M-80 745 C260 579 455 399 651 254 S1088 59 1520 -12" stroke="url(#metal)" stroke-width="76" fill="none" opacity=".6"/>
-<path d="M-65 737 C285 560 460 386 640 260 S1090 66 1520 -7" stroke="#eee8e5" stroke-width="2" fill="none" opacity=".5"/>
-<path d="M455 285 C655 355 772 425 972 459 S1360 527 1560 555" stroke="url(#edge)" stroke-width="10" fill="none" filter="url(#glow)" opacity=".28"/>
-<rect width="1440" height="900" fill="#09070c" opacity=".23"/>
+<path d="M-65 737 C285 560 460 386 640 260 S1090 66 1520 -7" stroke="#d0f7f6" stroke-width="2" fill="none" opacity=".5"/>
+<path d="M455 285 C655 355 772 425 972 459 S1360 527 1560 555" stroke="url(#accent-edge)" stroke-width="10" fill="none" filter="url(#glow)" opacity=".28"/>
+<rect width="1440" height="900" fill="#071923" opacity=".23"/>
 </svg>
