@@ -53,6 +53,9 @@ const paths = {
   maximize: '<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>',
   play: '<path d="m8 5 12 7-12 7V5Z"/>',
   pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  'arrow-right': '<path d="M4 12h16m-6-6 6 6-6 6"/>',
+
 };
 export function icon(name) {
   return `<svg class="bm-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[name] || paths.discussion}</svg>`;
