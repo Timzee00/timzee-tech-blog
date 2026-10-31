@@ -8,6 +8,7 @@ import { injectSiteShell } from "./inject-site-shell.mjs";
 import { injectSocialDefaults } from "./inject-social-meta.mjs";
 import { previewIndexingHeaders } from "./preview-indexing.mjs";
 import {downloadBrandAssets,useLocalBrandAssetUrls} from "./brand-assets.mjs";
+import {createPwaIcons} from "./build-pwa-icons.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const output = resolve(root, "dist");
@@ -17,7 +18,7 @@ await mkdir(output, { recursive: true });
 // Only public assets belong in the CDN bundle. Never publish the repository,
 // migrations, server source, dependency tree, or operational reports.
 for (const entry of await readdir(root)) {
-  if (entry.endsWith(".html") || ["_headers", "robots.txt", "sitemap.xml", "sw.js"].includes(entry)) {
+  if (entry.endsWith(".html") || ["_headers", "robots.txt", "sitemap.xml", "sw.js", "app.webmanifest"].includes(entry)) {
     await cp(resolve(root, entry), resolve(output, entry));
   }
 }
@@ -80,6 +81,18 @@ for (const file of files.filter(path => path.endsWith(".html"))) {
   // Cover shell-less public HTML too, without loading analytics for staff pages.
   const staff = ["admin/","author/","moderator/","super/"].some(prefix =>
     relativePath.startsWith(prefix));
+  // A single push-compatible service worker makes the public app installable.
+  // Register only after load/idle; do not add offline caching to staff pages.
+  if (!staff && enhanced.includes("</head>") && !/rel=["']manifest["']/.test(enhanced)) {
+    enhanced = enhanced.replace("</head>",
+      '  <link rel="manifest" href="/app.webmanifest">\n' +
+      '  <meta name="apple-mobile-web-app-capable" content="yes">\n' +
+      '  <meta name="apple-mobile-web-app-title" content="Blipmood">\n</head>');
+  }
+  if (!staff && enhanced.includes("</body>") && !enhanced.includes("pwa-register.mjs")) {
+    enhanced = enhanced.replace("</body>",
+      '  <script type="module" src="/assets/js/pwa-register.mjs"></script>\n</body>');
+  }
   if (!staff && enhanced.includes("</body>") &&
       !enhanced.includes('src="/assets/js/visitor-analytics.js"')) {
     enhanced = enhanced.replace("</body>",
@@ -90,6 +103,7 @@ for (const file of files.filter(path => path.endsWith(".html"))) {
 // Include the exact user-approved artwork in the first-party published bundle.
 // Source media is checksum-pinned: never ship a truncated or tampered image.
 await downloadBrandAssets(output);
+await createPwaIcons(output);
 // Replace the immutable media sources with first-party URLs after copying assets.
 // In source mode, remote URLs remain valid for local previews and link validation.
 for (const file of await filesIn(output)) {
@@ -102,6 +116,10 @@ const publishedFiles=await filesIn(output);
 const hash = createHash("sha256");
 for (const file of publishedFiles) hash.update(await readFile(file));
 const assetVersion = hash.digest("hex").slice(0, 16);
+// Each deploy gets a fresh static-cache namespace, avoiding stale scripts.
+const workerPath=resolve(output,"sw.js");
+await writeFile(workerPath,(await readFile(workerPath,"utf8"))
+  .replaceAll("__BLIPMOOD_ASSET_VERSION__",assetVersion));
 // Old deployments marked stable URLs immutable for a year. Version every local
 // JS/CSS reference (including module and CSS imports) to escape those caches.
 for (const file of publishedFiles.filter(path => /\.(?:html|js|mjs|css)$/.test(path))) {
