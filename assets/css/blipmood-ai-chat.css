@@ -1,0 +1,60 @@
+/* Blipmood AI conversation shell — scoped, responsive and mobile-first. */
+body.blipmood-ai-page{--ai-accent:#49e3da}
+body.blipmood-ai-page .site-header{position:sticky;top:0;z-index:80;background:var(--color-surface,#092536);border-bottom:1px solid var(--color-border,#335362)}
+body.blipmood-ai-page main{padding:18px 0 22px;max-width:100%;overflow-x:clip}
+body.blipmood-ai-page #aiChatLayout{width:min(calc(100% - 24px),1240px);max-width:100%;height:clamp(490px,calc(100dvh - 184px),880px);min-height:0;margin:auto;padding:0;display:grid;grid-template-columns:minmax(230px,295px) minmax(0,1fr);align-items:stretch;gap:14px}
+body.blipmood-ai-page #aiChatLayout>*{min-width:0;min-height:0}
+body.blipmood-ai-page #aiChatLayout .chat-sidebar{min-height:0;overflow:auto;overscroll-behavior:contain;align-content:start;gap:13px;padding:16px}
+body.blipmood-ai-page #aiChatLayout .chat-sidebar-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+body.blipmood-ai-page #aiChatLayout .chat-sidebar-header h2{font-size:1.13rem;margin:0}
+body.blipmood-ai-page #aiChatLayout #newConversationBtn{min-height:39px;padding:8px 12px;font-size:.84rem;border-radius:11px}
+body.blipmood-ai-page #aiChatLayout .chat-pane{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;align-self:stretch;overflow:hidden;min-height:0;height:100%;max-height:100%;border-radius:17px}
+body.blipmood-ai-page #aiChatHeader{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;flex-shrink:0;width:100%;min-height:70px;padding:11px 15px;background:var(--color-surface,#102d3b);border-bottom:1px solid var(--color-border,#49646d);box-shadow:0 2px 12px #0000000c}
+body.blipmood-ai-page .ai-chat-identity{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+body.blipmood-ai-page .ai-chat-mark{width:39px;height:39px;border-radius:12px;display:grid;place-items:center;flex:0 0 39px;background:linear-gradient(135deg,#067c84,#32d5b7);color:#fff;box-shadow:0 4px 14px #07a49a38}
+body.blipmood-ai-page .ai-chat-mark svg{width:22px;height:22px}
+body.blipmood-ai-page .ai-chat-heading{min-width:0;display:grid;gap:4px}
+body.blipmood-ai-page #aiChatTitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;color:var(--color-text,#eef7fb);font-size:.95rem}
+body.blipmood-ai-page #aiChatSubtitle{font-size:.7rem;color:var(--color-text-muted,#aec3d0);line-height:1.3}
+body.blipmood-ai-page #aiHeaderNewChat{border:1px solid #528c8c;background:#1b414c;color:#e3fbfc;border-radius:11px;padding:8px 12px;min-height:38px;white-space:nowrap;font-size:.77rem;font-weight:800;cursor:pointer}
+body.blipmood-ai-page #aiHeaderNewChat:hover{border-color:#48e3da}
+body.blipmood-ai-page #aiChatMessages{min-height:0;max-height:none!important;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;padding:clamp(12px,2vw,20px);background:var(--color-bg,#081b28)}
+body.blipmood-ai-page #aiChatMessages .message-row{max-width:100%;min-width:0}
+body.blipmood-ai-page #aiChatMessages .ai-message-stack{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:min(96%,860px)}
+body.blipmood-ai-page #aiChatMessages .chat-bubble{max-width:100%;overflow-wrap:anywhere;word-break:normal;border-radius:15px;padding:12px 15px;min-width:0}
+body.blipmood-ai-page #aiChatMessages .self-row .chat-bubble{background:#14565d;color:#fff;border-color:#2b7778}
+body.blipmood-ai-page #aiChatMessages .ai-rich-response{background:var(--color-surface,#123041);color:var(--color-text,#edf7fa);border:1px solid var(--color-border,#355668)}
+body.blipmood-ai-page .ai-message-actions{display:flex;gap:7px;align-items:center;padding:0 3px}
+body.blipmood-ai-page .ai-copy-answer{border:0;background:transparent;color:var(--color-text-muted,#bad0dd);font-size:.72rem;padding:5px 8px;cursor:pointer;border-radius:8px}
+body.blipmood-ai-page .ai-copy-answer:hover{background:var(--color-surface-muted,#19465a);color:var(--color-primary,#3edbc8)}
+body.blipmood-ai-page #aiChatForm{position:relative;z-index:4;flex:none;border-top:1px solid var(--color-border,#325567);background:var(--color-surface,#102d3b);padding:12px;min-width:0}
+body.blipmood-ai-page #aiChatForm .chat-input-row{align-items:flex-end;gap:10px}
+body.blipmood-ai-page #aiChatInput{min-height:47px;max-height:124px;resize:none;line-height:1.5;font-size:16px;background:var(--color-surface-muted,#172f41);color:var(--color-text,#fff);border:1px solid var(--color-border,#526879);border-radius:12px;min-width:0;flex:1}
+body.blipmood-ai-page #aiChatForm .chat-send-btn{display:grid;place-items:center;flex:0 0 45px;width:45px;height:45px;background:#38dfce;color:#042d37;border-radius:12px}
+body.blipmood-ai-page #aiChatForm .chat-send-btn svg{width:21px;height:21px}
+body.blipmood-ai-page #aiTypingIndicator{position:relative;z-index:3;flex:none}
+body.blipmood-ai-page .ai-rich-content a,body.blipmood-ai-page .ai-rich-content a:visited{color:#66e8dc;text-decoration:underline;text-underline-offset:3px}
+body.blipmood-ai-page .ai-rich-content p{line-height:1.65}
+body.blipmood-ai-page .ai-rich-content pre,body.blipmood-ai-page .ai-rich-content .ai-table-scroll{max-width:100%}
+body.blipmood-ai-page .ai-rich-content pre{white-space:pre;overflow-x:auto}
+body.blipmood-ai-page :is(button,a,input,textarea):focus-visible{outline:2px solid #50f7e5;outline-offset:2px}
+@media(max-width:960px){
+ body.blipmood-ai-page #aiChatLayout{grid-template-columns:minmax(0,1fr);height:calc(100dvh - 162px);min-height:390px}
+ body.blipmood-ai-page #aiChatLayout[data-view="list"] .chat-pane{display:none}
+ body.blipmood-ai-page #aiChatLayout[data-view="chat"] .chat-sidebar{display:none}
+ body.blipmood-ai-page #aiChatLayout .chat-pane{min-height:0}
+ body.blipmood-ai-page #aiChatLayout .chat-sidebar{height:100%}
+ body.blipmood-ai-page #backToConversationsBtn{display:inline-flex;align-items:center;justify-content:center;min-width:35px;max-width:35px;min-height:36px;padding:0;border-radius:9px}
+}
+@media(max-width:550px){
+ body.blipmood-ai-page main{padding:8px 0 10px}
+ body.blipmood-ai-page #aiChatLayout{width:100%;padding:0 9px;height:calc(100dvh - 149px);min-height:360px}
+ body.blipmood-ai-page #aiChatLayout .chat-pane{border-radius:12px}
+ body.blipmood-ai-page #aiChatHeader{padding:10px;gap:7px;min-height:64px}
+ body.blipmood-ai-page .ai-chat-mark{width:34px;height:34px;flex-basis:34px}
+ body.blipmood-ai-page #aiHeaderNewChat{padding:7px 9px}
+ body.blipmood-ai-page #aiChatMessages{padding:10px}
+ body.blipmood-ai-page #aiChatMessages .ai-message-stack{max-width:100%}
+ body.blipmood-ai-page #aiChatForm{padding:9px}
+}
+@media(prefers-reduced-motion:reduce){body.blipmood-ai-page #aiChatLayout *{scroll-behavior:auto!important;transition:none!important}}
