@@ -38,6 +38,10 @@
 .fyp-inline-video{display:block;width:100%;max-height:min(72vh,620px);aspect-ratio:16/9;object-fit:contain;background:#0b141a}
 .fyp-social-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;border-top:1px solid var(--color-border);padding-top:12px}
 .fyp-social-actions :is(button,a){min-height:44px}
+.fyp-social-actions svg,.fyp-fullscreen svg{width:17px;height:17px;display:inline-block;vertical-align:middle;stroke-width:1.8;flex:none}
+.fyp-social-actions .fyp-like[aria-pressed="true"] svg{fill:currentColor}
+.fyp-video-flash svg{width:58px;height:58px;display:block;margin:auto}
+.fyp-video-flash[data-icon="heart"] svg{fill:currentColor;color:#ff527c}
 .fyp-social-actions .fyp-like[aria-pressed="true"]{color:var(--color-primary);border-color:currentColor}
 .fyp-comments{margin-top:12px;padding:14px;border-radius:12px;background:var(--color-surface-muted);border:1px solid var(--color-border)}
 .fyp-comments h3{margin:0 0 10px;font-size:1rem}
