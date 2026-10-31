@@ -13,9 +13,9 @@ test("browser push is explicit opt in with service worker and unsubscribing",()=
  assert.match(client,/subscription\.unsubscribe\(\)/);
  assert.match(worker,/showNotification/);
  assert.match(worker,/notificationclick/);
- assert.match(worker,/ALLOWED_STATIC_PREFIXES/);
+ assert.match(worker,/OFFLINE_BRAND_ASSETS/);
  assert.match(worker,/request\.mode==="navigate"/);
- assert.match(worker,/isSafeStaticRequest/);
+ assert.match(worker,/isSafeOfflineBrandRequest/);
  assert.match(worker,/OFFLINE_CACHE/);
 });
 test("push is server signed, encrypted, RLS secured and disabled until configured",()=>{
