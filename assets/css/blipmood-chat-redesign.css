@@ -460,3 +460,104 @@ body.chat-page.blipmood-chat-redesign .bottom-tab-bar{display:none!important}
 body.chat-page.blipmood-chat-redesign .chat-group-actions #groupNotifyBtn::before{
  content:"♧";font-size:1.15rem;color:var(--chat-brand)
 }
+
+
+/* Chat mobile usability: keep the approved identity and every filter visible.
+ * The inbox itself scrolls; controls must never shrink into a clipped strip. */
+body.chat-page.blipmood-chat-redesign .chat-inbox-brand{
+  flex:0 0 auto;min-height:68px;align-items:center;
+  padding:10px 16px 5px;line-height:1;
+}
+body.chat-page.blipmood-chat-redesign .chat-inbox-wordmark{
+  display:block;width:clamp(148px,18vw,202px);height:auto;max-height:70px;
+  max-width:100%;object-fit:contain;object-position:left center;
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar-header,
+body.chat-page.blipmood-chat-redesign .chat-sidebar>.chat-search-shell{
+  flex-shrink:0;
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar-actions{
+  gap:2px;flex:0 0 auto;
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar-actions .chat-status-shortcut{
+  display:grid;place-items:center;text-decoration:none;
+  color:var(--color-text,#e7f3f4);
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar-actions .chat-status-shortcut svg{
+  width:22px;height:22px;
+}
+body.chat-page.blipmood-chat-redesign .chat-find-people-button{
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  flex:0 0 auto;align-self:stretch;min-height:42px;
+  margin:0 16px 12px;padding:9px 12px;
+  border:1px solid color-mix(in srgb,var(--chat-brand) 50%,var(--chat-line));
+  border-radius:12px;background:color-mix(in srgb,var(--chat-brand) 13%,var(--color-surface));
+  color:var(--color-text,#e7f5f6);font:750 .78rem var(--font-body);
+  text-align:center;cursor:pointer;
+}
+body.chat-page.blipmood-chat-redesign .chat-find-people-button svg{
+  width:20px;height:20px;flex:0 0 auto;color:var(--color-primary,#55ddd2);
+}
+body.chat-page.blipmood-chat-redesign .chat-find-people-button span:last-child{
+  font-size:1.15rem;margin-left:auto;line-height:1;
+}
+body.chat-page.blipmood-chat-redesign .chat-find-people-button:hover{
+  background:color-mix(in srgb,var(--chat-brand) 22%,var(--color-surface));
+}
+body.chat-page.blipmood-chat-redesign .chat-find-people-button:focus-visible,
+body.chat-page.blipmood-chat-redesign .chat-status-shortcut:focus-visible{
+  outline:2px solid var(--color-primary,#54ddd0);outline-offset:3px;
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tabs{
+  flex:0 0 auto;align-self:stretch;min-height:48px;height:auto;
+  overflow-x:auto;overflow-y:hidden;max-height:none;
+  scroll-padding-inline:8px;overscroll-behavior-x:contain;
+}
+body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab{
+  flex-shrink:0;min-height:42px;height:auto;line-height:1.3;
+  text-align:center;
+}
+body.chat-page.blipmood-chat-redesign .chat-tab-badge[hidden]{display:none!important}
+body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab-panel:not([hidden]){
+  flex:1 1 auto;min-height:0;
+}
+@media(max-width:760px){
+  body.chat-page.blipmood-chat-redesign .chat-inbox-brand{
+    min-height:66px;padding:8px 15px 3px;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-inbox-wordmark{
+    width:min(55vw,195px);max-height:60px;
+  }
+  /* Balanced 3+2 grid: five real tabs are readable without sideways scrolling. */
+  body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tabs{
+    display:grid;grid-template-columns:repeat(6,minmax(0,1fr));
+    align-items:stretch;justify-content:stretch;
+    gap:6px;flex:0 0 auto;min-height:0;max-width:none;
+    padding:3px 0 5px;margin:0 14px 10px;
+    overflow:visible;scrollbar-width:none;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab:not(.chat-tab-secondary){
+    grid-column:span 2;display:flex;align-items:center;justify-content:center;
+    width:100%;min-width:0;max-width:none;min-height:42px;
+    padding:8px 5px;white-space:nowrap;font-size:clamp(12px,3.25vw,14px);
+    border:1px solid var(--chat-line);
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab:nth-of-type(4),
+  body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab:nth-of-type(5){
+    grid-column:span 3;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab.active{
+    border-color:var(--chat-brand);
+  }
+  body.chat-page.blipmood-chat-redesign .chat-find-people-button{
+    margin:0 14px 10px;min-height:44px;
+  }
+}
+@media(max-width:370px){
+  body.chat-page.blipmood-chat-redesign .chat-sidebar .chat-tab:not(.chat-tab-secondary){
+    padding-inline:3px;font-size:12px;
+  }
+  body.chat-page.blipmood-chat-redesign .chat-sidebar-actions .chat-icon-btn{
+    width:33px;min-width:33px;height:38px;
+  }
+}
