@@ -32,6 +32,19 @@ const paths = {
   'volume-x': '<path d="M11 5 6 9H3v6h3l5 4V5ZM16 9l6 6m0-6-6 6"/>',
   check: '<path d="m4 12 5 5L20 6"/>',
   close: '<path d="M18 6 6 18M6 6l12 12"/>',
+
+  rewind: '<path d="M3 11a9 9 0 1 1 2 6M3 5v6h6"/><path d="M12 8v4l-3 2"/>',
+  camera: '<path d="M4 7h3l2-3h6l2 3h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="4"/>',
+  edit: '<path d="M12 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M17 3l4 4-9 9-5 1 1-5 9-9Z"/>',
+  flag: '<path d="M5 22V4m0 0c5-4 9 4 14 0v12c-5 4-9-4-14 0"/>',
+  smile: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M8 9h.01M16 9h.01"/>',
+  mic: '<rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4m-4 0h8"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  star: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1L12 2Z"/>',
+  lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/>',
+  pin: '<path d="m16 3 5 5-3 1-4 5-4-4 5-4 1-3ZM10 10l-7 11M9 14l1 1"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2 2-.07-.06a1.7 1.7 0 0 0-1.87-.35 1.7 1.7 0 0 0-1.04 1.56V21h-2.8v-.09A1.7 1.7 0 0 0 10.3 19a1.7 1.7 0 0 0-1.9.36l-.06.06-2-2 .06-.07A1.7 1.7 0 0 0 6.75 15a1.7 1.7 0 0 0-1.56-1H5v-2.8h.19a1.7 1.7 0 0 0 1.56-1.04 1.7 1.7 0 0 0-.35-1.88l-.06-.07 2-2 .07.06A1.7 1.7 0 0 0 10.3 6a1.7 1.7 0 0 0 1.04-1.56V4h2.8v.44A1.7 1.7 0 0 0 15.18 6a1.7 1.7 0 0 0 1.88-.35l.07-.06 2 2-.06.07A1.7 1.7 0 0 0 18.7 9.5a1.7 1.7 0 0 0 1.56 1.04H21v2.8h-.74a1.7 1.7 0 0 0-1.56 1.04Z"/>',
+
 };
 export function icon(name) {
   return `<svg class="bm-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[name] || paths.discussion}</svg>`;
