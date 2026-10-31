@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,follow"><meta name="theme-color" content="#071b27">
+<title>Verified Blip Earn Winners | Blipmood</title><link rel="stylesheet" href="assets/css/styles.css">
+<style>
+body.bew-body{min-height:100dvh;background:radial-gradient(circle at 15% 14%,#17695338,transparent 37%),radial-gradient(circle at 90% 20%,#3556a540,transparent 40%),#071c27;color:#ecfdfb;margin:0}
+.bew-main{max-width:920px;width:calc(100% - 32px);margin:52px auto 85px}
+.bew-title{display:flex;gap:18px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.bew-kicker{color:#91ecdf;font-size:.85rem;letter-spacing:.09em;font-weight:900}
+.bew-title h1{font-size:clamp(2rem,5vw,3rem);letter-spacing:-.035em;margin:8px 0}
+.bew-title p{font-size:.99rem;line-height:1.7;color:#c6dee0;max-width:61ch}
+.bew-link{display:inline-flex;align-items:center;min-height:42px;padding:9px 16px;border:1px solid #81d4c557;border-radius:10px;text-decoration:none;color:#d5f9ee}
+.bew-link:hover{background:#8ce9d41c}
+.bew-note{border-radius:13px;border:1px solid #83d4c45a;background:#1134437a;padding:16px 20px;color:#d5f5f0;line-height:1.6;margin:23px 0}
+.bew-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.bew-card{border:1px solid #75b9bc4f;background:linear-gradient(140deg,#183f4e,#102c3b);padding:23px;border-radius:16px;min-width:0;box-shadow:0 13px 33px #03182238}
+.bew-card h2{margin:0 0 12px;font-size:1.17rem;color:#eafcf6;overflow-wrap:anywhere}
+.bew-card .bew-amount{color:#8ef3d7;font-size:clamp(1.4rem,4vw,1.8rem);font-weight:900}
+.bew-card p{margin:10px 0 0;color:#c5dee0;line-height:1.5;font-size:.83rem}
+.bew-empty{background:#132f4080;border-radius:16px;padding:25px;line-height:1.6;border:1px solid #77c8bc4b}
+.bew-footer{margin-top:20px;color:#b9d3d8;font-size:.84rem;line-height:1.7}
+a:focus-visible{outline:3px solid #8de4d6;outline-offset:3px}
+@media(max-width:620px){.bew-main{width:calc(100% - 22px);margin:25px auto 65px}.bew-list{grid-template-columns:minmax(0,1fr)}}
+</style></head><body class="bew-body">
+<main class="bew-main"><header class="bew-title"><div><span class="bew-kicker">BLIPMOOD · BLIP EARN</span><h1>Our confirmed winners</h1>
+<p>Real members helping Blipmood grow. Each name shown here belongs to an approved referral reward that the founder has personally marked paid, and the winner has chosen to display their public username.</p></div>
+<a href="blip-earn.html" class="bew-link">My Blip Earn dashboard</a></header>
+<p class="bew-note">This board lists <strong>published and consenting winners only</strong>. Referral tracking and payment confirmation are reviewed by staff. No bank details, phone numbers or other private information appear here.</p>
+<div id="bewStatus" role="status" aria-live="polite" class="bew-note">Loading verified winner announcements…</div>
+<section class="bew-list" id="bewList" aria-label="Confirmed Blip Earn winners" hidden></section>
+<div id="bewChannel" class="bew-footer"></div>
+<p class="bew-footer">Winners can withdraw publication consent from their Blip Earn dashboard, which removes their listing. Blipmood never asks for OTPs or banking passwords to issue manual referral rewards.</p>
+</main><script type="module" src="assets/js/blip-earn-winners.mjs"></script></body></html>
