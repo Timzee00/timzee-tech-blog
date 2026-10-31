@@ -45,7 +45,7 @@ await build({
 // Resolve the CSS import graph at build time instead of making every visitor
 // download two dozen serial stylesheets. Keep the source modules maintainable.
 await build({
-  entryPoints: [resolve(root, "assets/css/styles.css"), resolve(root, "assets/css/admin.css")],
+  entryPoints: [resolve(root, "assets/css/styles.css"), resolve(root, "assets/css/styles-home.css"), resolve(root, "assets/css/admin.css")],
   bundle: true, minify: true, target: ["chrome110", "safari16.4", "firefox115"],
   outdir: resolve(output, "assets/css"), legalComments: "none"
 });
@@ -149,7 +149,14 @@ function optimizeHomeHero(html,version){
 // JS/CSS reference (including module and CSS imports) to escape those caches.
 for (const file of publishedFiles.filter(path => /\.(?:html|js|mjs|css)$/.test(path))) {
   let contents = await readFile(file, "utf8");
-  if (file === resolve(output,"index.html")) contents=optimizeHomeHero(contents,assetVersion);
+  if (file === resolve(output,"index.html")) {
+    contents=optimizeHomeHero(contents,assetVersion);
+    // Swap only the public homepage to the slim CSS bundle; every other
+    // Blipmood route retains all its original page-specific styles.
+    const fullCss='href="assets/css/styles.css"';
+    if(!contents.includes(fullCss))throw new Error("Homepage shared stylesheet missing");
+    contents=contents.replace(fullCss,'href="assets/css/styles-home.css"');
+  }
   const versioned = contents.replace(/(["'])([^"'\s<>]+\.(?:js|mjs|css|png|svg|webp))\1/g, (match, quote, path) => {
     if (/^(?:[a-z]+:|\/\/)/i.test(path)) return match;
     const local = path.startsWith("/") ? resolve(output, `.${path}`) : resolve(dirname(file), path);
