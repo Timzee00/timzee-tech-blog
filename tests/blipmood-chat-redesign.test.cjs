@@ -50,3 +50,35 @@ test("messaging controls and moderation still use existing safe backend operatio
   assert.match(js, /field\.setRangeText\(emoji,start,end,"end"\)/);
   assert.match(js, /function keepPeopleSearchFocus\(event\)/);
 });
+
+test("mobile inbox uses remaining viewport for scrollable conversations instead of the old 46vh cap", () => {
+  const css = read("assets/css/blipmood-chat-redesign.css");
+  const old = read("assets/css/chat.css");
+  const html = read("chat.html");
+
+  // Original shared rule was capping the actual list and wasting the rest
+  // of the viewport on short phones.
+  assert.match(old, /\.chat-tab-panel,[\s\S]*?max-height:\s*46vh/);
+  assert.match(css, /Inbox viewport space recovery/);
+  assert.match(css, /\.chat-sidebar \.chat-tab-panel:not\(\[hidden\]\)\s*\{[\s\S]*?flex:\s*1 1 0;[\s\S]*?max-height:\s*none;/);
+  assert.match(css, /\.chat-sidebar \.chat-tab-panel:not\(\[hidden\]\)\s*\{[\s\S]*?overflow-y:\s*auto;/);
+  assert.match(css, /\.chat-sidebar \.chat-list\s*\{\s*align-content:\s*start;/);
+  assert.match(css, /@media\(max-width:760px\)/);
+  assert.match(css, /\.chat-sidebar\s*\{[\s\S]*?display:flex;[\s\S]*?flex-direction:column;/);
+  assert.match(html, /class="chat-list" id="friendList"/);
+  assert.match(html, /class="chat-mobile-nav"/);
+});
+
+test("compact mobile chat keeps brand, accessible controls and all real filter tabs", () => {
+  const css = read("assets/css/blipmood-chat-redesign.css");
+  const html = read("chat.html");
+  assert.match(css, /\.chat-inbox-wordmark\s*\{[\s\S]*?width:154px;[\s\S]*?height:50px;/);
+  assert.match(css, /\.chat-sidebar \.chat-tabs\s*\{[\s\S]*?grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.chat-sidebar \.chat-tab:not\(\.chat-tab-secondary\)\s*\{[\s\S]*?min-height:40px;/);
+  assert.match(css, /\.chat-mobile-nav :is\(a,button\)\s*\{\s*min-height:44px;/);
+  assert.match(css, /@media\(max-width:760px\) and \(max-height:730px\)/);
+  assert.match(css, /\.chat-find-people-button\s*\{\s*display:none;/);
+  assert.match(html, /id="peopleSearchToggle"[^>]*aria-label="Find people"/);
+  for (const tab of ["all", "dms", "groups", "archived", "requests"])
+    assert.match(html, new RegExp('data-tab="'+tab+'"'));
+});
