@@ -50,3 +50,16 @@ test("AI chat is mobile height-contained with fixed header and copy action",()=>
  assert.match(renderer,/[-*+•]/);
  assert.doesNotMatch(ai,/Timzee AI Assistant/);
 });
+
+// Prevent prebuild tests from importing runtime-only vendor files indirectly.
+// DOMPurify is generated into dist by build-site.mjs, not committed to source.
+test("Community Markdown has no dependency on build-generated sanitizer modules",()=>{
+ const markdown=read("assets/js/community-markdown.mjs");
+ const escaper=read("assets/js/social-rich-text.mjs");
+ const build=read("scripts/build-site.mjs");
+ assert.match(markdown,/import \{escapeSocial as escapeHTML\} from "\.\/social-rich-text\.mjs"/);
+ assert.doesNotMatch(markdown,/from ["']\.\/utils\.js["']/);
+ assert.doesNotMatch(escaper,/^import\s/m);
+ assert.match(escaper,/export function escapeSocial/);
+ assert.match(build,/assets\/vendor\/purify\.es\.mjs/);
+});
