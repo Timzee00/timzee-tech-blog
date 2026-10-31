@@ -137,7 +137,9 @@ test("video discovery and full-screen reels use trusted tier frames and batched 
 
 test("marketplace displays verified identity without implying guaranteed purchases",()=>{
  const market=read("marketplace.html"),listing=read("listing.html");
- assert.match(market,/loadVerifiedIdentityMap\(supabase,state\.listings\.map/);
+ assert.match(market,/loadVerifiedIdentityMap\(supabase,page\.map/);
+ assert.match(market,/rows\.slice\(0,state\.limit\)/);
+ assert.match(market,/state\.listings=page/);
  assert.match(market,/verifiedName\(safeSellerLabel/);
  assert.doesNotMatch(market,/Verified Seller<\/span>/);
  assert.match(listing,/verifiedName\(sellerName,seller/);
