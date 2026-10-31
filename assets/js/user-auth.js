@@ -15,6 +15,7 @@ import {
 import { fetchSettings } from "./settings.js";
 import { fetchThemeById, applyThemeVariables } from "./themes.js";
 import { setupReveal } from "./reveal.js";
+import { validateForm } from "./ui-controls.js";
 import { extractErrorMessage, reportAppError } from "./utils.js";
 import "./nav.js";
 import { getAuthRedirectOrigin, safeAuthNext, makeAuthRedirect } from "./auth-redirects.mjs";
@@ -320,6 +321,42 @@ async function boot() {
   const googleSignUp = document.getElementById("googleSignUp");
   const appleSignUp = document.getElementById("appleSignUp");
   const loginRemember = document.getElementById("loginRemember");
+  const passwordFieldForStrength = document.getElementById("signupPassword");
+  const confirmFieldForStrength = document.getElementById("signupPasswordConfirm");
+  const strengthBars = document.getElementById("signupPasswordBars");
+  const strengthText = document.getElementById("signupPasswordStrength");
+  const matchText = document.getElementById("signupPasswordMatch");
+  // These indicators are guidance only; server-side password policy is authoritative.
+  function updatePasswordGuidance() {
+    const password = passwordFieldForStrength?.value || "";
+    const confirmation = confirmFieldForStrength?.value || "";
+    let score = 0;
+    if (password.length) {
+      score = 1;
+      if (password.length >= 8) score = 2;
+      if (password.length >= 12 && /[a-z]/i.test(password) && /[0-9]/.test(password)) score = 3;
+      if (password.length >= 14 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^a-z0-9]/i.test(password)) score = 4;
+    }
+    if (strengthBars) strengthBars.dataset.strength = String(score);
+    if (strengthText) strengthText.textContent = password
+      ? "Password guidance: " + ["", "too short", "meets minimum length", "better variety", "stronger variety"][score] + "."
+      : "Use at least 8 characters. A longer, unique password is safer.";
+    if (matchText) {
+      const match = password === confirmation;
+      matchText.textContent = confirmation ? (match ? "Passwords match." : "Passwords do not match yet.") : "";
+      if (confirmation) matchText.dataset.match = String(match);
+      else delete matchText.dataset.match;
+    }
+  }
+  passwordFieldForStrength?.addEventListener("input", updatePasswordGuidance);
+  confirmFieldForStrength?.addEventListener("input", updatePasswordGuidance);
+  // Screen readers can announce loading without changing existing button labels.
+  const setFormBusy = (form, busy) => {
+    if (!form) return;
+    const submit = form.querySelector('button[type="submit"]');
+    form.setAttribute("aria-busy", String(busy));
+    if (submit) { submit.disabled = busy; submit.setAttribute("aria-busy", String(busy)); }
+  };
   // Remembering an email is opt-in. Passwords/tokens are never written here.
   try {
     const savedEmail = localStorage.getItem("blipmood:remember-email");
@@ -447,13 +484,13 @@ async function boot() {
   if (loginForm) {
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      if (!loginForm.reportValidity()) return;
+      if (!validateForm(loginForm)) return;
       const email = document.getElementById("loginEmail").value.trim();
       // Passwords are never trimmed: leading/trailing spaces may be intentional.
       const password = document.getElementById("loginPassword").value;
       const submit = loginForm.querySelector('button[type="submit"]');
       if (submit?.disabled) return;
-      if (submit) submit.disabled = true;
+      setFormBusy(loginForm, true);
       setMessage(loginMessage, "", false);
       try {
         const result = await signIn(email, password);
@@ -478,7 +515,7 @@ async function boot() {
       } catch (error) {
         setMessage(loginMessage, normalizeAuthError(error, "login"));
       } finally {
-        if (submit) submit.disabled = false;
+        setFormBusy(loginForm, false);
       }
     });
   }
@@ -552,7 +589,7 @@ async function boot() {
       }
       const submit = signupForm.querySelector('button[type="submit"]');
       if (submit?.disabled) return;
-      if (submit) submit.disabled = true;
+      setFormBusy(signupForm, true);
       try {
         const result = await signUp(email, password, name);
         if (result.error) {
@@ -567,7 +604,7 @@ async function boot() {
       } catch (error) {
         setMessage(signupMessage, normalizeAuthError(error, "signup"));
       } finally {
-        if (submit) submit.disabled = false;
+        setFormBusy(signupForm, false);
       }
     });
     document.getElementById("signupPasswordConfirm")?.addEventListener("input", (event) => {
