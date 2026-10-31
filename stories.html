@@ -147,6 +147,7 @@
         </label>
         <input type="file" id="storyFile" accept="image/*,video/*" hidden required>
         <button type="button" id="storyEditPhoto" class="btn ghost" hidden>Edit photo: crop, rotate, text, draw</button>
+        <button type="button" id="storyEditVideo" class="btn ghost" hidden>Edit video: trim and mute</button>
         <label class="status-composer-label" for="storyCaption">Caption (optional)</label>
         <textarea id="storyCaption" placeholder="Share a thought · @mention a member" rows="2" maxlength="200" class="resize-none"></textarea>
         <details class="story-composer-details"><summary>♫ Add a soundtrack (optional)</summary>
@@ -212,6 +213,7 @@
       import {setupMentionInput} from "./assets/js/mentions.js";
       import {showStoryInteractions} from "./assets/js/story-interactions.mjs";
       import {editStatusPhoto} from "./assets/js/story-media-editor.mjs";
+      import {editStatusVideo} from "./assets/js/story-video-editor.mjs";
       import {supabase} from "./assets/js/supabase.js";
       import "./assets/js/nav.js";
 
@@ -954,6 +956,7 @@
         revokeStoryPreview();
         editedStoryFile=null;
         document.getElementById("storyEditPhoto").hidden=true;
+        document.getElementById("storyEditVideo").hidden=true;
         document.getElementById("storyFilePreviewLabel").textContent = "Choose a photo or video";
         document.body.style.overflow = composerBodyOverflow;
         restoreStoryFocus(composerOpener);
@@ -983,6 +986,9 @@
           const label = document.getElementById("storyFilePreviewLabel");
           editedStoryFile=null;
           document.getElementById("storyEditPhoto").hidden=!file?.type?.startsWith("image/");
+          document.getElementById("storyEditVideo").hidden=!file?.type?.startsWith("video/");
+          const message=document.getElementById("storyComposerStatus");
+          message.textContent="";message.style.display="none";
           preview.innerHTML = "";
           revokeStoryPreview();
           if (!file) {
@@ -1026,6 +1032,31 @@
             window.appUI?.toast?.(error.message||"Photo editing unavailable on this device.");
           }finally{button.disabled=false;}
         });
+        document.getElementById("storyEditVideo").addEventListener("click",async()=>{
+          const original=editedStoryFile||fileInput.files?.[0];
+          if(!original?.type?.startsWith("video/"))return;
+          const button=document.getElementById("storyEditVideo");
+          button.disabled=true;
+          try{
+            const edited=await editStatusVideo(original);
+            if(!edited)return;
+            editedStoryFile=edited;
+            revokeStoryPreview();
+            const url=URL.createObjectURL(edited);
+            storyPreviewObjectUrl=url;
+            const preview=document.getElementById("storyFilePreview");
+            const video=document.createElement("video");
+            video.src=url;video.controls=true;video.muted=true;
+            video.playsInline=true;video.preload="metadata";
+            video.setAttribute("aria-label","Edited story video preview");
+            preview.replaceChildren(video);
+            document.getElementById("storyFilePreviewLabel").textContent="Edited video ready";
+          }catch(error){
+            const status=document.getElementById("storyComposerStatus");
+            status.textContent=error.message||"Video editing is unavailable on this device.";
+            status.style.display="block";
+          }finally{button.disabled=false;}
+        });
         setupMentionInput(document.getElementById("storyCaption"));
         document.getElementById("storyForm").addEventListener("submit", async (event) => {
           event.preventDefault();
@@ -1042,23 +1073,37 @@
             return;
           }
 
+          if(navigator.onLine===false){
+            status.textContent="You are offline. Reconnect and tap Post Story again; your selected file and caption are preserved.";
+            status.style.display="block";return;
+          }
+          if(file.size<=0||file.size>50*1024*1024){
+            status.textContent="Choose a valid photo or video under 50 MB.";
+            status.style.display="block";return;
+          }
+          status.textContent="";status.style.display="none";
           submitBtn.disabled = true;
           submitBtn.textContent = "Posting...";
           const durationHours=state.verified?Number(document.getElementById("storyDuration").value):24;
           const musicFile=document.getElementById("storyMusicFile").files?.[0]||null;
-          const result = await createStory({
-            userId:state.user.id,file,caption,visibility,durationHours,
-            allowReshare:document.getElementById("storyAllowReshare").checked,
-            allowPublicComments:document.getElementById("storyAllowComments").checked,
-            musicFile,
-            musicTitle:document.getElementById("storyMusicTitle").value.trim(),
-            musicRightsConfirmed:document.getElementById("storyMusicRights").checked
-          });
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Post Story";
+          let result;
+          try{
+            result = await createStory({
+              userId:state.user.id,file,caption,visibility,durationHours,
+              allowReshare:document.getElementById("storyAllowReshare").checked,
+              allowPublicComments:document.getElementById("storyAllowComments").checked,
+              musicFile,
+              musicTitle:document.getElementById("storyMusicTitle").value.trim(),
+              musicRightsConfirmed:document.getElementById("storyMusicRights").checked
+            });
+          }catch(error){result={error};}
+          finally{
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Post Story";
+          }
 
           if (result.error) {
-            status.textContent = result.error.message || "Could not post story.";
+            status.textContent = result.error.message || "Could not post story. Please try again.";
             status.style.display = "block";
             return;
           }
