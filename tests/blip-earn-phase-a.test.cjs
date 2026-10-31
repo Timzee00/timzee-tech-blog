@@ -14,7 +14,7 @@ test("Referral tracking is off by default and manual rewards are separately capp
  assert.match(api,/\["issue-code","claim","admin-config","admin-rewards-config"/);
  assert.doesNotMatch(api,/action\s*===\s*["'](?:payout|withdraw|credit)["']/i);
  assert.match(earn,/paid personally by the founder/);
- assert.match(read("supabase/migrations/20261031142000_blip_earn_manual_review_rewards.sql"),/max_awards integer not null default 0/);
+ assert.match(read("supabase/migrations/20261031123335_blip_earn_manual_review_rewards.sql"),/max_awards integer not null default 0/);
  assert.match(admin,/No automatic payments/);
 });
 test("Owner attribution and settings are protected by RLS and service-only SQL RPCs",()=>{
