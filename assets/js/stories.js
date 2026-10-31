@@ -113,6 +113,7 @@ export async function createStory({
       return {error:{message:"Enter a soundtrack title (up to 90 characters)."}};
   }
   const uploaded=[];
+  let stage="uploading your status";
   try{
     const privateStory=visibility==="private";
     const mediaUrl=privateStory
@@ -122,12 +123,14 @@ export async function createStory({
     uploaded.push(mediaUrl);
     let musicUrl=null;
     if(musicFile){
+      stage="uploading the soundtrack";
       musicUrl=privateStory
         ?await uploadPrivateStoryMedia(musicFile,userId,{music:true})
         :await uploadMedia(musicFile,`stories/${userId}/music`);
       if(!musicUrl)throw Error("Soundtrack upload failed.");
       uploaded.push(musicUrl);
     }
+    stage="publishing your status";
     // Publishing uses the server clock and validates the creator's account.
     const {data,error}=await supabase.rpc("publish_story",{
       p_media_url:mediaUrl,
@@ -145,7 +148,14 @@ export async function createStory({
     return {data,error:null};
   }catch(error){
     await cleanupFailedStoryUploads(uploaded,userId);
-    return {error:{message:error.message||"Status upload failed. Please try again."}};
+    const detail=String(error?.message||"");
+    const networkFailure=/failed to fetch|networkerror|network request failed|load failed|fetch failed|failed to connect/i.test(detail);
+    const interrupted=typeof navigator!=="undefined"&&navigator.onLine===false;
+    const message=(networkFailure||interrupted)
+      ? "Could not reach Blipmood while "+stage+". Check your connection and try again. Your media and caption are still here."
+      : detail||"Status upload failed. Please try again.";
+    console.warn("Story error during "+stage,error);
+    return {error:{message}};
   }
 }
 
