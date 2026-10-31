@@ -7,14 +7,15 @@ const html=read("welcome.html");
 const earn=read("blip-earn.html");
 const admin=read("super/referrals.html");
 const capture=read("assets/js/referral-capture.mjs");
-test("Referral launch is off by default and makes no cash or airtime promises",()=>{
+test("Referral tracking is off by default and manual rewards are separately capped",()=>{
  assert.match(sql,/enabled boolean not null default false/);
  assert.match(sql,/values\(true,false,0\)/);
  assert.match(api,/cash_payouts_enabled:\s*false/);
- assert.match(api,/\["issue-code","claim","admin-config"\]/);
+ assert.match(api,/\["issue-code","claim","admin-config","admin-rewards-config"/);
  assert.doesNotMatch(api,/action\s*===\s*["'](?:payout|withdraw|credit)["']/i);
- assert.match(earn,/Cash, airtime and payouts have/);
- assert.match(admin,/Turning referrals ON activates invitation tracking, not a ₦1,000 payment promise|Switching referrals ON activates invitation tracking, not a ₦1,000 payment promise/);
+ assert.match(earn,/paid personally by the founder/);
+ assert.match(read("supabase/migrations/20261031142000_blip_earn_manual_review_rewards.sql"),/max_awards integer not null default 0/);
+ assert.match(admin,/No automatic payments/);
 });
 test("Owner attribution and settings are protected by RLS and service-only SQL RPCs",()=>{
  for(const table of ["blip_referral_settings","blip_referral_codes","blip_referrals"]){
