@@ -425,6 +425,7 @@
           await loadPurchaseConfirmations();
         }));
       }
+      let ownedListingStatus="all";
       async function loadMyListings(){
         if(!state.user)return;
         const target=document.getElementById("myMarketList");
@@ -435,7 +436,9 @@
         if(result.error){target.textContent="Couldn't load your listings. Please retry.";return;}
         const mine=result.data||[];
         if(!mine.length){target.textContent="No listings yet. Create your first one above.";return;}
-        target.innerHTML=mine.map(item=>`
+        const filteredMine=mine.filter(item=>ownedListingStatus==="all"||(ownedListingStatus==="live"?item.is_available:!item.is_available));
+        if(!filteredMine.length){target.textContent="No "+ownedListingStatus+" listings in your recent listings.";return;}
+        target.innerHTML=filteredMine.map(item=>`
           <article class="market-owner-item" data-owned-id="${encodeURIComponent(item.id)}">
            <div class="market-owner-preview">${item.images?.[0]&&isSafeUrl(item.images[0])?
              '<img loading="lazy" src="'+escapeHTML(item.images[0])+'" alt="">':'<span aria-hidden="true">▧</span>'}</div>
@@ -470,6 +473,16 @@
         }));
       }
       document.getElementById("refreshMyListings").addEventListener("click",()=>void loadMyListings());
+      document.getElementById("marketSellerTabs").addEventListener("click",event=>{
+        const button=event.target.closest("[data-market-listing-status]");
+        if(!button)return;
+        ownedListingStatus=button.dataset.marketListingStatus;
+        document.querySelectorAll("[data-market-listing-status]").forEach(tab=>{
+          const active=tab===button;tab.classList.toggle("active",active);
+          tab.setAttribute("aria-pressed",String(active));
+        });
+        void loadMyListings();
+      });
 
       async function loadSellerInquiries(){
         const box=document.getElementById("sellerInquiryList");
@@ -514,9 +527,17 @@
           document.getElementById("sellerInquiryInbox").hidden=false;
           document.getElementById("myMarketListings").hidden=false;
           document.getElementById("marketPurchaseRequests").hidden=false;
-          void loadMyListings();
-          void loadPurchaseConfirmations();
           await loadSellerProfile();
+          document.getElementById("marketSellerSummaryCard").hidden=false;
+          void loadVerifiedIdentityMap(supabase,[state.user.id]).then(map=>{
+            const profile=map.get(state.user.id);
+            const display=profile?.username?"@"+profile.username:getDisplayName(state.user);
+            document.getElementById("marketSellerSummary").innerHTML=
+              '<a class="market-seller-summary-avatar" href="profile.html?id='+encodeURIComponent(state.user.id)+'">'+
+              verifiedAvatar(profile?.avatar_url,profile,{size:"lg",alt:""})+'</a>'+
+              '<div class="market-seller-summary-info"><strong>'+verifiedName(display,profile,{compact:true})+'</strong>'+
+              '<small>Your Blipmood seller profile</small></div>';
+          }).catch(()=>{document.getElementById("marketSellerSummary").textContent="Your seller profile";});
         } else {
           authActions.innerHTML = `<a class="btn ghost" href="login.html?next=${encodeURIComponent('marketplace.html')}">Log In</a>`;
         }
