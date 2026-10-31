@@ -71,7 +71,7 @@ test("Blipmood chat keeps all five tabs legible and the approved wordmark",()=>{
  const html=read("chat.html"),css=read("assets/css/blipmood-chat-redesign.css");
  assert.match(html,/class="chat-inbox-wordmark" data-bm-logo="wordmark"/);
  assert.doesNotMatch(html,/class="chat-inbox-mark"/);
- assert.match(html,/class="chat-status-shortcut"/);
+ assert.match(html,/class="chat-icon-btn chat-status-shortcut"/);
  assert.match(html,/href="stories.html" aria-label="Open Status"/);
  for(const name of ["all","dms","groups","archived","requests"])
    assert.match(html,new RegExp('data-tab="'+name+'"'));
