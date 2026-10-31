@@ -10,8 +10,12 @@ const shouldAnimate=()=>{
 };
 
 export async function enhanceAnimatedHeader(){
-  const wrapper=document.querySelector(".site-header a.brand > .bm-brand-display");
-  const fallback=wrapper?.querySelector(".bm-wordmark-image");
+  // Desktop uses the unified left rail (the header brand is hidden there).
+  // Phones use the visible header wordmark instead of the hidden desktop rail.
+  const desktop=window.matchMedia?.("(min-width: 1190px)")?.matches;
+  const rail=desktop?document.querySelector(".bm-has-unified-rail .bm-rail-brand"):null;
+  const wrapper=rail||document.querySelector(".site-header a.brand > .bm-brand-display");
+  const fallback=wrapper?.querySelector(".bm-wordmark-image, img[data-bm-logo='wordmark']");
   if(!wrapper||!fallback||wrapper.querySelector("blipmood-logo")||!shouldAnimate())return false;
 
   // The large visual source is cached and loaded only after essential site UI.
