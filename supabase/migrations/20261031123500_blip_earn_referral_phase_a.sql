@@ -170,11 +170,11 @@ declare attempts_now integer;
 begin
  if current_setting('role',true) is distinct from 'service_role'
  then raise exception 'Server access required' using errcode='42501';end if;
- insert into private.blip_referral_claim_attempts(user_id,attempt_day,attempts)
+ insert into private.blip_referral_claim_attempts as current_attempt(user_id,attempt_day,attempts)
  values(p_user,current_date,1)
  on conflict(user_id,attempt_day) do update set
- attempts=private.blip_referral_claim_attempts.attempts+1
- where private.blip_referral_claim_attempts.attempts<8
+ attempts=current_attempt.attempts+1
+ where current_attempt.attempts<8
  returning attempts into attempts_now;
  return found;
 end $$;
