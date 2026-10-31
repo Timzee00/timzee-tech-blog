@@ -37,6 +37,7 @@ body.bef-body{background:radial-gradient(circle at 4% 4%,#16695e23,transparent 4
 .bef-note{border-left:3px solid #89bce9;border-radius:8px;padding:11px 14px;background:#89bce90b}
 .bef-wide{grid-column:1/-1}
 .bef-history{margin:13px 0 0;padding:0;list-style:none;display:grid;gap:10px}.bef-history li{border:1px solid #86c9c044;background:#0e2b3a94;border-radius:10px;padding:12px 14px;display:grid;gap:5px}.bef-history strong{color:#a6f4e7}.bef-history small{color:#bed7db;line-height:1.5;overflow-wrap:anywhere}
+.bef-queue{display:grid;gap:13px;margin-top:15px}.bef-queue-item{border:1px solid #69d3c14f;background:#0d293ae0;padding:15px;border-radius:12px;min-width:0}.bef-queue-item strong{color:#a4f2e7}.bef-queue-item p{margin:8px 0 11px}.bef-queue-item input,.bef-queue-item textarea{min-height:42px;width:100%;box-sizing:border-box;border:1px solid #86c2bc61;background:#0d293a;color:#effdf9;padding:10px;border-radius:9px;font:inherit}.bef-queue-item textarea{min-height:76px}.bef-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}.bef-action{cursor:pointer;padding:10px 14px;border-radius:9px;border:1px solid #91d7c7;background:#1b4a57;color:#e8fff8;font-weight:750}.bef-action.secondary{border-color:#8fadb1;background:#193242}.bef-action:disabled{opacity:.45;cursor:not-allowed}.bef-note-text{color:#b5d1d5;font-size:.8rem;line-height:1.6}.bef-field small{color:#bed8df}.bef-out{color:#aef7eb;display:block;margin:10px 0 0}
 [hidden]{display:none!important}
 @media(max-width:710px){.bef-main{width:calc(100% - 22px);margin:24px auto 70px}.bef-grid{grid-template-columns:1fr}.bef-wide{grid-column:1}}
 </style></head><body class="admin-shell bef-body">
@@ -64,6 +65,41 @@ body.bef-body{background:radial-gradient(circle at 4% 4%,#16695e23,transparent 4
 <div class="bef-note"><strong>Tracking only.</strong> Cash payouts, airtime, withdrawal requests and automatic awards are disabled. Switching referrals ON activates invitation tracking, not a ₦1,000 payment promise. All setting changes are written to a private database audit log.</div>
 <p>Pausing stops new code claims and prevents new invitation codes from being issued. Existing referral records and codes remain saved, and users can still use the rest of Blipmood normally.</p>
 <a class="bef-back" href="../blip-earn.html">View member dashboard</a>
+</div>
+<div class="bef-card bef-wide"><h2>Personally funded ₦1,000 rewards</h2>
+<p>One ₦1,000 award becomes available per ten individually approved referrals, subject to the total number of awards you choose to fund. No automated transfer service exists.</p>
+<form id="befRewardForm">
+<label class="bef-toggle"><input type="checkbox" id="befRewardEnabled"><span>Allow NEW founder-funded awards</span></label>
+<div class="bef-field"><label for="befAwardCap">Maximum ₦1,000 awards to fund, lifetime</label><input id="befAwardCap" type="number" min="0" max="1000" step="1" value="0" required>
+<small>For example, 15 awards means a maximum total commitment of ₦15,000. Existing awards and payment requests remain when you pause further awards.</small></div>
+<p class="bef-note" id="befBudgetText">Configured commitment: ₦0</p>
+<div class="bef-field"><label for="befVerifiedChat">Official verified staff @username</label><input id="befVerifiedChat" maxlength="90" placeholder="@your_verified_super_account">
+<small>Only an active, currently verified Super Admin or Admin can be selected. Winners will see a Blipmood direct-chat link to this account.</small></div>
+<div class="bef-field"><label for="befChannelUrl">Winners channel URL (optional)</label><input id="befChannelUrl" maxlength="350" inputmode="url" placeholder="https://t.me/your_channel">
+<small>Your channel must be created separately. Blipmood only links to it; it never posts automatically.</small></div>
+<div class="bef-field"><label for="befRewardReason">Reason for changing funding / contacts</label><textarea id="befRewardReason" minlength="12" maxlength="500" placeholder="Explain your manual reward budget and changes." required></textarea></div>
+<button class="bef-button" id="befRewardSave" type="submit">Save manual reward program</button>
+<p id="befRewardFeedback" class="bef-help" role="status" aria-live="polite"></p>
+</form>
+</div>
+<div class="bef-card bef-wide"><h2>Review new referrals</h2>
+<p>Only email-verified adult accounts with onboarding completed, three different activity dates and staff-approved genuine participation can become qualified. Fake or purchased accounts should be rejected with a reason.</p>
+<div class="bef-queue" id="befReviewQueue" aria-live="polite"><p>Loading pending referrals…</p></div>
+</div>
+<div class="bef-card bef-wide"><h2>Catch up on eligible rewards</h2>
+<p>When you enable funding after referrals have already qualified, you can create previously earned milestones within your hard cap, without double awarding.</p>
+<form id="befMintForm"><div class="bef-field"><label for="befMintUsername">Member's @username</label><input id="befMintUsername" maxlength="32" placeholder="account_username" required></div>
+<button type="submit" class="bef-button" id="befMintButton">Check and issue capped awards</button>
+<p id="befMintFeedback" role="status" class="bef-help"></p></form>
+</div>
+<div class="bef-card bef-wide"><h2>Personal payment requests</h2>
+<p>Transfer the ₦1,000 or airtime yourself using the official verified chat. Only after actually sending it, record the payment here. Never paste account numbers or payment PINs into a confirmation note.</p>
+<div class="bef-queue" id="befPaymentQueue" aria-live="polite"><p>Loading manual payment requests…</p></div>
+</div>
+<div class="bef-card bef-wide"><h2>Winners to announce</h2>
+<p>Only your manually marked-paid members who separately opted into publicity and whom you have published appear below. Copy the approved names and post them in your channel yourself.</p>
+<div class="bef-actions"><button class="bef-action" type="button" id="befCopyWinners">Copy approved winner announcements</button><a class="bef-back" href="../blip-winners.html">View public winners board</a></div>
+<p id="befWinnerFeedback" class="bef-help" role="status"></p><div id="befWinnersPreview" class="bef-queue"></div>
 </div>
 <div class="bef-card bef-wide"><h2>Recent audited changes</h2><p>Every change to the referral switch or automatic member goal is saved to a private audit record.</p>
 <ol class="bef-history" id="befAuditHistory"><li>No changes recorded yet.</li></ol></div>
