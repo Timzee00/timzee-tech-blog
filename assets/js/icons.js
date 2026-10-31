@@ -48,6 +48,9 @@ const paths = {
   'bell-off': '<path d="M8.3 4.4A6 6 0 0 1 18 9c0 6.6 3 6.6 3 8H10M10 21h4M3 3l18 18"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   crown: '<path d="m2 8 5 4 5-8 5 8 5-4-2 12H4L2 8ZM4 16h16"/>',
+  maximize: '<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>',
+  play: '<path d="m8 5 12 7-12 7V5Z"/>',
+  pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
 };
 export function icon(name) {
   return `<svg class="bm-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[name] || paths.discussion}</svg>`;
