@@ -143,13 +143,15 @@ test("home discovery renders only nine stories first and category changes fetch 
  assert.match(css,/@media\(max-width:600px\)/);
 });
 
-test("neon showcase does not replace the data-driven homepage or navigation",()=>{
+test("homepage retains its original hero emblem without a decorative phone mockup",()=>{
  const html=read("index.html"),css=read("assets/css/blipmood-neon-experience.css");
  const app=read("assets/js/app.js");
  assert.match(html,/href="assets\/css\/blipmood-neon-experience\.css"/);
  assert.match(html,/<body class="blipmood-home">/);
  assert.match(html,/<div class="bm-hero-art" aria-hidden="true">/);
- assert.match(html,/<div class="bm-device-shell">/);
+ assert.doesNotMatch(html,/bm-device-shell|bm-device-post|bm-device-circles/);
+ assert.match(html,/data-bm-logo="emblem"/);
+ assert.match(html,/<div class="bm-hero-art" aria-hidden="true">[\s\S]*?data-bm-logo="emblem"/);
  assert.match(html,/<h1 id="bmHeroTitle">/);
  assert.equal((html.match(/<h1\b/g)||[]).length,1);
  for(const id of ["searchInput","searchBtn","categoryNav","tagFilter","latestPosts",
@@ -160,7 +162,10 @@ test("neon showcase does not replace the data-driven homepage or navigation",()=
   assert.ok(html.includes('href="'+href+'"'),"Missing real destination: "+href);
  assert.match(app,/const POSTS_PAGE_SIZE = 9;/);
  assert.match(css,/body\.blipmood-home \{/);
- assert.match(css,/\.blipmood-home \.bm-device-shell/);
+ assert.doesNotMatch(css,/bm-device-/);
+ assert.match(css,/\.blipmood-home \.bm-hero-art>img/);
+ assert.match(css,/\.blipmood-home \.bm-hero-split\{display:block;position:relative\}/);
+ assert.match(css,/\.blipmood-home \.bm-hero-art\{[\s\S]*?position:absolute;right:0;top:28px/);
  assert.match(css,/\.blipmood-home \.explore-panel>a/);
  assert.match(css,/@media\(max-width:650px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
