@@ -138,13 +138,14 @@ async function claimCode(db, actor, input) {
     : "Referral code saved for review. No cash reward has been earned."});
 }
 async function adminState(db, actor, program) {
-  const [record, claims, pending, approved] = await Promise.all([
+  const [record, claims, pending, approved, history] = await Promise.all([
     db.from("blip_referral_settings").select("enabled,target_activated_members,updated_at,updated_by").eq("singleton",true).single(),
     db.from("blip_referrals").select("referred_user_id",{head:true,count:"exact"}),
     db.from("blip_referrals").select("referred_user_id",{head:true,count:"exact"}).eq("status","pending"),
-    db.from("blip_referrals").select("referred_user_id",{head:true,count:"exact"}).eq("status","qualified")
+    db.from("blip_referrals").select("referred_user_id",{head:true,count:"exact"}).eq("status","qualified"),
+    db.rpc("blip_referral_recent_changes",{p_actor:actor.user.id})
   ]);
-  if ([record,claims,pending,approved].some(r=>r.error)) throw new Error("Founder referral controls unavailable.");
+  if ([record,claims,pending,approved,history].some(r=>r.error)) throw new Error("Founder referral controls unavailable.");
   return {
     program: { ...publicState(program),...record.data,
       activated_members:Number(program.activated_members || 0),
@@ -155,7 +156,8 @@ async function adminState(db, actor, program) {
       pending:pending.count || 0,
       qualified:approved.count || 0
     },
-    funding: {cash_rewards_enabled:false,payouts_enabled:false}
+    funding: {cash_rewards_enabled:false,payouts_enabled:false},
+    history: Array.isArray(history.data) ? history.data : []
   };
 }
 exports.handler = async (event) => {
