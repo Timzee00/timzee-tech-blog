@@ -14,6 +14,7 @@ body.auth-v7-page {
     radial-gradient(ellipse 85% 27% at 96% 51%, rgba(217,132,32,.22), transparent 65%),
     radial-gradient(ellipse 75% 48% at 4% 78%, rgba(156,156,178,.14), transparent 73%),
     radial-gradient(ellipse 45% 30% at 50% 44%, rgba(73,53,58,.18), transparent 80%),
+    url("../brand/blipmood-auth-metallic-v7.svg") center/cover no-repeat fixed,
     #08070b;
 }
 body.auth-v7-page .site-header,
