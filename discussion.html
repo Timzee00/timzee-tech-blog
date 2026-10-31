@@ -17,7 +17,7 @@
   <header class="site-header">
     <div class="container wrap">
       <a class="brand" href="index.html"><span class="logo">Blipmood</span><span class="tagline">Your world. Your mood.</span></a>
-      <label class="forum-header-search" for="forumHeaderSearch"><span aria-hidden="true">⌕</span><input id="forumHeaderSearch" type="search" maxlength="70" autocomplete="off" placeholder="Search communities" aria-label="Search communities"></label>
+      <label class="forum-header-search" for="forumHeaderSearch"><span data-bm-icon="search" aria-hidden="true"></span><input id="forumHeaderSearch" type="search" maxlength="70" autocomplete="off" placeholder="Search communities" aria-label="Search communities"></label>
       <nav class="nav-pill" aria-label="Main navigation">
         <a href="discussion.html" aria-current="page">Communities</a>
         <a href="my-tech.html">My Tech</a>
@@ -27,7 +27,7 @@
           <div class="nav-more-menu"><a href="index.html">Home</a><a href="marketplace.html">Marketplace</a><a href="newsletter.html">Newsletter</a><a href="support.html">Support</a></div>
         </div>
       </nav>
-      <div class="header-actions"><a class="icon-btn" href="chat.html" aria-label="Chat" title="Chat">✉</a><div class="auth-actions" id="authActions"></div></div>
+      <div class="header-actions"><a class="icon-btn" href="chat.html" aria-label="Chat" title="Chat"><span data-bm-icon="chat" aria-hidden="true"></span></a><div class="auth-actions" id="authActions"></div></div>
     </div>
   </header>
   <main id="main-content" class="forum-page container">
@@ -35,16 +35,16 @@
     <div class="forum-layout">
       <aside class="forum-sidebar" aria-label="Explore communities">
         <div class="forum-panel forum-navigation">
-          <a href="index.html" class="forum-nav-home"><span aria-hidden="true">⌂</span> Home</a>
+          <a href="index.html" class="forum-nav-home"><span data-bm-icon="home" aria-hidden="true"></span> Home</a>
           <h2 class="forum-nav-section">Explore</h2>
-          <button type="button" data-forum-nav="home" class="forum-nav-item active"><span aria-hidden="true">⌂</span> Community Feed</button>
-          <button type="button" data-forum-nav="personal" class="forum-nav-item"><span aria-hidden="true">◈</span> For You</button>
+          <button type="button" data-forum-nav="home" class="forum-nav-item active"><span data-bm-icon="home" aria-hidden="true"></span> Community Feed</button>
+          <button type="button" data-forum-nav="personal" class="forum-nav-item"><span data-bm-icon="fyp" aria-hidden="true"></span> For You</button>
           <button type="button" data-forum-nav="joined" class="forum-nav-item"><span aria-hidden="true" data-bm-icon="users"></span> My Communities</button>
-          <button type="button" data-forum-nav="saved" class="forum-nav-item"><span aria-hidden="true">▣</span> Saved Posts</button>
+          <button type="button" data-forum-nav="saved" class="forum-nav-item"><span data-bm-icon="bookmark" aria-hidden="true"></span> Saved Posts</button>
           <a href="spaces.html" class="forum-nav-item forum-spaces-link"><span aria-hidden="true" data-bm-icon="mic"></span> Live Spaces</a>
           <button id="forumInterestButton" class="forum-nav-item" type="button"><span aria-hidden="true" data-bm-icon="settings"></span> Edit my interests</button>
           <h3 class="forum-nav-section">Discover</h3>
-          <a class="forum-nav-home" href="#forumCommunitySearch" data-focus-community-search><span aria-hidden="true">⌕</span> Find a Community</a>
+          <a class="forum-nav-home" href="#forumCommunitySearch" data-focus-community-search><span data-bm-icon="search" aria-hidden="true"></span> Find a Community</a>
           <label class="forum-sidebar-search-label" for="forumCommunitySearch">Search communities</label>
           <input id="forumCommunitySearch" type="search" maxlength="70" placeholder="Search communities…">
           <button id="createCommunityButton" class="forum-button secondary forum-sidebar-create" type="button">+ Create Community</button>
@@ -60,7 +60,7 @@
             <p class="forum-welcome">Welcome to</p>
             <h1 id="forumHeroTitle">Blipmood</h1>
             <p class="forum-hero-description">Real people. Real interests. A community for everything you care about.</p>
-            <label class="forum-hero-search" for="forumHeroSearch"><span aria-hidden="true">⌕</span><input id="forumHeroSearch" type="search" maxlength="70" autocomplete="off" placeholder="Search communities" aria-label="Search communities"></label>
+            <label class="forum-hero-search" for="forumHeroSearch"><span data-bm-icon="search" aria-hidden="true"></span><input id="forumHeroSearch" type="search" maxlength="70" autocomplete="off" placeholder="Search communities" aria-label="Search communities"></label>
           </div>
           <span class="forum-hero-script" aria-hidden="true">Find your people ↗</span>
         </section>
@@ -103,7 +103,7 @@
           <form id="forumReplyForm" class="forum-reply-form">
             <div id="forumReplyTarget" class="forum-reply-target" hidden></div>
             <label for="forumReplyText">Add to this discussion</label>
-            <textarea id="forumReplyText" maxlength="10000" rows="4" placeholder="Share something helpful. Use @mention to refer to others."></textarea>
+            <textarea id="forumReplyText" maxlength="10000" rows="4" placeholder="Write a reply. Select text and tap Link to add a clickable URL."></textarea>
             <div class="forum-format-tools" data-format-toolbar="forumReplyText"><button type="button" data-format="bold">Bold</button><button type="button" data-format="italic">Italic</button><button type="button" data-format="quote">Quote</button><button type="button" data-format="code">Code</button><button type="button" data-format="link">Link</button><button type="button" data-toggle-preview="forumReplyPreview">Preview</button></div>
             <div id="forumReplyPreview" class="forum-markdown-preview" hidden></div>
             <label class="forum-file-label">Attach a photo or short video (optional, up to 12 MB)<input id="forumReplyMedia" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"></label>
@@ -159,7 +159,7 @@
       <label>Optional topic flair<input name="flair" maxlength="28" placeholder="e.g. Help Needed, Tutorial, Showcase"></label>
       <label>Post type<select name="kind"><option value="discussion">Discussion</option><option value="question">Question</option><option value="guide">Guide / tutorial</option><option value="news">Tech news</option><option value="showcase">Project showcase</option></select></label>
       <label>Title (optional when posting media)<input name="title" maxlength="180" minlength="5" placeholder="Write a clear title, or share a photo/video on its own"></label>
-      <label>Details<textarea id="forumThreadBodyInput" name="body" maxlength="12000" rows="7" placeholder="Give enough background for meaningful replies."></textarea></label>
+      <label>Details<textarea id="forumThreadBodyInput" name="body" maxlength="12000" rows="7" placeholder="Write your post. For clickable text, highlight words and tap Link."></textarea></label>
       <div class="forum-format-tools" data-format-toolbar="forumThreadBodyInput"><button type="button" data-format="heading">Heading</button><button type="button" data-format="bold">Bold</button><button type="button" data-format="italic">Italic</button><button type="button" data-format="code">Code</button><button type="button" data-format="list">List</button><button type="button" data-format="link">Link</button><button type="button" data-toggle-preview="forumThreadPreview">Preview</button></div>
       <div id="forumThreadPreview" class="forum-markdown-preview" hidden></div>
       <label>Photos or one video (optional)<input type="file" id="forumTopicMedia" name="media" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"></label>
