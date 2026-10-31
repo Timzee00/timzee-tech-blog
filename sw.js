@@ -4,7 +4,7 @@
 "use strict";
 const PWA_BUILD="__BLIPMOOD_ASSET_VERSION__";
 const OFFLINE_CACHE="blipmood-offline-"+PWA_BUILD;
-const STATIC_CACHE="blipmood-static-"+PWA_BUILD;
+const STATIC_CACHE="blipmood-static-"+PWA_BUILD; // obsolete cache, deleted on upgrade
 const OFFLINE_PAGE="/offline.html";
 const OFFLINE_SHELL=[
  OFFLINE_PAGE,
@@ -13,17 +13,13 @@ const OFFLINE_SHELL=[
  "/assets/brand/blipmood-pwa-192.png",
  "/assets/brand/blipmood-pwa-512.png"
 ];
-const ALLOWED_STATIC_PREFIXES=[
- "/assets/css/", "/assets/js/", "/assets/vendor/", "/assets/brand/"
-];
-const STATIC_MAX_ENTRIES=120;
-function isSafeStaticRequest(request,url){
- if(request.method!=="GET"||url.origin!==self.location.origin)return false;
- if(request.headers.has("Authorization")||request.headers.has("Range"))return false;
- if(!["script","style","image","font"].includes(request.destination))return false;
- if(!ALLOWED_STATIC_PREFIXES.some(prefix=>url.pathname.startsWith(prefix)))return false;
- if(!/\.(?:css|js|mjs|png|svg|webp|woff2?)$/i.test(url.pathname))return false;
- return true;
+// Only three small public brand assets have a meaningful offline use.
+// All other CSS, JS, media and font requests are left to native HTTP caching.
+const OFFLINE_BRAND_ASSETS=new Set(OFFLINE_SHELL.filter(path=>path.startsWith("/assets/")));
+function isSafeOfflineBrandRequest(request,url){
+ return request.method==="GET"&&url.origin===self.location.origin&&
+   !request.headers.has("Authorization")&&!request.headers.has("Range")&&
+   request.destination==="image"&&OFFLINE_BRAND_ASSETS.has(url.pathname);
 }
 self.addEventListener("install",event=>{
  event.waitUntil((async()=>{
@@ -68,25 +64,17 @@ self.addEventListener("fetch",event=>{
   })());
   return;
  }
- if(!isSafeStaticRequest(request,url))return;
+ // Do not intercept site scripts, styles, fonts or dynamic user assets.
+ // Native HTTP caching is faster and does not require hundreds of IDB reads
+ // and CacheStorage writes during first render / Lighthouse measurement.
+ if(!isSafeOfflineBrandRequest(request,url))return;
  event.respondWith((async()=>{
-  let cache;
-  try{cache=await caches.open(STATIC_CACHE);}
-  catch{return fetch(request);}
-  const hit=(await cache.match(request))||(await caches.match(request));
-  if(hit)return hit;
-  const response=await fetch(request);
-  if(response.ok&&response.type==="basic"&&
-    !/\b(?:private|no-store)\b/i.test(response.headers.get("cache-control")||"")){
-    // Fail open when a device is out of storage: don't break network access.
-    try{
-      await cache.put(request,response.clone());
-      const keys=await cache.keys();
-      if(keys.length>STATIC_MAX_ENTRIES)
-       await Promise.all(keys.slice(0,keys.length-STATIC_MAX_ENTRIES).map(key=>cache.delete(key)));
-    }catch{/* CacheStorage is optional and quota is device-dependent. */}
+  try{
+   const cached=await caches.match(request,{ignoreSearch:true});
+   return cached || await fetch(request);
+  }catch{
+   return fetch(request);
   }
-  return response;
  })());
 });
 
