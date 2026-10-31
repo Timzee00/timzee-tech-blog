@@ -1540,7 +1540,7 @@
         // neighbours. Mounted videos retain their native HTTP cache while
         // scrolling back; avoid preloading every clip on a long feed.
         function hydrateNearby(index) {
-          for (const position of (state.preferences.videos.dataSaver ? [index] : [index-1,index,index+1])) {
+          for (const position of ((state.preferences.videos.dataSaver || state.preferences.performance?.dataSaver || navigator.connection?.saveData) ? [index] : [index-1,index,index+1])) {
             const candidate=document.getElementById(`video-${position}`);
             if(!candidate || candidate.getAttribute("src"))continue;
             const source=candidate.dataset.videoSrc;
