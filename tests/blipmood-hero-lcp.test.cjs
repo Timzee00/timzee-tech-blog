@@ -34,7 +34,7 @@ test("only homepage gets the responsive hero and existing approved images stay u
  const src=read("index.html"),built=read("scripts/build-site.mjs");
  assert.match(src,/data-bm-logo="emblem"/);
  assert.match(src,/rel="preload" href="https:\/\/[^"]+\.png" as="image"/);
- assert.match(built,/if \(file === resolve\(output,"index\.html"\)\) contents=optimizeHomeHero\(contents,assetVersion\);/);
+ assert.match(built,/if \(file === resolve\(output,"index\.html"\)\) \{\s*contents=optimizeHomeHero\(contents,assetVersion\);/);
  assert.match(built,/await createResponsiveEmblemAssets\(output\)/);
  assert.match(read("scripts/build-pwa-icons.mjs"),/function resizeTransparent\(source,targetWidth\)/);
  assert.match(read("scripts/build-pwa-icons.mjs"),/for\(const theme of \["light","dark"\]\)/);
