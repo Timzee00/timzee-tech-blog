@@ -184,13 +184,11 @@
           </form>
         </div>
 
-        <div id="listingsContainer">
+        <section class="market-browse-toolbar" aria-label="Browse listings"><div class="market-browse-heading"><strong>Explore listings</strong><span id="marketResultsStatus" role="status" aria-live="polite">Loading listings…</span></div><label for="marketSort">Sort <select id="marketSort"><option value="newest">Newest first</option><option value="popular">Most viewed</option></select></label></section><div id="listingsContainer">
           <div class="callout">Loading marketplace...</div>
         </div>
 
-        <div class="market-load-more">
-          <button class="btn ghost" id="loadMoreBtn" style="display: none;">Load More</button>
-        </div>
+        <nav class="market-load-more market-pagination" aria-label="Marketplace pages"><button type="button" class="btn ghost" id="prevPageBtn" hidden>← Previous</button><span id="marketPageIndicator" aria-live="polite">Page 1</span><button type="button" class="btn ghost" id="loadMoreBtn" hidden>Next 20 →</button></nav>
       </div>
     </main>
 
@@ -230,6 +228,7 @@
         listings: [],
         offset: 0,
         category: "all",
+        sort: "newest",
         limit: 20,
         selectedPhotos: [],
         editingListing: null
@@ -462,37 +461,40 @@
       let sellerIdentityMap=new Map();
       let listVersion = 0;
       let loading = false;
-      async function loadListings() {
-        const version = ++listVersion;
-        const offset = state.offset;
-        const query = document.getElementById("marketplaceSearch").value.trim();
-        const category = state.category === "all" ? null : state.category;
-        const container = document.getElementById("listingsContainer");
-        const more = document.getElementById("loadMoreBtn");
-        loading = true; more.disabled = true; container.setAttribute("aria-busy", "true");
-        try {
-          const rows = await (query ? searchMarketplace : fetchMarketplaceItems)({
-            query, category, limit: state.limit, offset,
-            onlyAvailable: true,
+      async function loadListings(){
+        const version=++listVersion,offset=state.offset;
+        const query=document.getElementById("marketplaceSearch").value.trim();
+        const category=state.category==="all"?null:state.category;
+        const container=document.getElementById("listingsContainer");
+        const more=document.getElementById("loadMoreBtn"),previous=document.getElementById("prevPageBtn");
+        const notice=document.getElementById("marketResultsStatus"),indicator=document.getElementById("marketPageIndicator");
+        loading=true;more.disabled=true;previous.disabled=true;container.setAttribute("aria-busy","true");
+        notice.textContent="Finding listings…";
+        try{
+          const rows=await (query?searchMarketplace:fetchMarketplaceItems)({
+            query,category,sort:state.sort,limit:state.limit+1,offset,onlyAvailable:true
           });
-          if (version !== listVersion || query !== document.getElementById("marketplaceSearch").value.trim()) return;
-          state.listings = offset === 0 ? rows : [...state.listings, ...rows];
-          let identities=new Map();
-          try{
-            identities=await loadVerifiedIdentityMap(supabase,state.listings.map(item=>item.user_id).filter(Boolean));
-          }catch(error){console.warn("Seller identity decorations unavailable",error.message);}
           if(version!==listVersion)return;
-          sellerIdentityMap=identities;
-          renderListings();
-          more.style.display = rows.length === state.limit ? "inline-flex" : "none";
-        } catch (error) {
-          if (version !== listVersion) return;
-          console.error("Could not load listings:", error);
-          if (offset) state.offset = Math.max(0, offset - state.limit);
-          else container.innerHTML = '<div class="callout" role="status">We couldn’t load listings. <button type="button" class="btn ghost" data-retry-list>Try again</button></div>';
-          container.querySelector("[data-retry-list]")?.addEventListener("click", () => loadListings());
-        } finally {
-          if (version === listVersion) { loading = false; more.disabled = false; container.setAttribute("aria-busy", "false"); }
+          const hasNext=rows.length>state.limit,page=rows.slice(0,state.limit);
+          let identities=new Map();
+          try{identities=await loadVerifiedIdentityMap(supabase,page.map(item=>item.user_id).filter(Boolean));}
+          catch(error){console.warn("Seller identity decorations unavailable",error.message);}
+          if(version!==listVersion)return;
+          state.listings=page;sellerIdentityMap=identities;renderListings();
+          previous.hidden=offset===0;more.hidden=!hasNext;more.style.display=hasNext?"inline-flex":"none";
+          indicator.textContent="Page "+(Math.floor(offset/state.limit)+1);
+          notice.textContent=page.length?"Showing "+(offset+1)+"–"+(offset+page.length)+(hasNext?" · more available":""):"No matching listings";
+          if(!page.length&&offset>0){state.offset=Math.max(0,offset-state.limit);void loadListings();return;}
+        }catch(error){
+          if(version!==listVersion)return;
+          console.error("Could not load listings:",error);notice.textContent="Could not load this page";
+          if(!state.listings.length){
+            container.innerHTML='<div class="callout" role="alert">Could not load listings. <button type="button" class="btn ghost" data-retry-list>Try again</button></div>';
+            container.querySelector("[data-retry-list]")?.addEventListener("click",()=>loadListings());
+          }
+          more.hidden=true;more.style.display="none";previous.hidden=offset===0;
+        }finally{
+          if(version===listVersion){loading=false;more.disabled=false;previous.disabled=false;container.setAttribute("aria-busy","false");}
         }
       }
 
@@ -511,7 +513,7 @@
           <article class="listing-card" data-id="${encodeURIComponent(item.id)}">
             <a class="market-card-photo-link" href="listing.html?id=${encodeURIComponent(item.id)}" aria-label="View ${escapeHTML(item.title || 'listing')} photos">
               <div class="listing-image">
-                ${item.images?.[0] && isSafeUrl(item.images[0]) ? `<img src="${escapeHTML(item.images[0])}" alt="${escapeHTML(item.title || '')}" loading="lazy">` : `<div class="listing-image-placeholder" aria-hidden="true">${icon("stories")}<span>No photo yet</span></div>`}
+                ${item.images?.[0] && isSafeUrl(item.images[0]) ? `<img src="${escapeHTML(item.images[0])}" alt="${escapeHTML(item.title || '')}" loading="lazy" decoding="async" fetchpriority="low">` : `<div class="listing-image-placeholder" aria-hidden="true">${icon("stories")}<span>No photo yet</span></div>`}
                 ${item.condition ? `<div class="listing-badge">${escapeHTML(item.condition)}</div>` : ''}
               </div>
             </a>
@@ -549,7 +551,10 @@
         loadListings();
       });
 
-      bindSearch(document.getElementById("marketplaceSearch"), () => { state.offset = 0; void loadListings(); });
+      bindSearch(document.getElementById("marketplaceSearch"),()=>{state.offset=0;void loadListings();});
+      document.getElementById("marketSort").addEventListener("change",event=>{
+        state.sort=event.target.value==="popular"?"popular":"newest";state.offset=0;void loadListings();
+      });
 
       document.getElementById("listingPhotos").addEventListener("change", (event) => {
         addSelectedPhotos(event.target.files);
@@ -660,10 +665,13 @@
         document.getElementById("listingTitle").focus();
       });
 
-      document.getElementById("loadMoreBtn").addEventListener("click", () => {
-        if (loading) return;
-        state.offset += state.limit;
-        loadListings();
+      document.getElementById("loadMoreBtn").addEventListener("click",()=>{
+        if(loading)return;state.offset+=state.limit;void loadListings();
+        document.getElementById("marketResultsStatus").scrollIntoView({block:"start"});
+      });
+      document.getElementById("prevPageBtn").addEventListener("click",()=>{
+        if(loading||state.offset===0)return;state.offset=Math.max(0,state.offset-state.limit);
+        void loadListings();document.getElementById("marketResultsStatus").scrollIntoView({block:"start"});
       });
 
       await setupAuth();
