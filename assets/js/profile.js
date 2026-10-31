@@ -777,7 +777,14 @@ async function setupProfileFx(){
   saving=true;repaint();feedback("Saving your effects securely…");
   try{
    const submitted=normalizeFx(draft);
-   await syncObservedRegion(supabase);
+   const regionReady=await syncObservedRegion(supabase);
+   // Match the server's rollout decision before writing, without bypassing RLS.
+   const fxAvailability=await supabase.rpc("blipmood_feature_allowed",{p_feature:"profile_fx"});
+   if(!fxAvailability.error&&fxAvailability.data===false){
+     throw new Error(regionReady?
+       "Profile effects are not enabled for your region yet.":
+       "We could not confirm your region. Please check your connection and retry.");
+   }
    const {data,error}=await supabase.from("member_profile_effects")
      .upsert({user_id:state.user.id,...submitted,updated_at:new Date().toISOString()},{onConflict:"user_id"})
      .select("cover_effect,avatar_effect,intensity,enabled").single();
