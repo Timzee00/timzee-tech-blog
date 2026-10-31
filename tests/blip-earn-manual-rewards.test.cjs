@@ -133,3 +133,8 @@ test("Founder's funded rewards cannot open without verified staff support or sto
  assert.match(adminJs,/befVerifiedChat/);
  assert.match(api,/Configure a verified Blipmood staff chat before enabling manual rewards/);
 });
+
+test("Winner publicity consent explicitly covers the founders external channel and revocation limits",()=>{
+ assert.match(memberJs,/official announcement channel/);
+ assert.match(memberJs,/must be removed manually by staff/);
+});
