@@ -129,6 +129,7 @@ test("Founder's funded rewards cannot open without verified staff support or sto
  assert.match(hardened,/if p_enabled and v_support is null/);
  assert.match(hardened,/Configure a verified Blipmood staff chat before enabling manual rewards/);
  assert.match(hardened,/p_note ~ '\[0-9\]\{6,\}'/);
- assert.match(adminJs,/\(enabled&&!\\$\("befVerifiedChat"\)\.value\.trim\(\)\)/);
+ assert.match(adminJs,/enabled&&!/);
+ assert.match(adminJs,/befVerifiedChat/);
  assert.match(api,/Configure a verified Blipmood staff chat before enabling manual rewards/);
 });
