@@ -58,7 +58,7 @@ export async function insertCommunityFormatting(field,kind){
  if(!field)return;
  if(kind==="link"){
   const start=field.selectionStart,end=field.selectionEnd;
-  const selected=field.value.slice(start,end).replace(/[\\]\\n]/g,"").trim()||"Link";
+  const selected=field.value.slice(start,end).replace(/[\[\]\r\n]/g,"").trim()||"Link";
   const answer=window.appUI?.prompt?
    await window.appUI.prompt("Paste the link URL (https://…)"):
    window.prompt("Paste the link URL (https://…)", "https://");
