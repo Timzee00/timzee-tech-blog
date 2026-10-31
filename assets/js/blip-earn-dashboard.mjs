@@ -62,7 +62,7 @@ function renderRewards(data){
      const consentLabel=document.createElement("label");
      const consent=document.createElement("input");consent.type="checkbox";consent.checked=false;
      const consentText=document.createElement("span");
-     consentText.textContent="If the founder pays me, I allow my public @username and ₦1,000 award to appear on Blipmood's winners board.";
+     consentText.textContent="If the founder pays me, I agree to show my public @username and ₦1,000 award on Blipmood's winners board and its official announcement channel. Channel posts may not be removable instantly.";
      consentLabel.append(consent,consentText);
      const button=document.createElement("button");button.type="button";button.className="be-button";
      button.textContent="Request manual payment";
@@ -85,7 +85,7 @@ function renderRewards(data){
      const msg=document.createElement("small");msg.className="be-mini-status";msg.setAttribute("role","status");
      setting.addEventListener("click",async()=>{
        const nowOptIn=!opted;
-       if(opted&&!confirm("Remove permission for public winner announcements? Your entry will be removed from Blipmood's board."))return;
+       if(opted&&!confirm("Withdraw publication consent? Blipmood will remove your site listing, but any existing external channel announcement must be removed manually by staff."))return;
        setting.disabled=true;
        try{await post("member-consent",{award_id:award.id,public_consent:nowOptIn});await reload();}
        catch(error){msg.textContent=error.message||"Could not update consent.";setting.disabled=false;}
