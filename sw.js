@@ -6,12 +6,13 @@ const PWA_BUILD="__BLIPMOOD_ASSET_VERSION__";
 const OFFLINE_CACHE="blipmood-offline-"+PWA_BUILD;
 const STATIC_CACHE="blipmood-static-"+PWA_BUILD; // obsolete cache, deleted on upgrade
 const OFFLINE_PAGE="/offline.html";
+// Only cache what's needed to make the offline editor work.
+// Install icons remain available online from the manifest without forcing
+// extra 192px and 512px downloads during every first-visit setup.
 const OFFLINE_SHELL=[
  OFFLINE_PAGE,
  "/app.webmanifest",
- "/assets/brand/blipmood-emblem-light.png",
- "/assets/brand/blipmood-pwa-192.png",
- "/assets/brand/blipmood-pwa-512.png"
+ "/assets/brand/blipmood-emblem-light.png"
 ];
 // Only three small public brand assets have a meaningful offline use.
 // All other CSS, JS, media and font requests are left to native HTTP caching.
