@@ -103,9 +103,20 @@ async function issueCode(db, actor, program) {
   }
   for (let attempt = 0; attempt < 4; attempt++) {
     const code = "BL" + randomBytes(6).toString("hex").toUpperCase();
-    const {error} = await db.from("blip_referral_codes").insert({owner_id:userId,code});
-    if (!error) return code;
-    if (error.code !== "23505") {
+    // Database locks the referral switch and goal before minting a new code.
+    const {data:issued,error} = await db.rpc("blip_referral_issue_code",{
+      p_user:userId,p_code:code
+    });
+    if (!error && typeof issued==="string" && CODE.test(issued)) return issued;
+    if (error?.code === "55000") {
+      const e=new Error("New referral invitations are paused or the member goal has been met.");
+      e.status=409;throw e;
+    }
+    if (error?.code === "42501") {
+      const e=new Error("A verified, active account is required to invite friends.");
+      e.status=403;throw e;
+    }
+    if (error?.code !== "23505") {
       throw new Error("Unable to create your referral code.");
     }
     // Unique owner or code collision. Re-read for racing tabs before retrying.
