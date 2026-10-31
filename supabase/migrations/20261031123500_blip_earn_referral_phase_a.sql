@@ -35,7 +35,7 @@ create table if not exists public.blip_referrals (
 create index if not exists blip_referrals_referrer_status_idx on public.blip_referrals(referrer_id,status,created_at desc);
 alter table public.blip_referrals enable row level security;
 revoke all on public.blip_referrals from public,anon,authenticated;
-grant select,insert to service_role on public.blip_referrals;
+grant select,insert on public.blip_referrals to service_role;
 
 create table if not exists private.blip_referral_settings_audit (
  id bigint generated always as identity primary key,
@@ -173,9 +173,10 @@ begin
  insert into private.blip_referral_claim_attempts(user_id,attempt_day,attempts)
  values(p_user,current_date,1)
  on conflict(user_id,attempt_day) do update set
- attempts=least(8,private.blip_referral_claim_attempts.attempts+1)
+ attempts=private.blip_referral_claim_attempts.attempts+1
+ where private.blip_referral_claim_attempts.attempts<8
  returning attempts into attempts_now;
- return attempts_now<=8;
+ return found;
 end $$;
 revoke all on function public.blip_referral_consume_attempt(uuid) from public,anon,authenticated;
 grant execute on function public.blip_referral_consume_attempt(uuid) to service_role;
