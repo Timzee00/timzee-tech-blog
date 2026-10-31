@@ -131,13 +131,23 @@ export async function editStatusVideo(file) {
     status("Preparing your edited video…");
     try {
       video.pause();
-      video.currentTime = start;
-      if (Math.abs(video.currentTime - start) > 0.1) {
+      if (video.seeking || Math.abs(video.currentTime - start) > 0.04) {
         await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => { done(); reject(Error("Video seeking timed out.")); }, 12000);
-          const done = () => { clearTimeout(timeout); video.removeEventListener("seeked", ready); };
-          const ready = () => { done(); resolve(); };
-          video.addEventListener("seeked", ready, { once: true });
+          const cleanup = () => {
+            clearTimeout(timeout);
+            video.removeEventListener("seeked", ready);
+            video.removeEventListener("error", failed);
+          };
+          const ready = () => { cleanup(); resolve(); };
+          const failed = () => { cleanup(); reject(Error("Video cannot seek to that position.")); };
+          const timeout = setTimeout(() => {
+            cleanup(); reject(Error("Video seeking timed out."));
+          }, 12000);
+          video.addEventListener("seeked", ready);
+          video.addEventListener("error", failed, { once: true });
+          try { video.currentTime = start; } catch (error) { cleanup(); reject(error); }
+          if (!video.seeking && Math.abs(video.currentTime - start) <= 0.04)
+            ready();
         });
       }
       if (completed) return;
