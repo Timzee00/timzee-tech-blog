@@ -9,7 +9,12 @@ test("V7 design stays scoped to the member login page", () => {
   const css = read("assets/css/blipmood-auth-v7.css");
   assert.match(html, /class="auth-v7-page"/);
   assert.match(html, /assets\/css\/blipmood-auth-v7\.css/);
-  assert.match(html, /assets\/brand\/blipmood-wordmark-dark\.png/);
+  // Build downloads the checksum-pinned wordmark after source-page validation.
+  // Source markup must use the canonical URL, which build-site rewrites locally.
+  const brandAssets = read("scripts/brand-assets.mjs");
+  assert.match(html, /src="https:\/\/d2ol7oe51mr4n9\.cloudfront\.net\/[^"]+\.png"/);
+  assert.match(brandAssets, /blipmood-wordmark-dark\.png/);
+  assert.doesNotMatch(html, /src="assets\/brand\/blipmood-wordmark-dark\.png"/);
   assert.match(css, /body\.auth-v7-page/);
   assert.match(css, /blipmood-auth-metallic-v7\.svg/);
   assert.match(css, /backdrop-filter:\s*blur/);
