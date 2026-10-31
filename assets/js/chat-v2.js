@@ -26,7 +26,7 @@ const AUDIO_EXTENSIONS = new Set(["mp3","wav","ogg","m4a","aac","flac","opus","w
 
 const state = {
   selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false, editing: null, editSaving: false, replyTo: null, reactions:new Map(), reactionBusy:new Set(),
-  drafts: new Map(), previews: new Map(), peopleResults: [], peopleRequest: 0, messageVersions: new Map(), messageRevision: 0,
+  drafts: new Map(), previews: new Map(), previewsLoading: false, chatListGeneration: 0, peopleResults: [], peopleRequest: 0, messageVersions: new Map(), messageRevision: 0,
   user: null, verified:false, translations:new Map(), translationBusy:new Set(), starred:new Set(),forwardingMessageId:null,settings: { ...DEFAULT_SETTINGS }, friends: [], friendProfiles: new Map(), friendships: [], requests: [], sentRequests: [], blocked: [], directPartners: [], staffDMAllowed: false, canCompose: true,
   blockedProfiles: new Map(), groups: [], groupMembers: new Map(), personalViews: new Map(), messages: [], pinnedMessages: [], activeThreadId: "", activeFriendId: "", activeGroupId: "",
   searchTerm: "", peopleTerm: "", messageSearchTerm: "", mediaFile: null, mediaType: "", previewUrl: "",
@@ -232,42 +232,77 @@ async function loadProfiles(ids) {
   const result=await supabase.from("public_profiles").select("*").in("id",unique); if(result.error)throw result.error;
   (result.data||[]).forEach((p)=>state.friendProfiles.set(p.id,p));
 }
-async function loadAllChatData() {
-  const saved=await supabase.from("chat_personal_views")
-    .select("thread_id,archived,muted,cleared_before,updated_at").eq("user_id",state.user.id);
-  if(saved.error)throw saved.error;
+async function loadAllChatData({deferPreviews=false}={}) {
+  const generation=++state.chatListGeneration;
+  const userId=state.user.id;
+  // Independent requests can run together; prior startup waited for each
+  // network round-trip before beginning the next one.
+  const [saved,fr,gr,history]=await Promise.all([
+    supabase.from("chat_personal_views")
+      .select("thread_id,archived,muted,cleared_before,updated_at").eq("user_id",userId),
+    supabase.from("friendships").select("*")
+      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`),
+    supabase.from("chat_members")
+      .select("thread_id,tags,is_muted,is_pinned,chat_threads(id,name,is_group,created_by,created_at,avatar_url,description,settings,updated_at)")
+      .eq("user_id",userId),
+    supabase.from("direct_messages")
+      .select("sender_id,recipient_id,created_at")
+      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+      .not("recipient_id","is",null)
+      .order("created_at",{ascending:false}).limit(250)
+  ]);
+  for(const response of [saved,fr,gr,history])if(response.error)throw response.error;
+  if(generation!==state.chatListGeneration)return;
   state.personalViews=new Map((saved.data||[]).map(view=>[view.thread_id,view]));
-  const fr=await supabase.from("friendships").select("*").or(`requester_id.eq.${state.user.id},addressee_id.eq.${state.user.id}`); if(fr.error)throw fr.error;
   state.friendships=fr.data||[];
-  state.requests=state.friendships.filter(r=>r.status==='pending'&&r.addressee_id===state.user.id);
-  state.sentRequests=state.friendships.filter(r=>r.status==='pending'&&r.requester_id===state.user.id);
-  state.friends=state.friendships.filter(r=>r.status==='accepted').map(r=>r.requester_id===state.user.id?r.addressee_id:r.requester_id);
-  state.blocked=state.friendships.filter(r=>r.status==='blocked'&&r.blocked_by===state.user.id).map(r=>r.requester_id===state.user.id?r.addressee_id:r.requester_id);
-  const gr=await supabase.from("chat_members").select("thread_id,tags,is_muted,is_pinned,chat_threads(id,name,is_group,created_by,created_at,avatar_url,description,settings,updated_at)").eq("user_id",state.user.id); if(gr.error)throw gr.error;
-  state.groups=(gr.data||[]).map(r=>({...(r.chat_threads||{}),member_tags:r.tags||[],is_muted:r.is_muted,is_pinned:r.is_pinned})).filter(g=>g.id&&g.is_group);
-  // Preserve two-way access to staff-initiated direct conversations without friendship.
-  const history=await supabase.from("direct_messages")
-    .select("sender_id,recipient_id,created_at")
-    .or(`sender_id.eq.${state.user.id},recipient_id.eq.${state.user.id}`)
-    .not("recipient_id","is",null)
-    .order("created_at",{ascending:false}).limit(250);
-  if(history.error)throw history.error;
+  state.requests=state.friendships.filter(r=>r.status==='pending'&&r.addressee_id===userId);
+  state.sentRequests=state.friendships.filter(r=>r.status==='pending'&&r.requester_id===userId);
+  state.friends=state.friendships.filter(r=>r.status==='accepted')
+    .map(r=>r.requester_id===userId?r.addressee_id:r.requester_id);
+  state.blocked=state.friendships.filter(r=>r.status==='blocked'&&r.blocked_by===userId)
+    .map(r=>r.requester_id===userId?r.addressee_id:r.requester_id);
+  state.groups=(gr.data||[]).map(r=>({
+    ...(r.chat_threads||{}),member_tags:r.tags||[],
+    is_muted:r.is_muted,is_pinned:r.is_pinned
+  })).filter(g=>g.id&&g.is_group);
   const blockedPairs=new Set(state.friendships.filter(f=>f.status==="blocked")
-    .map(f=>f.requester_id===state.user.id?f.addressee_id:f.requester_id));
-  // Preferences keep previously cleared or archived staff DMs discoverable
-  // even when their old message history is hidden by per-user RLS.
+    .map(f=>f.requester_id===userId?f.addressee_id:f.requester_id));
   const savedPartners=[...state.personalViews.keys()]
     .filter(id=>id.includes("_"))
-    .map(id=>id.split("_").find(part=>part!==state.user.id));
+    .map(id=>id.split("_").find(part=>part!==userId));
   state.directPartners=[...new Set([
-    ...(history.data||[]).map(m=>m.sender_id===state.user.id?m.recipient_id:m.sender_id),
+    ...(history.data||[]).map(m=>m.sender_id===userId?m.recipient_id:m.sender_id),
     ...savedPartners
-  ])].filter(id=>id&&id!==state.user.id&&!blockedPairs.has(id));
-  await loadProfiles([...state.friends,...state.directPartners,...state.requests.map(r=>r.requester_id),...state.sentRequests.map(r=>r.addressee_id),...state.blocked]);
-  state.previews = await loadThreadPreviews([
+  ])].filter(id=>id&&id!==userId&&!blockedPairs.has(id));
+
+  const ids=[...state.friends,...state.directPartners,
+    ...state.requests.map(r=>r.requester_id),...state.sentRequests.map(r=>r.addressee_id),
+    ...state.blocked];
+  const threadIds=[
     ...[...new Set([...state.friends,...state.directPartners])].map(threadForFriend),
     ...state.groups.map(g=>g.id)
-  ]);
+  ];
+  const profiles=loadProfiles(ids);
+  if(deferPreviews){
+    state.previewsLoading=true;
+    state.previews=new Map();
+    const previewRequest=loadThreadPreviews(threadIds);
+    void Promise.all([profiles,previewRequest]).then(([,previews])=>{
+      if(generation!==state.chatListGeneration)return;
+      state.previews=previews;state.previewsLoading=false;
+      renderFriends();renderGroups();
+    }).catch(error=>{
+      if(generation!==state.chatListGeneration)return;
+      state.previewsLoading=false;
+      console.warn("Chat previews will refresh when conversations are opened:",error);
+      renderFriends();renderGroups();
+    });
+    await profiles;
+  }else{
+    const [,previews]=await Promise.all([profiles,loadThreadPreviews(threadIds)]);
+    if(generation!==state.chatListGeneration)return;
+    state.previews=previews;state.previewsLoading=false;
+  }
 }
 async function loadThreadPreviews(threadIds = []) {
   // One preview per thread, never an unbounded download of complete histories.
@@ -322,6 +357,7 @@ function renderUnifiedInbox(){
   const label=item.type==='group'?escapeHTML(item.title):
    verifiedName(item.title,item.profile,{compact:true});
   const excerpt=String(item.preview?.body||(
+    !item.preview&&state.previewsLoading?'Loading latest message…':
     item.preview?.media_type?'Sent '+item.preview.media_type:
     item.type==='group'?item.group?.description||'Group chat':'Start a conversation')).slice(0,120);
   const when=item.preview?chatTimeAgo(item.preview.created_at):'';
@@ -1674,14 +1710,16 @@ function setupEvents(){
 }
 async function handleRequests(e){const b=e.target.closest('button[data-request]');if(!b)return;const row=state.friendships.find(r=>r.id===b.dataset.id);if(!row)return;if(b.dataset.request==='accept'){const r=await supabase.from('friendships').update({status:'accepted',updated_at:new Date().toISOString()}).eq('id',row.id);if(r.error)throw r.error;}else{const r=await supabase.from('friendships').delete().eq('id',row.id);if(r.error)throw r.error;}await loadAllChatData();renderRequests();renderBlocked();await renderFriends();renderPeopleResults();}
 
-async function boot(){setupTabs();setupEvents();chatEnhancements.setup();setupChatVoicePlayers();state.settings=readSettings();applySettings();state.user=await getCurrentUserWithRole();if(!state.user){const invite=new URLSearchParams(location.search).get('join');if(invite&&/^[0-9a-f]{64}$/.test(invite)){location.replace('login.html?next='+encodeURIComponent('chat.html?join='+invite));return;}$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}const verifiedResult=await supabase.from('profiles')
-    .select('is_verified,verification_tier,verification_expires_at').eq('id',state.user.id).maybeSingle();
+async function boot(){setupTabs();setupEvents();chatEnhancements.setup();setupChatVoicePlayers();state.settings=readSettings();applySettings();state.user=await getCurrentUserWithRole();if(!state.user){const invite=new URLSearchParams(location.search).get('join');if(invite&&/^[0-9a-f]{64}$/.test(invite)){location.replace('login.html?next='+encodeURIComponent('chat.html?join='+invite));return;}$("chatLayout").dataset.view="auth";$("chatEmptyState").innerHTML='<div class="chat-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div><h2>Sign in to chat</h2><p>Private conversations are available after you log in.</p><a class="btn" href="login.html?next=chat.html">Log in</a>';return;}const [verifiedResult,preferences,staffPermission]=await Promise.all([
+      supabase.from('profiles').select('is_verified,verification_tier,verification_expires_at').eq('id',state.user.id).maybeSingle(),
+      loadUserPreferences(state.user),
+      supabase.rpc('can_start_staff_dm')
+    ]);
     state.verified=Boolean(verifiedLevel(verifiedResult.data));
     document.body.dataset.chatVerified=String(state.verified);
     $("chatVerifiedTranslation").hidden=!state.verified;
-    const preferences=await loadUserPreferences(state.user);
     state.settings={...DEFAULT_SETTINGS,...preferences.chat};
     if(!state.verified)state.settings.autoTranslate=false;
     applySettings();
-    $("chatTranslateLanguage").value=state.settings.translateLanguage||'en';document.documentElement.dataset.groupTags=preferences.groups?.showMemberTags===false?"hidden":"visible";await loadAllChatData();const staffPermission=await supabase.rpc('can_start_staff_dm');state.staffDMAllowed=staffPermission.data===true&&!staffPermission.error;renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('join'))await joinFromInvitation(params.get('join')).catch(err=>reportAppError(err,'Unable to join group'));else if(params.get('user'))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
+    $("chatTranslateLanguage").value=state.settings.translateLanguage||'en';document.documentElement.dataset.groupTags=preferences.groups?.showMemberTags===false?"hidden":"visible";await loadAllChatData({deferPreviews:true});state.staffDMAllowed=staffPermission.data===true&&!staffPermission.error;renderFriends();renderGroups();renderRequests();renderBlocked();renderPeopleResults();const params=new URLSearchParams(location.search);if(params.get('join'))await joinFromInvitation(params.get('join')).catch(err=>reportAppError(err,'Unable to join group'));else if(params.get('user'))await selectFriend(params.get('user'));else if(params.get('group')&&state.groups.some(g=>g.id===params.get('group')))await selectGroup(params.get('group'));}
 boot().catch(err=>{reportAppError(err,'Chat initialization failed');if($("chatMessages"))$("chatMessages").innerHTML=`<div class="chat-no-messages">Unable to load chats right now. ${escapeHTML(err.message||'Please try again.')}</div>`;});
