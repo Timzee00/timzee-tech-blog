@@ -9,7 +9,8 @@ const GROUPS=[
   ["♧","My Profile","/profile.html"],["♢","Notifications","/profile.html?tab=notifications"]]},
  {label:"Your space",links:[
   ["⚙","Settings","/settings.html"],["?","Help & Support","/support.html"],
-  ["★","Leaderboard","/index.html#leaderboardList"]]}
+  ["★","Leaderboard","/index.html#leaderboardList"],
+  ["✧","Blip Earn","/blip-earn.html"]]}
 ];
 const current=location.pathname.split("/").pop()||"index.html";
 const safeSkip=new Set(["login.html","welcome.html","404.html"]);
