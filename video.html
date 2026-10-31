@@ -710,6 +710,7 @@
       .reel-uploader .tz-identity-name.tz-nameplate{
         padding:2px 5px;border-radius:7px;background:rgba(14,25,36,.65);box-shadow:none
       }
+      .reel-uploader .reel-handle-text{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .reel-uploader .tz-verified-badge{flex:0 0 auto;vertical-align:middle}
       .reel-bottom .reel-meta{min-width:0;max-width:calc(100% - 72px)}
       @media(max-width:420px){
@@ -1148,7 +1149,8 @@
         const profile=video.uploader_profile||null;
         const uploaderName = publicIdentityName(profile,video.author_name||"Member");
         const avatarMarkup=verifiedAvatar(profile?.avatar_url,profile,{size:"sm",alt:""});
-        const uploaderMarkup=verifiedName("@"+uploaderName,profile,{compact:true});
+        const uploaderMarkup=verifiedName("@"+uploaderName,profile,{compact:true})
+          .replace(/^(<span\b[^>]*>)([^<]*)/, '$1<span class="reel-handle-text">$2</span>');
         const staff = video.uploader_staff_pick
           ? '<span class="reel-staff">★ Staff Pick</span>'
           : '';
@@ -1178,7 +1180,7 @@
                 </div>
                 <div class="reel-uploader">
                   <a class="reel-avatar-frame" href="profile.html?id=${encodeURIComponent(video.user_id || '')}" aria-label="View uploader profile">${avatarMarkup}</a>
-                  <span class="reel-username">${uploaderMarkup}</span>
+                  <span class="reel-username" title="@${escapeHTML(uploaderName)}">${uploaderMarkup}</span>
                 </div>
                 <p class="reel-caption" id="caption-${index}">${renderSocialText(video.title || "")}${video.description ? " — " + renderSocialText(video.description) : ""}</p>
                 <button type="button" class="reel-caption-more" data-action="expand-caption" data-index="${index}" aria-expanded="false">More caption</button>
