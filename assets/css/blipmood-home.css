@@ -230,3 +230,12 @@ body.blipmood-home main, body.blipmood-home footer { position: relative; z-index
 }
 /* Brand font loads progressively; reserve headline line boxes through swap. */
 .blipmood-home .home-intro h1{line-height:1.05;min-width:0}
+
+/* Below-the-fold homepage sections don't need layout/paint during first frame.
+   Never defer the hero or the primary article feed, which may contain LCP. */
+@supports (content-visibility: auto) {
+  .blipmood-home :is(#popular,#popularTopics,#categories) {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 380px;
+  }
+}
