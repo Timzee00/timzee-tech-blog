@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#071c27">
+<title>Blip Earn — Referrals | Blipmood</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+<style>
+body.be-page{margin:0;min-height:100dvh;background:radial-gradient(circle at 8% 8%,#16766b40,transparent 34%),radial-gradient(circle at 88% 22%,#2368a244,transparent 36%),#071b27;color:#ecfafa}
+.be-main{max-width:1040px;width:calc(100% - 36px);margin:50px auto 90px;min-width:0}
+.be-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:21px}
+.be-top h1{font:800 clamp(1.8rem,4vw,2.8rem)/1.1 system-ui,sans-serif;letter-spacing:-.035em;margin:6px 0 12px;color:#f1ffff}
+.be-top p{color:#b9d2d9;line-height:1.65;margin:0;max-width:62ch}
+.be-brand{display:inline-flex;align-items:center;gap:8px;font-size:.85rem;color:#83e7d6;font-weight:800;letter-spacing:.04em}
+.be-brand svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.be-home{color:#c5f1eb;text-decoration:none;border:1px solid #70d3c459;border-radius:12px;padding:11px 16px;display:inline-flex}
+.be-home:hover{background:#6bd6c31c}
+.be-state{border:1px solid #6bd6c15b;background:#173745a9;border-radius:15px;padding:16px 20px;line-height:1.6;margin:22px 0;color:#d9f6ef}
+.be-state[data-error=true]{color:#ffcbc9;border-color:#ff9f994a}
+.be-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.be-card{border:1px solid #84b8c443;background:linear-gradient(135deg,#1a3949de,#0d2939ed);backdrop-filter:blur(16px);border-radius:19px;padding:clamp(17px,3vw,27px);min-width:0;box-shadow:0 18px 38px #04131f33}
+.be-card h2{font-size:1.13rem;color:#f1fbfb;margin:0 0 12px}
+.be-card p{color:#bad4da;line-height:1.6;margin:0 0 17px}
+.be-code{color:#b0fbed;font-size:clamp(1.1rem,3vw,1.5rem);font-weight:800;letter-spacing:.085em;overflow-wrap:anywhere;margin-bottom:16px;font-variant-numeric:tabular-nums}
+.be-gridstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.be-stat{border-radius:14px;background:#69d3c10c;border:1px solid #75dbd02d;padding:15px 10px}
+.be-stat strong{display:block;font-size:clamp(1.55rem,4vw,2.25rem);line-height:1.15;color:#87e9db;font-variant-numeric:tabular-nums}
+.be-stat span{display:block;margin-top:8px;font-size:.76rem;color:#cadfe5}
+.be-actions{display:flex;gap:9px;flex-wrap:wrap}
+.be-button{min-height:45px;padding:10px 16px;border-radius:11px;font:700 .9rem system-ui,sans-serif;cursor:pointer;border:1px solid #b8f9ec;color:#062932;background:linear-gradient(110deg,#a6f5e4,#69d3c1,#9dceef)}
+.be-button.secondary{background:#183f51;color:#e3faf6;border-color:#80cfc372}
+.be-button:disabled{opacity:.48;cursor:not-allowed}
+.be-input{width:100%;min-height:46px;border-radius:11px;padding:11px 13px;background:#0a2737;color:white;border:1px solid #88aab957;font:inherit;box-sizing:border-box}
+.be-input:focus-visible,.be-button:focus-visible,.be-home:focus-visible{outline:3px solid #8cf5df;outline-offset:3px}
+.be-field{display:grid;gap:8px;margin:13px 0}
+.be-field label{font-size:.86rem;font-weight:750}
+.be-progress{height:12px;border-radius:999px;overflow:hidden;background:#7ccfb524;margin:13px 0}
+.be-progress>span{display:block;height:100%;width:0;background:linear-gradient(90deg,#69d3c1,#89bce9);transition:width .25s}
+.be-footnote{font-size:.79rem;line-height:1.65;color:#bad2d8;margin:10px 0 0}
+.be-wide{grid-column:1/-1}.be-alert{border-left:3px solid #89bce9;background:#89bce90d;border-radius:8px;padding:13px 15px;line-height:1.55}
+[hidden]{display:none!important}
+@media(max-width:690px){.be-main{width:calc(100% - 24px);margin:25px auto 85px}.be-grid{grid-template-columns:minmax(0,1fr)}.be-wide{grid-column:1}.be-card{padding:17px}}
+@media(prefers-reduced-motion:reduce){.be-progress>span{transition:none}}
+</style></head><body class="be-page">
+<main class="be-main" id="beMain">
+<header class="be-top"><div><span class="be-brand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 12 9-9 9 9-9 9-9-9Z"/><path d="m9 9 6 6M15 9l-6 6"/></svg> BLIPMOOD REWARDS</span>
+<h1>Blip Earn</h1><p>Your invitation space. Share what you love about Blipmood, keep track of friends you referred, and follow each invitation through review.</p></div>
+<a class="be-home" href="index.html">Back to Blipmood</a></header>
+<div id="beStatus" class="be-state" role="status" aria-live="polite">Checking the referral program…</div>
+<section class="be-grid" id="beWorkspace" hidden aria-label="Your referral dashboard">
+<div class="be-card"><h2>Your invitation code</h2><p>This belongs to your account and cannot be transferred to another member.</p>
+<div class="be-code" id="beCode">Not generated</div>
+<div class="be-actions"><button type="button" class="be-button" id="beGenerate">Create my code</button><button type="button" class="be-button secondary" id="beCopy" disabled>Copy invitation link</button></div>
+<p class="be-footnote" id="beCodeHint">Invitations can only be created while the program is open.</p>
+</div>
+<div class="be-card"><h2>Referral overview</h2>
+<div class="be-gridstats"><div class="be-stat"><strong id="bePending">0</strong><span>Pending review</span></div>
+<div class="be-stat"><strong id="beQualified">0</strong><span>Qualified</span></div>
+<div class="be-stat"><strong id="beRejected">0</strong><span>Rejected</span></div></div>
+<p class="be-footnote">A referral being recorded does not mean that it has qualified or earned a cash award.</p>
+</div>
+<div class="be-card"><h2>Milestone tracking</h2>
+<p><strong id="beProgressLabel">0 of 10</strong> qualified invitations toward the proposed milestone.</p>
+<div class="be-progress" role="progressbar" aria-label="Qualified referrals toward proposed milestone" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0" id="beProgress"><span id="beProgressFill"></span></div>
+<p class="be-alert">Cash, airtime and payouts have <strong>not launched</strong>. This dashboard is for invitation tracking only. No earnings are payable yet.</p>
+</div>
+<div class="be-card" id="beClaimPanel"><h2>Did a friend invite you?</h2><p>If you joined recently, you can apply a referral code once. Verified adult onboarding is required and each new account can be linked only once.</p>
+<form id="beClaimForm"><div class="be-field"><label for="beClaimCode">Invitation code</label><input class="be-input" id="beClaimCode" maxlength="14" autocomplete="off" spellcheck="false" placeholder="BLXXXXXXXXXXXX" required></div>
+<button type="submit" class="be-button" id="beClaimButton">Apply referral code</button>
+<p id="beClaimFeedback" role="status" aria-live="polite" class="be-footnote"></p></form>
+</div>
+<div class="be-card be-wide"><h2>How referrals work</h2><p>A referral must belong to a real, newly registered and verified adult account. It is recorded once, then reviewed for genuine participation. Self-referrals, purchased accounts and automated signups do not qualify.</p><p>When the founder pauses the program or the verified-member target is reached, <strong>new referrals stop</strong>. Existing records remain visible. No cash payment can be requested from this page.</p>
+<a href="support.html" class="be-home">Contact Blipmood Support</a></div>
+</section></main><script type="module" src="assets/js/blip-earn-dashboard.mjs"></script>
+</body></html>
