@@ -123,3 +123,12 @@ test("New frontend modules parse and required no-duplicate controls exist",()=>{
   assert.match(source,/<meta name="viewport"/);
  }
 });
+
+test("Founder's funded rewards cannot open without verified staff support or store payment account digits",()=>{
+ const hardened=read("supabase/migrations/20261031124655_blip_earn_manual_payment_privacy_hardening.sql");
+ assert.match(hardened,/if p_enabled and v_support is null/);
+ assert.match(hardened,/Configure a verified Blipmood staff chat before enabling manual rewards/);
+ assert.match(hardened,/p_note ~ '\[0-9\]\{6,\}'/);
+ assert.match(adminJs,/\(enabled&&!\\$\("befVerifiedChat"\)\.value\.trim\(\)\)/);
+ assert.match(api,/Configure a verified Blipmood staff chat before enabling manual rewards/);
+});
