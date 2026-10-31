@@ -15,7 +15,8 @@ test("members can access archived direct and group chats independently",()=>{
  assert.match(page,/data-chat-menu="clear"/);
  assert.match(client,/function renderArchived\(\)/);
  assert.match(client,/state\.personalViews/);
- assert.match(client,/\.eq\("user_id",state\.user\.id\)/);
+ assert.match(client,/const userId=state\.user\.id;/);
+ assert.match(client,/supabase\.from\("chat_personal_views"\)[\s\S]*?\.select\("thread_id,archived,muted,cleared_before,updated_at"\)\.eq\("user_id",userId\)/);
  assert.match(client,/isArchived\(threadForFriend\(friendId\)\)/);
  assert.match(client,/isArchived\(g\.id\)/);
  assert.match(client,/renderArchived\(\)/);
