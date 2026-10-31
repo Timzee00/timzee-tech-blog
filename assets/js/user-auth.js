@@ -427,12 +427,21 @@ async function boot() {
   if (appleSignIn) {
     appleSignIn.addEventListener("click", () => handleOAuthSignIn("apple", appleSignIn, loginMessage, nextUrl));
   }
-  // Sign-up social controls use the identical OAuth flow and account provisioning.
+  // Sign-up social controls use the same provider flow but require explicit consent first.
+  const signUpWithProvider = (provider, button) => {
+    const terms = document.getElementById("signupTerms");
+    if (!terms?.checked) {
+      setMessage(signupMessage, "Please accept the Terms and Privacy Policy to create an account.");
+      terms?.focus();
+      return;
+    }
+    void handleOAuthSignIn(provider, button, signupMessage, nextUrl);
+  };
   if (googleSignUp) {
-    googleSignUp.addEventListener("click", () => handleOAuthSignIn("google", googleSignUp, signupMessage, nextUrl));
+    googleSignUp.addEventListener("click", () => signUpWithProvider("google", googleSignUp));
   }
   if (appleSignUp) {
-    appleSignUp.addEventListener("click", () => handleOAuthSignIn("apple", appleSignUp, signupMessage, nextUrl));
+    appleSignUp.addEventListener("click", () => signUpWithProvider("apple", appleSignUp));
   }
 
   if (loginForm) {
