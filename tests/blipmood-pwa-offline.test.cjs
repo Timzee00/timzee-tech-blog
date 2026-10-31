@@ -116,13 +116,22 @@ test("PNG icon build creates valid 192 and 512 squares using the original approv
   fs.writeFileSync(path.join(folder,"blipmood-emblem-light.png"),Buffer.concat([
    signature,chunk("IHDR",header),chunk("IDAT",deflateSync(px)),chunk("IEND",Buffer.alloc(0))
   ]));
+  fs.copyFileSync(path.join(folder,"blipmood-emblem-light.png"),path.join(folder,"blipmood-emblem-dark.png"));
   const generator=await import(pathToFileURL(path.resolve(__dirname,"../scripts/build-pwa-icons.mjs")).href);
   await generator.createPwaIcons(tmp);
+  await generator.createResponsiveEmblemAssets(tmp);
   for(const [filename,size] of [["192",192],["512",512],["maskable-512",512]]){
    const output=fs.readFileSync(path.join(folder,"blipmood-pwa-"+filename+".png"));
    assert.ok(output.subarray(0,8).equals(signature));
    assert.equal(output.readUInt32BE(16),size);
    assert.equal(output.readUInt32BE(20),size);
+  }
+  for(const theme of ["light","dark"])for(const size of [180,420]){
+   const image=fs.readFileSync(path.join(folder,"blipmood-emblem-"+theme+"-"+size+".png"));
+   assert.ok(image.subarray(0,8).equals(signature));
+   assert.equal(image.readUInt32BE(16),size);
+   assert.equal(image.readUInt32BE(20),size);
+   assert.equal(image[25],6,"hero image must preserve RGBA transparency");
   }
  }finally{fs.rmSync(tmp,{recursive:true,force:true});}
 });
