@@ -1,7 +1,13 @@
 import { supabase, getCurrentUser, getDisplayName, signOut } from "./supabase.js";
 import { createContentReport } from "./data.js";
 import { formatRichText, sanitizeHTML, escapeHTML, isSafeUrl } from "./utils.js";
+import { icon } from "./icons.js";
 import "./nav.js";
+
+// Hydrate static icon slots after the HTML loads; all labels remain accessible.
+document.querySelectorAll("[data-bm-icon]").forEach((slot) => {
+  slot.innerHTML = icon(slot.getAttribute("data-bm-icon"));
+});
 
 const params = new URLSearchParams(window.location.search);
 const novelId = params.get("id");
@@ -95,7 +101,7 @@ async function loadNovel() {
     if (state.novel.cover_url && isSafeUrl(state.novel.cover_url)) {
       document.getElementById("coverImg").innerHTML = `<img src="${escapeHTML(state.novel.cover_url)}" alt="${escapeHTML(state.novel.title || "Cover")}">`;
     } else {
-      document.getElementById("coverImg").textContent = "📖";
+      document.getElementById("coverImg").innerHTML = icon("book-open");
     }
 
     document.getElementById("editBtn").style.display = state.isAuthor ? "flex" : "none";
@@ -173,12 +179,14 @@ function renderEngagementButtons() {
 
   if (likeBtn) {
     likeBtn.classList.toggle("active", !!state.hasLiked);
-    likeBtn.textContent = state.hasLiked ? "❤️ Liked" : "❤️ Like";
+    likeBtn.innerHTML = `${icon("heart")} ${state.hasLiked ? "Liked" : "Like"}`;
+    likeBtn.setAttribute("aria-pressed", String(!!state.hasLiked));
   }
 
   if (subscribeBtn) {
     subscribeBtn.classList.toggle("active", !!state.isSubscribed);
-    subscribeBtn.textContent = state.isSubscribed ? "🔕 Subscribed" : "🔔 Subscribe";
+    subscribeBtn.innerHTML = `${icon(state.isSubscribed ? "bell-off" : "bell")} ${state.isSubscribed ? "Subscribed" : "Subscribe"}`;
+    subscribeBtn.setAttribute("aria-pressed", String(!!state.isSubscribed));
   }
 }
 
