@@ -598,7 +598,7 @@ function threadPreviewHtml(thread){
  if(url.startsWith("forum-private-media/"))return "<div class='forum-thread-thumb'><span>Members-only attachment</span></div>";
  if(!isSafeUrl(url))return "";
  if(thread.media_type==="video"||/\.(mp4|webm)(\?|$)/i.test(url))
-  return "<div class='forum-thread-thumb'><span aria-label='Video attached'>▶ Video</span></div>";
+  return "<div class='forum-thread-thumb'><span aria-label='Video attached'>"+icon("video")+" Video</span></div>";
  return "<div class='forum-thread-thumb'><img src='"+escape(url)+"' loading='lazy' decoding='async' alt='Preview of attached community image'></div>";
 }
 function threadCard(thread,{pinned=false}={}){
