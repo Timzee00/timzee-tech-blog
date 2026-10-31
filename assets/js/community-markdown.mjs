@@ -54,7 +54,28 @@ export function renderCommunityMarkdown(raw){
  flush();
  return lines.join("");
 }
-export function insertCommunityFormatting(field,kind){
+export async function insertCommunityFormatting(field,kind){
+ if(!field)return;
+ if(kind==="link"){
+  const start=field.selectionStart,end=field.selectionEnd;
+  const selected=field.value.slice(start,end).replace(/[\\]\\n]/g,"").trim()||"Link";
+  const answer=window.appUI?.prompt?
+   await window.appUI.prompt("Paste the link URL (https://…)"):
+   window.prompt("Paste the link URL (https://…)", "https://");
+  if(!answer)return;
+  let parsed;
+  try{
+   parsed=new URL(String(answer).trim());
+   if(!["https:","http:"].includes(parsed.protocol)||parsed.username||parsed.password)throw Error("Invalid URL");
+  }catch{
+   window.appUI?.toast?.("Enter a valid http or https link.",{tone:"warning"});
+   return;
+  }
+  field.setRangeText("["+selected+"]("+parsed.href+")",start,end,"end");
+  field.focus();
+  field.dispatchEvent(new Event("input",{bubbles:true}));
+  return;
+ }
  const pair={
   bold:["**","**"],italic:["*","*"],code:[tick,tick],
   quote:["> ",""],list:["- ",""],heading:["## ",""],link:["[","](https://example.com)"]
