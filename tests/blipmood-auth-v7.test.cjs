@@ -9,7 +9,7 @@ test("V7 design stays scoped to the member login page", () => {
   const css = read("assets/css/blipmood-auth-v7.css");
   assert.match(html, /class="auth-v7-page"/);
   assert.match(html, /assets\/css\/blipmood-auth-v7\.css/);
-  assert.match(html, /assets\/brand\/blipmood-mark\.svg/);
+  assert.match(html, /assets\/brand\/blipmood-wordmark-dark\.png/);
   assert.match(css, /body\.auth-v7-page/);
   assert.match(css, /blipmood-auth-metallic-v7\.svg/);
   assert.match(css, /backdrop-filter:\s*blur/);
@@ -60,4 +60,33 @@ test("Reference-inspired metallic SVG remains an original local vector", () => {
   assert.match(svg, /<path/);
   assert.match(svg, /<\/svg>$/);
   assert.doesNotMatch(svg, /<script|<foreignObject|<iframe|onload=/i);
+});
+test("Blipmood member auth uses its real teal/blue palette and never the reference gold CTA", () => {
+  const css = read("assets/css/blipmood-auth-v7.css");
+  const artwork = read("assets/brand/blipmood-auth-metallic-v7.svg");
+  const brandAssets = read("scripts/brand-assets.mjs");
+  assert.match(css, /--v7-accent:\s*#69d3c1/i);
+  assert.match(css, /--v7-accent-deep:\s*#2368a2/i);
+  assert.match(css, /#89bce9|#87c6eb|#8cc9eb/i);
+  assert.match(artwork, /#69d3c1|#70d2cb/i);
+  assert.match(brandAssets, /blipmood-wordmark-dark\.png/);
+  assert.doesNotMatch(css, /--v7-gold|#ffe03a|#fff54e|#ffda21|#f4bb15/i);
+  assert.doesNotMatch(artwork, /url\(#gold\)|#ffc976|#fbd490/i);
+});
+
+test("polished auth provides narrow-screen forms, inline errors and accessible progress", () => {
+  const css = read("assets/css/blipmood-auth-v7.css");
+  const html = read("login.html");
+  const js = read("assets/js/user-auth.js");
+  assert.match(css, /@media\s*\(max-width:480px\)/);
+  assert.match(css, /\.auth-password-pair\s*\{grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(html, /id="signupPasswordBars"/);
+  assert.match(html, /id="signupPasswordStrength"/);
+  assert.match(html, /id="signupPasswordMatch"/);
+  assert.match(js, /updatePasswordGuidance/);
+  assert.match(js, /validateForm\(loginForm\)/);
+  assert.match(js, /setFormBusy\(loginForm, true\)/);
+  assert.match(js, /setFormBusy\(signupForm, true\)/);
+  assert.match(js, /submit\.setAttribute\("aria-busy", String\(busy\)\)/);
+  assert.match(js, /password !== confirm/);
 });
