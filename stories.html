@@ -565,6 +565,7 @@
         if (state.timerId) clearTimeout(state.timerId);
         if (state.mediaWatchdog) clearTimeout(state.mediaWatchdog);
         state.timerId=null;state.mediaWatchdog=null;
+        state.storyActiveVideo?.pause();
         state.storyActiveVideo=null;
         state.storyDuration=0;state.storyRemaining=0;state.storyStartedAt=0;
         state.storyHeld=false;
@@ -717,7 +718,7 @@
           video.muted = true; // Browsers block autoplay with sound.
           video.playsInline = true;
           video.controls = true; // Let the user unmute, pause or resume.
-          video.preload = "auto";
+          video.preload = "metadata";
           state.storyActiveVideo=video;
           const fail = () => { if (media.contains(video)) mediaError("This video cannot be played. Moving to the next story."); };
           video.addEventListener("error", fail, { once: true });
