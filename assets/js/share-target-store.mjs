@@ -54,10 +54,11 @@ export function safeExternalUrl(value){
 }
 export function sharedUrl(payload){
  const explicit=safeExternalUrl(payload?.url);if(explicit)return explicit;
- const text=String(payload?.text||"");
- for(const match of text.matchAll(/https:\/\/[^\s<>"']+/gi)){
-  const candidate=safeExternalUrl(match[0].replace(/[),.!?;]+$/,""));
-  if(candidate)return candidate;
+ for(const text of [String(payload?.text||""),String(payload?.title||"")]){
+  for(const match of text.matchAll(/https:\/\/[^\s<>"']+/gi)){
+   const candidate=safeExternalUrl(match[0].replace(/[),.!?;]+$/,""));
+   if(candidate)return candidate;
+  }
  }
  return "";
 }
