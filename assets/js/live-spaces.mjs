@@ -185,7 +185,21 @@ function renderRooms(){
   const mode=r.speaking_mode==="open"?"Open mic":"Request to speak";
   const meta=el("p",dateLabel(r.starts_at)+" · "+r.capacity+" seats · "+r.visibility+" · "+mode,"space-item-meta");
   article.append(badge,title,intro,meta);
-  article.append(button(live?"🎙 Join live":"View Space →",()=>void openRoom(r.id,{joinImmediately:live})));
+  const entryButton=button(live?"🎙 Join live":"View Space →",async()=>{
+   if(entryButton.disabled)return;
+   if(live&&!state.user){
+    location.href="login.html?next="+encodeURIComponent("/spaces.html?room="+r.id+"&join=1");
+    return;
+   }
+   entryButton.disabled=true;
+   entryButton.textContent=live?"Connecting…":"Opening…";
+   alertStatus(live?"Opening this Space and connecting audio…":"Opening Space…");
+   try{
+    await openRoom(r.id,{joinImmediately:live});
+   }catch(error){alertStatus(error?.message||"Could not open this Space. Try again.","error")}
+   finally{entryButton.disabled=false;entryButton.textContent=live?"🎙 Join live":"View Space →"}
+  });
+  article.append(entryButton);
   list.append(article);
  }
 }
@@ -298,7 +312,12 @@ async function openRoom(id,{enableMic=false,joinImmediately=false}={}){
   await goLive();return;
  }
  if((hostIsLive||audioWindowRequested||joinImmediately)&&state.room?.status==="live"&&
-    state.audioConfigured&&!roomExpired(state.room)){
+    !roomExpired(state.room)){
+   if(!state.audioConfigured){
+    alertStatus("Live audio is temporarily unavailable. Refresh or try again soon.","error");
+    audioStatus("Live audio provider is unavailable; no one has been connected.");
+    return;
+   }
    // Preserve the speaker's actual mute choice when moving to a separate window.
    await join({enableMic:audioWindowRequested?q.get("speak")==="1":true});
  }
@@ -332,7 +351,7 @@ function renderDetail(){
 function configureControls(){
  const room=state.room,host=Boolean(room&&state.user?.id===room.owner_id);
  const live=room?.status==="live",scheduled=room?.status==="scheduled";
- $("spaceJoin").hidden=state.joined||state.joining||!state.audioConfigured||Boolean(room&&(room.status!=="live"||roomExpired(room)));
+ $("spaceJoin").hidden=state.joined||state.joining||Boolean(room&&(room.status!=="live"||roomExpired(room)));
  $("spaceStart").hidden=!host||!scheduled||!state.audioConfigured;
  $("spaceEnd").hidden=!host;
  $("spaceEnd").textContent=room?.status==="ended"?"Confirm audio stopped":"End room";
@@ -360,7 +379,7 @@ function configureControls(){
    liveMic?"Your mic is live. Others can hear you.":"Your microphone is off. Tap Mic to talk."):
   room?.speaking_mode==="open"?"Join once and your mic activates after permission.":
   "Join to listen; ask the host before speaking.";
- $("spaceJoin").textContent=host?"🎙 Reconnect as host":"🎙 Join live";
+ $("spaceJoin").textContent=!state.user?"Sign in to join":host?"🎙 Reconnect as host":state.joining?"Joining…":"🎙 Join live";
  $("spaceAsk").hidden=!state.joined||state.role!=="listener"||!room?.allow_requests;
  // Hosts also need a recovery path when their audio connection drops.
  const reconnect=$("spaceReconnect");
@@ -545,7 +564,12 @@ async function connectJoinedRoom({enableMic=false}={}){
 }
 async function join({enableMic=false}={}){
  if(!authRequired()||!state.roomId||state.joined||state.joining)return;
+ if(!state.audioConfigured){
+  alertStatus("Live audio isn't available right now. Retry when audio is configured.","error");
+  return;
+ }
  state.joining=true;configureControls();
+ alertStatus("Joining the Space…");
  try{
   // Permission belongs to the user and browser; request during the Join action.
   if(enableMic&&(state.user?.id===state.room?.owner_id||
@@ -559,7 +583,7 @@ async function join({enableMic=false}={}){
   await refreshRoom();
   const connected=await connectJoinedRoom({enableMic});
   startPolling();
-  alertStatus(connected?(state.desiredMic?"You're live! Microphone is on.":
+  alertStatus(connected?(state.livekit?.canPlaybackAudio===false?"Joined! Tap Play audio below to hear speakers.":state.desiredMic?"You're live! Microphone is on.":
    state.role==="listener"?"Listening live. Ask to speak when ready.":
    "You're in. Mic is off; allow microphone permission to speak."):
    "Room joined, but audio did not connect. Use Reconnect to try again.",
@@ -787,7 +811,7 @@ async function init(){
  if(q.has("post")||q.has("workspace")||q.has("community")||q.has("project"))setTab("here");
  await loadRooms();
  const selected=q.get("room");
- if(validId(selected)){await openRoom(selected)}
+ if(validId(selected)){await openRoom(selected,{joinImmediately:q.get("join")==="1"})}
 }
 $("spacesCreateToggle").addEventListener("click",()=>{if(authRequired())showCreate(true)});
 $("spacesCancel").addEventListener("click",()=>showCreate(false));
@@ -826,7 +850,14 @@ $("spaceReportForm").addEventListener("submit",async event=>{
 });
 $("spaceStart").addEventListener("click",goLive);
 $("spaceEnd").addEventListener("click",endRoom);
-$("spaceJoin").addEventListener("click",()=>void join({enableMic:true}));
+$("spaceJoin").addEventListener("click",()=>{
+ if(!state.user){
+  if(state.roomId)location.href="login.html?next="+encodeURIComponent("/spaces.html?room="+state.roomId+"&join=1");
+  else alertStatus("Select a live room to join.","error");
+  return;
+ }
+ void join({enableMic:true});
+});
 $("spaceLeave").addEventListener("click",async()=>{await leave();alertStatus("Left the room.","success")});
 $("spacePopout").addEventListener("click",()=>{
  // Let the real link open a persistent window. Handoff only after that window
