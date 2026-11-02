@@ -8,6 +8,7 @@ import {setupMentionInput} from "./mentions.js";
 import {incrementVideoView} from "./videos-marketplace.js";
 import {renderSocialText} from "./social-rich-text.mjs";
 import {icon} from "./icons.js";
+import {deliveryMediaUrl} from "./media-delivery.mjs";
 
 const state = { user: null, preferences: mergePreferences(), type: "all", mode: "for-you", loading: false };
 const feedCache = new Map();
@@ -40,15 +41,15 @@ function contentHref(row) {
   return "#";
 }
 function renderRow(row) {
-  const type=row.content_type,mediaUrl=row.video_url;
+  const type=row.content_type,mediaUrl=deliveryMediaUrl(row.video_url);
   const isVideo=type==="video" && mediaUrl && isSafeUrl(mediaUrl);
   const image=row.image_url && isSafeUrl(row.image_url)
-    ? '<img src="'+escapeHTML(row.image_url)+'" alt="'+escapeHTML(row.title||"Story image")+'" loading="lazy">'
+    ? '<img src="'+escapeHTML(deliveryMediaUrl(row.image_url))+'" alt="'+escapeHTML(row.title||"Story image")+'" loading="lazy">'
     : '<div class="fyp-media-fallback" aria-hidden="true">'+escapeHTML(typeLabel(type).toUpperCase())+'</div>';
   const media=isVideo ?
     '<div class="fyp-video-stage" data-fyp-video-stage>'+
       '<video class="fyp-inline-video" controls playsinline preload="none" loading="lazy"'+
-      (row.image_url&&isSafeUrl(row.image_url)?' poster="'+escapeHTML(row.image_url)+'"':"")+
+      (row.image_url&&isSafeUrl(row.image_url)?' poster="'+escapeHTML(deliveryMediaUrl(row.image_url))+'"':"")+
       ' src="'+escapeHTML(mediaUrl)+'" aria-label="'+escapeHTML(row.title||"Community video")+'"></video>'+
       '<div class="fyp-video-gestures" data-fyp-video-gestures role="button" tabindex="0" aria-label="Tap to pause or play; double tap to like"></div>'+
       '<div class="fyp-video-flash" aria-hidden="true"></div>'+
