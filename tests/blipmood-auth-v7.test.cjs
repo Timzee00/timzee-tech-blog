@@ -96,13 +96,14 @@ test("polished auth provides narrow-screen forms, inline errors and accessible p
   assert.match(js, /password !== confirm/);
 });
 
-test("signup never shows verification instructions after a failed request and gives accurate password guidance", () => {
+test("signup shows verification instructions only after success, and enforces configured password guidance", () => {
   const html = read("login.html");
   const js = read("assets/js/user-auth.js");
   assert.doesNotMatch(html, /class="auth-v7-note">Check your inbox or spam folder/);
-  assert.match(js, /lower\\.includes\\("error sending confirmation email"\\)/);
-  assert.match(js, /if \\(result\\.error\\) \\{/);
-  assert.match(js, /meetsSignupPasswordPolicy\\(password\\)/);
-  assert.match(js, /Password meets the required format/);
-  assert.match(js, /Account created\\. Confirm your email/);
+  assert.ok(js.includes('lower.includes("error sending confirmation email")'));
+  assert.ok(js.includes('if (result.error) {'));
+  assert.ok(js.includes('meetsSignupPasswordPolicy(password)'));
+  assert.ok(js.includes('Password meets the required format'));
+  assert.ok(js.includes('Account created. Confirm your email'));
+  assert.ok(js.includes('/[^a-zA-Z0-9\\s]/'));
 });
