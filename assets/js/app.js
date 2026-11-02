@@ -36,6 +36,7 @@ import { setupReveal } from "./reveal.js";
 // Reader personalization is imported only for signed-in members.
 import {verifiedAvatar,verifiedName} from "./verified-identity.mjs";
 import { icon } from "./icons.js";
+import { deliveryMediaUrl } from "./media-delivery.mjs";
 import "./nav.js";
 
 // The homepage is a curated discovery preview rather than an archive.
@@ -337,7 +338,7 @@ function renderPopularTopics() {
   track.innerHTML = topTopics
     .map((topic) => {
       const count = Math.max(0, Number(topic.reply_count) || 0);
-      const mediaUrl = topic.media_url && isSafeUrl(topic.media_url) ? escapeHTML(topic.media_url) : "";
+      const mediaUrl = topic.media_url && isSafeUrl(topic.media_url) ? escapeHTML(deliveryMediaUrl(topic.media_url)) : "";
       const media =
         topic.media_type === "video" && mediaUrl
           ? `<span class="topic-video-link" aria-label="Open video discussion"><span aria-hidden="true">▶</span> Video discussion · Open to watch</span>`
