@@ -103,6 +103,9 @@ function normalizeAuthError(error, context = "generic") {
   }
 
   if (context === "signup") {
+    if (lower.includes("error sending confirmation email") || lower.includes("smtp") || lower.includes("authentication failed")) {
+      return "We could not send your verification email. Please try again later or contact support if this continues.";
+    }
     if (lower.includes("already registered") || lower.includes("already been registered")) {
       return "This email is already registered. Try signing in or use password reset.";
     }
@@ -326,21 +329,29 @@ async function boot() {
   const strengthBars = document.getElementById("signupPasswordBars");
   const strengthText = document.getElementById("signupPasswordStrength");
   const matchText = document.getElementById("signupPasswordMatch");
-  // These indicators are guidance only; server-side password policy is authoritative.
+  // Guidance mirrors the configured Supabase password requirements; server remains authoritative.
+  function meetsSignupPasswordPolicy(password) {
+    return password.length >= 8 && /[a-z]/.test(password) && /[A-Z]/.test(password)
+      && /[0-9]/.test(password) && /[^a-zA-Z0-9\\s]/.test(password);
+  }
   function updatePasswordGuidance() {
     const password = passwordFieldForStrength?.value || "";
     const confirmation = confirmFieldForStrength?.value || "";
-    let score = 0;
-    if (password.length) {
-      score = 1;
-      if (password.length >= 8) score = 2;
-      if (password.length >= 12 && /[a-z]/i.test(password) && /[0-9]/.test(password)) score = 3;
-      if (password.length >= 14 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^a-z0-9]/i.test(password)) score = 4;
-    }
+    const requirements = [
+      [password.length >= 8, "8 or more characters"],
+      [/[a-z]/.test(password), "a lowercase letter"],
+      [/[A-Z]/.test(password), "an uppercase letter"],
+      [/[0-9]/.test(password), "a number"],
+      [/[^a-zA-Z0-9\\s]/.test(password), "a symbol"]
+    ];
+    const missing = requirements.filter(([met]) => !met).map(([, label]) => label);
+    const meetsPolicy = missing.length === 0;
+    const score = !password ? 0 : meetsPolicy ? (password.length >= 12 ? 4 : 3) : password.length >= 8 ? 2 : 1;
     if (strengthBars) strengthBars.dataset.strength = String(score);
-    if (strengthText) strengthText.textContent = password
-      ? "Password guidance: " + ["", "too short", "meets minimum length", "better variety", "stronger variety"][score] + "."
-      : "Use at least 8 characters. A longer, unique password is safer.";
+    if (strengthText) strengthText.textContent = !password
+      ? "Use 8 or more characters, including uppercase, lowercase, a number and a symbol."
+      : meetsPolicy ? "Password meets the required format. A longer, unique password is safer."
+      : "Password needs: " + missing.join(", ") + ".";
     if (matchText) {
       const match = password === confirmation;
       matchText.textContent = confirmation ? (match ? "Passwords match." : "Passwords do not match yet.") : "";
@@ -570,8 +581,8 @@ async function boot() {
         return;
       }
       if (!emailField?.checkValidity()) { emailField?.reportValidity(); return; }
-      if (password.length < 8) {
-        setMessage(signupMessage, "Use a password with at least 8 characters.");
+      if (!meetsSignupPasswordPolicy(password)) {
+        setMessage(signupMessage, "Use at least 8 characters with uppercase, lowercase, a number and a symbol.");
         passwordField?.focus();
         return;
       }
