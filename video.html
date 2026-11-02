@@ -848,6 +848,7 @@
       import { icon } from "./assets/js/icons.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
       import {renderSocialText} from "./assets/js/social-rich-text.mjs";
+      import {deliveryMediaUrl} from "./assets/js/media-delivery.mjs";
       import {mountPoll,openPollComposer} from "./assets/js/content-polls.mjs";
       import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
       import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap,publicIdentityName} from "./assets/js/verified-identity.mjs";
@@ -1170,8 +1171,8 @@
           .slice(0, 6)
           .map((t) => `<a class="reel-tag" href="hashtags.html?tag=${encodeURIComponent(t)}">#${escapeHTML(t)}</a>`)
           .join(" ");
-        const poster = video.thumbnail_url && isSafeUrl(video.thumbnail_url) ? video.thumbnail_url : "";
-        const src = isSafeUrl(video.video_url) ? video.video_url : "";
+        const poster = video.thumbnail_url && isSafeUrl(video.thumbnail_url) ? deliveryMediaUrl(video.thumbnail_url) : "";
+        const src = isSafeUrl(video.video_url) ? deliveryMediaUrl(video.video_url) : "";
 
         return `
           <div class="reel-item" data-index="${index}" data-id="${escapeHTML(video.id)}">
@@ -1213,7 +1214,7 @@
                   <div class="reel-chip-icon">${icon("share")}</div>
                   <span class="reel-chip-count">Share</span>
                 </button>
-                <button type="button" aria-label="Save video" class="reel-chip" data-action="download" ${video.allow_download===false?"hidden":""} data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(video.video_url || '')}" data-title="${escapeHTML(video.title || 'video')}">
+                <button type="button" aria-label="Save video" class="reel-chip" data-action="download" ${video.allow_download===false?"hidden":""} data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(deliveryMediaUrl(video.video_url || ''))}" data-title="${escapeHTML(video.title || 'video')}">
                   <div class="reel-chip-icon">${icon("download")}</div>
                   <span class="reel-chip-count">Save</span>
                 </button>
