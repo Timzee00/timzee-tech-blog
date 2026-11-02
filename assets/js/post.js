@@ -425,7 +425,7 @@ function renderGallery(mediaItems) {
     .map((item, index) => {
       const url = escapeHTML(item.url);
       if (item.media_type === "video") {
-        return `<figure class="post-gallery-item"><video controls playsinline preload="metadata" src="${url}"></video><figcaption>Video ${index + 1}</figcaption></figure>`;
+        return `<figure class="post-gallery-item"><video controls playsinline preload="none" src="${url}"></video><figcaption>Video ${index + 1}</figcaption></figure>`;
       }
       return `<figure class="post-gallery-item"><a href="${url}" target="_blank" rel="noopener noreferrer" aria-label="Open article image ${index + 1} in new tab"><img loading="lazy" decoding="async" width="960" height="540" referrerpolicy="no-referrer" src="${url}" alt="Article image ${index + 1}"></a><figcaption>Image ${index + 1} · opens original file</figcaption></figure>`;
     })
