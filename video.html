@@ -1243,7 +1243,10 @@
       // and only fall back to muted playback if the browser actually rejects it —
       // rather than defaulting every video to muted regardless.
       function playWithSoundFallback(vid, idx, { explicit = false } = {}) {
-        if (!explicit && state.preferences.videos.autoplay === false) return;
+        // Visitors who enable Data Saver watch only by tapping; passive scrolling costs no video bytes.
+        const saveData = state.preferences.videos.dataSaver ||
+          state.preferences.performance?.dataSaver || navigator.connection?.saveData;
+        if (!explicit && (state.preferences.videos.autoplay === false || saveData || document.visibilityState === "hidden")) return;
         // Preserve the viewer's latest mute decision across every reel.
         if (state.commentsOpenFor || document.getElementById("reelUploadDialog")?.open) return;
         vid.muted = state.sessionMuted;
@@ -1294,6 +1297,17 @@
             tapState.set(idx,{at:now,timer});
           });
         });
+
+        // Keep video buffering from continuing while the tab is backgrounded.
+        if(!document.documentElement.dataset.reelVisibilityWired){
+          document.documentElement.dataset.reelVisibilityWired="true";
+          const pauseBackgroundReels=()=>{
+            if(document.visibilityState==="hidden")
+              document.querySelectorAll(".reel-video").forEach(video=>video.pause());
+          };
+          document.addEventListener("visibilitychange",pauseBackgroundReels);
+          window.addEventListener("pagehide",()=>document.querySelectorAll(".reel-video").forEach(video=>video.pause()));
+        }
 
         // Mute is handled by the shared header and applies to all clips.
 
@@ -1549,20 +1563,17 @@
           track.addEventListener("pointercancel", endDrag);
         });
 
-        // Only attach media sources for the visible reel and immediate
-        // neighbours. Mounted videos retain their native HTTP cache while
-        // scrolling back; avoid preloading every clip on a long feed.
+        // Only load the video the viewer actually watches. Older code attached
+        // both neighbours and invoked load(), producing CDN traffic while scrolling.
+        // Video src is added only for the active reel or an explicit tap.
         function hydrateNearby(index) {
-          for (const position of ((state.preferences.videos.dataSaver || state.preferences.performance?.dataSaver || navigator.connection?.saveData) ? [index] : [index-1,index,index+1])) {
-            const candidate=document.getElementById(`video-${position}`);
-            if(!candidate || candidate.getAttribute("src"))continue;
-            const source=candidate.dataset.videoSrc;
-            if(!source)continue;
-            candidate.src=source;
-            candidate.preload=position===index && !state.preferences.videos.dataSaver?"auto":
-              state.preferences.videos.dataSaver?"none":"metadata";
-            candidate.load();
-          }
+          const candidate=document.getElementById(`video-${index}`);
+          if(!candidate||candidate.getAttribute("src"))return;
+          const source=candidate.dataset.videoSrc;
+          if(!source)return;
+          candidate.preload="none";
+          candidate.src=source;
+          // The play() promise below starts fetching only if playback is requested.
         }
         // Autoplay active video, pause others
         if (observer) observer.disconnect();
@@ -1574,8 +1585,14 @@
               if (!vid) return;
               if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
                 state.activeIndex = Number(idx);
-                hydrateNearby(Number(idx));
-                playWithSoundFallback(vid, idx);
+                // Background tabs and Data Saver never download autoplay candidates.
+                const saving=state.preferences.videos.dataSaver ||
+                  state.preferences.performance?.dataSaver || navigator.connection?.saveData;
+                if(document.visibilityState!=="hidden" &&
+                   !saving && state.preferences.videos.autoplay!==false) {
+                  hydrateNearby(Number(idx));
+                  playWithSoundFallback(vid, idx);
+                }
                 maybeLoadMore(Number(idx));
               } else {
                 vid.pause();
