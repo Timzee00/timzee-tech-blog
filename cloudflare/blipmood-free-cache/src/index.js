@@ -6,7 +6,7 @@
  * ranges from the cached body automatically.
  */
 const ORIGIN="https://duvbcwwprkzzyzikmcol.supabase.co/storage/v1/object/public/media/";
-const ALLOWED=new Set(["videos","video-thumbnails","topics","avatars","covers","marketplace","post-media","community-threads","community-replies"]);
+const ALLOWED=new Set(["videos","video-thumbnails","topics","avatars","covers","marketplace","post-media","community-threads","community-replies","comments","discussion","ads","group-avatars"]);
 const MAX_VIDEO_BYTES=12*1024*1024;
 const MAX_IMAGE_BYTES=4*1024*1024;
 const TTL_SECONDS=90;
@@ -20,7 +20,7 @@ function keyFromPath(path){
  try{key=decodeURIComponent(raw)}catch{return null}
  if(key.length<5||key.length>480||!/^[-\w./]+$/.test(key)||
     key.includes("..")||key.includes("//")||key.startsWith("/")||key.endsWith("/")||
-    key.split("/").length<3||!/\.[a-z0-9]{2,7}$/i.test(key))return null;
+    key.split("/").length<2||!/\.[a-z0-9]{2,7}$/i.test(key))return null;
  if(!ALLOWED.has(key.split("/")[0]))return null;
  return key;
 }
