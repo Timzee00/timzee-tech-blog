@@ -11,3 +11,5 @@ Do not modify the existing `platform_video_upload_gate` or `publish_story` autho
 Never delete or rewrite existing media, and do not expose a public R2 bucket. The Worker provides public access only for approved public path prefixes.
 
 Never mirror `media/stories/` into R2: temporary public statuses must stay on their existing Supabase delivery path until an expiry-aware migration is separately designed.
+
+The separate **Workers Free** prototype is at `cloudflare/blipmood-free-cache/`. Its deployment does not require R2. The client canary is opt-in only via `?blipmood_cache_canary=1` and fails back to Supabase; production remains off by default.
