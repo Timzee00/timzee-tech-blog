@@ -100,10 +100,10 @@ test("large media deliberately redirects instead of buffering unbounded payloads
 });
 test("URL router is off by default and only permits public Supabase media", async () => {
   const code = read("assets/js/media-delivery.mjs");
-  assert.match(code, /const WORKER_ORIGIN = "";/);
-  assert.match(code, /source\.hostname !== PUBLIC_HOST/);
-  assert.match(code, /key\.startsWith\("stories\/"\)/);
-  assert.match(code, /!source\.pathname\.startsWith\(PUBLIC_STORAGE_PREFIX\)/);
+  assert.match(code, /const WORKER_ENABLED_BY_DEFAULT = false;/);
+  assert.match(code, /PUBLIC_ORIGIN/);
+  assert.match(code, /!PUBLIC_FOLDERS\.has\(key\.split\("\/"\)\[0\]\)/);
+  assert.match(code, /!u\.pathname\.startsWith\(PUBLIC_STORAGE_PREFIX\)/);
   const module = await import("data:text/javascript," + encodeURIComponent(code));
   const legacy = "https://duvbcwwprkzzyzikmcol.supabase.co/storage/v1/object/public/media/videos/user/x.mp4";
   assert.equal(module.deliveryMediaUrl(legacy), legacy);
