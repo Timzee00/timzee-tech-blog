@@ -12,7 +12,7 @@
 - Delivery attempts use persisted message UUIDs, known-success markers and uncertain-delivery markers to minimize duplicate sends after interrupted network operations.
 
 ## Compatibility and recovery
-- Android/Chrome file sharing can be affected by browser regressions which deliver an empty multipart form. Empty handoffs now redirect into the manual photo/video/link importer instead of failing; users must pick their attachment again. This does not bypass authorization or publish automatically.
+- Android/Chrome file sharing can be affected by browser regressions which deliver an empty multipart form. Empty handoffs and filename-only media handoffs now redirect into the manual photo/video/link importer instead of failing; users must pick their attachment again. This does not bypass authorization or publish automatically.
 - The same importer is available directly at `/share-inbox.html` for browsers that cannot install a Web Share Target.
 - Some Android share intents put the only URL in the title field; the external-link parser checks title as a fallback.
 - The recipient picker enforces text/media selection limits during selection and again before sending.
