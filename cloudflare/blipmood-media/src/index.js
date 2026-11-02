@@ -1,10 +1,10 @@
 /**
  * Public-media read-through cache for Blipmood.
  * This Worker mirrors ONLY the public Supabase "media" bucket.
- * It must not be used for friends-only Stories, private chats, or uploads.
+ * It must not be used for any Stories (even public temporary ones), private chats, or uploads.
  */
 const SOURCE="https://duvbcwwprkzzyzikmcol.supabase.co/storage/v1/object/public/media/";
-const FOLDERS=new Set(["videos","video-thumbnails","topics","stories","avatars","covers","marketplace","post-media","discussion","comments","ads","community-threads","community-replies","group-avatars"]);
+const FOLDERS=new Set(["videos","video-thumbnails","topics","avatars","covers","marketplace","post-media","discussion","comments","ads","community-threads","community-replies","group-avatars"]);
 const MAX_COPY=24*1024*1024;
 const WEEK=604800;
 
