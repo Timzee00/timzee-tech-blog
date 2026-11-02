@@ -88,7 +88,11 @@ async function receiveNativeShare(request){
   const title=String(form.get("title")||"").slice(0,200);
   const body=String(form.get("text")||"").slice(0,4000);
   const url=String(form.get("url")||"").slice(0,2048);
-  if(!title.trim()&&!body.trim()&&!url.trim()&&!rawFiles.length)
+  // Some Android WebAPK versions drop the file and send only its filename.
+  // Never turn a known media filename into a misleading text-only status.
+  const likelyLostFile=!rawFiles.length&&!body.trim()&&!url.trim()&&
+   /\.(?:jpe?g|png|webp|gif|heic|heif|mp4|webm|mov)$/i.test(title.trim());
+  if((!title.trim()&&!body.trim()&&!url.trim()&&!rawFiles.length)||likelyLostFile)
    return Response.redirect(new URL("/share-inbox.html?manual=1",self.location.origin).href,303);
   const id=crypto.randomUUID();
   await storeIncomingShare({id,title,text:body,url,files:rawFiles,createdAt:Date.now(),sentTo:{},uncertainTo:{},attemptIds:{}});
