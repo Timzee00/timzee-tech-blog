@@ -49,6 +49,8 @@ test("Incoming share is a review flow, not an anonymous upload endpoint",()=>{
  assert.match(logic,/Nothing to send/);
  assert.match(page,/id="shareManualForm"/);
  assert.match(page,/id="shareManualMedia"/);
+ assert.match(page,/id="shareManualRecovery"/);
+ assert.match(logic,/shareManualRecovery/);
  assert.match(logic,/function showManualImport\(\)/);
  assert.match(logic,/recipientSelection\.size>=limit/);
  assert.match(logic,/safeExternalUrl\(raw\)/);
@@ -131,6 +133,12 @@ test("Service worker receives a real share and redirects to its on-device inbox"
  const missing=await sandbox.__receive({formData:async()=>({getAll:()=>[],get:()=>""})});
  assert.equal(missing.status,303);
  assert.equal(missing.headers.get("location"),
+  "https://blipmood.netlify.app/share-inbox.html?manual=1");
+ const filenameOnly=await sandbox.__receive({formData:async()=>({
+  getAll:()=>[],get:field=>field==="title"?"IMG_1007.jpg":""
+ })});
+ assert.equal(filenameOnly.status,303);
+ assert.equal(filenameOnly.headers.get("location"),
   "https://blipmood.netlify.app/share-inbox.html?manual=1");
  const tooLarge={
   getAll:(field)=>field==="media"?[{size:45*1024*1024+1,type:"image/jpeg",name:"photo.jpg"}]:[],
