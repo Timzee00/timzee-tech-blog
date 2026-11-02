@@ -776,28 +776,40 @@ async function performSearch() {
   }
 }
 
-async function handleContentRequest() {
-  const topic = state.searchTerm || state.activeTags.join(", ");
+async function handleContentRequest(event) {
+  const button = event?.currentTarget;
+  if (button?.disabled) return;
+  const topic = (state.searchTerm || state.activeTags.join(", ")).trim();
   if (!topic) return;
-  let email = "";
-  if (!state.user) {
-    email = await window.appUI.prompt("Enter your email so we can notify you (optional):") || "";
+  if (button) { button.disabled = true; button.textContent = "Sending request…"; }
+  let completed = false;
+  try {
+    let email = "";
+    if (!state.user) {
+      email = await window.appUI.prompt("Enter your email so we can notify you (optional):") || "";
+    }
+    const payload = {
+      id: crypto.randomUUID(),
+      user_id: state.user?.id || null,
+      user_email: state.user?.email || email.trim() || "",
+      user_name: state.user ? getDisplayName(state.user) : "",
+      query: topic.slice(0, 2000),
+      status: "open",
+      created_at: new Date().toISOString()
+    };
+    const result = await createContentRequest(payload);
+    if (result.error) throw result.error;
+    completed = true;
+    window.appUI.toast("Request sent to the admins. Thanks!");
+    if (button) button.textContent = "Topic requested ✓";
+  } catch (error) {
+    const message = /already received|duplicate/i.test(error?.message || "")
+      ? "This topic was already requested. Thanks for suggesting it!"
+      : error?.message || "Request failed. Please try again.";
+    window.appUI.toast(message);
+  } finally {
+    if (button && !completed) { button.disabled = false; button.textContent = "Request this topic"; }
   }
-  const payload = {
-    id: crypto.randomUUID(),
-    user_id: state.user?.id || null,
-    user_email: state.user?.email || email || "",
-    user_name: state.user ? getDisplayName(state.user) : "",
-    query: topic,
-    status: "open",
-    created_at: new Date().toISOString()
-  };
-  const result = await createContentRequest(payload);
-  if (result.error) {
-    window.appUI.toast(result.error.message || "Request failed. Please try again.");
-    return;
-  }
-  window.appUI.toast("Request sent to the admins. Thanks!");
 }
 
 function renderSuggestedPeople() {
