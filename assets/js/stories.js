@@ -1,5 +1,5 @@
 import { supabase } from "./supabase.js";
-import { uploadMedia } from "./media.js";
+import { uploadMedia, optimizeImageForUpload } from "./media.js";
 
 // Bounded, RLS-filtered status discovery; stable cursor preserves timestamp ties.
 const STORY_PAGE_SIZE=72;
@@ -74,11 +74,12 @@ function privateStoryPath(source,userId){
 async function uploadPrivateStoryMedia(file,userId,{music=false}={}){
  if(!userId||!file)throw Error("Private status upload requires an account and a file.");
  if(file.size<1||file.size>50*1024*1024)throw Error("Private status files must be under 50 MB.");
- const ext=String(file.name||"").split(".").at(-1)?.toLowerCase()||"";
+ const preparedFile=music?file:await optimizeImageForUpload(file,{maxDimension:1080});
+ const ext=String(preparedFile.name||"").split(".").at(-1)?.toLowerCase()||"";
  if(!/^[a-z0-9]{2,6}$/.test(ext))throw Error("Unsupported file extension.");
  const path=userId+"/"+(music?"music/":"")+crypto.randomUUID()+"."+ext;
- const {error}=await supabase.storage.from(PRIVATE_STORY_BUCKET).upload(path,file,{
-   upsert:false,cacheControl:"300",contentType:file.type||undefined
+ const {error}=await supabase.storage.from(PRIVATE_STORY_BUCKET).upload(path,preparedFile,{
+   upsert:false,cacheControl:"300",contentType:preparedFile.type||undefined
  });
  if(error)throw Error(error.message||"Unable to store private status.");
  return PRIVATE_STORY_BUCKET+"/"+path;
