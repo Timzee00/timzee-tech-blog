@@ -82,11 +82,15 @@ export function captureVideoThumbnail(file, seekTime = 0.5) {
       drawing = true;
       try {
         const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        // All upload surfaces share a small poster; never upload a full-resolution
+        // 4K still just to fill a 640px feed tile.
+        const scale=Math.min(1,720/Math.max(video.videoWidth,video.videoHeight));
+        canvas.width=Math.max(1,Math.round(video.videoWidth*scale));
+        canvas.height=Math.max(1,Math.round(video.videoHeight*scale));
         const ctx = canvas.getContext("2d");
         if (!ctx) { finish(null); return true; }
         ctx.drawImage(video,0,0,canvas.width,canvas.height);
-        canvas.toBlob(blob => finish(blob ? new File([blob],"video-cover.jpg",{type:"image/jpeg"}) : null),"image/jpeg",.84);
+        canvas.toBlob(blob => finish(blob ? new File([blob],"video-cover.jpg",{type:"image/jpeg"}) : null),"image/jpeg",.78);
       } catch { finish(null); }
       return true;
     };
