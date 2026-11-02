@@ -297,7 +297,7 @@
         container.innerHTML = `<div class="video-grid">${state.videos.map(v => `
           <a class="video-card" href="video.html?id=${encodeURIComponent(v.id)}">
             <div class="video-thumbnail">
-              ${v.thumbnail_url && isSafeUrl(v.thumbnail_url) ? `<img src="${escapeHTML(v.thumbnail_url)}" width="640" height="360" loading="lazy" decoding="async" alt="${escapeHTML(v.title || '')}">` : (v.video_url && isSafeUrl(v.video_url) ? `<video class="tz-video-cover-fallback" muted playsinline preload="none" aria-hidden="true" data-cover-src="${escapeHTML(v.video_url)}"></video><span class="tz-video-cover-placeholder">${icon("videos")}</span>` : icon("videos"))}
+              ${v.thumbnail_url && isSafeUrl(v.thumbnail_url) ? `<img src="${escapeHTML(v.thumbnail_url)}" width="640" height="360" loading="lazy" decoding="async" alt="${escapeHTML(v.title || '')}">` : (v.video_url && isSafeUrl(v.video_url) ? `<span class="tz-video-cover-placeholder tz-video-cover-missing">${icon("videos")}<span>Open to watch</span></span>` : icon("videos"))}
               <div class="video-duration">${escapeHTML(String(v.duration || 0))}s</div>
             </div>
             <div class="video-info">
@@ -313,32 +313,11 @@
             </div>
           </a>
         `).join("")}</div>`;
-        hydrateLegacyCovers(container);
+        // Video tiles without covers stay static until opened to avoid fetching whole videos.
 
 
       }
 
-      function hydrateLegacyCovers(container) {
-        // Missing covers from older uploads: decode a frame only near the viewport.
-        const clips=container.querySelectorAll(".tz-video-cover-fallback");
-        const hydrate=clip=>{
-          if(clip.dataset.hydrated)return;
-          clip.dataset.hydrated="true"; clip.preload="metadata"; clip.src=clip.dataset.coverSrc;
-          const show=()=>{if(clip.readyState>=2&&clip.videoWidth)clip.classList.add("is-ready");};
-          clip.addEventListener("loadedmetadata",()=>{
-            try{clip.currentTime=Math.min(.2,Math.max(0,(clip.duration||0)-.1));}catch{show();}
-          },{once:true});
-          clip.addEventListener("loadeddata",show);
-          clip.addEventListener("seeked",show);
-          clip.load();
-        };
-        if("IntersectionObserver" in window) {
-          const observer=new IntersectionObserver(entries=>{
-            entries.forEach(e=>{if(e.isIntersecting){observer.unobserve(e.target);hydrate(e.target);}});
-          },{rootMargin:"320px"});
-          clips.forEach(clip=>observer.observe(clip));
-        } else clips.forEach(hydrate);
-      }
       function updateVideoModes(){
         document.querySelectorAll("[data-video-mode]").forEach(button=>{
           const active=button.dataset.videoMode===state.mode;
