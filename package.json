@@ -10,7 +10,8 @@
     "build": "npm run check && node scripts/build-site.mjs",
     "test": "node --test tests/*.test.cjs",
     "test:browser": "npm run build && playwright test",
-    "check:cloudflare-media": "node --test tests/cloudflare-r2-media-worker.test.cjs"
+    "check:cloudflare-media": "node --test tests/cloudflare-r2-media-worker.test.cjs",
+    "check:cloudflare-free": "node --test tests/cloudflare-workers-free.test.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.116.0",
