@@ -22,7 +22,7 @@ test("Android installed PWA is a bounded, local-only share target",()=>{
  assert.match(worker,/incomingUrl\.pathname==="\/share-target"/);
  assert.match(worker,/request\.formData\(\)/);
  assert.match(worker,/indexedDB\.open\(SHARE_DB,1\)/);
- assert.match(worker,/Response\.redirect\("\/share-inbox\.html\?id="\+encodeURIComponent\(id\),303\)/);
+ assert.match(worker,/Response\.redirect\(new URL\("\/share-inbox\.html\?id="/);
  assert.match(worker,/bytes>45\*1024\*1024/);
  assert.match(worker,/rawFiles\.length>6/);
  assert.doesNotMatch(worker,/cache\.put\(.*share-target/);
@@ -97,4 +97,36 @@ test("Spotify cover metadata is allowlisted and non-executable",async()=>{
   const preview=await spotifyPreview("https://open.spotify.com/track/123");
   assert.deepEqual(preview,{title:"A safe track",provider:"Spotify",image:""});
  }finally{global.fetch=before;}
+});
+
+
+test("Service worker receives a real share and redirects to its on-device inbox",async()=>{
+ const vm=require("node:vm");
+ const listeners={};
+ let stored=null;
+ const sandbox={
+  self:{location:{origin:"https://blipmood.netlify.app"},addEventListener:(name,fn)=>{listeners[name]=fn;}},
+  URL,Response,Date,console,crypto:{randomUUID:()=>"11111111-1111-4111-8111-111111111111"}
+ };
+ vm.runInNewContext(read("sw.js")+
+  "\nstoreIncomingShare=async row=>{globalThis.__stored=row;};globalThis.__receive=receiveNativeShare;",
+  sandbox,{timeout:3000});
+ const payload={
+  getAll:(field)=>field==="media"?[]:[],
+  get:(field)=>({title:"Praise The Lord",text:"Listen to this song",url:"https://open.spotify.com/track/123"})[field]||""
+ };
+ const response=await sandbox.__receive({formData:async()=>payload});
+ assert.equal(response.status,303);
+ assert.equal(response.headers.get("location"),
+  "https://blipmood.netlify.app/share-inbox.html?id=11111111-1111-4111-8111-111111111111");
+ assert.equal(sandbox.__stored.title,"Praise The Lord");
+ assert.equal(sandbox.__stored.files.length,0);
+ assert.equal(sandbox.__stored.sentTo["a"],undefined);
+ const tooLarge={
+  getAll:(field)=>field==="media"?[{size:45*1024*1024+1,type:"image/jpeg",name:"photo.jpg"}]:[],
+  get:()=> ""
+ };
+ const denied=await sandbox.__receive({formData:async()=>tooLarge});
+ assert.equal(denied.status,507);
+ assert.equal(sandbox.__stored.title,"Praise The Lord","rejected share must not replace the saved item");
 });

@@ -92,7 +92,7 @@ async function receiveNativeShare(request){
    throw Error("No shareable content was received.");
   const id=crypto.randomUUID();
   await storeIncomingShare({id,title,text:body,url,files:rawFiles,createdAt:Date.now(),sentTo:{},uncertainTo:{},attemptIds:{}});
-  return Response.redirect("/share-inbox.html?id="+encodeURIComponent(id),303);
+  return Response.redirect(new URL("/share-inbox.html?id="+encodeURIComponent(id),self.location.origin).href,303);
  }catch(error){
   return new Response(
    "<!doctype html><html lang='en'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Share unavailable</title>"+
