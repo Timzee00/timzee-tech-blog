@@ -1928,7 +1928,7 @@
       commentPostStatus.setAttribute("role", "status");
       commentPostStatus.setAttribute("aria-live", "polite");
       commentPostStatus.hidden = true;
-      drawerForm.insertAdjacentElement("afterend", commentPostStatus);
+      drawerForm.insertAdjacentElement("beforebegin", commentPostStatus);
       let commentSubmitting = false;
       const showCommentPostStatus = (message, failed = false) => {
         commentPostStatus.textContent = message;
