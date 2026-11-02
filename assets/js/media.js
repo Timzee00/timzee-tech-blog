@@ -153,10 +153,44 @@ function installChatMediaRefresh() {
   else window.addEventListener("DOMContentLoaded", start, { once: true });
 }
 
+// Resize oversized still pictures before upload, so every subsequent viewer
+// downloads fewer bytes. Never modify animation, video, audio, SVG or documents.
+// Unsupported browsers and conversion errors safely keep the original file.
+export async function optimizeImageForUpload(file,{maxDimension=1440}={}){
+  if(!file||!/^image\/(?:jpeg|png)$/i.test(String(file.type||""))||
+     file.size<180*1024||typeof createImageBitmap!=="function"||
+     typeof document==="undefined")return file;
+  let bitmap=null;
+  try{
+    bitmap=await createImageBitmap(file);
+    const max=Math.max(256,Math.min(1920,Number(maxDimension)||1440));
+    const ratio=Math.min(1,max/Math.max(bitmap.width,bitmap.height));
+    const width=Math.max(1,Math.round(bitmap.width*ratio));
+    const height=Math.max(1,Math.round(bitmap.height*ratio));
+    if(!width||!height)return file;
+    const canvas=document.createElement("canvas");
+    canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext("2d",{alpha:true});
+    if(!ctx)return file;
+    ctx.drawImage(bitmap,0,0,width,height);
+    const result=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",0.82));
+    if(!result||result.type!=="image/webp"||result.size>=file.size*0.88)return file;
+    const name=String(file.name||"photo").replace(/\.(?:jpe?g|png)$/i,"")+".webp";
+    return new File([result],name,{type:"image/webp",lastModified:file.lastModified||Date.now()});
+  }catch(error){
+    console.warn("Image optimization skipped:",error?.message||"unsupported image");
+    return file;
+  }finally{try{bitmap?.close?.()}catch{}}
+}
+
 export async function uploadMedia(file, folder = "uploads") {
   if (!file) return "";
 
-  const ext = getExtension(file.name);
+  const imageFolder=String(folder||"");
+  const maxDimension=/avatar|profile/i.test(imageFolder)?512:
+    /stor(?:y|ies)/i.test(imageFolder)?1080:1440;
+  const preparedFile=await optimizeImageForUpload(file,{maxDimension});
+  const ext = getExtension(preparedFile.name);
   const fileName = `${crypto.randomUUID()}${ext ? `.${ext}` : ""}`;
 
   const isChatMedia = folder === CHAT_FOLDER;
@@ -171,10 +205,10 @@ export async function uploadMedia(file, folder = "uploads") {
   }
 
   try {
-    const result = await supabase.storage.from(bucket).upload(path, file, {
+    const result = await supabase.storage.from(bucket).upload(path, preparedFile, {
       cacheControl: "3600",
       upsert: false,
-      contentType: file.type || undefined
+      contentType: preparedFile.type || undefined
     });
 
     if (result.error) {
