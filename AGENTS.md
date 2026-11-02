@@ -15,3 +15,5 @@ Follow Cloudflare's current agent setup documentation: <https://developers.cloud
 - Validate via `npm run check:cloudflare-media`, then full `npm run check` and mobile browser smoke tests before activating traffic.
 
 Current status, activation instructions, rollout and rollback are in `cloudflare/blipmood-media/README.md`.
+
+A separate **Workers Free** media cache (no R2) is deployed at `cloudflare/blipmood-free-cache/`. `assets/js/media-delivery.mjs` is OFF by default and may be tried in a single browser with `?blipmood_cache_canary=1` after the Netlify production lock is lifted. Never globally enable it without live response, range, quota and deletion tests.
