@@ -11,6 +11,10 @@ This Worker uses the **Workers Free plan** and Cloudflare's Worker Response Cach
 - Query strings, path traversals, expiring Stories, signed chat media, non-public uploads and all authenticated requests are excluded. Nothing is uploaded to Cloudflare.
 - Every object fetched on a cache miss **still counts toward Supabase egress**, so the Worker does not guarantee the 5 GB Supabase limit will never be exceeded.
 
+## Safe canary test (after Netlify publishes the new code)
+
+Production traffic is **OFF by default** in `assets/js/media-delivery.mjs`, even though the Worker itself is deployed. Once the new Netlify deployment is live, open `https://blipmood.netlify.app/video.html?blipmood_cache_canary=1` in a test browser. That enables the Worker for that tab via session storage. Browse real public Reels, profiles and topics; inspect Network for successful `GET`/`206` and repeat `cf-cache-status: HIT`. Errors on images and video sources automatically retry their original Supabase URL once. Use `?blipmood_cache_canary=0` to turn canary mode off for the same browser tab. Do not enable all users until real playback and moderation/deletion tests pass.
+
 ## Test and rollout gates
 1. Verify `https://blipmood-free-media.blipmood-timzee.workers.dev/health` responds 200 with `{"ok":true,"mode":"workers-free-cache","r2":false}`.
 2. Verify a real small public image/video returns 200; a video with a `Range: bytes=0-1023` request returns 206. Repeat requests and confirm `cf-cache-status: HIT`; record Cloudflare and Supabase usage.
