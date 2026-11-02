@@ -81,6 +81,6 @@ test("source and integration remain zero-cost, safe, reversible",()=>{
  assert.equal(cfg.cache.enabled,true);
  assert.equal(cfg.r2_buckets,undefined);
  const media=fs.readFileSync(path.join(__dirname,"../assets/js/media-delivery.mjs"),"utf8");
- assert.match(media,/const WORKER_ORIGIN = "";/);
- assert.match(media,/if \(key\.startsWith\("stories\/"\)\)/);
+ assert.match(media,/const WORKER_ENABLED_BY_DEFAULT = false;/);
+ assert.match(media,/!PUBLIC_FOLDERS\.has\(key\.split\("\/"\)\[0\]\)/);
 });
