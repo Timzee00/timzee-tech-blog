@@ -21,6 +21,8 @@ export function deliveryMediaUrl(rawUrl) {
         source.search || source.hash || source.port ||
         !source.pathname.startsWith(PUBLIC_STORAGE_PREFIX)) return original;
     const key = decodeURIComponent(source.pathname.slice(PUBLIC_STORAGE_PREFIX.length));
+    // Stories expire and can be deleted: never retain them in durable R2 copies.
+    if (key.startsWith("stories/")) return original;
     if (!/^[-\w./]+$/.test(key) || key.includes("..") ||
         key.startsWith("/") || key.includes("//") ||
         !/\.[a-z0-9]{2,7}$/i.test(key)) return original;
