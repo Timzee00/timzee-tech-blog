@@ -19,6 +19,10 @@
 .native-share-preview-body small{display:block;opacity:.74;margin-top:4px}
 .native-share-help{font-size:.82rem;line-height:1.5;opacity:.8;margin:10px 0 0}
 .native-share-card #shareOpenLink{display:inline-flex;min-height:44px;align-items:center;color:var(--color-primary,#85f2d9);font-weight:700;margin-top:8px}
+.native-share-recovery{display:inline-flex;min-height:44px;align-items:center;color:var(--color-primary,#85f2d9);text-decoration:underline;text-underline-offset:3px;font-weight:600}
+.native-share-manual-form{display:grid;gap:10px}
+.native-share-manual-form label{font-weight:650;margin-top:8px}
+.native-share-manual-form button{margin-top:12px}
 .native-share-destinations{border:0;padding:0;margin:0;display:grid;gap:8px;min-width:0}
 .native-share-destinations>label{display:flex;gap:12px;align-items:center;min-height:72px;border:1px solid var(--color-border,#48636f);border-radius:14px;padding:12px;cursor:pointer}
 .native-share-destinations>label:has(input:checked){border:2px solid var(--color-primary,#6ee0cb);background:color-mix(in srgb,var(--color-primary,#27a28f) 11%,transparent)}
