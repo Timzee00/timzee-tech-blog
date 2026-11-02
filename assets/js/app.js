@@ -340,9 +340,9 @@ function renderPopularTopics() {
       const mediaUrl = topic.media_url && isSafeUrl(topic.media_url) ? escapeHTML(topic.media_url) : "";
       const media =
         topic.media_type === "video" && mediaUrl
-          ? `<video muted playsinline controls src="${mediaUrl}"></video>`
+          ? `<span class="topic-video-link" aria-label="Open video discussion"><span aria-hidden="true">▶</span> Video discussion · Open to watch</span>`
           : mediaUrl
-            ? `<img src="${mediaUrl}" alt="${escapeHTML(topic.title || "Topic cover")}">`
+            ? `<img src="${mediaUrl}" loading="lazy" decoding="async" alt="${escapeHTML(topic.title || "Topic cover")}">`
             : "";
       return `
         <article class="popular-card topic-card" data-reveal>
