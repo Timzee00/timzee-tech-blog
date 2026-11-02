@@ -68,7 +68,7 @@ test("profile push uses real Web Push subscription, not a local-only preference"
 });
 
 
-test("both upload pages share thumbnail extraction, validate videos, and show older covers",()=>{
+test("upload pages extract thumbnails and legacy covers never download full video previews",()=>{
  const grid=read("videos.html"),reels=read("video.html");
  const media=read("assets/js/videos-marketplace.js"),css=read("assets/css/content-pages.css");
  assert.match(media,/export function captureVideoThumbnail/);
@@ -76,8 +76,10 @@ test("both upload pages share thumbnail extraction, validate videos, and show ol
  assert.match(media,/thumbnailFile = thumbnailFile \|\| await captureVideoThumbnail\(videoFile\)/);
  assert.match(grid,/const captureVideoFrame=captureVideoThumbnail/);
  assert.match(reels,/const captureReelCover=captureVideoThumbnail/);
- assert.match(grid,/hydrateLegacyCovers\(container\)/);
- assert.match(css,/tz-video-cover-fallback\.is-ready/);
+ assert.match(grid,/tz-video-cover-placeholder tz-video-cover-missing/);
+ assert.doesNotMatch(grid,/hydrateLegacyCovers\(container\)/);
+ assert.doesNotMatch(grid,/tz-video-cover-fallback/);
+ assert.match(css,/tz-video-cover-missing/);
 });
 test("public surfaces use account handles while profile retains full-name display",()=>{
  const grid=read("videos.html"),nav=read("assets/js/nav.js"),app=read("assets/js/app.js");
