@@ -1,0 +1,13 @@
+{
+  "name": "blipmood-free-media",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-02",
+  "workers_dev": true,
+  "cache": {
+    "enabled": true
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.05
+  }
+}
