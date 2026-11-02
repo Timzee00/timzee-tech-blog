@@ -47,7 +47,7 @@ function renderRow(row) {
     : '<div class="fyp-media-fallback" aria-hidden="true">'+escapeHTML(typeLabel(type).toUpperCase())+'</div>';
   const media=isVideo ?
     '<div class="fyp-video-stage" data-fyp-video-stage>'+
-      '<video class="fyp-inline-video" controls playsinline preload="metadata"'+
+      '<video class="fyp-inline-video" controls playsinline preload="none" loading="lazy"'+
       (row.image_url&&isSafeUrl(row.image_url)?' poster="'+escapeHTML(row.image_url)+'"':"")+
       ' src="'+escapeHTML(mediaUrl)+'" aria-label="'+escapeHTML(row.title||"Community video")+'"></video>'+
       '<div class="fyp-video-gestures" data-fyp-video-gestures role="button" tabindex="0" aria-label="Tap to pause or play; double tap to like"></div>'+
