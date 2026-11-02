@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="robots" content="noindex,nofollow,noarchive">
+ <meta name="referrer" content="no-referrer">
+ <meta name="theme-color" content="#0d2331">
+ <title>Share to Blipmood</title>
+ <meta name="description" content="Privately choose where an item shared from your phone goes on Blipmood.">
+ <link rel="stylesheet" href="/assets/css/styles.css">
+ <link rel="stylesheet" href="/assets/css/share-inbox.css">
+ <script defer src="/assets/js/theme-init.js"></script>
+</head>
+<body class="native-share-page">
+ <main class="native-share-main" id="shareMain">
+  <header class="native-share-header">
+   <a href="/index.html" class="native-share-back" aria-label="Go to Blipmood homepage">←</a>
+   <div><span class="native-share-eyebrow">BLIPMOOD</span><h1>Share something</h1></div>
+  </header>
+  <p class="native-share-intro">Choose who receives your content. Nothing is posted or sent until you confirm.</p>
+  <p id="shareNotice" class="native-share-notice" role="status" aria-live="polite">Opening your phone's shared item…</p>
+  <div id="shareApp" hidden>
+   <section class="native-share-card" aria-labelledby="sharePreviewHeading">
+    <h2 id="sharePreviewHeading">Preview</h2>
+    <div id="sharePreview" class="native-share-preview"></div>
+    <a id="shareOpenLink" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" hidden>Open original link</a>
+    <p id="shareFileHint" class="native-share-help"></p>
+   </section>
+   <section class="native-share-card" aria-labelledby="shareDestinationHeading">
+    <h2 id="shareDestinationHeading">Where should it go?</h2>
+    <fieldset class="native-share-destinations" id="shareDestinations">
+     <legend class="sr-only">Choose a sharing destination</legend>
+     <label><input type="radio" name="shareDestination" value="status" checked><span><strong>My Status</strong><small>Publish for 24 hours, with your chosen audience</small></span></label>
+     <label><input type="radio" name="shareDestination" value="chat"><span><strong>Chats & Groups</strong><small>Send directly to selected recipients</small></span></label>
+     <label><input type="radio" name="shareDestination" value="community"><span><strong>Community Post</strong><small>Review a draft in the community composer</small></span></label>
+    </fieldset>
+    <div id="shareStatusOptions" class="native-share-options">
+     <fieldset><legend>Story audience</legend>
+      <label><input type="radio" name="shareVisibility" value="public" checked> Public</label>
+      <label><input type="radio" name="shareVisibility" value="private"> Friends only</label>
+     </fieldset>
+     <label for="shareDuration">Story duration</label>
+     <select id="shareDuration"><option value="24">24 hours</option><option value="48" hidden disabled>48 hours · verified</option><option value="72" hidden disabled>72 hours · verified</option></select>
+     <label><input type="checkbox" id="shareAllowReshare" checked> Allow reshares</label>
+     <label><input type="checkbox" id="shareAllowComments" checked> Allow public comments</label>
+    </div>
+    <div id="shareChatOptions" class="native-share-options" hidden>
+     <label for="shareRecipientSearch">Find people or groups</label>
+     <input id="shareRecipientSearch" type="search" autocomplete="off" placeholder="Search recipients">
+     <div id="shareRecipients" class="native-share-recipients" role="group" aria-label="Recipients"></div>
+     <p class="native-share-help" id="shareRecipientHint">Select up to 10 recipients, or 3 when sharing a file.</p>
+    </div>
+    <div id="shareCommunityOptions" class="native-share-options" hidden>
+     <p class="native-share-help">We'll open the existing community editor. Choose a community, review its rules and publish there yourself.</p>
+    </div>
+   </section>
+   <section class="native-share-card" aria-labelledby="shareCaptionHeading">
+    <h2 id="shareCaptionHeading">Add your message</h2>
+    <label for="shareMessage" class="sr-only">Caption or message</label>
+    <textarea id="shareMessage" rows="3" maxlength="4000" placeholder="Write a caption or add a message (optional)"></textarea>
+    <p class="native-share-help">Links keep an Open original action. Music from Spotify is linked, not copied or uploaded as audio.</p>
+   </section>
+   <div class="native-share-actions">
+    <button id="shareSend" class="native-share-send" type="button">Continue</button>
+    <button id="shareDiscard" class="native-share-discard" type="button">Discard this share</button>
+   </div>
+  </div>
+  <div id="shareSignIn" class="native-share-card" hidden>
+   <h2>Sign in to continue</h2><p>Your received item stays on this device until it expires or you discard it.</p>
+   <a id="shareLoginLink" class="native-share-login" href="/login.html">Sign in to Blipmood</a>
+  </div>
+ </main>
+ <script type="module" src="/assets/js/share-inbox.mjs"></script>
+</body>
+</html>

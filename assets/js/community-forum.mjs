@@ -8,6 +8,8 @@ import {renderCommunityMarkdown,insertCommunityFormatting} from "./community-mar
 import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap} from "./verified-identity.mjs";
 import {communityRankCursor,appendUniqueCommunityRows,isCommunitySnapshotStale} from "./community-feed-pagination.mjs";
 import "./nav.js";
+import {getPendingShare,deletePendingShare,formatShareText,sharedUrl} from "./share-target-store.mjs";
+let incomingShareDraftId=null;
 
 const $=id=>document.getElementById(id);
 const escape=value=>escapeHTML(String(value??""));
@@ -984,6 +986,12 @@ async function createThread(event){
   }).select("id,status").single();
   if(error)throw error;
   created=data;
+  // Once the topic row exists, it is no longer an unsent draft even if
+  // optional gallery/poll follow-up work later fails.
+  if(incomingShareDraftId){
+   const completed=incomingShareDraftId;incomingShareDraftId=null;
+   try{await deletePendingShare(completed);}catch(error){console.warn("Share inbox cleanup unavailable",error);}
+  }
   if(uploaded.length>1){
    const {error:galleryError}=await supabase.from("community_thread_media").insert(
     uploaded.slice(1).map((item,index)=>({
@@ -1488,6 +1496,57 @@ async function openCreatorDraft(){
   notify("Your creator draft could not be loaded. It remains safely saved.",true);
  }
 }
+/* The PWA transfers only a random local ID. Never put media or private text
+ * in the URL, and never silently publish into a default community. */
+async function openIncomingShareDraft(){
+ const params=new URLSearchParams(location.search);
+ const id=params.get("incoming_share");
+ if(!id)return;
+ if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)){
+  notify("Invalid incoming share link.",true);return;
+ }
+ if(!state.user){
+  location.replace("/login.html?next="+encodeURIComponent("/discussion.html?incoming_share="+id));
+  return;
+ }
+ try{
+  const row=await getPendingShare(id);
+  if(!row){notify("That phone share expired or was discarded.",true);return;}
+  const files=(row.files||[]).filter(file=>file?.size>0);
+  if(files.length>6||files.some(file=>file.size>12*1024*1024))
+   throw Error("Community media must be up to six images (12 MB each) or one 12 MB video.");
+  if(files.some(file=>!["image/jpeg","image/png","image/webp","image/gif","video/mp4","video/webm"].includes(file.type)))
+   throw Error("This file type isn't supported in communities. Share a link or select compatible media.");
+  if(files.some(file=>file.type.startsWith("video/"))&&files.length>1)
+   throw Error("A community post can contain one video, or multiple photos, but not both.");
+  showDialog("forumThreadDialog");
+  const dialog=$("forumThreadDialog");
+  if(!dialog.open)throw Error("The community post editor could not open.");
+  const form=$("forumThreadForm");
+  const title=String(row.title||"").trim();
+  form.elements.namedItem("title").value=(title||"Shared from my phone").slice(0,180);
+  form.elements.namedItem("body").value=formatShareText({...row,text:String(row.text||""),url:sharedUrl(row)}).slice(0,12000);
+  if(files.length){
+   const transfer=new DataTransfer();
+   for(const file of files)transfer.items.add(file);
+   form.querySelector("[name=media]").files=transfer.files;
+   form.querySelector("[name=media]").dispatchEvent(new Event("change",{bubbles:true}));
+  }
+  const select=form.elements.namedItem("community_id");
+  const placeholder=document.createElement("option");
+  placeholder.value="";placeholder.textContent="Choose where to publish";placeholder.disabled=true;
+  select.prepend(placeholder);select.value="";
+  $("forumThreadRulesAcknowledged").checked=false;
+  incomingShareDraftId=id;
+  updateAllVisiblePreviews();
+  notify("Shared draft loaded. Choose a community, review its rules and publish when ready.");
+  const clean=new URL(location.href);clean.searchParams.delete("incoming_share");
+  history.replaceState(null,"",clean.pathname+clean.search+clean.hash);
+ }catch(error){
+  notify(error.message||"Could not open your shared item. It is still on this device.",true);
+ }
+}
+
 async function boot(){
  document.querySelectorAll("[data-bm-icon]").forEach(slot=>{slot.innerHTML=icon(slot.dataset.bmIcon);slot.setAttribute("aria-hidden","true");});
  renderCategories();bindEvents();
@@ -1511,6 +1570,7 @@ async function boot(){
  try{await loadCommunities(true);}catch(error){notify("Cannot load community directory right now.",true);}
  await initializeFromUrl();
  await openCreatorDraft();
+ await openIncomingShareDraft();
  if(new URLSearchParams(location.search).get("interests")==="1"&&state.user)showInterestEditor();
 }
 boot().catch(error=>{reportAppError(error,"Community forum failed to start");notify("Could not load communities. Refresh to try again.",true);});

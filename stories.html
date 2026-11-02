@@ -209,6 +209,7 @@
     <script type="module">
       import { getCurrentUser, getDisplayName } from "./assets/js/supabase.js";
       import { fetchStoriesFeedPage, fetchUserStories, createStory, deleteStory } from "./assets/js/stories.js";
+      import {safeExternalUrl,isSpotifyUrl} from "./assets/js/share-target-store.mjs";
       import { escapeHTML, isSafeUrl, timeAgo } from "./assets/js/utils.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
       import {showStoryInteractions} from "./assets/js/story-interactions.mjs";
@@ -654,7 +655,20 @@
           (profile?.is_verified?" ✓ Verified":"");
         document.getElementById("viewerTime").textContent = timeAgo(story.created_at);
         document.getElementById("viewerSequence").textContent = `${state.activeStoryIndex+1} of ${group.stories.length}`;
-        document.getElementById("viewerCaption").textContent = story.caption || "";
+        // Safe outbound links are deliberate actions, never autoplayed media.
+        // Spotify's own audio is not copied into the status.
+        const captionHost=document.getElementById("viewerCaption");
+        captionHost.replaceChildren(document.createTextNode(story.caption||""));
+        const match=String(story.caption||"").match(/https:\/\/[^\s<>"']+/i);
+        const external=match?safeExternalUrl(match[0].replace(/[),.!?;]+$/,"")):"";
+        if(external){
+          const link=document.createElement("a");link.className="story-source-link";
+          link.href=external;link.target="_blank";link.rel="noopener noreferrer";
+          link.referrerPolicy="no-referrer";
+          link.textContent=isSpotifyUrl(external)?"Open on Spotify ↗":"Open original link ↗";
+          link.setAttribute("aria-label",isSpotifyUrl(external)?"Open on Spotify in a new tab":"Open external source in a new tab");
+          captionHost.append(link);
+        }
         const musicControls=document.getElementById("storyMusicControls");
         const soundtrack=document.getElementById("storyMusicAudio");
         const musicToggle=document.getElementById("storyMusicToggle");

@@ -38,8 +38,79 @@ self.addEventListener("activate",event=>{
   await self.clients.claim();
  })());
 });
+
+/* Only installed PWAs receive the Android share POST. Keep inbound images,
+ * videos and links in local IndexedDB, never in public CacheStorage. */
+const SHARE_DB="blipmood-native-shares",SHARE_STORE="pending";
+const SHARE_ALLOWED=new Set(["image/jpeg","image/png","image/webp","image/gif","image/heic","image/heif",
+ "video/mp4","video/webm","video/quicktime"]);
+function storeIncomingShare(row){
+ return new Promise((resolve,reject)=>{
+  const open=indexedDB.open(SHARE_DB,1);
+  open.onupgradeneeded=()=>{
+   if(!open.result.objectStoreNames.contains(SHARE_STORE))
+    open.result.createObjectStore(SHARE_STORE,{keyPath:"id"});
+  };
+  open.onerror=()=>reject(open.error||Error("Local storage is unavailable."));
+  open.onsuccess=()=>{
+   const db=open.result,tx=db.transaction(SHARE_STORE,"readwrite");
+   const store=tx.objectStore(SHARE_STORE);
+   const cursor=store.openCursor();
+   cursor.onsuccess=()=>{
+    const entry=cursor.result;
+    if(!entry)return;
+    if(!Number.isFinite(entry.value?.createdAt)||Date.now()-entry.value.createdAt>86400000)
+     entry.delete();
+    entry.continue();
+   };
+   store.put(row);
+   tx.oncomplete=()=>{db.close();resolve();};
+   tx.onerror=()=>{db.close();reject(tx.error||Error("Unable to save incoming share."));};
+   tx.onabort=()=>{db.close();reject(tx.error||Error("Share storage was interrupted."));};
+  };
+ });
+}
+async function receiveNativeShare(request){
+ try{
+  const form=await request.formData();
+  const rawFiles=form.getAll("media").filter(item=>item&&typeof item==="object"&&typeof item.size==="number");
+  if(rawFiles.length>6)throw Error("Share at most six images or one video at a time.");
+  let bytes=0,videos=0;
+  for(const file of rawFiles){
+   if(!SHARE_ALLOWED.has(String(file.type||"").toLowerCase()))
+    throw Error("Only JPEG, PNG, WebP, GIF, HEIC, MP4, WebM and MOV media can be imported.");
+   if(file.size<1||file.size>45*1024*1024)throw Error("Each shared file must be under 45 MB.");
+   bytes+=file.size;
+   if(file.type.startsWith("video/"))videos++;
+  }
+  if(bytes>45*1024*1024||videos>1||(videos&&rawFiles.length>1))
+   throw Error("Choose up to 45 MB of photos or one video.");
+  const title=String(form.get("title")||"").slice(0,200);
+  const body=String(form.get("text")||"").slice(0,4000);
+  const url=String(form.get("url")||"").slice(0,2048);
+  if(!title.trim()&&!body.trim()&&!url.trim()&&!rawFiles.length)
+   throw Error("No shareable content was received.");
+  const id=crypto.randomUUID();
+  await storeIncomingShare({id,title,text:body,url,files:rawFiles,createdAt:Date.now(),sentTo:{},uncertainTo:{},attemptIds:{}});
+  return Response.redirect("/share-inbox.html?id="+encodeURIComponent(id),303);
+ }catch(error){
+  return new Response(
+   "<!doctype html><html lang='en'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Share unavailable</title>"+
+   "<body style='font:16px system-ui;background:#0d2331;color:white;padding:24px'><h1>Could not receive the share</h1>"+
+   "<p>"+(error?.name==="QuotaExceededError"?"Not enough device storage for this share. Free space and try again.":
+    "The item was too large, unsupported, or local storage could not save it.")+
+   "</p><a style='color:#a0f5e7' href='/share-inbox.html'>Open Blipmood</a></body></html>",
+   {status:507,headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}}
+  );
+ }
+}
+
 self.addEventListener("fetch",event=>{
  const request=event.request;
+ const incomingUrl=new URL(request.url);
+ if(request.method==="POST"&&incomingUrl.origin===self.location.origin&&incomingUrl.pathname==="/share-target"){
+  event.respondWith(receiveNativeShare(request));return;
+ }
  if(request.method!=="GET")return;
  const url=new URL(request.url);
  if(url.origin!==self.location.origin)return;

@@ -52,5 +52,41 @@
       "short_name": "Communities",
       "url": "/discussion.html"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "media",
+          "accept": [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+            "image/heic",
+            "image/heif",
+            "video/mp4",
+            "video/webm",
+            "video/quicktime",
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp",
+            ".gif",
+            ".heic",
+            ".heif",
+            ".mp4",
+            ".webm",
+            ".mov"
+          ]
+        }
+      ]
+    }
+  }
 }
