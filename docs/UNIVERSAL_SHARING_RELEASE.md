@@ -11,6 +11,13 @@
 - Spotify titles and image previews are fetched from the documented public oEmbed endpoint when available. Art is shown only as a preview, not downloaded into posts; outgoing status links get a deliberate **Open on Spotify** action.
 - Delivery attempts use persisted message UUIDs, known-success markers and uncertain-delivery markers to minimize duplicate sends after interrupted network operations.
 
+## Compatibility and recovery
+- Android/Chrome file sharing can be affected by browser regressions which deliver an empty multipart form. Empty handoffs now redirect into the manual photo/video/link importer instead of failing; users must pick their attachment again. This does not bypass authorization or publish automatically.
+- The same importer is available directly at `/share-inbox.html` for browsers that cannot install a Web Share Target.
+- Some Android share intents put the only URL in the title field; the external-link parser checks title as a fallback.
+- The recipient picker enforces text/media selection limits during selection and again before sending.
+- This is a best-effort fallback, not a fix to an operating system bug.
+
 ## Before treating the feature as live
 
 1. Run `npm run check` and `npm run build` on the exact committed main SHA. Check Netlify production deploy points to that same SHA.
