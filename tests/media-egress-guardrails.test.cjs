@@ -39,6 +39,9 @@ test("reels start with no video source, hydrate active only, and pause on backgr
   assert.match(page,/document\.visibilityState==="hidden"/);
   assert.match(page,/document\.addEventListener\("visibilitychange",pauseBackgroundReels\)/);
   assert.match(page,/window\.addEventListener\("pagehide"/);
+  assert.match(page,/autoplayDelayTimer=setTimeout/);
+  assert.match(page,/,400\)/);
+  assert.match(page,/clearTimeout\(autoplayDelayTimer\)/);
 });
 
 test("secondary video surfaces do not preload entire media collections",()=>{
