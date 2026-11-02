@@ -47,6 +47,11 @@ test("Incoming share is a review flow, not an anonymous upload endpoint",()=>{
  assert.match(logic,/location\.assign\("\/discussion\.html\?incoming_share="/);
  assert.match(logic,/deletePendingShare\(pending\.id\)/);
  assert.match(logic,/Nothing to send/);
+ assert.match(page,/id="shareManualForm"/);
+ assert.match(page,/id="shareManualMedia"/);
+ assert.match(logic,/function showManualImport\(\)/);
+ assert.match(logic,/recipientSelection\.size>=limit/);
+ assert.match(logic,/safeExternalUrl\(raw\)/);
 });
 
 test("Community share reuses normal editor and rules, never auto publishes",()=>{
@@ -85,6 +90,7 @@ test("Shared links refuse insecure schemes and userinfo",async()=>{
  assert.equal(isSpotifyUrl("https://spotify.link/123"),true);
  assert.equal(isSpotifyUrl("https://open.spotify.com.attacker.tld/track/123"),false);
  assert.equal(isSpotifyUrl("https://evil.com/?next=open.spotify.com"),false);
+ assert.equal(sharedUrl({title:"Song: https://open.spotify.com/track/123",text:""}),"https://open.spotify.com/track/123");
 });
 
 test("Spotify cover metadata is allowlisted and non-executable",async()=>{
@@ -122,6 +128,10 @@ test("Service worker receives a real share and redirects to its on-device inbox"
  assert.equal(sandbox.__stored.title,"Praise The Lord");
  assert.equal(sandbox.__stored.files.length,0);
  assert.equal(sandbox.__stored.sentTo["a"],undefined);
+ const missing=await sandbox.__receive({formData:async()=>({getAll:()=>[],get:()=>""})});
+ assert.equal(missing.status,303);
+ assert.equal(missing.headers.get("location"),
+  "https://blipmood.netlify.app/share-inbox.html?manual=1");
  const tooLarge={
   getAll:(field)=>field==="media"?[{size:45*1024*1024+1,type:"image/jpeg",name:"photo.jpg"}]:[],
   get:()=> ""
