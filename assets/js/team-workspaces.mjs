@@ -5,6 +5,21 @@ const make=(tag,text="",className="")=>{const el=document.createElement(tag);if(
 const notice=(message,tone="neutral")=>{const n=$("teamStatus");n.textContent=message;n.dataset.tone=tone};
 const requireSuccess=result=>{if(result.error)throw result.error;return result.data};
 const getForm=form=>Object.fromEntries(new FormData(form).entries());
+// The database requires HTTPS; upgrade ordinary HTTP links and accept bare domains.
+function normalizeWorkspaceWebsite(value) {
+ const original=String(value||"").trim();
+ if(!original)return null;
+ if(/\s/.test(original))throw Error("Website URLs cannot contain spaces.");
+ const candidate=/^https?:\/\//i.test(original)
+  ?original.replace(/^http:\/\//i,"https://")
+  :/^[a-z][a-z0-9+.-]*:/i.test(original)?original:"https://"+original;
+ let url;
+ try{url=new URL(candidate)}catch{throw Error("Enter a valid website, such as https://example.com.");}
+ if(url.protocol!=="https:"||!url.hostname||url.username||url.password)
+  throw Error("Website must use a valid HTTPS URL without embedded credentials.");
+ if(url.href.length>300)throw Error("Website address is too long (300 characters maximum).");
+ return url.href;
+}
 function row(title,subtitle,buttons=[]){
  const wrapper=make("div","","studio-row");
  const summary=make("div");summary.append(make("strong",title),make("p",subtitle));
@@ -130,33 +145,35 @@ async function loadProjects(){
 }
 $("createWorkspaceForm").addEventListener("submit",async event=>{
  event.preventDefault();if(!state.user)return;
- const values=getForm(event.currentTarget),button=event.submitter;button.disabled=true;
+ const values=getForm(event.currentTarget),button=event.submitter||event.currentTarget.querySelector('button[type="submit"]');
+ if(button)button.disabled=true;
  try{
   // Avoid INSERT RETURNING: a separate read can see the newly committed
   // owner-scoped row through its membership and access policies.
   const createdId=crypto.randomUUID();
   const created=await supabase.from("team_workspaces").insert({
    id:createdId,owner_id:state.user.id,kind:values.kind,name:values.name.trim(),
-   description:values.description.trim(),website:values.website.trim()||null
+   description:values.description.trim(),website:normalizeWorkspaceWebsite(values.website)
   });
   if(created.error)throw created.error;
   await loadWorkspaces();
   if(!state.workspaces.some(ws=>ws.id===createdId))throw Error("Workspace saved but is not visible yet. Refresh your session and check access.");
   event.currentTarget.reset();notice("Workspace created. You can now plan events and content.","success");
   await openWorkspace(createdId);
- }catch(e){notice(e.message||"Unable to create workspace.","error")}finally{button.disabled=false}
+ }catch(e){notice(e.message||"Unable to create workspace.","error")}finally{if(button)button.disabled=false}
 });
 $("teamSettingsForm").addEventListener("submit",async event=>{
  event.preventDefault();if(!state.active||state.role!=="owner")return;
- const f=event.currentTarget,values=getForm(f),submit=event.submitter;submit.disabled=true;
+ const f=event.currentTarget,values=getForm(f),submit=event.submitter||f.querySelector('button[type="submit"]');
+ if(submit)submit.disabled=true;
  try{
   requireSuccess(await supabase.from("team_workspaces").update({
    name:values.name.trim(),description:values.description.trim(),
-   website:values.website.trim()||null
+   website:normalizeWorkspaceWebsite(values.website)
   }).eq("id",state.active.id).select("id").single());
   await loadWorkspaces();notice("Workspace settings updated.","success");
  }catch(e){notice(e.message||"Could not save workspace settings.","error")}
- finally{submit.disabled=false}
+ finally{if(submit)submit.disabled=false}
 });
 $("teamInviteForm").addEventListener("submit",async event=>{
  event.preventDefault();if(!state.active)return;
