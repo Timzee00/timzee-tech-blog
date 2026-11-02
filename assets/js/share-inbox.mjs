@@ -72,7 +72,10 @@ function renderPreview(){
  const anchor=$("shareOpenLink");
  anchor.hidden=!link;
  if(link){anchor.href=link;anchor.textContent=isSpotifyUrl(link)?"Open on Spotify":"Open original link";}
- $("shareFileHint").textContent=files.length>1?"Multiple images can be shared through a community post. Statuses and chats support one file per send.":"";
+ $("shareFileHint").textContent=files.length>1?"Multiple images can be shared through a community post. Statuses and chats support one file per send.":
+  !files.length&&/\.(?:jpe?g|png|webp|gif|heic|heif|mp4|webm|mov)$/i.test(String(pending.title||"").trim())
+  ?"Your phone passed only the file name, not the attachment. Please choose the actual file manually.":"";
+ $("shareManualRecovery").hidden=files.length>0;
 }
 function renderRecipients(){
  const list=$("shareRecipients");
