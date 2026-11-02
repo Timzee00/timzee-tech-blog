@@ -20,6 +20,19 @@
   </header>
   <p class="native-share-intro">Choose who receives your content. Nothing is posted or sent until you confirm.</p>
   <p id="shareNotice" class="native-share-notice" role="status" aria-live="polite">Opening your phone's shared item…</p>
+  <section id="shareManualSection" class="native-share-card" aria-labelledby="shareManualHeading" hidden>
+   <h2 id="shareManualHeading">Choose something from your phone</h2>
+   <p class="native-share-help">If your phone could not pass an attachment to Blipmood, pick it here. You can also paste a link without installing the app.</p>
+   <form id="shareManualForm" class="native-share-manual-form">
+    <label for="shareManualMedia">Photos or video (up to 45 MB total)</label>
+    <input type="file" id="shareManualMedia" name="media" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,video/mp4,video/webm,video/quicktime,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.mp4,.webm,.mov">
+    <label for="shareManualUrl">Website or Spotify link (optional)</label>
+    <input type="url" id="shareManualUrl" inputmode="url" maxlength="2048" placeholder="https://">
+    <label for="shareManualText">Text or caption (optional)</label>
+    <textarea id="shareManualText" rows="3" maxlength="4000" placeholder="Add a message"></textarea>
+    <button class="native-share-send" type="submit" id="shareManualStart">Choose recipients or status</button>
+   </form>
+  </section>
   <div id="shareApp" hidden>
    <section class="native-share-card" aria-labelledby="sharePreviewHeading">
     <h2 id="sharePreviewHeading">Preview</h2>
