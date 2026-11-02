@@ -3,6 +3,7 @@ import {loadUserPreferences} from "./user-preferences.js";
 import {escapeHTML,timeAgo,reportAppError,isSafeUrl} from "./utils.js";
 import {setupMentionInput} from "./mentions.js";
 import {icon} from "./icons.js";
+import {deliveryMediaUrl} from "./media-delivery.mjs";
 import {renderCommunityMarkdown,insertCommunityFormatting} from "./community-markdown.mjs";
 import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap} from "./verified-identity.mjs";
 import {communityRankCursor,appendUniqueCommunityRows,isCommunitySnapshotStale} from "./community-feed-pagination.mjs";
@@ -396,7 +397,7 @@ function mediaHtml(url,type,kind="thread",itemId="",position=0){
    "' data-media-type='"+escape(type||"image")+"'><span>Member-only media loading…</span></div>";
  }
  if(!isSafeUrl(url))return "";
- const safeUrl=escape(url);
+ const safeUrl=escape(deliveryMediaUrl(url));
  if(type==="video"||/\.(mp4|webm)(\?|$)/i.test(url))
   return "<div class='forum-attachment'><video src='"+safeUrl+"' preload='none' controls playsinline aria-label='Community video attachment'></video></div>";
  return "<div class='forum-attachment'><img src='"+safeUrl+"' loading='lazy' decoding='async' alt='Attached image'></div>";
