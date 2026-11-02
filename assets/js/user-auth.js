@@ -332,7 +332,7 @@ async function boot() {
   // Guidance mirrors the configured Supabase password requirements; server remains authoritative.
   function meetsSignupPasswordPolicy(password) {
     return password.length >= 8 && /[a-z]/.test(password) && /[A-Z]/.test(password)
-      && /[0-9]/.test(password) && /[^a-zA-Z0-9\\s]/.test(password);
+      && /[0-9]/.test(password) && /[^a-zA-Z0-9\s]/.test(password);
   }
   function updatePasswordGuidance() {
     const password = passwordFieldForStrength?.value || "";
@@ -342,7 +342,7 @@ async function boot() {
       [/[a-z]/.test(password), "a lowercase letter"],
       [/[A-Z]/.test(password), "an uppercase letter"],
       [/[0-9]/.test(password), "a number"],
-      [/[^a-zA-Z0-9\\s]/.test(password), "a symbol"]
+      [/[^a-zA-Z0-9\s]/.test(password), "a symbol"]
     ];
     const missing = requirements.filter(([met]) => !met).map(([, label]) => label);
     const meetsPolicy = missing.length === 0;
