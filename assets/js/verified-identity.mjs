@@ -1,3 +1,4 @@
+import {deliveryMediaUrl} from "./media-delivery.mjs";
 /* Timzee identity system. One canonical renderer across profiles, cards,
    comments, communities and short-video feeds. No copied third-party marks.
    Display must reflect server-protected public_profiles, never self-claimed metadata. */
@@ -58,7 +59,7 @@ export function affiliationBadge(profile){
  const affiliation=profile?.blipmoodOrganization;
  if(!affiliation?.name)return "";
  const label="Affiliated with "+String(affiliation.name).slice(0,120);
- const logo=safeUrl(affiliation.logo_url)?'<img src="'+safeText(affiliation.logo_url)+'" alt="" width="19" height="19" loading="lazy" decoding="async">':"⌂";
+ const logo=safeUrl(affiliation.logo_url)?'<img src="'+safeText(deliveryMediaUrl(affiliation.logo_url))+'" alt="" width="19" height="19" loading="lazy" decoding="async">':"⌂";
  return '<span class="tz-affiliation-mark" role="button" tabindex="0" data-org-label="'+safeText(label)+
  '" data-org-title="'+safeText(affiliation.title||"Affiliated member")+'" aria-label="'+safeText(label)+
  '" title="'+safeText(label)+'">'+logo+'</span>';
@@ -176,7 +177,7 @@ export function verifiedAvatar(url,profile,{size="md",alt="Profile picture"}={})
   const safeUrl=/^(https:\/\/|\/assets\/|assets\/)/i.test(value)&&
     !/[<>"'\\]/.test(value)?value:"/assets/img/avatar-placeholder.svg";
   return '<span class="tz-avatar-verified '+verifiedFrameClasses(profile)+
-    ' tz-avatar-verified--'+sizeClass+'"'+profileTarget(profile)+'><img src="'+safeText(safeUrl)+
+    ' tz-avatar-verified--'+sizeClass+'"'+profileTarget(profile)+'><img src="'+safeText(deliveryMediaUrl(safeUrl))+
     '" alt="'+safeText(alt)+'" loading="lazy" decoding="async"></span>';
 }
 
