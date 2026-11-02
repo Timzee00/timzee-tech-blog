@@ -84,3 +84,40 @@ test("source and integration remain zero-cost, safe, reversible",()=>{
  assert.match(media,/const WORKER_ENABLED_BY_DEFAULT = false;/);
  assert.match(media,/!PUBLIC_FOLDERS\.has\(key\.split\("\/"\)\[0\]\)/);
 });
+
+test("the opt-in free-worker canary defaults off and retries failed media on Supabase",()=>{
+ const mod=fs.readFileSync(path.join(__dirname,"../assets/js/media-delivery.mjs"),"utf8");
+ const source=mod.replace(/^export\s+/gm,"");
+ let handler=null,search="",loaded=false;
+ const values=new Map();
+ const store={
+  getItem:key=>values.get(key)||null,
+  setItem:(key,value)=>values.set(key,value),
+  removeItem:key=>values.delete(key)
+ };
+ const ctx={
+  URL,URLSearchParams,Set,
+  window:{location:{get search(){return search}}},
+  document:{addEventListener:(type,callback,capture)=>{
+   if(type==="error" && capture===true)handler=callback;
+  }},
+  sessionStorage:store
+ };
+ vm.runInNewContext(source+"\nthis.route=deliveryMediaUrl;this.enabled=publicMediaDeliveryEnabled;",ctx);
+ const original="https://duvbcwwprkzzyzikmcol.supabase.co/storage/v1/object/public/media/videos/owner/clip.mp4";
+ assert.equal(ctx.enabled,false);
+ assert.equal(ctx.route(original),original);
+ search="?blipmood_cache_canary=1";
+ const routed=ctx.route(original);
+ assert.match(routed,/^https:\/\/blipmood-free-media\.blipmood-timzee\.workers\.dev\/media\/videos\/owner\/clip\.mp4$/);
+ assert.equal(ctx.route("story-private-media/owner/private.mp4"),"story-private-media/owner/private.mp4");
+ assert.equal(ctx.route("https://duvbcwwprkzzyzikmcol.supabase.co/storage/v1/object/public/media/stories/owner/status.jpg"),
+ "https://duvbcwwprkzzyzikmcol.supabase.co/storage/v1/object/public/media/stories/owner/status.jpg");
+ const video={tagName:"VIDEO",currentSrc:"",src:routed,dataset:{},load(){loaded=true}};
+ handler({target:video});
+ assert.equal(video.src,original);
+ assert.equal(video.dataset.blipmoodMediaFallback,"1");
+ assert.equal(loaded,true);
+ handler({target:video}); // no error loop
+ assert.equal(video.src,original);
+});
