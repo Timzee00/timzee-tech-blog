@@ -1,0 +1,16 @@
+{
+  "name": "blipmood-public-media",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-02",
+  "workers_dev": true,
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "blipmood-public-media"
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.05
+  }
+}
