@@ -87,7 +87,18 @@ function renderRecipients(){
   const input=document.createElement("input");
   input.type="checkbox";input.value=recipient.key;input.dataset.shareTo="";
   input.disabled=sent||uncertain;input.checked=recipientSelection.has(recipient.key)&&!input.disabled;
-  input.addEventListener("change",()=>{if(input.checked)recipientSelection.add(recipient.key);else recipientSelection.delete(recipient.key);updateDestination();});
+  input.addEventListener("change",()=>{
+   if(input.checked){
+    const limit=getFiles().length?MAX_MEDIA_RECIPIENTS:MAX_CHAT;
+    if(recipientSelection.size>=limit){
+     input.checked=false;
+     announce("Select up to "+limit+" recipient"+(limit===1?"":"s")+" for this share.",{error:true});
+     return;
+    }
+    recipientSelection.add(recipient.key);
+   }else recipientSelection.delete(recipient.key);
+   updateDestination();
+  });
   const name=document.createElement("span");
   name.append(previewTextNode("strong",recipient.label));
   name.append(previewTextNode("small",sent?"Already sent":uncertain?"Delivery uncertain · check chat first":recipient.kind==="group"?"Group":"Friend"));
@@ -279,9 +290,48 @@ async function submitShare(){
  }catch(error){announce(error.message||"Sharing failed. Your draft is preserved.",{error:true});}
  finally{busy=false;if(!$("shareApp").querySelector(".native-share-login"))$("shareSend").disabled=false;}
 }
+function showManualImport(){
+ $("shareManualSection").hidden=false;
+ announce(new URLSearchParams(location.search).get("manual")==="1"
+  ?"Your phone did not pass the attachment. Select it again here to continue safely."
+  :"Choose a file or paste a link to share. Nothing is uploaded until you pick a destination.");
+ $("shareManualForm").addEventListener("submit",async event=>{
+  event.preventDefault();
+  if(busy)return;
+  busy=true;
+  const submit=$("shareManualStart");submit.disabled=true;
+  try{
+   const files=Array.from($("shareManualMedia").files||[]);
+   const raw=$("shareManualUrl").value.trim();
+   const url=raw?safeExternalUrl(raw):"";
+   if(raw&&!url)throw Error("Enter a valid HTTPS link, without an embedded username or password.");
+   const body=$("shareManualText").value.trim();
+   if(!files.length&&!url&&!body)throw Error("Choose at least one photo, video, link or message.");
+   if(files.length>6)throw Error("Choose no more than six photos or one video.");
+   const allowed=new Set(["image/jpeg","image/png","image/webp","image/gif","image/heic","image/heif",
+    "video/mp4","video/webm","video/quicktime"]);
+   let total=0,videos=0;
+   for(const item of files){
+    if(!allowed.has(String(item.type||"").toLowerCase()))throw Error("Unsupported file format. Choose a photo or MP4, WebM or MOV video.");
+    if(item.size<1||item.size>45*1024*1024)throw Error("Each shared file must be smaller than 45 MB.");
+    total+=item.size;
+    if(item.type.startsWith("video/"))videos++;
+   }
+   if(total>45*1024*1024||videos>1||(videos&&files.length>1))
+    throw Error("Choose up to 45 MB of photos or one video.");
+   const row={id:crypto.randomUUID(),title:"",text:body,url,files,createdAt:Date.now(),
+    sentTo:{},uncertainTo:{},attemptIds:{}};
+   await savePendingShare(row);
+   location.assign("/share-inbox.html?id="+encodeURIComponent(row.id));
+  }catch(error){
+   announce(error?.name==="QuotaExceededError"?"Not enough free device storage to keep this share. Free space or try a smaller file.":error.message||"Could not save the shared item.",{error:true});
+   busy=false;submit.disabled=false;
+  }
+ });
+}
 async function boot(){
  const id=new URLSearchParams(location.search).get("id");
- if(!id){announce("Choose Share → Blipmood from another app to send something here.",{error:true});return;}
+ if(!id){showManualImport();return;}
  try{pending=await getPendingShare(id);}
  catch(error){announce(error.message||"Unable to open this device's share inbox.",{error:true});return;}
  if(!pending){announce("That shared item has expired or is no longer available on this device.",{error:true});return;}
