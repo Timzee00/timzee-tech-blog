@@ -215,6 +215,7 @@
       import {editStatusPhoto} from "./assets/js/story-media-editor.mjs";
       import {editStatusVideo} from "./assets/js/story-video-editor.mjs";
       import {supabase} from "./assets/js/supabase.js";
+      import {deliveryMediaUrl} from "./assets/js/media-delivery.mjs";
       import "./assets/js/nav.js";
 
       const DEFAULT_AVATAR = "/assets/img/avatar-placeholder.svg";
@@ -424,7 +425,7 @@
             isSafeUrl(newest.media_url)&&!String(newest.media_url).startsWith("story-private-media/");
           if(previewable){
             const photo=document.createElement("img");
-            photo.className="status-moment-photo";photo.src=newest.media_url;
+            photo.className="status-moment-photo";photo.src=deliveryMediaUrl(newest.media_url);
             photo.alt="";photo.loading="lazy";photo.decoding="async";card.appendChild(photo);
           }
           const author=document.createElement("span");author.className="status-moment-author";
@@ -670,8 +671,8 @@
 
         const media = document.getElementById("storyViewerMedia");
         media.innerHTML = "";
-        let url=isSafeUrl(story.media_url)?story.media_url:"";
-        let musicUrl=isSafeUrl(story.music_url)?story.music_url:"";
+        let url=isSafeUrl(story.media_url)?deliveryMediaUrl(story.media_url):"";
+        let musicUrl=isSafeUrl(story.music_url)?deliveryMediaUrl(story.music_url):"";
         const mediaError = message => {
           if(version!==state.storyPlaybackVersion||document.getElementById("storyViewer").hidden)return;
           if(state.mediaWatchdog){clearTimeout(state.mediaWatchdog);state.mediaWatchdog=null;}
