@@ -1266,6 +1266,7 @@
       }
 
       let observer;
+      let autoplayDelayTimer=null;
       function wireItems() {
         const scroller = document.getElementById("scroller");
         if (!scroller) return;
@@ -1302,8 +1303,10 @@
         if(!document.documentElement.dataset.reelVisibilityWired){
           document.documentElement.dataset.reelVisibilityWired="true";
           const pauseBackgroundReels=()=>{
-            if(document.visibilityState==="hidden")
+            if(document.visibilityState==="hidden"){
+              clearTimeout(autoplayDelayTimer);
               document.querySelectorAll(".reel-video").forEach(video=>video.pause());
+            }
           };
           document.addEventListener("visibilitychange",pauseBackgroundReels);
           window.addEventListener("pagehide",()=>document.querySelectorAll(".reel-video").forEach(video=>video.pause()));
@@ -1575,6 +1578,9 @@
           candidate.src=source;
           // The play() promise below starts fetching only if playback is requested.
         }
+        // Wait until a viewer settles on the reel. A rapid swipe must not
+        // download an entire video just because it crossed the screen briefly.
+        clearTimeout(autoplayDelayTimer);
         // Autoplay active video, pause others
         if (observer) observer.disconnect();
         observer = new IntersectionObserver(
@@ -1590,11 +1596,19 @@
                   state.preferences.performance?.dataSaver || navigator.connection?.saveData;
                 if(document.visibilityState!=="hidden" &&
                    !saving && state.preferences.videos.autoplay!==false) {
-                  hydrateNearby(Number(idx));
-                  playWithSoundFallback(vid, idx);
+                  clearTimeout(autoplayDelayTimer);
+                  const pendingIndex=Number(idx);
+                  autoplayDelayTimer=setTimeout(()=>{
+                    if(!vid.isConnected||state.activeIndex!==pendingIndex||
+                       document.visibilityState!=="visible"||!vid.paused||
+                       state.commentsOpenFor||document.getElementById("reelUploadDialog")?.open)return;
+                    hydrateNearby(pendingIndex);
+                    playWithSoundFallback(vid,idx);
+                  },400);
                 }
                 maybeLoadMore(Number(idx));
               } else {
+                if(Number(idx)===state.activeIndex)clearTimeout(autoplayDelayTimer);
                 vid.pause();
               }
             });
