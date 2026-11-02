@@ -19,7 +19,7 @@
  <section class="studio-panel"><h2>Start a workspace</h2>
  <form id="createWorkspaceForm" class="studio-form"><label>Workspace type<select name="kind" required><option value="organization">Company or organization</option><option value="creator">Creator team</option></select></label>
  <label>Name<input name="name" maxlength="120" minlength="2" placeholder="Your team's public-facing name" required></label>
- <label>Website (optional)<input name="website" type="url" maxlength="300" placeholder="https://example.com"></label>
+ <label>Website (optional)<input name="website" type="text" inputmode="url" maxlength="300" placeholder="https://example.com or example.com"></label>
  <label class="span-all">Description<textarea name="description" maxlength="2000" rows="2" placeholder="What will your team create?"></textarea></label>
  <button class="btn" type="submit">Create workspace</button></form></section>
  <section class="studio-panel" id="invitedSection" hidden><h2>Invitations for you</h2><div id="teamInvites"></div></section>
@@ -30,7 +30,7 @@
     <div class="studio-action-row"><a class="btn ghost" id="teamSpaceLink" href="spaces.html">Host a Space</a><a class="btn ghost" href="creator-studio.html">Personal drafts</a></div>
     <form id="teamSettingsForm" class="studio-form" hidden>
       <label>Workspace name<input name="name" minlength="2" maxlength="120" required></label>
-      <label>Official website (optional)<input name="website" type="url" maxlength="300"></label>
+      <label>Official website (optional)<input name="website" type="text" inputmode="url" maxlength="300"></label>
       <label class="span-all">Description<textarea name="description" maxlength="2000" rows="2"></textarea></label>
       <button class="btn ghost" type="submit">Save workspace settings</button>
     </form>
