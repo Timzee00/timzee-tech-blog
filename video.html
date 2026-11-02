@@ -817,6 +817,10 @@
       .video-comment-creator-controls label{display:flex;align-items:center;gap:5px;font:600 .75rem system-ui}
       .video-comment-creator-controls button{border:1px solid #659da1;border-radius:8px;padding:8px;background:#123740;color:white;font:600 .76rem system-ui}
       .video-comment-poll{padding:8px;max-height:min(34dvh,310px);overflow:auto}
+      .comment-post-status{margin:8px 15px 10px;padding:9px 12px;border:1px solid #4e857d;border-radius:9px;background:#0b3036;color:#d9fff8;font:500 .85rem system-ui}
+      .comment-post-status[data-error="true"]{border-color:#e38989;color:#ffcbcb;background:#411d2d}
+      .comment-post-status[hidden]{display:none!important}
+      .comment-drawer-form button:disabled{cursor:wait;opacity:.65}
       .video-comment-poll:empty{display:none}
       .reel-chip[hidden]{display:none!important}
     </style>
@@ -1882,6 +1886,7 @@
         commentLoading = false;
         replyingTo = null;
         updateReplyIndicator();
+        showCommentPostStatus("");
         drawer.classList.add("open");
         backdrop.classList.add("open");
         drawer.setAttribute("aria-hidden", "false");
@@ -1916,36 +1921,90 @@
       document.getElementById("commentDrawerClose").addEventListener("click", closeComments);
       backdrop.addEventListener("click", closeComments);
 
+      const commentPostButton = drawerForm.querySelector('button[type="submit"]');
+      const commentPostStatus = document.createElement("p");
+      commentPostStatus.id = "commentPostStatus";
+      commentPostStatus.className = "comment-post-status";
+      commentPostStatus.setAttribute("role", "status");
+      commentPostStatus.setAttribute("aria-live", "polite");
+      commentPostStatus.hidden = true;
+      drawerForm.insertAdjacentElement("afterend", commentPostStatus);
+      let commentSubmitting = false;
+      const showCommentPostStatus = (message, failed = false) => {
+        commentPostStatus.textContent = message;
+        commentPostStatus.hidden = !message;
+        commentPostStatus.dataset.error = String(failed);
+      };
       drawerForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const selected=state.videos.find(v=>v.id===state.commentsOpenFor);
-        if(selected?.allow_comments===false){window.appUI?.toast?.("The creator disabled comments on this video.");return;}
+        if (commentSubmitting) return;
+        const videoId = state.commentsOpenFor;
+        const selected = state.videos.find(v => v.id === videoId);
+        if (selected?.allow_comments === false) {
+          showCommentPostStatus("Comments are turned off for this video.", true);
+          return;
+        }
         const body = drawerInput.value.trim();
-        if (!body || !state.commentsOpenFor) return;
+        if (!body || !videoId) {
+          showCommentPostStatus("Write a comment before posting.", true);
+          return;
+        }
         if (!state.user) {
           window.location.href = `login.html?next=${encodeURIComponent(window.location.href)}`;
           return;
         }
-        const own=await supabase.from("public_profiles").select("username,display_name").eq("id",state.user.id).maybeSingle();
-        const authorName=publicIdentityName(own.data,state.user.user_metadata?.display_name||"Member");
-        const result = await commentOnVideo(state.commentsOpenFor, state.user.id, authorName, body, replyingTo?.id || null);
-        if (!result.error) {
+        commentSubmitting = true;
+        commentPostButton.disabled = true;
+        commentPostButton.textContent = "Posting…";
+        showCommentPostStatus("");
+        try {
+          // The identity lookup is optional: profile service issues must not block replies.
+          const own = await supabase.from("public_profiles")
+            .select("username,display_name").eq("id", state.user.id).maybeSingle();
+          const authorName = publicIdentityName(own.data, state.user.user_metadata?.display_name || "Member");
+          const result = await commentOnVideo(videoId, state.user.id, authorName, body, replyingTo?.id || null);
+          if (result.error) throw result.error;
+          // The active reel might have changed while the request was being sent.
+          if (state.commentsOpenFor !== videoId) return;
           drawerInput.value = "";
-          const video = state.videos.find((v) => v.id === state.commentsOpenFor);
-          if (video && video.user_id && video.user_id !== state.user.id) {
-            notifyVideoComment(video.user_id, authorName, state.commentsOpenFor).catch((error) => console.warn("Video-comment notification failed:", error));
+          replyingTo = null;
+          updateReplyIndicator();
+          showCommentPostStatus("Comment posted.");
+          if (selected?.user_id && selected.user_id !== state.user.id) {
+            notifyVideoComment(selected.user_id, authorName, videoId)
+              .catch(error => console.warn("Video-comment notification failed:", error));
           }
-          const currentVideoId=state.commentsOpenFor;
-          const counters=await supabase.rpc("video_social_counts",{p_video_ids:[currentVideoId]});
-          const total=Number(counters.data?.[0]?.comment_count||0);
-          const badge=state.videos.findIndex(v=>v.id===currentVideoId);
-          if(badge>=0){
-            state.videos[badge].comment_count=total;
-            const count=document.getElementById("commentcount-"+badge);
-            if(count)count.textContent=String(total);
+          // Count updates are best effort: a successful insert must never look like failure.
+          try {
+            const counters = await supabase.rpc("video_social_counts", {p_video_ids: [videoId]});
+            if (!counters.error) {
+              const total = Number(counters.data?.[0]?.comment_count || 0);
+              const index = state.videos.findIndex(v => v.id === videoId);
+              if (index >= 0) {
+                state.videos[index].comment_count = total;
+                const count = document.getElementById("commentcount-" + index);
+                if (count) count.textContent = String(total);
+              }
+            }
+          } catch (error) {
+            console.warn("Video comment count refresh unavailable:", error);
           }
-          replyingTo=null;
-          void openComments(currentVideoId);
+          if (state.commentsOpenFor === videoId) await openComments(videoId);
+        } catch (error) {
+          console.warn("Reel comment could not be posted:", error);
+          const raw = String(error?.message || "");
+          const message = /foreign key|reply_to/i.test(raw)
+            ? "This comment is no longer available to reply to. Cancel the reply and try again."
+            : /permission|policy|unauthori|42501/i.test(raw)
+              ? "Your account cannot post this comment right now. Sign in again or contact support."
+              : /network|failed to fetch/i.test(raw)
+                ? "Connection interrupted. Your comment was not confirmed. Check your connection and retry."
+                : "Could not post the comment: " + (raw || "Please try again.");
+          showCommentPostStatus(message, true);
+        } finally {
+          commentSubmitting = false;
+          commentPostButton.disabled = false;
+          commentPostButton.textContent = "Post";
         }
       });
 
