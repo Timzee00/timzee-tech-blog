@@ -7,8 +7,8 @@ const start=source.indexOf("async function connectJoinedRoom(");
 const end=source.indexOf("function stopPolling(){",start);
 assert.ok(start>=0&&end>start);
 const fragment=source.slice(start,end);
-async function runJoin(shouldFail){
- const state={roomId:"room",role:"listener",joined:false,joining:false,livekit:null,audioConfigured:true};
+async function runJoin(shouldFail,audioConfigured=true){
+ const state={roomId:"room",role:"listener",joined:false,joining:false,livekit:null,audioConfigured};
  const messages=[],audio=[];
  const deps={state,authRequired:()=>true,
   success:v=>v.data,supabase:{rpc:async()=>({data:"listener",error:null})},
@@ -32,6 +32,12 @@ test("failed audio keeps room membership but explicitly warns",async()=>{
  assert.equal(failed.messages.at(-1).tone,"error");
  assert.match(failed.messages.at(-1).message,/audio did not connect/);
  assert.match(failed.audio.at(-1),/Audio offline/);
+});
+test("Space membership is not falsely confirmed without audio configuration",async()=>{
+ const room=await runJoin(false,false);
+ assert.equal(room.state.joined,false);
+ assert.equal(room.messages.at(-1).tone,"error");
+ assert.match(room.messages.at(-1).message,/audio isn't available/i);
 });
 test("reconnect checks heartbeat and renews server-granted speaking role",()=>{
  assert.match(source,/if\(heartbeat\.error\|\|!heartbeat\.data\)/);
