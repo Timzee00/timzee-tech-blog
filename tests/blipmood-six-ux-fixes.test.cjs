@@ -41,7 +41,7 @@ test("video and FYP display public names, not email-address fallbacks",()=>{
  assert.match(identities,/publicIdentityName/);
  assert.match(identities,/username,display_name,avatar_url/);
  assert.match(video,/publicIdentityName\(commentProfiles\.get\(c\.user_id\),c\.author_name\)/);
- assert.match(video,/const authorName=publicIdentityName/);
+ assert.match(video,/const\s+authorName\s*=\s*publicIdentityName\s*\(/);
  assert.doesNotMatch(video,/state\.user\.user_metadata\?\.display_name \|\| state\.user\.email/);
  assert.match(fyp,/publicIdentityName\(profile,comment\.author_name\)/);
  const sql=read("supabase/migrations/20261028140000_video_author_email_privacy.sql");
