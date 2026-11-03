@@ -115,23 +115,23 @@ test("signup confirmation is Blipmood branded and reaches existing three-step se
   const onboarding=read("assets/js/member-onboarding.mjs");
   assert.match(template, /Confirm your Blipmood account/);
   assert.doesNotMatch(template, /Timzee Tech Hub/);
-  assert.match(template, /confirm-email\\.html\\?token_hash=\\{\\{ \\.TokenHash \\}\\}/);
-  assert.doesNotMatch(template, /\\.ConfirmationURL/);
+  assert.match(template, /confirm-email\.html\?token_hash=\{\{ \.TokenHash \}\}/);
+  assert.doesNotMatch(template, /\.ConfirmationURL/);
   assert.match(page, /id="confirmEmailButton"/);
   assert.match(page, /noindex,nofollow/);
   assert.match(page, /name="referrer" content="no-referrer"/);
-  assert.match(confirm, /addEventListener\\("click",async/);
-  assert.match(confirm, /supabase\\.auth\\.verifyOtp\\(\\{token_hash:tokenHash,type:"email"\\}\\)/);
-  assert.match(confirm, /history\\.replaceState/);
-  assert.match(confirm, /window\\.location\\.replace\\("\\/welcome\\.html"\\)/);
-  assert.doesNotMatch(confirm, /window\\.location\\.replace\\(.*index\\.html/);
-  assert.match(onboarding, /if\\(o\\.data\\?\\.completed_at\\)\\{location\\.replace\\(nextTarget\\(\\)\\);return;\\}/);
+  assert.match(confirm, /addEventListener\("click",async/);
+  assert.match(confirm, /supabase\.auth\.verifyOtp\(\{token_hash:tokenHash,type:"email"\}\)/);
+  assert.match(confirm, /history\.replaceState/);
+  assert.match(confirm, /window\.location\.replace\("\/welcome\.html"\)/);
+  assert.doesNotMatch(confirm, /window\.location\.replace\(.*index\.html/);
+  assert.match(onboarding, /if\(o\.data\?\.completed_at\)\{location\.replace\(nextTarget\(\)\);return;\}/);
 });
 
 test("only a deliberate click can consume a signup confirmation token",async()=>{
   const vm=require("node:vm");
   const source=read("assets/js/confirm-email.mjs")
-    .replace(/^import \\{supabase\\} from "\\.\\/supabase\\.js";\\s*/,"");
+    .replace(/^import \{supabase\} from "\.\/supabase\.js";\s*/,"");
   const handlers={};
   const status={textContent:"",dataset:{}};
   const button={disabled:true,textContent:"",addEventListener:(name,fn)=>{handlers[name]=fn;}};
