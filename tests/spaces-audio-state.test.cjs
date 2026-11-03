@@ -8,7 +8,7 @@ const end=source.indexOf("function stopPolling(){",start);
 assert.ok(start>=0&&end>start);
 const fragment=source.slice(start,end);
 async function runJoin(shouldFail){
- const state={roomId:"room",role:"listener",joined:false,livekit:null};
+ const state={roomId:"room",role:"listener",joined:false,joining:false,livekit:null,audioConfigured:true};
  const messages=[],audio=[];
  const deps={state,authRequired:()=>true,
   success:v=>v.data,supabase:{rpc:async()=>({data:"listener",error:null})},
