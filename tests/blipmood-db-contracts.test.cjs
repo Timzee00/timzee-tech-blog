@@ -55,7 +55,7 @@ test("security-definer restriction checker is never publicly callable", () => {
 test("chat preview accelerator executes as the caller and preserves message RLS", () => {
   assert.match(chatPreview, /SECURITY INVOKER/i);
   assert.doesNotMatch(chatPreview, /SECURITY DEFINER/i);
-  assert.match(chatPreview, /FROM public\.direct_messages/);
+  assert.match(chatPreview, /from public\.direct_messages/i);
   assert.match(chatPreview, /revoke all on function public\.get_direct_message_previews\(text\[\]\) from anon/i);
   assert.match(chatPreview, /grant execute on function public\.get_direct_message_previews\(text\[\]\) to authenticated/i);
   const chat = read("assets/js/chat-previews.mjs");
