@@ -684,7 +684,7 @@
             console.warn("Falling back to Supabase user list:", err);
             const { data, error } = await supabase
               .from("profiles")
-              .select("id, display_name, username, role, status, created_at")
+              .select("id, display_name, username, role, account_status, created_at")
               .order("created_at", { ascending: false })
               .limit(200);
             if (error) {
@@ -695,7 +695,7 @@
               <div class="form-card" style="margin-bottom:12px;">
                 <strong>${escapeHTML(user.display_name || user.username || "Member")}</strong>
                 <div style="color:var(--color-text-muted);font-size:12px;">${escapeHTML(user.username || "—")} • ${escapeHTML(user.role || "user")}</div>
-                <div style="color:var(--color-text-muted);font-size:12px;">Status: ${escapeHTML(user.status || "active")}</div>
+                <div style="color:var(--color-text-muted);font-size:12px;">Status: ${escapeHTML(user.account_status || "active")}</div>
               </div>
             `);
             renderList("allUsersContainer", cards, "No users found.");
