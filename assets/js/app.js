@@ -3,7 +3,7 @@ import { renderTrending } from "./trending-engine.js";
 import { renderPopular as renderPopularRanking } from "./popularity-engine.js";
 import { fetchPostEngagement } from "./post-engagement.mjs";
 import { bindSearch } from "./search-input.js";
-import { supabase as supabaseForEngagement, getCurrentUser, getCurrentUserWithRole, getDisplayName, getUserRole, signOut } from "./supabase.js";
+import { supabase as supabaseForEngagement, getCurrentUser, getCurrentUserWithRole, getDisplayName, getUserRole, signOut, hadOAuthCallback } from "./supabase.js";
 import {
   fetchCategories,
   fetchPosts,
@@ -1078,6 +1078,18 @@ async function boot() {
     }).catch(error => console.warn("Post engagement unavailable:", error));
 
   [state.user, state.settings] = await Promise.all([identityPromise, settingsPromise]);
+  // Compatibility for older confirmation emails which redirect to the home
+  // URL with a Supabase PKCE ?code= instead of the new confirmation page.
+  // A normal home visit makes no additional onboarding query.
+  if (hadOAuthCallback && state.user?.id) {
+    const check=await supabaseForEngagement.from("member_onboarding")
+      .select("completed_at").eq("user_id",state.user.id).maybeSingle();
+    if (!check.error && !check.data?.completed_at) {
+      window.location.replace("/welcome.html");
+      return;
+    }
+    if (check.error) console.warn("Email callback onboarding check unavailable",check.error.code||"unknown");
+  }
   applyTheme(state.settings);
   if (state.settings.themeId) {
     void fetchThemeById(state.settings.themeId)
