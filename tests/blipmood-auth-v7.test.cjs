@@ -107,3 +107,57 @@ test("signup shows verification instructions only after success, and enforces co
   assert.ok(js.includes('Account created. Confirm your email'));
   assert.ok(js.includes('/[^a-zA-Z0-9\\s]/'));
 });
+
+test("signup confirmation is Blipmood branded and reaches existing three-step setup", () => {
+  const template=read("docs/templates/blipmood-supabase-confirm-signup.html");
+  const page=read("confirm-email.html");
+  const confirm=read("assets/js/confirm-email.mjs");
+  const onboarding=read("assets/js/member-onboarding.mjs");
+  assert.match(template, /Confirm your Blipmood account/);
+  assert.doesNotMatch(template, /Timzee Tech Hub/);
+  assert.match(template, /confirm-email\\.html\\?token_hash=\\{\\{ \\.TokenHash \\}\\}/);
+  assert.doesNotMatch(template, /\\.ConfirmationURL/);
+  assert.match(page, /id="confirmEmailButton"/);
+  assert.match(page, /noindex,nofollow/);
+  assert.match(page, /name="referrer" content="no-referrer"/);
+  assert.match(confirm, /addEventListener\\("click",async/);
+  assert.match(confirm, /supabase\\.auth\\.verifyOtp\\(\\{token_hash:tokenHash,type:"email"\\}\\)/);
+  assert.match(confirm, /history\\.replaceState/);
+  assert.match(confirm, /window\\.location\\.replace\\("\\/welcome\\.html"\\)/);
+  assert.doesNotMatch(confirm, /window\\.location\\.replace\\(.*index\\.html/);
+  assert.match(onboarding, /if\\(o\\.data\\?\\.completed_at\\)\\{location\\.replace\\(nextTarget\\(\\)\\);return;\\}/);
+});
+
+test("only a deliberate click can consume a signup confirmation token",async()=>{
+  const vm=require("node:vm");
+  const source=read("assets/js/confirm-email.mjs")
+    .replace(/^import \\{supabase\\} from "\\.\\/supabase\\.js";\\s*/,"");
+  const handlers={};
+  const status={textContent:"",dataset:{}};
+  const button={disabled:true,textContent:"",addEventListener:(name,fn)=>{handlers[name]=fn;}};
+  const pages={confirmEmailButton:button,confirmEmailStatus:status};
+  let verifications=0,dest="",removed="";
+  const client={auth:{
+    verifyOtp:async ({token_hash,type})=>{
+      verifications++;
+      assert.equal(token_hash,"a".repeat(64));
+      assert.equal(type,"email");
+      return {data:{user:{id:"account-one"},session:{access_token:"temporary"}},error:null};
+    },
+    getUser:async()=>({data:{user:{id:"account-one"}},error:null})
+  }};
+  const context={
+    supabase:client,
+    document:{getElementById:(id)=>pages[id],title:"Confirm your email"},
+    window:{location:{search:"?token_hash="+("a".repeat(64))+"&type=email",href:"https://blipmood.netlify.app/confirm-email.html?token_hash="+("a".repeat(64))+"&type=email",replace:(url)=>{dest=url;}}},
+    history:{replaceState:(_a,_b,url)=>{removed=url;}},
+    URL,URLSearchParams,console
+  };
+  vm.runInNewContext(source,context,{timeout:1200});
+  assert.equal(verifications,0,"opening an email link must not consume the token");
+  assert.equal(button.disabled,false);
+  await handlers.click();
+  assert.equal(verifications,1);
+  assert.equal(dest,"/welcome.html");
+  assert.equal(removed,"/confirm-email.html");
+});
