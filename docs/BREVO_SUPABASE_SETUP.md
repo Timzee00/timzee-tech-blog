@@ -10,7 +10,7 @@
 1. In Brevo, verify the sender domain and configure **SPF/DKIM** DNS, then verify the exact sender address intended for mail, such as `no-reply@your-domain.example`.
 2. Brevo Settings → SMTP & API → SMTP: copy the **SMTP Login** and generate an **SMTP key** (not the REST API key). The login may be an account email or a generated `...@smtp-brevo.com` address; use the value Brevo shows.
 3. Supabase project `duvbcwwprkzzyzikmcol` → Authentication → Emails → SMTP Settings → **Enable custom SMTP**.
-4. Sender name: `Timzee Tech Hub`; sender email: the exact verified address. Host: `smtp-relay.brevo.com`. Port: `587` with STARTTLS, or `465` SSL/TLS. Username: the Brevo SMTP Login. Password: the Brevo SMTP key. Save settings.
+4. Sender name: `Blipmood`; sender email: the exact verified address. Host: `smtp-relay.brevo.com`. Port: `587` with STARTTLS, or `465` SSL/TLS. Username: the Brevo SMTP Login. Password: the Brevo SMTP key. Save settings.
 5. Supabase Auth → URL Configuration: set the production `Site URL` and allowlist the production auth callback URL. Preview URL(s) should be allowlisted for isolated staging tests only. Never place secrets in redirects.
 6. Adjust **Authentication → Rate Limits** after testing and within your Brevo sending quota. Supabase custom SMTP initially raises its test-only threshold but does not make email unlimited.
 7. Verify with a TEST account: signup confirmation, reset password, recovery redirect, and resend. Inspect Brevo Transactional email logs for delivery/deferred/bounce details and Supabase Auth logs for rejection/rate limiting. Do not test on real customers.
@@ -28,3 +28,51 @@
 - Never roll out a custom SMTP sender or global newsletter to 100k users without verified SPF/DKIM, unsubscribe processing, bounce handling, rate limits, data-consent review and queue backpressure.
 
 References: https://developers.brevo.com/docs/supabase-smtp-integration , https://supabase.com/docs/guides/auth/auth-smtp , https://developers.brevo.com/docs/smtp-integration .
+
+## Confirm-signup email branding and routing (November 2026)
+
+The legacy confirmation email may still display **Timzee Tech Hub** because
+Supabase Auth stores its email template and SMTP sender name independently of
+the website's GitHub code. Changing frontend text or Netlify environment variables
+does not update the already-saved Auth template.
+
+The approved, copy-ready **Blipmood** confirm-signup template is tracked at
+`docs/templates/blipmood-supabase-confirm-signup.html`. It deliberately links
+to `https://blipmood.netlify.app/confirm-email.html?token_hash={{ .TokenHash }}&type=email`.
+The token is verified **only after a button click** using Supabase
+`auth.verifyOtp({ token_hash, type: "email" })`; a successful verification
+receives a session, confirms the identity using `getUser()` and opens
+`/welcome.html`. That existing page checks `member_onboarding.completed_at`:
+new users get all three setup stages; completed accounts continue to the site.
+This works when an email opens in a different browser from the signup browser,
+without relying on the original browser's PKCE code verifier.
+
+**Dashboard configuration required; GitHub commits alone do not change email
+templates:**
+
+1. Confirm the Netlify production deploy includes `confirm-email.html` and
+   `assets/js/confirm-email.mjs` before editing the live email template.
+2. In Supabase **Authentication → Email Templates → Confirm signup**: subject
+   `Confirm your Blipmood account`; replace the confirmation HTML with the
+   tracked template above. Only change **Confirm signup**, not the password
+   recovery, invite, or magic-link templates.
+3. In **Authentication → URL Configuration** set Site URL to
+   `https://blipmood.netlify.app` and include
+   `https://blipmood.netlify.app/login.html` as an allowed redirect
+   (needed by existing OAuth and password recovery). The new token-hash
+   confirmation page is a direct first-party link rather than a Supabase redirect.
+4. In **Authentication → Emails → SMTP Settings** change the sender display name
+   to **Blipmood** while preserving your verified sender email and functioning
+   Brevo SMTP login/key. Do **not** paste SMTP credentials into GitHub or chat.
+5. Test with a freshly created test account and *newly sent* confirmation message,
+   ideally opening the link from a different mobile browser. The old email
+   in an inbox is not retroactively edited. Check that a first-time user reaches
+   the three-stage welcome page and an already-completed user is not onboarded twice.
+
+**Important:** Supabase Free-tier projects created after June 3, 2026 using its
+default mail service cannot customize auth templates, but projects with a custom
+SMTP provider may still do so. Keep custom SMTP only if already configured and
+working, with no requirement to purchase a new service.
+
+Auth template reference: https://supabase.com/docs/guides/auth/auth-email-templates
+
