@@ -126,6 +126,10 @@ test("signup confirmation is Blipmood branded and reaches existing three-step se
   assert.match(confirm, /window\.location\.replace\("\/welcome\.html"\)/);
   assert.doesNotMatch(confirm, /window\.location\.replace\(.*index\.html/);
   assert.match(onboarding, /if\(o\.data\?\.completed_at\)\{location\.replace\(nextTarget\(\)\);return;\}/);
+  const home=read("assets/js/app.js");
+  assert.match(home, /if \(hadOAuthCallback && state\.user\?\.id\)/);
+  assert.match(home, /supabaseForEngagement\.from\("member_onboarding"\)/);
+  assert.match(home, /window\.location\.replace\("\/welcome\.html"\)/);
 });
 
 test("only a deliberate click can consume a signup confirmation token",async()=>{
