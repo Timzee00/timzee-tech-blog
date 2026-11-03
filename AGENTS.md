@@ -17,3 +17,17 @@ Follow Cloudflare's current agent setup documentation: <https://developers.cloud
 Current status, activation instructions, rollout and rollback are in `cloudflare/blipmood-media/README.md`.
 
 A separate **Workers Free** media cache (no R2) is deployed at `cloudflare/blipmood-free-cache/`. `assets/js/media-delivery.mjs` is OFF by default and may be tried in a single browser with `?blipmood_cache_canary=1` after the Netlify production lock is lifted. Never globally enable it without live response, range, quota and deletion tests.
+
+
+## Database and RLS compatibility
+
+These rules follow actual production failures found in November 2026:
+- Before adding a Supabase table/RPC/column reference, compare it with the live catalog and relevant applied migrations. Record any new schema in a versioned migration rather than silently changing only the live project.
+- A public table may allow anonymous INSERT but deny SELECT (for example, `content_requests`). Never use `.insert(...).select().single()` or SQL `INSERT ... RETURNING` on a write-only public form: PostgreSQL can return RLS `42501` even when the INSERT without returning succeeds. Keep the saved ID client-generated when needed.
+- When one trigger function is attached to different tables, put `OLD.foo`/`NEW.foo` references inside **separate nested table-specific IF branches**. Do not combine `TG_TABLE_NAME = 'x' AND OLD.x_only_column ...` in one boolean condition: PostgreSQL can resolve the wrong table's record fields and raise `42703`.
+- Supabase may grant function EXECUTE directly to `anon`, even after `REVOKE ... FROM PUBLIC`. For sensitive `SECURITY DEFINER` functions, explicitly revoke from `PUBLIC, anon` and only grant the specific intended role. Never blindly revoke from shared functions used inside RLS.
+- Do not change, weaken or remove RLS policies merely to hide permission errors. Prove authorized and unauthorized behavior using an authenticated-role transaction and `ROLLBACK`, with no persisted test rows.
+- Database and application releases must agree: `npm run check` includes `tests/blipmood-db-contracts.test.cjs`; run role-based database tests and browser smoke tests before claiming production-safe. Fix Netlify's locked deployment before expecting new JS to reach visitors.
+- Keep optional feed-refresh functionality off until its reviewed RPC, performance tests and security checks are complete. Do not enable billing or remove existing media as a workaround.
+
+See `docs/audits/2026-11-03-database-rls-stability.md` for the tested incident and rollout status.
