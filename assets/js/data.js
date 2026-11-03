@@ -495,7 +495,9 @@ export async function sendFriendRequestTo(currentUser, targetUserId) {
 }
 
 export async function createContentRequest(payload) {
-  return supabase.from("content_requests").insert(payload).select().single();
+  // Anonymous visitors may INSERT requests but must not SELECT the admin queue.
+  // INSERT ... RETURNING triggers RLS 42501 even when the insert itself is allowed.
+  return supabase.from("content_requests").insert(payload);
 }
 
 export async function fetchContentRequests() {
