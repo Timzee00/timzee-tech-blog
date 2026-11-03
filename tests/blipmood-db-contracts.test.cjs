@@ -80,3 +80,15 @@ test("optional feed refresh remains off unless explicitly enabled", () => {
   assert.match(f, /env\.FEED_CANDIDATE_REFRESH_ENABLED !== "true"/);
   assert.match(f, /return \{ skipped: "disabled" \}/);
 });
+
+test("public topic-request creation never requires an admin-only SELECT policy", () => {
+  const data = read("assets/js/data.js");
+  const start = data.indexOf("export async function createContentRequest(payload)");
+  const end = data.indexOf("\nexport ", start + 15);
+  assert.ok(start >= 0);
+  const code = data.slice(start, end > 0 ? end : undefined);
+  assert.match(code, /\.from\("content_requests"\)\.insert\(payload\);/);
+  assert.doesNotMatch(code, /\.select\(/);
+  const app = read("assets/js/app.js");
+  assert.match(app, /id: crypto\.randomUUID\(\),\s+user_id: state\.user\?\.id \|\| null/);
+});
