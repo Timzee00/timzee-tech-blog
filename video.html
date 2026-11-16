@@ -1003,6 +1003,7 @@
       const playerMenuToggle = document.getElementById("reelPlayerMenuToggle");
       const reportDialog = document.getElementById("reelReportDialog");
       let resumeAfterMenu = false;
+      let resumeAfterReport = false;
       let reportVideoId = null;
       function activeVideo() {
         return state.videos[state.activeIndex] || null;
@@ -1070,6 +1071,7 @@
           }, {onConflict:"user_id,content_type,content_id"});
           if (result.error) throw result.error;
           const removedIndex = state.activeIndex;
+          resumeAfterMenu = false;
           state.videos.splice(removedIndex,1);
           state.activeIndex = Math.min(removedIndex, Math.max(0,state.videos.length-1));
           closePlayerMenu();
@@ -1126,9 +1128,17 @@
         reportVideoId = video.id;
         document.getElementById("reelReportStatus").textContent = "";
         document.getElementById("reelReportReason").value = "";
+        resumeAfterReport = resumeAfterMenu;
         resumeAfterMenu = false;
         closePlayerMenu();
         reportDialog.showModal();
+      });
+      reportDialog.addEventListener("close",()=>{
+        if(resumeAfterReport){
+          const current=document.getElementById("video-"+state.activeIndex);
+          if(current)playWithSoundFallback(current,state.activeIndex,{explicit:true});
+        }
+        resumeAfterReport=false;
       });
       const closeReportDialog = () => { if (reportDialog.open) reportDialog.close(); };
       document.getElementById("reelReportClose").addEventListener("click",closeReportDialog);
@@ -1196,7 +1206,8 @@
         }
         // Don't replace a draft or change the selected reel when composing.
         const playing = document.getElementById("video-" + state.activeIndex);
-        resumeAfterUpload = Boolean(playing && !playing.paused);
+        resumeAfterUpload = Boolean((playing && !playing.paused) || resumeAfterMenu);
+        resumeAfterMenu = false;
         document.querySelectorAll(".reel-video").forEach(video => video.pause());
         document.getElementById("reelUploadSignin").hidden = Boolean(state.user);
         uploadForm.hidden = !state.user;
@@ -1495,6 +1506,7 @@
           .map((v, i) => itemTemplate(v, i))
           .join("")}</div>`;
         wireItems();
+        syncHeaderMute();
       }
 
       // Browsers block unmuted autoplay unless the user already interacted with
@@ -1641,6 +1653,106 @@
           );
         }
 
+        scroller.querySelectorAll('[data-action="follow"]:not([data-reel-follow-wired])').forEach(button => {
+          button.dataset.reelFollowWired="true";
+          button.addEventListener("click",async event => {
+            event.stopPropagation();
+            if(!state.user){
+              location.href="login.html?next="+encodeURIComponent(location.href);
+              return;
+            }
+            const creatorId=button.dataset.creatorId;
+            if(!creatorId||button.disabled)return;
+            const wasFollowing=button.dataset.following==="true";
+            button.disabled=true;
+            try{
+              const query=supabase.from("follows");
+              const result=wasFollowing
+                ? await query.delete().eq("follower_id",state.user.id)
+                    .eq("target_type","author").eq("target_id",creatorId)
+                : await query.insert({
+                    id:crypto.randomUUID(),follower_id:state.user.id,
+                    target_type:"author",target_id:creatorId
+                  });
+              if(result.error)throw result.error;
+              state.videos.filter(video=>String(video.user_id)===String(creatorId)).forEach(video=>{
+                video.viewer_follows_creator=!wasFollowing;
+              });
+              scroller.querySelectorAll('[data-action="follow"][data-creator-id="'+creatorId+'"]').forEach(node=>{
+                node.dataset.following=String(!wasFollowing);
+                node.setAttribute("aria-pressed",String(!wasFollowing));
+                node.textContent=wasFollowing?"Follow":"Following";
+              });
+            }catch(error){
+              console.warn("Reel creator follow failed",error);
+              window.appUI?.toast?.("Could not update creator follow. Please retry.",{tone:"error"});
+            }finally{button.disabled=false;}
+          });
+        });
+
+        scroller.querySelectorAll('[data-action="playback"]:not([data-reel-playback-wired])').forEach(button=>{
+          button.dataset.reelPlaybackWired="true";
+          const idx=Number(button.dataset.index);
+          const video=document.getElementById("video-"+idx);
+          if(!video)return;
+          const sync=()=>{
+            button.innerHTML=icon(video.paused?"play":"pause");
+            button.setAttribute("aria-label",video.paused?"Play video":"Pause video");
+          };
+          sync();
+          button.addEventListener("click",event=>{
+            event.stopPropagation();
+            if(video.paused){hydrateNearby(idx);playWithSoundFallback(video,idx,{explicit:true});}
+            else video.pause();
+          });
+          video.addEventListener("play",sync);
+          video.addEventListener("pause",sync);
+        });
+
+        scroller.querySelectorAll('[data-action="speed"]:not([data-reel-speed-wired])').forEach(button=>{
+          button.dataset.reelSpeedWired="true";
+          const idx=Number(button.dataset.index);
+          const video=document.getElementById("video-"+idx);
+          const rates=[0.5,0.75,1,1.25,1.5,2];
+          button.addEventListener("click",event=>{
+            event.stopPropagation();
+            if(!video)return;
+            const current=rates.indexOf(video.playbackRate);
+            const next=rates[(current+1+rates.length)%rates.length];
+            video.playbackRate=next;
+            button.textContent=String(next)+"x";
+            button.setAttribute("aria-label","Playback speed "+next+" times");
+          });
+        });
+
+        scroller.querySelectorAll('[data-action="volume"]:not([data-reel-volume-wired])').forEach(button=>{
+          button.dataset.reelVolumeWired="true";
+          button.addEventListener("click",event=>{event.stopPropagation();toggleReelMute();});
+        });
+
+        scroller.querySelectorAll('[data-action="fullscreen"]:not([data-reel-fullscreen-wired])').forEach(button=>{
+          button.dataset.reelFullscreenWired="true";
+          const idx=Number(button.dataset.index);
+          const item=document.getElementById("reel-"+idx);
+          const sync=()=>{
+            const active=document.fullscreenElement===item;
+            button.innerHTML=icon(active?"close":"maximize");
+            button.setAttribute("aria-label",active?"Exit fullscreen":"Enter fullscreen");
+          };
+          button.addEventListener("click",async event=>{
+            event.stopPropagation();
+            try{
+              if(document.fullscreenElement===item)await document.exitFullscreen();
+              else if(item?.requestFullscreen)await item.requestFullscreen();
+              else if(document.getElementById("video-"+idx)?.webkitEnterFullscreen)
+                document.getElementById("video-"+idx).webkitEnterFullscreen();
+              else window.appUI?.toast?.("Fullscreen is not available in this browser.");
+            }catch(error){window.appUI?.toast?.("Could not enter fullscreen on this device.");}
+            sync();
+          });
+          document.addEventListener("fullscreenchange",sync);
+        });
+
         scroller.querySelectorAll('[data-action="like"]:not([data-reel-like-wired])').forEach((btn) => {
 
           btn.dataset.reelLikeWired="true";
@@ -1762,11 +1874,41 @@
           let dragging = false;
           let wasPlayingBeforeDrag = false;
 
-          vid.addEventListener("timeupdate", () => {
-            if (dragging) return; // don't fight the drag preview
+          function updatePlayerProgress() {
+            if (dragging) return;
             if (fill && vid.duration) {
-              fill.style.width = `${(vid.currentTime / vid.duration) * 100}%`;
+              const ratio=Math.min(1,Math.max(0,(vid.currentTime/vid.duration)||0));
+              fill.style.width=(ratio*100)+"%";
+              track?.setAttribute("aria-valuenow",String(Math.round(ratio*100)));
+              track?.setAttribute("aria-valuetext",formatTime(vid.currentTime)+" of "+formatTime(vid.duration));
             }
+            const remaining=document.getElementById("remaining-"+idx);
+            if(remaining){
+              const time=Number.isFinite(vid.duration)?Math.max(0,vid.duration-vid.currentTime):0;
+              remaining.textContent="−"+formatTime(time);
+            }
+          }
+          vid.addEventListener("timeupdate",updatePlayerProgress);
+          vid.addEventListener("durationchange",updatePlayerProgress);
+          vid.addEventListener("loadedmetadata",updatePlayerProgress);
+          vid.addEventListener("ended",()=>{
+            if(!state.autoAdvance)return;
+            const advance=()=>{
+              const next=document.getElementById("reel-"+(Number(idx)+1));
+              if(!next)return false;
+              scroller.scrollTo({top:next.offsetTop,behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+              return true;
+            };
+            if(!advance())void maybeLoadMore(Number(idx)).then(()=>requestAnimationFrame(advance));
+          });
+          track?.addEventListener("keydown",event=>{
+            if(!["ArrowLeft","ArrowRight","Home","End"].includes(event.key))return;
+            event.preventDefault();
+            if(!Number.isFinite(vid.duration))return;
+            if(event.key==="Home")vid.currentTime=0;
+            else if(event.key==="End")vid.currentTime=vid.duration;
+            else vid.currentTime=Math.min(vid.duration,Math.max(0,vid.currentTime+(event.key==="ArrowRight"?5:-5)));
+            updatePlayerProgress();
           });
 
           // Real buffering indicator — shows while the browser is actually
@@ -2307,12 +2449,15 @@
         // never returns a legacy email or display name as the public handle.
         // Run alongside verified-profile and engagement lookups so a transient
         // failure in one feature does not hide the creator's identity.
-        const [identity,profilesResult,countsResult]=await Promise.allSettled([
+        const [identity,profilesResult,countsResult,followsResult]=await Promise.allSettled([
           supabase.rpc("reel_public_metadata",{p_video_ids:ids}),
           userIds.length?supabase.from("public_profiles")
             .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,official_badge_kind,official_badge_title,frame_style,is_staff_pick")
             .in("id",userIds):Promise.resolve({data:[],error:null}),
-          supabase.rpc("video_social_counts",{p_video_ids:ids})
+          supabase.rpc("video_social_counts",{p_video_ids:ids}),
+          state.user&&userIds.length?supabase.from("follows").select("target_id")
+            .eq("follower_id",state.user.id).eq("target_type","author")
+            .in("target_id",userIds.map(String)):Promise.resolve({data:[],error:null})
         ]);
         const usable=result=>result.status==="fulfilled"&&!result.value?.error
           ?result.value.data||[]:[];
@@ -2328,6 +2473,8 @@
         }
         const profileById=new Map(profiles.map(p=>[p.id,p]));
         const countsById=new Map(usable(countsResult).map(row=>[row.video_id,row]));
+        const followingIds=new Set(usable(followsResult).map(row=>String(row.target_id)));
+        const followStatusKnown=!state.user || (followsResult.status==="fulfilled"&&!followsResult.value?.error);
         videos.forEach(v=>{
           const publicRow=publicById.get(v.id);
           const p=profileById.get(v.user_id);
@@ -2343,6 +2490,8 @@
             v.uploader_profile.username=validated;
           if(v.uploader_profile&&v.user_id)v.uploader_profile.id=v.user_id;
           v.uploader_staff_pick=!!p?.is_staff_pick;
+          v.viewer_follows_creator=followingIds.has(String(v.user_id));
+          v.viewer_follow_status_known=followStatusKnown;
           if(publicRow?.view_count!==undefined)
             v.view_count=Math.max(0,Number(publicRow.view_count)||0);
           v.like_count=Number(countsById.get(v.id)?.like_count??v.like_count??0);
@@ -2387,7 +2536,12 @@
           const savedMute=sessionStorage.getItem("timzee:reels-muted");
           state.sessionMuted = savedMute === null ? state.preferences.videos.mutedByDefault === true : savedMute === "true";
         } catch { state.sessionMuted = state.preferences.videos.mutedByDefault === true; }
+        try {
+          const savedAdvance=localStorage.getItem("blipmood:reels-auto-advance");
+          state.autoAdvance=savedAdvance===null?true:savedAdvance==="true";
+        } catch { state.autoAdvance=true; }
         syncHeaderMute();
+        syncPlayerMenu();
         if(state.mode==="for-you" && state.preferences.feed.showRecommendations===false){
           state.mode="following"; updateReelModeButtons();
         }
