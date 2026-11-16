@@ -1752,14 +1752,17 @@
             sync();
           });
         });
-        document.addEventListener("fullscreenchange",()=>{
-          document.querySelectorAll('[data-action="fullscreen"]').forEach(button=>{
-            const item=document.getElementById("reel-"+button.dataset.index);
-            const active=document.fullscreenElement===item;
-            button.innerHTML=icon(active?"close":"maximize");
-            button.setAttribute("aria-label",active?"Exit fullscreen":"Enter fullscreen");
+        if(!document.documentElement.dataset.reelFullscreenListener){
+          document.documentElement.dataset.reelFullscreenListener="true";
+          document.addEventListener("fullscreenchange",()=>{
+            document.querySelectorAll('[data-action="fullscreen"]').forEach(button=>{
+              const item=document.getElementById("reel-"+button.dataset.index);
+              const active=document.fullscreenElement===item;
+              button.innerHTML=icon(active?"close":"maximize");
+              button.setAttribute("aria-label",active?"Exit fullscreen":"Enter fullscreen");
+            });
           });
-        });
+        }
 
         scroller.querySelectorAll('[data-action="like"]:not([data-reel-like-wired])').forEach((btn) => {
 
