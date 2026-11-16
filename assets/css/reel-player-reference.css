@@ -84,6 +84,7 @@
   -webkit-line-clamp:2;
 }
 .reel-caption-more{min-height:30px;padding:2px 0 4px;color:#fff}
+.reel-caption-more[hidden]{display:none!important}
 .reel-tags{max-height:24px;overflow:hidden}
 .reel-rail{
   display:flex;flex-direction:row;align-items:center;justify-content:flex-start;
