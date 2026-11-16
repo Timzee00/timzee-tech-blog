@@ -724,6 +724,7 @@
         .reel-uploader .reel-username{max-width:min(58vw,235px)}
       }
 </style>
+    <link rel="stylesheet" href="assets/css/reel-player-reference.css">
   </head>
   <body class="reel-mode">
     <a class="skip-link" href="#main-content">Skip to videos</a>
@@ -732,19 +733,92 @@
     <main id="main-content" aria-label="Blipmood Reels">
       <h1 class="visually-hidden">Blipmood Reels</h1>
       <header class="reel-nav" aria-label="Reels controls">
-        <a class="reel-back" id="reelHeaderBack" href="videos.html" aria-label="Back to videos" title="Back">←</a>
+        <a class="reel-back" id="reelHeaderBack" href="videos.html" aria-label="Back to videos" title="Back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7" /></svg>
+        </a>
         <nav class="reel-feed-modes" aria-label="Video feed">
           <button type="button" data-reel-mode="for-you" aria-pressed="true" class="active">For You</button>
           <button type="button" data-reel-mode="following" aria-pressed="false">Following</button>
         </nav>
         <div class="reel-nav-actions">
-          <button type="button" class="reel-nav-create" id="reelOpenUpload" aria-haspopup="dialog" aria-controls="reelUploadDialog" aria-label="Create and upload a reel" title="Create a reel">+</button>
-          <button type="button" class="reel-mute" id="reelHeaderMute" aria-label="Toggle sound" title="Mute or unmute videos"></button>
+          <button type="button" class="reel-player-menu-toggle" id="reelPlayerMenuToggle"
+            aria-haspopup="dialog" aria-controls="reelPlayerMenu" aria-expanded="false"
+            aria-label="Video options" title="Video options">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+          </button>
         </div>
       </header>
       <div id="reelRoot"></div>
     </main>
 
+    <dialog class="reel-player-menu" id="reelPlayerMenu" aria-labelledby="reelPlayerMenuTitle">
+      <div class="reel-menu-grabber" aria-hidden="true"></div>
+      <div class="reel-menu-heading">
+        <h2 id="reelPlayerMenuTitle">Video options</h2>
+        <button type="button" id="reelPlayerMenuClose" aria-label="Close video options">
+          <span data-menu-icon="close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="reel-menu-options">
+        <button type="button" class="reel-menu-row" data-menu-action="not-interested">
+          <span class="reel-menu-icon" data-menu-icon="fyp" aria-hidden="true"></span>
+          <span class="reel-menu-label">Not interested</span>
+        </button>
+        <button type="button" class="reel-menu-row" data-menu-action="captions" id="reelMenuCaptions">
+          <span class="reel-menu-icon" data-menu-icon="file-text" aria-hidden="true"></span>
+          <span class="reel-menu-label">Captions</span>
+          <span class="reel-menu-value" id="reelMenuCaptionsValue">Off</span>
+        </button>
+        <div class="reel-menu-row reel-menu-row-static" aria-label="Quality: Auto">
+          <span class="reel-menu-icon" data-menu-icon="settings" aria-hidden="true"></span>
+          <span class="reel-menu-label">Quality</span>
+          <span class="reel-menu-value">Auto</span>
+        </div>
+        <button type="button" class="reel-menu-row" data-menu-action="auto-advance" id="reelMenuAutoAdvance">
+          <span class="reel-menu-icon" data-menu-icon="play" aria-hidden="true"></span>
+          <span class="reel-menu-label">Auto-advance</span>
+          <span class="reel-menu-value" id="reelMenuAutoAdvanceValue">Enabled</span>
+        </button>
+        <a class="reel-menu-row" id="reelMenuGoToPost" href="videos.html">
+          <span class="reel-menu-icon" data-menu-icon="file-text" aria-hidden="true"></span>
+          <span class="reel-menu-label">Go to Post</span>
+        </a>
+        <button type="button" class="reel-menu-row" data-menu-action="download" id="reelMenuDownload">
+          <span class="reel-menu-icon" data-menu-icon="download" aria-hidden="true"></span>
+          <span class="reel-menu-label">Download video</span>
+        </button>
+        <button type="button" class="reel-menu-row reel-menu-row-danger" data-menu-action="report">
+          <span class="reel-menu-icon" data-menu-icon="flag" aria-hidden="true"></span>
+          <span class="reel-menu-label">Report post</span>
+        </button>
+      </div>
+    </dialog>
+
+    <dialog class="reel-report-dialog" id="reelReportDialog" aria-labelledby="reelReportTitle">
+      <form id="reelReportForm" novalidate>
+        <div class="reel-report-heading">
+          <h2 id="reelReportTitle">Report this video</h2>
+          <button type="button" id="reelReportClose" aria-label="Close report form">
+            <span data-menu-icon="close" aria-hidden="true"></span>
+          </button>
+        </div>
+        <label for="reelReportReason">Why are you reporting this video?</label>
+        <select id="reelReportReason" required>
+          <option value="">Choose a reason</option>
+          <option value="spam">Spam or misleading content</option>
+          <option value="harassment">Harassment or bullying</option>
+          <option value="hateful">Hateful content</option>
+          <option value="nudity">Nudity or sexual content</option>
+          <option value="violence">Violence or dangerous acts</option>
+          <option value="other">Something else</option>
+        </select>
+        <p class="reel-report-status" id="reelReportStatus" role="status" aria-live="polite"></p>
+        <div class="reel-report-actions">
+          <button type="button" class="reel-report-cancel" id="reelReportCancel">Cancel</button>
+          <button type="submit" class="reel-report-submit" id="reelReportSubmit">Submit report</button>
+        </div>
+      </form>
+    </dialog>
     <dialog class="reel-editor-dialog" id="reelEditor" aria-labelledby="reelEditorTitle">
       <form id="reelEditorForm">
         <h2 id="reelEditorTitle">Edit your reel</h2>
@@ -850,7 +924,7 @@
       import {renderSocialText} from "./assets/js/social-rich-text.mjs";
       import {deliveryMediaUrl} from "./assets/js/media-delivery.mjs";
       import {mountPoll,openPollComposer} from "./assets/js/content-polls.mjs";
-      import { notifyVideoLike, notifyVideoComment } from "./assets/js/data.js";
+      import { notifyVideoLike, notifyVideoComment, createContentReport } from "./assets/js/data.js";
       import {verifiedName,verifiedAvatar,verifiedCommentClass,loadVerifiedIdentityMap,publicIdentityName} from "./assets/js/verified-identity.mjs";
 
       const root = document.getElementById("reelRoot");
@@ -861,6 +935,7 @@
         user: null,
         preferences: mergePreferences(),
         sessionMuted: false,
+        autoAdvance: true,
         videos: [],
         offset: 0,
         limit: 6,
@@ -907,17 +982,175 @@
       }, {passive:true});
       syncReelViewport();
 
-      const headerMute = document.getElementById("reelHeaderMute");
       function syncHeaderMute() {
-        headerMute.innerHTML = icon(state.sessionMuted ? "volume-x" : "volume-2");
-        headerMute.setAttribute("aria-label", state.sessionMuted ? "Unmute videos" : "Mute videos");
-        headerMute.setAttribute("aria-pressed", String(state.sessionMuted));
+        document.querySelectorAll('[data-action="volume"]').forEach(button => {
+          button.innerHTML = icon(state.sessionMuted ? "volume-x" : "volume-2");
+          button.setAttribute("aria-label", state.sessionMuted ? "Unmute video" : "Mute video");
+          button.setAttribute("aria-pressed", String(!state.sessionMuted));
+        });
       }
-      headerMute.addEventListener("click", () => {
+      function toggleReelMute() {
         state.sessionMuted = !state.sessionMuted;
         try { sessionStorage.setItem("timzee:reels-muted", String(state.sessionMuted)); } catch {}
         document.querySelectorAll(".reel-video").forEach(video => { video.muted = state.sessionMuted; });
         syncHeaderMute();
+      }
+      const playerMenu = document.getElementById("reelPlayerMenu");
+      const playerMenuToggle = document.getElementById("reelPlayerMenuToggle");
+      const reportDialog = document.getElementById("reelReportDialog");
+      let resumeAfterMenu = false;
+      let reportVideoId = null;
+      function activeVideo() {
+        return state.videos[state.activeIndex] || null;
+      }
+      function syncPlayerMenu() {
+        const video = activeVideo();
+        const captions = video ? document.getElementById("video-" + state.activeIndex)?.textTracks : null;
+        const availableCaptions = captions ? [...captions].filter(track => ["captions","subtitles"].includes(track.kind)) : [];
+        const captionsOn = availableCaptions.some(track => track.mode === "showing");
+        const captionButton = document.getElementById("reelMenuCaptions");
+        captionButton.disabled = !availableCaptions.length;
+        document.getElementById("reelMenuCaptionsValue").textContent =
+          availableCaptions.length ? (captionsOn ? "On" : "Off") : "Unavailable";
+        document.getElementById("reelMenuAutoAdvanceValue").textContent = state.autoAdvance ? "Enabled" : "Disabled";
+        const download = document.getElementById("reelMenuDownload");
+        download.disabled = video?.allow_download === false;
+        download.setAttribute("aria-disabled", String(video?.allow_download === false));
+        document.getElementById("reelMenuGoToPost").href = video
+          ? "video.html?id=" + encodeURIComponent(video.id)
+          : "videos.html";
+      }
+      function openPlayerMenu() {
+        if (!playerMenu || playerMenu.open) return;
+        const current = document.getElementById("video-" + state.activeIndex);
+        resumeAfterMenu = Boolean(current && !current.paused);
+        current?.pause();
+        syncPlayerMenu();
+        playerMenuToggle.setAttribute("aria-expanded","true");
+        playerMenu.showModal();
+      }
+      function closePlayerMenu() {
+        if (playerMenu?.open) playerMenu.close();
+      }
+      playerMenuToggle.addEventListener("click", openPlayerMenu);
+      document.getElementById("reelPlayerMenuClose").addEventListener("click", closePlayerMenu);
+      playerMenu.addEventListener("click", event => {
+        if (event.target === playerMenu) closePlayerMenu();
+      });
+      playerMenu.addEventListener("close", () => {
+        playerMenuToggle.setAttribute("aria-expanded","false");
+        if (resumeAfterMenu && !state.commentsOpenFor && !reportDialog.open) {
+          const current = document.getElementById("video-" + state.activeIndex);
+          if (current) playWithSoundFallback(current, state.activeIndex, {explicit:true});
+        }
+        resumeAfterMenu = false;
+        scheduleReelViewportSync();
+      });
+      document.querySelectorAll("[data-menu-icon]").forEach(node => {
+        node.innerHTML = icon(node.dataset.menuIcon);
+      });
+      document.querySelector('[data-menu-action="not-interested"]').addEventListener("click", async () => {
+        const video = activeVideo();
+        if (!video) return;
+        if (!state.user) {
+          location.href = "login.html?next=" + encodeURIComponent(location.href);
+          return;
+        }
+        const button = document.querySelector('[data-menu-action="not-interested"]');
+        button.disabled = true;
+        try {
+          const result = await supabase.from("user_content_feedback").upsert({
+            user_id: state.user.id, content_type: "video", content_id: video.id, action: "not_interested"
+          }, {onConflict:"user_id,content_type,content_id"});
+          if (result.error) throw result.error;
+          const removedIndex = state.activeIndex;
+          state.videos.splice(removedIndex,1);
+          state.activeIndex = Math.min(removedIndex, Math.max(0,state.videos.length-1));
+          closePlayerMenu();
+          if (!state.videos.length) {
+            await bootFeed(false);
+          } else {
+            render();
+            const scroller = document.getElementById("scroller");
+            if (scroller) scroller.scrollTo({top:state.activeIndex*scroller.clientHeight,behavior:"auto"});
+          }
+          window.appUI?.toast?.("This video will no longer appear in your recommendations.");
+        } catch(error) {
+          window.appUI?.toast?.("Could not update your recommendations. Please retry.",{tone:"error"});
+          console.warn("Reel preference update failed",error);
+        } finally {
+          button.disabled = false;
+        }
+      });
+      document.querySelector('[data-menu-action="captions"]').addEventListener("click", () => {
+        const current = document.getElementById("video-" + state.activeIndex);
+        const tracks = current?.textTracks
+          ? [...current.textTracks].filter(track => ["captions","subtitles"].includes(track.kind))
+          : [];
+        if (!tracks.length) {
+          window.appUI?.toast?.("Captions are not available for this video.");
+          return;
+        }
+        const turnOn = !tracks.some(track => track.mode === "showing");
+        tracks.forEach((track,index) => { track.mode = turnOn && index === 0 ? "showing" : "disabled"; });
+        syncPlayerMenu();
+      });
+      document.querySelector('[data-menu-action="auto-advance"]').addEventListener("click", () => {
+        state.autoAdvance = !state.autoAdvance;
+        try { localStorage.setItem("blipmood:reels-auto-advance",String(state.autoAdvance)); } catch {}
+        document.querySelectorAll(".reel-video").forEach(video => { video.loop = !state.autoAdvance; });
+        syncPlayerMenu();
+      });
+      document.getElementById("reelMenuDownload").addEventListener("click", () => {
+        const button = document.querySelector('#scroller [data-action="download"][data-index="' + state.activeIndex + '"]');
+        if (!button || button.hidden) {
+          window.appUI?.toast?.("The creator has disabled downloads for this video.");
+          return;
+        }
+        closePlayerMenu();
+        button.click();
+      });
+      document.querySelector('[data-menu-action="report"]').addEventListener("click", () => {
+        const video = activeVideo();
+        if (!video) return;
+        if (!state.user) {
+          location.href = "login.html?next=" + encodeURIComponent(location.href);
+          return;
+        }
+        reportVideoId = video.id;
+        document.getElementById("reelReportStatus").textContent = "";
+        document.getElementById("reelReportReason").value = "";
+        closePlayerMenu();
+        reportDialog.showModal();
+      });
+      const closeReportDialog = () => { if (reportDialog.open) reportDialog.close(); };
+      document.getElementById("reelReportClose").addEventListener("click",closeReportDialog);
+      document.getElementById("reelReportCancel").addEventListener("click",closeReportDialog);
+      document.getElementById("reelReportForm").addEventListener("submit",async event => {
+        event.preventDefault();
+        const reason = document.getElementById("reelReportReason").value;
+        const status = document.getElementById("reelReportStatus");
+        const submit = document.getElementById("reelReportSubmit");
+        if (!state.user || !reportVideoId || !reason) {
+          status.textContent = "Choose a reason before submitting the report.";
+          return;
+        }
+        submit.disabled = true;
+        status.textContent = "Submitting report…";
+        try {
+          const result = await createContentReport({
+            reporterId:state.user.id, contentType:"video", contentId:reportVideoId, reason
+          });
+          if (result?.error) throw result.error;
+          status.textContent = "Report submitted. Thank you.";
+          window.appUI?.toast?.("Report submitted. Thank you.");
+          reportDialog.close();
+        } catch(error) {
+          status.textContent = "The report could not be submitted. Please retry.";
+          console.warn("Video report failed",error);
+        } finally {
+          submit.disabled = false;
+        }
       });
       document.getElementById("reelHeaderBack").addEventListener("click", event => {
         try {
