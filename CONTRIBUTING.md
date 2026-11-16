@@ -11,6 +11,10 @@ Read [Architecture](docs/ARCHITECTURE.md) before cross-layer changes.
 
 The repository instructions require work on existing `main` unless another branch is explicitly requested.
 
+## Formatting defaults
+
+`.editorconfig` sets UTF-8, LF line endings, final newlines and two-space indentation for common source/config files. These are editor defaults, not an automatic formatter; follow the surrounding file style when editing legacy modules.
+
 ## Code organisation
 
 - Preserve static HTML/CSS/browser ES modules. Do not add a frontend framework as a readability shortcut.
