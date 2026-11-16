@@ -1,5 +1,5 @@
 import { createChatRealtime } from "./chat-realtime.mjs";
-import { asUtcTimestamp, getFileExtension, getMediaTypeFromMime, resolveAttachmentType, formatFileSize, getDisplayFileName, formatDuration } from "./chat/formatters.mjs";
+import { asUtcTimestamp, resolveAttachmentType, formatFileSize, getDisplayFileName, formatDuration } from "./chat/formatters.mjs";
 import { setupChatEnhancements } from "./chat-enhancements.mjs";
 import {openPollComposer,mountPoll} from "./content-polls.mjs";
 import {setupMentionInput} from "./mentions.js";
