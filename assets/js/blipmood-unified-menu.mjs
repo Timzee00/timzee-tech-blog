@@ -51,7 +51,7 @@ function installReelMenu(){
  document.body.append(toggle,shade,panel);
 }
 function install(){
- if(current==="video.html"){installReelMenu();return;}
+ if(current==="video.html")return;
  if(safeSkip.has(current)||location.pathname.startsWith("/admin/")||
   location.pathname.startsWith("/super/")||location.pathname.startsWith("/moderator/")||
   location.pathname.startsWith("/author/"))return;
