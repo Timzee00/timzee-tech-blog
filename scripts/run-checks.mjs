@@ -187,7 +187,8 @@ const steps=[
       "--test",
       "tests/video-discovery.test.cjs",
       "tests/atomic-video-view.test.cjs",
-      "tests/reels-identity-views-ranking.test.cjs"
+      "tests/reels-identity-views-ranking.test.cjs",
+      "tests/video-player-interface.test.cjs"
     ]
   },
   {
