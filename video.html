@@ -1039,7 +1039,7 @@
       }
       playerMenuToggle.addEventListener("click", openPlayerMenu);
       document.getElementById("reelPlayerMenuClose").addEventListener("click", closePlayerMenu);
-      document.getElementById("reelOpenUpload").addEventListener("click", () => { resumeAfterMenu = false; closePlayerMenu(); });
+      document.getElementById("reelOpenUpload").addEventListener("click", closePlayerMenu);
       playerMenu.addEventListener("click", event => {
         if (event.target === playerMenu) closePlayerMenu();
       });
