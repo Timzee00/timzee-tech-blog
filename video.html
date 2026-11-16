@@ -783,6 +783,10 @@
           <span class="reel-menu-icon" data-menu-icon="file-text" aria-hidden="true"></span>
           <span class="reel-menu-label">Go to Post</span>
         </a>
+        <button type="button" class="reel-menu-row" id="reelOpenUpload" aria-haspopup="dialog" aria-controls="reelUploadDialog">
+          <span class="reel-menu-icon" data-menu-icon="upload" aria-hidden="true"></span>
+          <span class="reel-menu-label">Create a reel</span>
+        </button>
         <button type="button" class="reel-menu-row" data-menu-action="download" id="reelMenuDownload">
           <span class="reel-menu-icon" data-menu-icon="download" aria-hidden="true"></span>
           <span class="reel-menu-label">Download video</span>
@@ -1034,12 +1038,14 @@
       }
       playerMenuToggle.addEventListener("click", openPlayerMenu);
       document.getElementById("reelPlayerMenuClose").addEventListener("click", closePlayerMenu);
+      document.getElementById("reelOpenUpload").addEventListener("click", () => { resumeAfterMenu = false; closePlayerMenu(); });
       playerMenu.addEventListener("click", event => {
         if (event.target === playerMenu) closePlayerMenu();
       });
       playerMenu.addEventListener("close", () => {
         playerMenuToggle.setAttribute("aria-expanded","false");
-        if (resumeAfterMenu && !state.commentsOpenFor && !reportDialog.open) {
+        if (resumeAfterMenu && !state.commentsOpenFor && !reportDialog.open &&
+            !document.getElementById("reelUploadDialog")?.open) {
           const current = document.getElementById("video-" + state.activeIndex);
           if (current) playWithSoundFallback(current, state.activeIndex, {explicit:true});
         }
@@ -1120,6 +1126,7 @@
         reportVideoId = video.id;
         document.getElementById("reelReportStatus").textContent = "";
         document.getElementById("reelReportReason").value = "";
+        resumeAfterMenu = false;
         closePlayerMenu();
         reportDialog.showModal();
       });
@@ -1336,8 +1343,12 @@
           reel.title=title;reel.description=description;
           state.videos.forEach((item,index)=>{
             if(item.id!==reel.id)return;
+            const titleNode=document.getElementById("title-"+index);
             const caption=document.getElementById("caption-"+index);
-            if(caption)caption.innerHTML=renderSocialText(title)+(description?" — "+renderSocialText(description):"");
+            if(titleNode)titleNode.innerHTML=renderSocialText(title);
+            if(caption)caption.innerHTML=renderSocialText(description);
+            const more=document.querySelector('[data-action="expand-caption"][data-index="'+index+'"]');
+            if(more)more.hidden=description.length<120;
           });
           resultStatus.textContent="Saved!";
           reelEditor.close();
@@ -1399,6 +1410,13 @@
         const staff = video.uploader_staff_pick
           ? '<span class="reel-staff">'+icon("star")+' Staff Pick</span>'
           : '';
+        const editMarkup = state.user?.id===video.user_id
+          ? '<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">'+icon("edit")+' Edit</button>'
+          : '';
+        const followMarkup = video.user_id && state.user?.id!==video.user_id &&
+          (!state.user || video.viewer_follow_status_known!==false)
+          ? '<button type="button" class="reel-follow-btn" data-action="follow" data-creator-id="'+escapeHTML(video.user_id)+'" data-following="'+String(video.viewer_follows_creator===true)+'" aria-pressed="'+String(video.viewer_follows_creator===true)+'">'+(video.viewer_follows_creator===true?"Following":"Follow")+'</button>'
+          : '';
         const tags = (video.tags || [])
           .filter(t=>/^[a-z0-9_]{1,32}$/i.test(String(t)))
           .slice(0, 6)
@@ -1406,62 +1424,69 @@
           .join(" ");
         const poster = video.thumbnail_url && isSafeUrl(video.thumbnail_url) ? deliveryMediaUrl(video.thumbnail_url) : "";
         const src = isSafeUrl(video.video_url) ? deliveryMediaUrl(video.video_url) : "";
+        const caption = video.description || "";
 
         return `
-          <div class="reel-item" data-index="${index}" data-id="${escapeHTML(video.id)}">
-            <div class="reel-progress" id="progresstrack-${index}"><div class="reel-progress-fill" id="progress-${index}"></div></div>
+          <div class="reel-item" id="reel-${index}" data-index="${index}" data-id="${escapeHTML(video.id)}">
             <div class="reel-scrub-time" id="scrubtime-${index}">0:00</div>
             <div class="reel-buffer-spinner" id="spinner-${index}"></div>
-            <video class="reel-video" id="video-${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} playsinline loop preload="none" data-video-src="${escapeHTML(src)}"></video>
+            <video class="reel-video" id="video-${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} playsinline ${state.autoAdvance ? "" : "loop"} preload="none" data-video-src="${escapeHTML(src)}"></video>
             <div class="reel-vignette"></div>
+            <h2 class="reel-title-overlay" id="title-${index}">${renderSocialText(video.title || "")}</h2>
             <div class="reel-tapzone" aria-hidden="true"></div>
-            <div class="reel-pause-flash" id="pauseflash-${index}">▶</div>
+            <div class="reel-pause-flash" id="pauseflash-${index}">${icon("play")}</div>
 
             <div class="reel-bottom">
               <div class="reel-meta">
                 <div class="reel-creator-flags" aria-label="Recognition and editing controls">
                   ${staff}
-                  ${state.user?.id===video.user_id?'<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">${icon("edit")} Edit</button>':''}
+                  ${editMarkup}
                 </div>
                 <div class="reel-uploader">
                   <a class="reel-avatar-frame" href="profile.html?id=${encodeURIComponent(video.user_id || '')}" aria-label="View uploader profile">${avatarMarkup}</a>
                   <span class="reel-username" title="@${escapeHTML(uploaderName)}">${uploaderMarkup}</span>
+                  ${followMarkup}
                 </div>
-                <p class="reel-caption" id="caption-${index}">${renderSocialText(video.title || "")}${video.description ? " — " + renderSocialText(video.description) : ""}</p>
-                <button type="button" class="reel-caption-more" data-action="expand-caption" data-index="${index}" aria-expanded="false">More caption</button>
+                <p class="reel-caption" id="caption-${index}">${renderSocialText(caption)}</p>
+                <button type="button" class="reel-caption-more" data-action="expand-caption" data-index="${index}" aria-expanded="false" ${caption.length<120?"hidden":""}>More caption</button>
                 <div class="reel-tags">${tags}</div>
               </div>
-              <div class="reel-rail">
+              <div class="reel-rail" aria-label="Video actions">
                 <button type="button" aria-label="Like video" class="reel-chip" data-action="like" data-id="${escapeHTML(video.id)}" data-index="${index}">
-                  <div class="reel-chip-icon">${icon("heart")}</div>
+                  <span class="reel-chip-icon">${icon("heart")}</span>
                   <span class="reel-chip-count" id="likecount-${index}">${video.like_count ?? 0}</span>
                 </button>
                 <button type="button" aria-label="View video comments" class="reel-chip" data-action="comment" data-id="${escapeHTML(video.id)}">
-                  <div class="reel-chip-icon">${icon("comment")}</div>
+                  <span class="reel-chip-icon">${icon("comment")}</span>
                   <span class="reel-chip-count" id="commentcount-${index}">${Number(video.comment_count||0)}</span>
                 </button>
-                <button type="button" aria-label="Rewind video 10 seconds" class="reel-chip" data-action="rewind" data-index="${index}">
-                  <div class="reel-chip-icon">${icon("rewind")}</div><span class="reel-chip-count">10s back</span>
-                </button>
                 <button type="button" aria-label="Share video" class="reel-chip" data-action="share" data-id="${escapeHTML(video.id)}">
-                  <div class="reel-chip-icon">${icon("share")}</div>
+                  <span class="reel-chip-icon">${icon("share")}</span>
                   <span class="reel-chip-count">Share</span>
                 </button>
-                <button type="button" aria-label="Save video" class="reel-chip" data-action="download" ${video.allow_download===false?"hidden":""} data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(deliveryMediaUrl(video.video_url || ''))}" data-title="${escapeHTML(video.title || 'video')}">
-                  <div class="reel-chip-icon">${icon("download")}</div>
+                <button type="button" aria-label="Download video" class="reel-chip" data-action="download" data-index="${index}" ${video.allow_download===false?"hidden":""} data-id="${escapeHTML(video.id)}" data-url="${escapeHTML(deliveryMediaUrl(video.video_url || ''))}" data-title="${escapeHTML(video.title || 'video')}">
+                  <span class="reel-chip-icon">${icon("download")}</span>
                   <span class="reel-chip-count">Save</span>
                 </button>
-                <div class="reel-chip">
-                  <div class="reel-chip-icon">${icon("eye")}</div>
-                  <span class="reel-chip-count" id="viewcount-${index}">${Math.max(0,Number(video.view_count)||0)}</span>
-                </div>
+              </div>
+            </div>
+            <div class="reel-player-dock">
+              <div class="reel-progress" id="progresstrack-${index}" role="slider" tabindex="0" aria-label="Video progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="reel-progress-fill" id="progress-${index}"></div>
+              </div>
+              <div class="reel-player-controls">
+                <button type="button" class="reel-player-button" data-action="playback" data-index="${index}" aria-label="Pause video">${icon("pause")}</button>
+                <span class="reel-player-remaining" id="remaining-${index}" aria-label="Time remaining">−0:00</span>
+                <button type="button" class="reel-player-button reel-player-speed" data-action="speed" data-index="${index}" aria-label="Playback speed">1x</button>
+                <button type="button" class="reel-player-button" data-action="volume" data-index="${index}" aria-label="Mute video">${icon(state.sessionMuted?"volume-x":"volume-2")}</button>
+                <button type="button" class="reel-player-button" data-action="fullscreen" data-index="${index}" aria-label="Enter fullscreen">${icon("maximize")}</button>
               </div>
             </div>
           </div>
         `;
       }
 
-      function render() {
+            function render() {
         if (!state.videos.length) {
           renderEmpty();
           return;
