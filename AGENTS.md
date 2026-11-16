@@ -1,33 +1,80 @@
-# Blipmood engineering agent instructions
+# Blipmood engineering instructions
 
-Work in the existing `main` branch; do not create a new branch unless explicitly requested. Keep the Netlify frontend, Supabase Auth/Postgres/RLS, Brevo email and LiveKit audio integration intact. Avoid surprises: no paid infra, destructive data changes, private media exposure or DB policy bypasses.
+Work on existing `main` unless the user explicitly requests another branch. Keep changes small and reviewable. Preserve the static HTML/CSS/browser-ESM frontend, Netlify Functions, Supabase Auth/Postgres/RLS, Brevo product email and LiveKit audio integrations. Avoid paid infrastructure, destructive data changes, private-media exposure and RLS bypasses.
 
-## Cloudflare integration
+## Read first
 
-Follow Cloudflare's current agent setup documentation: <https://developers.cloudflare.com/agent-setup/> and the Cloudflare R2/Workers docs. Consult current docs and applicable project skills rather than treating old API shapes, limits or prices as authoritative.
+- `README.md` — product and developer entry point.
+- `docs/ARCHITECTURE.md` — repository map and request paths.
+- `CONTRIBUTING.md` — code, security and test standards.
+- `docs/DOCUMENTATION_INDEX.md` — current feature documents.
+- `PRODUCTION_READINESS.md` — release gates.
 
-- The new Cloudflare Worker is in `cloudflare/blipmood-media/`, with deployment configuration in `wrangler.jsonc`.
-- Cloudflare R2 has NOT been activated yet. Never claim it is live until the Cloudflare API confirms a bucket and the Worker is deployed and tested.
-- `assets/js/media-delivery.mjs` is the deliberately **disabled** read-only URL routing switch. Keep it disabled until tests, storage activation, deletion invalidation and a production deployment all pass.
-- New public videos and Stories still use Supabase upload and ownership validation. Private chat, member-only community media and expiring Stories must never be mirrored into public R2.
-- Do not weaken `platform_video_upload_gate`, `publish_story`, ownership checks or RLS to make R2 uploads work.
-- R2 may bill for storage and requests above free allowance, even though R2 does not charge for egress. Never silently upgrade or enable billable subscriptions.
-- Validate via `npm run check:cloudflare-media`, then full `npm run check` and mobile browser smoke tests before activating traffic.
+`docs/archive/legacy-guides/` contains historical snapshots. Do not follow its old SQL, setup commands, feature statuses or security recommendations as current guidance.
 
-Current status, activation instructions, rollout and rollback are in `cloudflare/blipmood-media/README.md`.
+## Architecture
 
-A separate **Workers Free** media cache (no R2) is deployed at `cloudflare/blipmood-free-cache/`. `assets/js/media-delivery.mjs` is OFF by default and may be tried in a single browser with `?blipmood_cache_canary=1` after the Netlify production lock is lifted. Never globally enable it without live response, range, quota and deletion tests.
+- Product name is **Blipmood**; `timzee-tech-blog` is a legacy repo slug.
+- Root HTML files are entry points; browser modules are in `assets/js/`; CSS is in `assets/css/`.
+- `scripts/build-site.mjs` creates `dist/`; Netlify publishes `dist/` and serves `netlify/functions/`.
+- Supabase provides Auth, Postgres, RLS, Storage and Realtime.
+- Cloudflare Workers are separate projects; public media client routing is disabled by default.
 
+## Workflow
 
-## Database and RLS compatibility
+1. Inspect current `main`, related entry points, imports, Functions, migrations and tests.
+2. Search for existing implementations before adding code.
+3. Trace UI event → request → authorization → persistence/provider → visible state.
+4. Preserve contracts, RLS, private-media boundaries and free-tier constraints.
+5. Add focused regression tests.
+6. Run focused checks plus `npm run check` and relevant broader Node/browser tests.
+7. Review final changes and report real results. Mocks do not prove live integration or capacity.
 
-These rules follow actual production failures found in November 2026:
-- Before adding a Supabase table/RPC/column reference, compare it with the live catalog and relevant applied migrations. Record any new schema in a versioned migration rather than silently changing only the live project.
-- A public table may allow anonymous INSERT but deny SELECT (for example, `content_requests`). Never use `.insert(...).select().single()` or SQL `INSERT ... RETURNING` on a write-only public form: PostgreSQL can return RLS `42501` even when the INSERT without returning succeeds. Keep the saved ID client-generated when needed.
-- When one trigger function is attached to different tables, put `OLD.foo`/`NEW.foo` references inside **separate nested table-specific IF branches**. Do not combine `TG_TABLE_NAME = 'x' AND OLD.x_only_column ...` in one boolean condition: PostgreSQL can resolve the wrong table's record fields and raise `42703`.
-- Supabase may grant function EXECUTE directly to `anon`, even after `REVOKE ... FROM PUBLIC`. For sensitive `SECURITY DEFINER` functions, explicitly revoke from `PUBLIC, anon` and only grant the specific intended role. Never blindly revoke from shared functions used inside RLS.
-- Do not change, weaken or remove RLS policies merely to hide permission errors. Prove authorized and unauthorized behavior using an authenticated-role transaction and `ROLLBACK`, with no persisted test rows.
-- Database and application releases must agree: `npm run check` includes `tests/blipmood-db-contracts.test.cjs`; run role-based database tests and browser smoke tests before claiming production-safe. Fix Netlify's locked deployment before expecting new JS to reach visitors.
-- Keep optional feed-refresh functionality off until its reviewed RPC, performance tests and security checks are complete. Do not enable billing or remove existing media as a workaround.
+## Code rules
 
-See `docs/audits/2026-11-03-database-rls-stability.md` for the tested incident and rollout status.
+- Keep modules cohesive. Extract pure helpers before splitting stateful controllers.
+- Do not refactor solely to meet line counts; preserve shared state and event wiring.
+- Use descriptive kebab-case names and adjacent module conventions.
+- Use `textContent` for plain user text; escape/sanitize untrusted HTML.
+- Use shared SVG icons, not emoji icons.
+- Comments explain invariants, not every line.
+
+## Database, authorization and secrets
+
+- New schema belongs in timestamped `supabase/migrations/` files. Root SQL files are historical; `docs/sql/` is review-only. Neither is a live migration command.
+- Check actual schema and applied migration ledger first; migration history is incremental, not a guaranteed fresh-project bootstrap.
+- Authorization uses trusted `app_metadata` and/or database-backed mappings. Never trust `user_metadata.role` or browser role values.
+- Never expose Supabase service-role, AI provider, Brevo or other secrets in browser code or client storage.
+- Never weaken RLS to hide permission errors.
+- Private chat, member-only community media and expiring Stories must not be mirrored into public cache.
+
+## Cloudflare
+
+- Workers Free cache: `cloudflare/blipmood-free-cache/`; Media Worker: `cloudflare/blipmood-media/`.
+- Their READMEs describe state and rollout gates. Do not enable R2, paid infrastructure or global routing without explicit approval and tests.
+- Run relevant Worker checks and project checks after changes.
+
+## Database/RLS compatibility
+
+- Compare live schema and migrations before adding references; track every change in a versioned migration.
+- Public tables may permit INSERT but deny SELECT; avoid `.insert().select().single()` for write-only submissions.
+- Multi-table triggers must access table-specific `OLD`/`NEW` fields only within separate table branches.
+- Revoke `PUBLIC, anon` from sensitive `SECURITY DEFINER` functions and grant only intended roles.
+- Keep optional feed refresh disabled until its RPC, performance and security checks are complete.
+
+## Verification
+
+```bash
+npm ci --ignore-scripts
+npm run check
+npm test
+npm run build
+npx playwright install chromium
+npm run test:browser
+```
+
+Mocks do not replace staging checks for RLS, Auth SMTP, LiveKit, provider delivery or throughput.
+
+## Deployment safety
+
+Do not unlock Netlify production, run production migrations, change billing, rotate live secrets, enable media routing or publish a release during ordinary maintenance. Follow `PRODUCTION_READINESS.md` and obtain applicable approval.

@@ -1,42 +1,42 @@
-# Repo summary for AI coding agents
+# Blipmood guidance for coding assistants
 
-Keep edits small and intentional. This is a static site with client-side JS and Netlify serverless functions. Focus on safety (don’t introduce new secrets, follow existing RLS/security patterns) and follow the project’s code conventions.
+Read `AGENTS.md`, `README.md`, `CONTRIBUTING.md` and `docs/ARCHITECTURE.md` before cross-cutting work. Use `docs/DOCUMENTATION_INDEX.md` for current feature notes. `docs/archive/legacy-guides/` contains superseded records, not current setup/security guidance.
 
----
+## Product and architecture
 
-## Big picture
-- Static frontend served from repo root (`index.html`, `*.html`) and ES modules under `assets/js/` (`type="module"` in HTML).
-- Server-side logic lives in `netlify/functions/` (Netlify Functions) and is used for scheduled jobs (e.g., `scout-news`) and secure API proxying.
-- Database: Supabase (SQL files: `SUPABASE_SCHEMA.sql`, `MODERATOR_AND_CURATOR_SCHEMA.sql`, etc.). RLS policies matter and are enforced via JWT user metadata role checks.
+- Product: **Blipmood**. The `timzee-tech-blog` slug is historical.
+- Frontend: root static HTML, CSS in `assets/css/`, browser ES modules in `assets/js/`.
+- Build: Node 22; `scripts/build-site.mjs` creates `dist/`.
+- Hosting/API: Netlify static hosting and handlers in `netlify/functions/`; shared helpers in `netlify/functions/_lib/`.
+- Data: Supabase Auth, Postgres, RLS, Storage and Realtime. Canonical schema changes are in `supabase/migrations/`.
+- Integrations include Brevo product email, LiveKit audio spaces and separate Cloudflare Workers; consult their feature docs for status.
+- Preserve this architecture; do not introduce a framework as a readability shortcut.
 
-## Key developer workflows
-- Local dev (fast): open the repo root in a static server, e.g. `python -m http.server 5173` (see `README.md`).
-- Deploy: GitHub → Netlify; functions run only when deployed or via `netlify dev` locally.
-- Environment variables required by production: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, (optional) `GROQ_API_KEY`, `NEWS_FEEDS`, `NEWS_ENABLED`, etc. See `netlify.toml` and `README.md`.
+## Safe implementation
 
-## Important conventions & patterns (do this project-specific way)
-- Supabase usage is direct in browser JS (`assets/js/supabase.js`); **do not** move `SERVICE_ROLE_KEY` to frontend. Service keys must remain server-side.
-- Post `status` handling: `data.js` treats `null` or `published` as public; `scheduled` posts require `publish_at <= now` to show. Mirror this logic when adding queries or filters.
-- Text search uses `search_vector` and `textSearch(..., { type: 'websearch' })` — preserve this pattern when changing search code.
-- Tag queries use Postgres array operators (e.g., `.overlaps('tags', [...])`) — use same approach for compatibility.
-- Sanitize all user HTML: XSS fixes are required (see `SECURITY_FIXES.md`). Prefer `textContent` or DOMPurify before `innerHTML`.
-- Cron/scheduled functions detect `x-nf-event === 'schedule'`. Manual trigger paths often check auth with `Authorization: Bearer <token>` (see `netlify/functions/scout-news.js` → `requireSuperForManual`).
+- Search existing modules, Functions, RPCs, migrations and tests before adding another implementation.
+- Trace route → browser module → request → authorization → persistence/provider → UI state.
+- Browser code uses only the Supabase publishable/anon key. Service-role and provider secrets stay server-side.
+- Authorization uses trusted `app_metadata` and/or DB role mappings plus RLS. Never trust `user_metadata.role`, URLs or hidden controls.
+- Never weaken RLS. Keep private chat, restricted-community media and expiring Stories private.
+- New schema belongs in timestamped `supabase/migrations/` files. Root SQL is historical; `docs/sql/` is review-only.
+- Use `textContent` for plain text; escape/sanitize untrusted HTML.
+- Extract pure helpers from large controllers before stateful splits; test the helper contract.
+- Use shared SVG icons, not emoji icons.
 
-## Security & DB
-- Critical fixes already in docs: move Groq key to `netlify/functions/groq-proxy.js` (see `SECURITY_FIXES.md`) and remove localStorage key usage in `assets/js/groq.js`.
-- Add / update RLS policies in SQL migrations (`SUPABASE_SCHEMA.sql`, `FIX_RLS_POLICIES.sql`) when you change tables/permissions.
-- When adding a feature that needs permissions, update: SQL schema, `TECHNICAL_REFERENCE.md` and any UI in `super/` or `admin/` panels.
+## Commands
 
-## Testing & verification
-- No automated test runner is present by default. Use `VERIFICATION_CHECKLIST.md`, `TESTING_CHECKLIST.md` to document manual tests and add unit/integration tests under a new `tests/` directory if you introduce logic that needs CI.
-- To test functions locally use `netlify dev` (or deploy to a branch on Netlify) and set required env vars in the Netlify site settings.
+```bash
+npm ci --ignore-scripts
+npm run check
+npm test
+npm run build
+npx playwright install chromium
+npm run test:browser
+```
 
-## Files to inspect for related changes
-- Frontend: `assets/js/{app.js,data.js,post.js,supabase.js,groq.js}`
-- Server: `netlify/functions/*` (look for scheduled jobs e.g., `scout-news.js`)
-- DB/schema: `SUPABASE_SCHEMA.sql`, `MODERATOR_AND_CURATOR_SCHEMA.sql`, `FIX_RLS_POLICIES.sql`
-- Docs & guides: `START_HERE.md`, `README.md`, `SECURITY_FIXES.md`, `TECHNICAL_REFERENCE.md`, `GITHUB_NETLIFY_SETUP.md`
+`npm run check` is orchestrated by `scripts/run-checks.mjs`; `npm test` runs Node tests; `npm run test:browser` runs Playwright after build. Mocks do not prove production integration.
 
----
+## Release constraints
 
-If anything above is unclear or you want more fine-grained rules (linting, commit message templates, or a test runner recommendation), tell me which area to expand and I’ll iterate. ✅
+Read `PRODUCTION_READINESS.md`. Local success does not prove hosted CI, deployed behavior, live RLS or capacity. Do not unlock/deploy Netlify, apply production migrations, change billing, expose secrets or enable global media routing without approval and release gates.

@@ -1,84 +1,112 @@
-# Timzee Tech Hub — Production Community Platform
+# Blipmood
 
-Timzee Tech Hub is a modern community platform with a tech blog, discussions, profiles, direct messaging, marketplace, videos, novels, content curation, and an authenticated AI assistant, built with Supabase and Netlify.
+**Blipmood** is a community and social platform built by Timzee Corp. It brings together a personalised feed, profiles, messaging, communities, short-form video, stories, creator tools, a marketplace, moderation and an authenticated AI assistant.
 
-> **Production source of truth:** See `PRODUCTION_READINESS.md` for the current deployment, security, migration, and verification workflow. Older status/report documents are historical snapshots and may contain superseded setup instructions.
+The repository slug `timzee-tech-blog` is historical. The product name is **Blipmood**.
 
-The current [sitewide review](docs/sitewide-review-2026-10-08.md) includes redesign evidence, repairs and launch blockers. Shared interface ownership is documented in [DESIGN.md](DESIGN.md) and [UX-CONTRACT.md](UX-CONTRACT.md).
+## Start here
 
-## Core features
+| Goal | Read |
+| --- | --- |
+| Understand the system | [Architecture](docs/ARCHITECTURE.md) |
+| Set up development | [Contributing](CONTRIBUTING.md) |
+| Find current docs | [Documentation index](docs/DOCUMENTATION_INDEX.md) |
+| Understand release gates | [Production readiness](PRODUCTION_READINESS.md) |
+| Shared UI rules | [Design](DESIGN.md) and [UX contract](UX-CONTRACT.md) |
 
-- Tech blog, posts, comments, likes, bookmarks, follows, and notifications
-- Live discussions and direct/group chat
-- User profiles and verification
-- Marketplace listings and inquiries
-- Videos, novels, and chapters
-- RSS/content curation with moderation workflow
-- Authenticated AI assistant through a server-side provider proxy
-- Moderator/admin/super-admin controls
+Old setup/completion reports remain under [docs/archive](docs/archive/README.md), for history only.
 
-## Local setup
+## Product areas
 
-Use Node 22, install the locked dependencies, and build the public site:
+Feed and publishing; profiles, settings and verification; direct/group messaging; communities and moderation; videos and Stories; marketplace and rewards; creator tools and editorial curation; administration and analytics; authenticated AI.
+
+Source code does not imply that a feature is enabled or deployed. Check its feature documentation and release gates.
+
+## Technology
+
+| Layer | Technology | Location |
+| --- | --- | --- |
+| Web client | Static HTML, CSS, browser ES modules | Root HTML, `assets/` |
+| Build | Node 22, esbuild, project scripts | `scripts/`, `package.json` |
+| Hosting/API | Netlify static site and Functions | `netlify.toml`, `netlify/functions/` |
+| Data | Supabase Auth, Postgres, RLS, Storage, Realtime | `assets/js/supabase.js`, `supabase/migrations/` |
+| Product email | Brevo server integration; Auth SMTP separate | `netlify/functions/email-worker.js` |
+| Audio | LiveKit integration | `assets/js/live-spaces.mjs` |
+| Public media cache | Cloudflare Workers Free; client route off by default | `cloudflare/`, `assets/js/media-delivery.mjs` |
+| Quality | Node tests, validators, Playwright | `tests/`, `scripts/` |
+
+See [Architecture](docs/ARCHITECTURE.md) for request flows and module boundaries.
+
+## Local development
+
+Requires Node **22.x**, npm, Git and Chromium for Playwright.
 
 ```bash
 git clone https://github.com/Timzee00/timzee-tech-blog.git
 cd timzee-tech-blog
 npm ci --ignore-scripts
+npm run check
+npm test
 npm run build
 node scripts/serve-site.mjs
 ```
 
-Then visit `http://localhost:5173`.
+`npm run build` runs the configured checks and creates public `dist/` output. The local static server does not emulate Netlify Functions, Supabase Auth/RLS, Realtime, LiveKit or email delivery. Use isolated staging for service integration tests; do not run destructive/load tests against production.
 
-For serverless functions, use a Netlify-compatible local workflow rather than a plain static server.
+### Browser tests
 
-## Supabase
+```bash
+npx playwright install chromium
+npm run test:browser
+```
 
-The production database uses tracked migrations under `supabase/migrations/`.
+Browser fixtures and intercepted requests do not prove live database permissions, provider delivery or capacity.
 
-The tracked history contains incremental patches, not a complete new-environment baseline. Before provisioning or upgrading, reconcile the remote schema and migration ledger and verify a restore in an isolated environment. See the current production review; neither the old root SQL snapshots nor the patch history alone establish a reproducible setup.
+### Cloudflare checks
 
-Enable Realtime only for the tables that require it, including the discussion and messaging tables used by the application.
+```bash
+npm run check:cloudflare-free
+npm run check:cloudflare-media
+```
 
-Create the required `media` storage bucket and apply the repository's current storage policies for covers, comments, post media, discussions, topics, direct messages, avatars, ads, and themes.
+These validate Worker code; they do not activate media routing.
 
-### Roles
+## Environment and secrets
 
-Authorization is based on trusted `app_metadata` / database-backed role mappings. Do **not** use `user_metadata.role` for authorization decisions. The browser may contain a publishable Supabase key, but it must never contain a service or secret key.
+Depending on the feature, server-side functions use `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, AI provider keys and Brevo transactional email settings. Inspect the specific handler and feature guide for exact variable names.
 
-## AI provider configuration
+The browser uses only the Supabase publishable/anon key. **Never expose a service-role key, AI key, Brevo key, LiveKit secret or other server secret in browser code, committed files or client storage.** Supabase Auth confirmation/reset SMTP is configured separately in Supabase Auth; a Netlify Brevo variable does not configure it. See [Brevo + Supabase setup](docs/BREVO_SUPABASE_SETUP.md).
 
-AI provider API keys are server-side Netlify environment variables. Users do not enter or store provider secrets in browser storage.
+## Database rules
 
-Required environment variables for the AI proxy include:
+- New schema changes belong in `supabase/migrations/`.
+- Compare the live catalog and applied migration ledger before adding schema references.
+- `docs/sql/` contains review-only proposals.
+- Root SQL files are historical snapshots, not a fresh-database baseline. Do not paste them into a live SQL editor as a setup shortcut.
+- Never weaken RLS or authorize with browser-supplied role metadata.
+- The migration history is incremental and does not guarantee fresh-project bootstrap by itself.
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `GROQ_API_KEY`
-- `OPENAI_API_KEY` (when OpenAI is enabled)
-- `ANTHROPIC_API_KEY` (when Anthropic is enabled)
+## Quality commands
 
-The AI endpoint authenticates the user, validates the request, enforces per-user rate limits, and applies input/output bounds before forwarding to a provider.
+| Command | Purpose |
+| --- | --- |
+| `npm run check` | Ordered validators and focused regressions |
+| `npm test` | All Node tests matching `tests/*.test.cjs` |
+| `npm run test:browser` | Build and Playwright suite |
+| `npm run build` | Checks and public build |
+| `npm run check:cloudflare-free` | Workers Free tests |
+| `npm run check:cloudflare-media` | Media Worker tests |
 
-## Content curation
+The check runner prints its stages and stops on the first failure. See [Contributing](CONTRIBUTING.md).
 
-Optional scout settings:
+## Deployment safety
 
-- `NEWS_FEEDS`
-- `NEWS_TIPS_FEEDS`
-- `NEWS_ENABLED`
-- `NEWS_POSTS_PER_RUN`
-- `NEWS_AUTHOR_NAME`
+Netlify publishes `dist/` and serves Functions from `netlify/functions/`. A passing local build does not authorise a release. Read [Production Readiness](PRODUCTION_READINESS.md) and confirm the exact commit, hosted CI, isolated staging, schema compatibility, quotas, backup/restore, rollback and runtime health. Do not unlock a deliberately locked deploy or apply production migrations during routine code review.
 
-## Deploy
+## Capacity claims
 
-Recommended deployment path: **GitHub → Netlify** so both static pages and Netlify Functions are deployed.
+A large codebase or passing local suite is not proof of readiness for millions of users. Capacity claims require representative staging data, measured load tests, observed infrastructure limits and an operating-cost model.
 
-Before a production release:
+---
 
-1. Verify GitHub `main` is the intended release commit.
-2. Run `npm run build`, `npm test`, and `npm run test:browser` with Chromium installed.
-3. Confirm the Netlify deployment and `/release.json` point to that commit.
-4. Run the public smoke-test URLs and authenticated E2E tests where credentials are available.
-5. Run Supabase security and performance advisors after schema changes.
+**Blipmood — Powered by Timzee Corp.**

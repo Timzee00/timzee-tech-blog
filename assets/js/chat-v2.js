@@ -1,4 +1,5 @@
 import { createChatRealtime } from "./chat-realtime.mjs";
+import { asUtcTimestamp, getFileExtension, getMediaTypeFromMime, resolveAttachmentType, formatFileSize, getDisplayFileName, formatDuration } from "./chat/formatters.mjs";
 import { setupChatEnhancements } from "./chat-enhancements.mjs";
 import {openPollComposer,mountPoll} from "./content-polls.mjs";
 import {setupMentionInput} from "./mentions.js";
@@ -27,9 +28,6 @@ const DEFAULT_AVATAR = "/assets/img/avatar-placeholder.svg";
 const DEFAULT_GROUP_AVATAR = "/assets/img/group-placeholder.svg";
 const SETTINGS_KEY = "timzee_chat_settings_v2";
 const DEFAULT_SETTINGS = { notifications: true, enterToSend: true, compact: false, autoTranslate:false,translateLanguage:"en",fontSize:"1",wallpaper:"default" };
-const IMAGE_EXTENSIONS = new Set(["jpg","jpeg","png","gif","webp","bmp","svg","avif","heic","heif"]);
-const VIDEO_EXTENSIONS = new Set(["mp4","webm","mov","m4v","mkv","avi","wmv","flv","3gp"]);
-const AUDIO_EXTENSIONS = new Set(["mp3","wav","ogg","m4a","aac","flac","opus","webm"]);
 
 const state = {
   selection: 0, loadingThread: false, historyCursor: null, hasOlderMessages: false, loadingHistory: false, sending: false, editing: null, editSaving: false, replyTo: null, reactions:new Map(), reactionBusy:new Set(),
@@ -43,14 +41,6 @@ const state = {
 const $ = (id) => document.getElementById(id);
 let groupRestrictionTimer=null;
 let previousGroupRestrictionMode=null;
-// Postgres direct_messages.created_at is UTC timestamp WITHOUT TIME ZONE.
-// PostgREST returns a timezone-less string, which JS otherwise treats as local.
-function asUtcTimestamp(input){
-  const value=String(input||"");
-  if(!value)return "";
-  const normalized=value.replace(" ","T");
-  return /(?:Z|[+-]\d\d(?::?\d\d)?)$/i.test(normalized)?normalized:normalized+"Z";
-}
 const chatTimeAgo=value=>timeAgo(asUtcTimestamp(value));
 const chatEnhancements=setupChatEnhancements({
   supabase,
@@ -62,43 +52,7 @@ const chatEnhancements=setupChatEnhancements({
   }
 });
 
-function getFileExtension(value = "") {
-  const cleaned = String(value || "").split("?")[0].split("#")[0];
-  const segment = cleaned.split("/").pop() || "";
-  const parts = segment.split(".");
-  return parts.length > 1 ? parts.pop().toLowerCase() : "";
-}
-function getMediaTypeFromMime(mimeType = "") {
-  const normalized = String(mimeType || "").toLowerCase();
-  if (!normalized) return "";
-  if (normalized.startsWith("image/")) return "image";
-  if (normalized.startsWith("video/")) return "video";
-  if (normalized.startsWith("audio/")) return "audio";
-  return "file";
-}
-function resolveAttachmentType({ mediaType = "", mimeType = "", fileName = "", mediaUrl = "" } = {}) {
-  const normalized = String(mediaType || "").toLowerCase();
-  if (["image", "video", "audio", "file"].includes(normalized)) return normalized;
-  const mime = getMediaTypeFromMime(mimeType);
-  if (mime) return mime;
-  const ext = getFileExtension(fileName || mediaUrl);
-  if (IMAGE_EXTENSIONS.has(ext)) return "image";
-  if (VIDEO_EXTENSIONS.has(ext)) return "video";
-  if (AUDIO_EXTENSIONS.has(ext)) return "audio";
-  return "file";
-}
-function formatFileSize(size) {
-  const bytes = Number(size);
-  if (!Number.isFinite(bytes) || bytes <= 0) return "";
-  const units = ["B", "KB", "MB", "GB"];
-  let value = bytes, index = 0;
-  while (value >= 1024 && index < units.length - 1) { value /= 1024; index += 1; }
-  return `${index === 0 || value >= 100 ? Math.round(value) : value.toFixed(1)} ${units[index]}`;
-}
-function getDisplayFileName(value = "") {
-  const cleaned = String(value || "Attachment").split("?")[0].split("#")[0];
-  try { return decodeURIComponent(cleaned.split("/").pop() || "Attachment"); } catch (_) { return cleaned.split("/").pop() || "Attachment"; }
-}
+
 function readSettings() {
   try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") }; }
   catch (_) { return { ...DEFAULT_SETTINGS }; }
@@ -1273,7 +1227,7 @@ function chooseAttachment(kind){
 function clearMediaPreview(){if(state.previewUrl)URL.revokeObjectURL(state.previewUrl);state.previewUrl='';state.mediaFile=null;state.mediaType='';if($("chatMediaPreview"))$("chatMediaPreview").innerHTML='';}
 function showMediaPreview(file){clearMediaPreview();state.mediaFile=file;state.mediaType=resolveAttachmentType({mimeType:file.type,fileName:file.name});state.previewUrl=URL.createObjectURL(file);let c=state.mediaType==='image'?`<img src="${escapeHTML(state.previewUrl)}" alt="Attachment preview">`:state.mediaType==='video'?`<video controls src="${escapeHTML(state.previewUrl)}"></video>`:state.mediaType==='audio'?voicePlayerHtml(escapeHTML(state.previewUrl)):`<div class="media-preview-file"><strong>${escapeHTML(file.name)}</strong><small>${escapeHTML(file.type||'File')} · ${escapeHTML(formatFileSize(file.size))}</small></div>`;$("chatMediaPreview").innerHTML=`${c}<button class="btn ghost sm" id="removeChatMedia" type="button">Remove</button>`;$("removeChatMedia")?.addEventListener('click',clearMediaPreview);}
 function stopRecorderTracks(){state.recorderStream?.getTracks().forEach(t=>t.stop());state.recorderStream=null;try{state.audioContext?.close();}catch(_){}state.audioContext=null;state.analyser=null;if(state.analyserFrame)cancelAnimationFrame(state.analyserFrame);state.analyserFrame=0;}
-function formatDuration(ms){const total=Math.max(0,Math.floor(ms/1000));return `${Math.floor(total/60)}:${String(total%60).padStart(2,'0')}`;}
+
 function animateWaveform(){const bars=[...document.querySelectorAll('#voiceWaveform [data-wave]')];const tick=()=>{bars.forEach((bar,i)=>{bar.style.height=`${8+Math.abs(Math.sin(Date.now()/180+i))*28}px`;});state.analyserFrame=requestAnimationFrame(tick);};tick();}
 async function startRecording(){
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('Voice recording is not supported in this browser.');
