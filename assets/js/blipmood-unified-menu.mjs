@@ -125,4 +125,5 @@ css.textContent=`
 @media(prefers-reduced-motion:reduce){.bm-rail-link{scroll-behavior:auto}}
 `;
 document.head.appendChild(css);
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true});else install();
+function boot(){if(current==="video.html"){installReelMenu();return;}install();}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();
