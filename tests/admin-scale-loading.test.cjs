@@ -132,3 +132,14 @@ test("admin cursor indexes cover all-status lists and paged request inboxes",()=
     "announcements_admin_cursor_idx"
   ]) assert.match(sql,new RegExp("CREATE INDEX IF NOT EXISTS "+index));
 });
+
+test("admin keyset pages keep nullable creation timestamps at the end",()=>{
+  const data=read("assets/js/data.js");
+  assert.match(data,/created_at == null \? null : String\(cursor\.created_at\)/);
+  assert.match(data,/created_at: null/);
+  assert.match(data,/query\.is\("created_at", null\)\.lt\("id", id\)/);
+  assert.match(data,/query\.is\("created_at", null\)\.gt\("id", id\)/);
+  assert.match(data,/created_at\.is\.null/);
+  assert.match(data,/ascending: false, nullsFirst: false/);
+  assert.match(data,/ascending: true, nullsFirst: false/);
+});

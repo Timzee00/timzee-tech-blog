@@ -23,10 +23,12 @@ export const POST_PREVIEW_COLUMNS =
 // Cursor text is validation-only input; never concatenate unchecked values
 // into a PostgREST logical filter (both timestamps and IDs are untrusted).
 function requirePageCursor(cursor){
-  const created=String(cursor?.created_at||"");
+  const created=cursor?.created_at == null ? null : String(cursor.created_at);
   const id=String(cursor?.id||"");
-  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?$/.test(created)||
-     !Number.isFinite(Date.parse(created))||
+  if((created !== null && (
+       !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?$/.test(created)||
+       !Number.isFinite(Date.parse(created))
+     ))||
      !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))
     throw Error("Invalid page cursor.");
   return {created,id};
@@ -55,10 +57,13 @@ export async function fetchAdminPostsPage({ cursor = null, limit = 40 } = {}) {
   const pageSize = Math.max(1, Math.min(60, Math.trunc(Number(limit) || 40)));
   let query = supabase.from("posts")
     .select("id,title,category_id,status,updated_at,created_at,pinned")
-    .order("created_at", { ascending: false }).order("id", { ascending: false });
+    .order("created_at", { ascending: false, nullsFirst: false })
+    .order("id", { ascending: false });
   if (cursor) {
     const { created, id } = requirePageCursor(cursor);
-    query = query.or("created_at.lt." + created + ",and(created_at.eq." + created + ",id.lt." + id + ")");
+    query = created === null
+      ? query.is("created_at", null).lt("id", id)
+      : query.or("created_at.lt." + created + ",and(created_at.eq." + created + ",id.lt." + id + "),created_at.is.null");
   }
   const { data, error } = await query.limit(pageSize + 1);
   if (error) throw error;
@@ -69,10 +74,13 @@ export async function fetchCommentModerationPage({ cursor = null, limit = 40 } =
   const pageSize = Math.max(1, Math.min(60, Math.trunc(Number(limit) || 40)));
   let query = supabase.from("comments")
     .select("id,post_id,author_name,body,status,created_at,posts(title)")
-    .order("created_at", { ascending: true }).order("id", { ascending: true });
+    .order("created_at", { ascending: true, nullsFirst: false })
+    .order("id", { ascending: true });
   if (cursor) {
     const { created, id } = requirePageCursor(cursor);
-    query = query.or("created_at.gt." + created + ",and(created_at.eq." + created + ",id.gt." + id + ")");
+    query = created === null
+      ? query.is("created_at", null).gt("id", id)
+      : query.or("created_at.gt." + created + ",and(created_at.eq." + created + ",id.gt." + id + "),created_at.is.null");
   }
   const { data, error } = await query.limit(pageSize + 1);
   if (error) throw error;
@@ -90,10 +98,13 @@ export async function fetchAdminQueuePage(queue, { cursor = null, limit = 30 } =
     : queue === "admin" ? "admin_requests"
     : queue === "content" ? "content_requests" : "announcements";
   let query = supabase.from(table).select(columns)
-    .order("created_at", { ascending: false }).order("id", { ascending: false });
+    .order("created_at", { ascending: false, nullsFirst: false })
+    .order("id", { ascending: false });
   if (cursor) {
     const { created, id } = requirePageCursor(cursor);
-    query = query.or("created_at.lt." + created + ",and(created_at.eq." + created + ",id.lt." + id + ")");
+    query = created === null
+      ? query.is("created_at", null).lt("id", id)
+      : query.or("created_at.lt." + created + ",and(created_at.eq." + created + ",id.lt." + id + "),created_at.is.null");
   }
   const { data, error } = await query.limit(pageSize + 1);
   if (error) throw error;
