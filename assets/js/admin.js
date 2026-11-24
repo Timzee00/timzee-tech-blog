@@ -1335,7 +1335,7 @@ function renderCommentsTable() {
       const post = state.posts.find((item) => item.id === comment.post_id);
       return `
         <tr>
-          <td>${post ? clampText(post.title || "", 40) : ""}</td>
+          <td>${clampText(post?.title || comment.posts?.title || "", 40)}</td>
           <td>${comment.author_name}</td>
           <td>${clampText(stripHTML(comment.body || ""), 60)}</td>
           <td>${comment.status}</td>

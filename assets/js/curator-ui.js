@@ -456,11 +456,19 @@ class CuratorManager {
 
   async load() {
     try {
-      this.sources = await getAllCuratorSources();
-      this.posts = await getUnpostedCuratorPosts(50);
-      try { this.publishedPosts = await getPublishedCuratorPosts(20); }
-      catch(error) { console.warn("Published gallery history unavailable",error); this.publishedPosts=[]; }
-      this.stats = await getCuratorStats();
+      const [sources, posts, publishedPosts, stats] = await Promise.all([
+        getAllCuratorSources(),
+        getUnpostedCuratorPosts(50),
+        getPublishedCuratorPosts(20).catch(error => {
+          console.warn("Published gallery history unavailable", error);
+          return [];
+        }),
+        getCuratorStats()
+      ]);
+      this.sources = sources;
+      this.posts = posts;
+      this.publishedPosts = publishedPosts;
+      this.stats = stats;
 
       this.renderStats();
       this.renderSources();

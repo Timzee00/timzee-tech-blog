@@ -390,33 +390,24 @@ export async function updateCuratorSettings(settingsData) {
 
 export async function getCuratorStats() {
   try {
-    const { count: totalSources, error: e1 } = await supabase
-      .from("curator_sources")
-      .select("*", { count: "exact", head: true });
-    if (e1) throw e1;
-
-    const { count: activeSources, error: e2 } = await supabase
-      .from("curator_sources")
-      .select("*", { count: "exact", head: true })
-      .or("is_active.eq.true,enabled.eq.true");
-    if (e2) throw e2;
-
-    const { count: totalPosts, error: e3 } = await supabase
-      .from("curator_posts")
-      .select("*", { count: "exact", head: true });
-    if (e3) throw e3;
-
-    const { count: unpostedPosts, error: e4 } = await supabase
-      .from("curator_posts")
-      .select("*", { count: "exact", head: true })
-      .neq("status", "posted");
-    if (e4) throw e4;
-
+    // These independent HEAD counts can execute concurrently. Keep the same
+    // exact counts and filters while avoiding four serial network round trips.
+    const [sources, active, posts, unposted] = await Promise.all([
+      supabase.from("curator_sources").select("id", { count: "exact", head: true }),
+      supabase.from("curator_sources").select("id", { count: "exact", head: true })
+        .or("is_active.eq.true,enabled.eq.true"),
+      supabase.from("curator_posts").select("id", { count: "exact", head: true }),
+      supabase.from("curator_posts").select("id", { count: "exact", head: true })
+        .neq("status", "posted")
+    ]);
+    for (const result of [sources, active, posts, unposted]) {
+      if (result.error) throw result.error;
+    }
     return {
-      totalSources: totalSources || 0,
-      activeSources: activeSources || 0,
-      totalPosts: totalPosts || 0,
-      unpostedPosts: unpostedPosts || 0
+      totalSources: sources.count || 0,
+      activeSources: active.count || 0,
+      totalPosts: posts.count || 0,
+      unpostedPosts: unposted.count || 0
     };
   } catch (error) {
     console.error("Error fetching curator stats:", error);

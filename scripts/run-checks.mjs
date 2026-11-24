@@ -21,6 +21,13 @@ const steps=[
     ]
   },
   {
+    "label": "Admin and curator scalable data loading",
+    "args": [
+      "--test",
+      "tests/admin-scale-loading.test.cjs"
+    ]
+  },
+  {
     "label": "Public page-link validation",
     "args": [
       "scripts/validate-page-links.mjs"
