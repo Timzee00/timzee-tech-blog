@@ -35,7 +35,7 @@ export function setupChatVoicePlayers(){
           waveformCache.set(src,levels);
         }finally{await context.close().catch(()=>{});}
       }
-      host.innerHTML=levels.map(level=>'<i style="--wave-level:'+Math.round(level*100)+'%"></i>').join('');
+      host.innerHTML=levels.map((level,index)=>'<i data-wave-index="'+index+'" style="--wave-level:'+Math.round(level*100)+'%"></i>').join('');
       host.dataset.loaded='true';
     }catch(error){host.dataset.fallback='true';}
     finally{host.dataset.loading='false';}
@@ -71,7 +71,19 @@ export function setupChatVoicePlayers(){
     const seek=player.querySelector('.voice-player-seek');
     const label=player.querySelector('.voice-player-time');
     const play=player.querySelector('.voice-player-play');
-    if(seek)seek.value=duration?String(Math.min(100,Math.round(audio.currentTime*100/duration))):'0';
+    const progress=duration?Math.min(1,Math.max(0,audio.currentTime/duration)):0;
+    if(seek)seek.value=String(Math.round(progress*100));
+    const waveform=player.querySelector('.voice-preview-bars');
+    if(waveform){
+      waveform.dataset.progress=String(progress);
+      const bars=waveform.querySelectorAll('i');
+      const currentIndex=Math.min(bars.length-1,Math.floor(progress*bars.length));
+      bars.forEach((bar,index)=>{
+        bar.classList.toggle('is-played',index/bars.length<progress);
+        bar.classList.toggle('is-current',!audio.paused&&index===currentIndex);
+      });
+      waveform.classList.toggle('is-playing',!audio.paused);
+    }
     if(label)label.textContent=fmt(audio.currentTime)+' / '+fmt(duration);
     if(play)play.textContent=audio.paused?'▶':'❚❚';
     if(play)play.setAttribute('aria-label',audio.paused?'Play voice note':'Pause voice note');
@@ -104,8 +116,10 @@ export function voicePlayerHtml(url){
   return `<div class="voice-player">
    <button type="button" class="voice-player-play" aria-label="Play voice note">▶</button>
    <div class="voice-player-controls">
-      <div class="voice-preview-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <input class="voice-player-seek" type="range" min="0" max="100" value="0" aria-label="Seek in voice note">
+      <div class="voice-preview-bars" role="group" aria-label="Voice note waveform">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <input class="voice-player-seek" type="range" min="0" max="100" value="0" aria-label="Seek in voice note">
+      </div>
       <span class="voice-player-time">0:00 / 0:00</span>
    </div>
    <button type="button" class="voice-player-speed" aria-label="Change playback speed">1×</button>
