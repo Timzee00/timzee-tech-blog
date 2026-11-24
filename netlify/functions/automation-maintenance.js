@@ -63,13 +63,33 @@ exports.handler = async () => {
 
   // Expensive shared ranking snapshots are opt-in until the database function
   // and consumption path have passed isolated staging tests.
+  let feedCandidateRefresh = "skipped";
   try {
     const ranking = await maybeRefreshFeedCandidates(supabase, process.env);
+    feedCandidateRefresh = ranking.skipped ? "skipped" : "completed";
     if (!ranking.skipped) console.log("Feed candidate refresh completed:", ranking);
   } catch (error) {
     console.error("Feed candidate refresh failed:", error);
     throw error; // Scheduled function logs/alerts must reveal genuine failures.
   }
+
+  // Netlify synchronous functions must return a response object. Without one,
+  // completed maintenance work is incorrectly reported as HTTP 502 on every tick.
+  return {
+    statusCode: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store"
+    },
+    body: JSON.stringify({
+      ok: true,
+      automation: "completed",
+      verification: "completed",
+      moderationExpiries: Number(expiries.data || 0),
+      digestNotifications: Number(digest.data?.notified || 0),
+      feedCandidateRefresh
+    })
+  };
 };
 
 exports.config = {
