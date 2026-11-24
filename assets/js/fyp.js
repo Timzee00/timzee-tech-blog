@@ -303,13 +303,10 @@ async function loadFeed({ force = false, limit = 20 } = {}) {
           target.insertBefore(batch,moreButton.parentElement);
           if(additional.length){
             void hydrateLikes(batch);
-            target.querySelectorAll(".fyp-comment-form textarea").forEach(field=>{
-              if(!field.dataset.mentionsWired)setupMentionInput(field);
-              field.dataset.mentionsWired="true";
-            });
+            batch.querySelectorAll(".fyp-comment-form textarea").forEach(setupMentionInput);
             bindFypVideoGestures(target);
           }
-          feedCache.set(key,{time:Date.now(),rows:moreRows});
+          feedCache.set(key,{time:Date.now(),rows:moreRows.slice(0,20)});
           moreButton.parentElement.remove();
         }catch(error){
           if(version!==feedVersion)return;
