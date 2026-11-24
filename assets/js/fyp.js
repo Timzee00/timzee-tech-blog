@@ -232,7 +232,7 @@ function applyActiveControls() {
   if (label) label.textContent = state.mode === "following" ? "Following" : "For You";
 }
 let feedVersion = 0;
-async function loadFeed({ force = false } = {}) {
+async function loadFeed({ force = false, limit = 20 } = {}) {
   const version = ++feedVersion;
   const target = $("fypGrid");
   if (!target) return;
@@ -256,7 +256,7 @@ async function loadFeed({ force = false } = {}) {
       if(mode==="for-you")await syncObservedRegion(supabase);
       const rpcName = mode === "following" ? "get_following_feed" : "get_personalized_feed";
       const response = await supabase.rpc(rpcName, {
-        p_limit: 20, p_content_type: type === "all" ? "all" : type
+        p_limit: limit, p_content_type: type === "all" ? "all" : type
       });
       if (version !== feedVersion) return;
       if (response.error) throw response.error;
@@ -275,6 +275,49 @@ async function loadFeed({ force = false } = {}) {
     target.innerHTML = visible.length
       ? visible.map(renderRow).join("")
       : `<div class="fyp-empty card"><h2>${mode === "following" ? "Nothing from followed creators yet" : "No recommendations yet"}</h2><p>${mode === "following" ? "Follow creators or communities to see their updates here." : "Like posts, follow people and choose Not interested to improve future recommendations."}</p><a class="btn" href="index.html">Explore the community</a></div>`;
+    if(visible.length >= limit && limit < 40){
+      target.insertAdjacentHTML("beforeend",'<div class="fyp-load-more-wrap"><button class="btn ghost sm" type="button" id="fypLoadMoreBtn">Load more</button></div>');
+      const moreButton=$("fypLoadMoreBtn");
+      moreButton.addEventListener("click",async()=>{
+        moreButton.disabled=true;moreButton.textContent="Loading…";
+        try{
+          const moreResponse=await supabase.rpc(rpcName,{
+            p_limit:40,p_content_type:type==="all"?"all":type
+          });
+          if(moreResponse.error)throw moreResponse.error;
+          if(version!==feedVersion)return;
+          let moreRows=diversifyFeed(moreResponse.data||[],{mode});
+          moreRows=await enrichVideoItems(moreRows);
+          if(version!==feedVersion)return;
+          let moreIdentities=new Map();
+          try{
+            moreIdentities=await loadVerifiedIdentityMap(supabase,moreRows.map(row=>row.author_id).filter(Boolean));
+          }catch(error){console.warn("Additional creator metadata unavailable",error.message);}
+          if(version!==feedVersion)return;
+          feedIdentityMap=moreIdentities;
+          const existing=new Set([...target.querySelectorAll(".fyp-card")].map(card=>card.dataset.contentType+":"+card.dataset.contentId));
+          const additional=moreRows.filter(row=>!existing.has(row.content_type+":"+row.content_id));
+          const batch=document.createElement("div");
+          batch.className="fyp-more-batch";batch.style.display="contents";
+          batch.innerHTML=additional.map(renderRow).join("");
+          target.insertBefore(batch,moreButton.parentElement);
+          if(additional.length){
+            void hydrateLikes(batch);
+            target.querySelectorAll(".fyp-comment-form textarea").forEach(field=>{
+              if(!field.dataset.mentionsWired)setupMentionInput(field);
+              field.dataset.mentionsWired="true";
+            });
+            bindFypVideoGestures(target);
+          }
+          feedCache.set(key,{time:Date.now(),rows:moreRows});
+          moreButton.parentElement.remove();
+        }catch(error){
+          if(version!==feedVersion)return;
+          moreButton.disabled=false;moreButton.textContent="Retry loading more";
+          console.warn("Additional feed items could not be loaded",error);
+        }
+      });
+    }
     if(visible.length){
       void hydrateLikes(target);
       bindFypVideoGestures(target);
