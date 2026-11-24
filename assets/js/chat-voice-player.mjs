@@ -26,17 +26,24 @@ export function setupChatVoicePlayers(){
         try{
           const decoded=await context.decodeAudioData(bytes.slice(0));
           const channel=decoded.getChannelData(0);
-          const step=Math.max(1,Math.floor(channel.length/waveformBars));
           levels=Array.from({length:waveformBars},(_,index)=>{
-            const start=index*step,end=Math.min(channel.length,start+step);
-            let sum=0;for(let i=start;i<end;i++)sum+=channel[i]*channel[i];
-            return Math.max(.08,Math.sqrt(sum/Math.max(1,end-start)));
+            const start=Math.floor(index*channel.length/waveformBars);
+            const end=Math.max(start+1,Math.floor((index+1)*channel.length/waveformBars));
+            let sum=0;for(let i=start;i<Math.min(channel.length,end);i++)sum+=channel[i]*channel[i];
+            return Math.sqrt(sum/Math.max(1,Math.min(channel.length,end)-start));
           });
+          const peak=Math.max(.0001,...levels);
+          levels=levels.map(level=>Math.max(.16,level/peak));
           waveformCache.set(src,levels);
         }finally{await context.close().catch(()=>{});}
       }
-      host.innerHTML=levels.map((level,index)=>'<i data-wave-index="'+index+'" style="--wave-level:'+Math.round(level*100)+'%"></i>').join('');
+      host.querySelectorAll('i').forEach(bar=>bar.remove());
+      const seek=host.querySelector('.voice-player-seek');
+      const bars=levels.map((level,index)=>'<i data-wave-index="'+index+'" style="--wave-level:'+Math.round(level*100)+'%"></i>').join('');
+      if(seek)seek.insertAdjacentHTML('beforebegin',bars);
+      else host.insertAdjacentHTML('afterbegin',bars);
       host.dataset.loaded='true';
+      sync({target:audio});
     }catch(error){host.dataset.fallback='true';}
     finally{host.dataset.loading='false';}
   }
