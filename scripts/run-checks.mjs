@@ -193,7 +193,8 @@ const steps=[
     "args": [
       "--test",
       "tests/blipmood-theme-video-performance.test.cjs",
-      "tests/media-egress-guardrails.test.cjs"
+      "tests/media-egress-guardrails.test.cjs",
+      "tests/theme-preference-persistence.test.cjs"
     ]
   },
   {
