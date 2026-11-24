@@ -32,6 +32,74 @@ function requirePageCursor(cursor){
   return {created,id};
 }
 
+const ADMIN_QUEUE_COLUMNS = Object.freeze({
+  contact: "id,name,email,subject,message,created_at,status",
+  support: "id,name,email,issue,message,created_at,status",
+  newsletter: "id,name,email,interest,created_at,status",
+  ads: "id,name,email,company,budget,message,created_at,status",
+  admin: "id,user_id,user_email,user_name,message,status,reviewed_by,reviewed_at,created_at",
+  content: "id,user_id,user_email,user_name,query,status,created_at",
+  announcements: "id,title,type,status,created_at"
+});
+
+function buildAdminCursorPage(rows, pageSize) {
+  const items = rows.slice(0, pageSize);
+  const last = items.at(-1);
+  return { items, hasMore: rows.length > pageSize,
+    nextCursor: last ? { created_at: last.created_at, id: last.id } : null };
+}
+
+// Staff tables use compact keyset pages. Full post bodies are fetched only
+// when a staff member explicitly opens an article in the editor.
+export async function fetchAdminPostsPage({ cursor = null, limit = 40 } = {}) {
+  const pageSize = Math.max(1, Math.min(60, Math.trunc(Number(limit) || 40)));
+  let query = supabase.from("posts")
+    .select("id,title,category_id,status,updated_at,created_at,pinned")
+    .order("created_at", { ascending: false }).order("id", { ascending: false });
+  if (cursor) {
+    const { created, id } = requirePageCursor(cursor);
+    query = query.or("created_at.lt." + created + ",and(created_at.eq." + created + ",id.lt." + id + ")");
+  }
+  const { data, error } = await query.limit(pageSize + 1);
+  if (error) throw error;
+  return buildAdminCursorPage(Array.isArray(data) ? data : [], pageSize);
+}
+
+export async function fetchCommentModerationPage({ cursor = null, limit = 40 } = {}) {
+  const pageSize = Math.max(1, Math.min(60, Math.trunc(Number(limit) || 40)));
+  let query = supabase.from("comments")
+    .select("id,post_id,author_name,body,status,created_at,posts(title)")
+    .order("created_at", { ascending: true }).order("id", { ascending: true });
+  if (cursor) {
+    const { created, id } = requirePageCursor(cursor);
+    query = query.or("created_at.gt." + created + ",and(created_at.eq." + created + ",id.gt." + id + ")");
+  }
+  const { data, error } = await query.limit(pageSize + 1);
+  if (error) throw error;
+  return buildAdminCursorPage(Array.isArray(data) ? data : [], pageSize);
+}
+
+export async function fetchAdminQueuePage(queue, { cursor = null, limit = 30 } = {}) {
+  const columns = ADMIN_QUEUE_COLUMNS[queue];
+  if (!columns) throw new Error("Unsupported admin queue.");
+  const pageSize = Math.max(1, Math.min(60, Math.trunc(Number(limit) || 30)));
+  const table = queue === "contact" ? "contact_requests"
+    : queue === "support" ? "support_requests"
+    : queue === "newsletter" ? "newsletter_signups"
+    : queue === "ads" ? "ad_applications"
+    : queue === "admin" ? "admin_requests"
+    : queue === "content" ? "content_requests" : "announcements";
+  let query = supabase.from(table).select(columns)
+    .order("created_at", { ascending: false }).order("id", { ascending: false });
+  if (cursor) {
+    const { created, id } = requirePageCursor(cursor);
+    query = query.or("created_at.lt." + created + ",and(created_at.eq." + created + ",id.lt." + id + ")");
+  }
+  const { data, error } = await query.limit(pageSize + 1);
+  if (error) throw error;
+  return buildAdminCursorPage(Array.isArray(data) ? data : [], pageSize);
+}
+
 export async function fetchFeedPosts({limit=24,cursor=null,categoryId=null,contentType=null}={}){
   const pageSize=Math.max(1,Math.min(50,Math.trunc(Number(limit)||24)));
   let query=supabase.from("posts")
