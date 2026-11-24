@@ -70,19 +70,30 @@ export function setupChatVoicePlayers(){
     const duration=Number.isFinite(audio.duration)?audio.duration:0;
     const seek=player.querySelector('.voice-player-seek');
     const label=player.querySelector('.voice-player-time');
-    if(audio.readyState>=1)void loadWaveform(player);
     const play=player.querySelector('.voice-player-play');
     if(seek)seek.value=duration?String(Math.min(100,Math.round(audio.currentTime*100/duration))):'0';
     if(label)label.textContent=fmt(audio.currentTime)+' / '+fmt(duration);
     if(play)play.textContent=audio.paused?'▶':'❚❚';
     if(play)play.setAttribute('aria-label',audio.paused?'Play voice note':'Pause voice note');
   };
-  document.querySelectorAll('.voice-player').forEach(player=>void loadWaveform(player));
+  const waveformVisibility=typeof IntersectionObserver==='function'
+    ?new IntersectionObserver(entries=>entries.forEach(entry=>{
+      if(!entry.isIntersecting)return;
+      void loadWaveform(entry.target);
+      waveformVisibility.unobserve(entry.target);
+    }),{rootMargin:'180px'})
+    :null;
+  const watchWaveform=player=>{
+    if(!player)return;
+    if(waveformVisibility)waveformVisibility.observe(player);
+    else void loadWaveform(player);
+  };
+  document.querySelectorAll('.voice-player').forEach(watchWaveform);
   const waveformObserver=new MutationObserver(records=>{
     records.forEach(record=>record.addedNodes.forEach(node=>{
       if(node.nodeType!==1)return;
-      if(node.matches?.('.voice-player'))void loadWaveform(node);
-      node.querySelectorAll?.('.voice-player').forEach(player=>void loadWaveform(player));
+      if(node.matches?.('.voice-player'))watchWaveform(node);
+      node.querySelectorAll?.('.voice-player').forEach(watchWaveform);
     }));
   });
   waveformObserver.observe(document.body,{childList:true,subtree:true});
