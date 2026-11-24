@@ -1228,7 +1228,25 @@ function clearMediaPreview(){if(state.previewUrl)URL.revokeObjectURL(state.previ
 function showMediaPreview(file){clearMediaPreview();state.mediaFile=file;state.mediaType=resolveAttachmentType({mimeType:file.type,fileName:file.name});state.previewUrl=URL.createObjectURL(file);let c=state.mediaType==='image'?`<img src="${escapeHTML(state.previewUrl)}" alt="Attachment preview">`:state.mediaType==='video'?`<video controls src="${escapeHTML(state.previewUrl)}"></video>`:state.mediaType==='audio'?voicePlayerHtml(escapeHTML(state.previewUrl)):`<div class="media-preview-file"><strong>${escapeHTML(file.name)}</strong><small>${escapeHTML(file.type||'File')} · ${escapeHTML(formatFileSize(file.size))}</small></div>`;$("chatMediaPreview").innerHTML=`${c}<button class="btn ghost sm" id="removeChatMedia" type="button">Remove</button>`;$("removeChatMedia")?.addEventListener('click',clearMediaPreview);}
 function stopRecorderTracks(){state.recorderStream?.getTracks().forEach(t=>t.stop());state.recorderStream=null;try{state.audioContext?.close();}catch(_){}state.audioContext=null;state.analyser=null;if(state.analyserFrame)cancelAnimationFrame(state.analyserFrame);state.analyserFrame=0;}
 
-function animateWaveform(){const bars=[...document.querySelectorAll('#voiceWaveform [data-wave]')];const tick=()=>{bars.forEach((bar,i)=>{bar.style.height=`${8+Math.abs(Math.sin(Date.now()/180+i))*28}px`;});state.analyserFrame=requestAnimationFrame(tick);};tick();}
+function animateWaveform(){
+  const bars=[...document.querySelectorAll('#voiceWaveform [data-wave]')];
+  const samples=new Uint8Array(state.analyser?.fftSize||128);
+  const tick=()=>{
+    if(!state.analyser){state.analyserFrame=0;return;}
+    state.analyser.getByteTimeDomainData(samples);
+    const chunk=Math.max(1,Math.floor(samples.length/Math.max(1,bars.length)));
+    bars.forEach((bar,index)=>{
+      let energy=0,count=0;
+      for(let n=index*chunk;n<Math.min(samples.length,(index+1)*chunk);n++){
+        const amplitude=(samples[n]-128)/128;energy+=amplitude*amplitude;count++;
+      }
+      const rms=count?Math.sqrt(energy/count):0;
+      bar.style.height=Math.round(4+Math.min(1,rms*3.8)*40)+'px';
+    });
+    state.analyserFrame=requestAnimationFrame(tick);
+  };
+  tick();
+}
 async function startRecording(){
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('Voice recording is not supported in this browser.');
   if(state.recordingStarting||state.recorder)return;
@@ -1242,6 +1260,17 @@ async function startRecording(){
     }
     state.recorderStream=stream;
     state.recorderChunks=[];
+    const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+    if(AudioContextClass){
+      try{
+        state.audioContext=new AudioContextClass();
+        state.analyser=state.audioContext.createAnalyser();
+        state.analyser.fftSize=256;
+        state.analyser.smoothingTimeConstant=0.78;
+        state.audioContext.createMediaStreamSource(stream).connect(state.analyser);
+        if(state.audioContext.state==="suspended")await state.audioContext.resume();
+      }catch(error){console.warn("Live voice waveform unavailable",error);state.analyser=null;}
+    }
     const recorder=new MediaRecorder(stream);
     state.recorder=recorder;
     state.recorderStartedAt=Date.now();
