@@ -156,4 +156,19 @@ export async function fetchVideoDiscoveryPage(supabase, {
   return entry.rows.slice(start, start + size);
 }
 
+export async function recordVideoWatchSignal(supabase, {
+  videoId, watchSeconds = 0, completed = false
+} = {}) {
+  if (typeof videoId !== "string" || !videoId) return false;
+  const seconds = Math.max(0, Math.min(90, Math.floor(Number(watchSeconds) || 0)));
+  if (seconds < 3 && completed !== true) return false;
+  const { data, error } = await supabase.rpc("record_video_watch_signal", {
+    p_video_id: videoId,
+    p_watch_seconds: seconds,
+    p_completed: completed === true
+  });
+  if (error) throw error;
+  return data === true;
+}
+
 export function invalidateVideoDiscoveryCache() { cache.clear(); }
