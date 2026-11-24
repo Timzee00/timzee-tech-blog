@@ -189,6 +189,13 @@ const steps=[
     ]
   },
   {
+    "label": "Theme and video performance regressions",
+    "args": [
+      "--test",
+      "tests/blipmood-theme-video-performance.test.cjs"
+    ]
+  },
+  {
     "label": "Product upgrade behavior",
     "args": [
       "--test",
