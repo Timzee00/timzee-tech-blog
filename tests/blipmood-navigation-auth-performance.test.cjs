@@ -18,9 +18,9 @@ test("menu buttons have labels, one scroll surface and coordinated routes",()=>{
 });
 test("fullscreen Reels is isolated from the general navigation menu",()=>{
  const video=read("video.html"),menu=read("assets/js/blipmood-unified-menu.mjs");
- assert.doesNotMatch(video,/blipmood-unified-menu\\.mjs/);
+ assert.doesNotMatch(video,/blipmood-unified-menu\.mjs/);
  assert.doesNotMatch(menu,/installReelMenu|bmReelMenuToggle|bm-reel-menu-panel/);
- assert.match(menu,/if\\(current==="video\\.html"\\)return;/);
+ assert.match(menu,/if\(current==="video\.html"\)return;/);
 });
 test("authenticated Join community is not redirected back to signup",()=>{
  const app=read("assets/js/app.js"),login=read("assets/js/user-auth.js");
