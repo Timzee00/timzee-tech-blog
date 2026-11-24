@@ -14,6 +14,9 @@ function dataHarness(rows=[]){
       select(columns,options){call.columns=columns;call.selectOptions=options;return query;},
       order(column,options){call.orders.push([column,options.ascending]);return query;},
       or(value){call.cursorFilter=value;return query;},
+      is(column,value){(call.is??=[]).push([column,value]);return query;},
+      lt(column,value){(call.lt??=[]).push([column,value]);return query;},
+      gt(column,value){(call.gt??=[]).push([column,value]);return query;},
       eq(column,value){(call.eq??=[]).push([column,value]);return query;},
       neq(column,value){(call.neq??=[]).push([column,value]);return query;},
       limit(value){call.limit=value;return Promise.resolve({data:rows,error:null});}
@@ -133,13 +136,28 @@ test("admin cursor indexes cover all-status lists and paged request inboxes",()=
   ]) assert.match(sql,new RegExp("CREATE INDEX IF NOT EXISTS "+index));
 });
 
-test("admin keyset pages keep nullable creation timestamps at the end",()=>{
+test("admin keyset pages keep nullable creation timestamps at the end",async()=>{
   const data=read("assets/js/data.js");
   assert.match(data,/created_at == null \? null : String\(cursor\.created_at\)/);
-  assert.match(data,/created_at: null/);
+  assert.match(data,/created_at: last\.created_at/);
   assert.match(data,/query\.is\("created_at", null\)\.lt\("id", id\)/);
   assert.match(data,/query\.is\("created_at", null\)\.gt\("id", id\)/);
   assert.match(data,/created_at\.is\.null/);
   assert.match(data,/ascending: false, nullsFirst: false/);
   assert.match(data,/ascending: true, nullsFirst: false/);
+
+  const posts=dataHarness(sampleRows);
+  await posts.fetchAdminPostsPage({cursor:{created_at:null,id:id(22)}});
+  assert.deepEqual(posts.calls[0].is,[["created_at",null]]);
+  assert.deepEqual(posts.calls[0].lt,[["id",id(22)]]);
+
+  const comments=dataHarness(sampleRows);
+  await comments.fetchCommentModerationPage({cursor:{created_at:null,id:id(22)}});
+  assert.deepEqual(comments.calls[0].is,[["created_at",null]]);
+  assert.deepEqual(comments.calls[0].gt,[["id",id(22)]]);
+
+  const queue=dataHarness(sampleRows);
+  await queue.fetchAdminQueuePage("contact",{cursor:{created_at:null,id:id(22)}});
+  assert.deepEqual(queue.calls[0].is,[["created_at",null]]);
+  assert.deepEqual(queue.calls[0].lt,[["id",id(22)]]);
 });
