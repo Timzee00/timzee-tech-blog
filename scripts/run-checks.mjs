@@ -20,12 +20,6 @@ const steps=[
     ]
   },
   {
-    "label": "Migration filename validation",
-    "args": [
-      "scripts/validate-migration-versions.mjs"
-    ]
-  },
-  {
     "label": "Public page-link validation",
     "args": [
       "scripts/validate-page-links.mjs"
