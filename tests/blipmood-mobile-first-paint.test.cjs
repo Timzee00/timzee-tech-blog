@@ -69,5 +69,5 @@ test("secondary profile artwork does not compete with the main page hero",()=>{
  assert.match(app,/class="post-card-cover"[\s\S]*?loading="lazy" decoding="async"/);
  const html=read("index.html");
  assert.match(html,/data-bm-logo="emblem"[^>]*fetchpriority="high" loading="eager"/);
- assert.match(read("scripts/build-site.mjs"),/optimizeHomeHero\(contents,assetVersion\)/);
+ assert.match(read("scripts/build-site.mjs"),/optimizeHomeHero\(contents,heroVersion\)/);
 });
