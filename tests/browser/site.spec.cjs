@@ -57,8 +57,10 @@ test("public build excludes server source and identifies the release", async ({ 
   const html = await (await request.get("/")).text();
   const module = await (await request.get("/assets/js/supabase.js")).text();
   const css = await (await request.get("/assets/css/styles.css")).text();
-  expect(html).toContain(`.js?v=${release.asset_version}`);
-  expect(module).toContain(`supabase.mjs?v=${release.asset_version}`);
+  const appVersion = html.match(/assets\/js\/app\.js\?v=([a-f0-9]{16})/)?.[1];
+  const clientVersion = module.match(/vendor\/supabase\.mjs\?v=([a-f0-9]{16})/)?.[1];
+  expect(appVersion).toMatch(/^[a-f0-9]{16}$/);
+  expect(clientVersion).toMatch(/^[a-f0-9]{16}$/);
   expect(css).not.toContain("@import");
   expect(css).toContain("--color-primary");
 });

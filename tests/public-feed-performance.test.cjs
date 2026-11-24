@@ -27,7 +27,7 @@ function harness({rows=[],error=null}={}){
    return query;
  }};
  const context={supabase,reportAppError(){},getDisplayName(){},console,Date,Set,Map,Object,Number,String};
- vm.runInNewContext(source+"\nthis.api={fetchFeedPosts,fetchPostCommentPage,POST_PREVIEW_COLUMNS};",context);
+ vm.runInNewContext(source+"\nthis.api={fetchFeedPosts,fetchPostCommentPage,fetchAds,POST_PREVIEW_COLUMNS};",context);
  return{...context.api,calls};
 }
 
@@ -127,6 +127,7 @@ test("optional article dependencies fail softly without hiding article body",()=
 test("home discovery renders only nine stories first and category changes fetch indexed DB pages",()=>{
  const html=read("index.html"),app=read("assets/js/app.js");
  const css=read("assets/css/blipmood-home-refresh.css");
+ const homeCss=read("assets/css/styles-home.css");
  assert.match(app,/const POSTS_PAGE_SIZE = 9;/);
  assert.match(app,/fetchFeedPosts\(\{ limit: POSTS_PAGE_SIZE \}\)/);
  assert.match(app,/async function loadHomeCategory\(category="all"\)/);
@@ -138,15 +139,16 @@ test("home discovery renders only nine stories first and category changes fetch 
  assert.match(html,/id="loadMorePostsBtn" hidden>Show 9 more/);
  assert.ok(html.indexOf('id="latest"')<html.indexOf('id="suggestedPeopleSection"'));
  assert.match(html,/class="bm-feed-filter-details"/);
- assert.match(html,/href="assets\/css\/blipmood-home-refresh\.css"/);
+ assert.ok(homeCss.includes('@import url("blipmood-home-refresh.css")'));
  assert.match(css,/#latestPosts\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
  assert.match(css,/@media\(max-width:600px\)/);
 });
 
 test("homepage retains its original hero emblem without a decorative phone mockup",()=>{
  const html=read("index.html"),css=read("assets/css/blipmood-neon-experience.css");
+ const homeCss=read("assets/css/styles-home.css");
  const app=read("assets/js/app.js");
- assert.match(html,/href="assets\/css\/blipmood-neon-experience\.css"/);
+ assert.ok(homeCss.includes('@import url("blipmood-neon-experience.css")'));
  assert.match(html,/<body class="blipmood-home">/);
  assert.match(html,/<div class="bm-hero-art" aria-hidden="true">/);
  assert.doesNotMatch(html,/bm-device-shell|bm-device-post|bm-device-circles/);
@@ -177,4 +179,25 @@ test("homepage retains its original hero emblem without a decorative phone mocku
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  const bodyRules=css.match(/(?:^|\n)body\.blipmood-home\s*\{/g)||[];
  assert.equal(bodyRules.length,1);
+});
+
+test("homepage ad lookup selects only fields used by the ad cards",async()=>{
+ const fields="id,title,body,image_url,link_url,placement,status,starts_at,ends_at";
+ const model=harness();
+ await model.fetchAds({status:"active",limit:8,columns:fields});
+ assert.equal(model.calls[0].table,"ads");
+ assert.equal(model.calls[0].fields,fields);
+ assert.equal(model.calls[0].limit,8);
+ assert.ok(model.calls[0].eq.some(([name,value])=>name==="status"&&value==="active"));
+});
+test("homepage secondary widgets wait for visibility and skip anonymous suggestions",()=>{
+ const app=read("assets/js/app.js");
+ for(const selector of ["#trendingList","#popularTrack","#popularTopicsTrack","#leaderboardList",".side-card","#popular"])
+  assert.ok(app.includes('observeHomeWidget("'+selector+'"'),"Missing lazy activation: "+selector);
+ assert.match(app,/if \(!user\?\.id\) return;/);
+ assert.match(app,/championHistory\?\.addEventListener\("toggle"/);
+ assert.match(app,/discussionTopicsLoaded/);
+ assert.match(app,/const loadSuggestions = userId/);
+ assert.match(app,/function refreshTrending\(/);
+ assert.match(app,/function activatePopularRanking\(/);
 });

@@ -198,8 +198,8 @@ export async function fetchThemes() {
   return normalizeResponse(result);
 }
 
-export async function fetchAds({ status, placement, limit=null } = {}) {
-  let query = supabase.from("ads").select("*").order("created_at", { ascending: false });
+export async function fetchAds({ status, placement, limit=null, columns="*" } = {}) {
+  let query = supabase.from("ads").select(columns).order("created_at", { ascending: false });
   if (status) query = query.eq("status", status);
   if (placement) query = query.eq("placement", placement);
   if(limit!==null)query=query.limit(Math.max(1,Math.min(50,Math.trunc(Number(limit)||8))));

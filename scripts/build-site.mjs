@@ -121,6 +121,35 @@ const assetVersion = hash.digest("hex").slice(0, 16);
 const workerPath=resolve(output,"sw.js");
 await writeFile(workerPath,(await readFile(workerPath,"utf8"))
   .replaceAll("__BLIPMOOD_ASSET_VERSION__",assetVersion));
+// Keep the responsive hero cached until the approved artwork itself changes.
+const heroAssetVersion = createHash("sha256");
+for (const theme of ["light", "dark"]) for (const width of [180, 420]) {
+  heroAssetVersion.update(await readFile(resolve(output, `assets/brand/blipmood-emblem-${theme}-${width}.png`)));
+}
+const heroVersion = heroAssetVersion.digest("hex").slice(0, 16);
+const mediaExtensions = /\.(?:png|jpe?g|webp|avif|gif|svg|ico|woff2?|ttf|otf)$/i;
+const mediaFiles = publishedFiles.filter(path => mediaExtensions.test(path));
+const mediaVersions = new Map();
+for (const path of mediaFiles) mediaVersions.set(path,
+  createHash("sha256").update(await readFile(path)).digest("hex").slice(0, 16));
+const vendorFiles = publishedFiles.filter(path => /\/assets\/vendor\/[^/]+\.(?:js|mjs)$/i.test(path));
+const vendorVersions = new Map();
+for (const path of vendorFiles) vendorVersions.set(path,
+  createHash("sha256").update(await readFile(path)).digest("hex").slice(0, 16));
+const hashAssetGroup = async paths => {
+  const digest = createHash("sha256");
+  for (const path of paths) {
+    digest.update(path.slice(output.length + 1));
+    digest.update(await readFile(path));
+  }
+  return digest.digest("hex").slice(0, 16);
+};
+// App modules change as a unit so their static imports stay coherent. Bundled vendor
+// libraries retain their own hashes and are reused after unrelated application updates.
+const javascriptVersion = await hashAssetGroup(publishedFiles.filter(path =>
+  /\.(?:js|mjs)$/i.test(path) && !path.endsWith("/sw.js")
+).concat(mediaFiles));
+const stylesheetVersion = await hashAssetGroup(publishedFiles.filter(path => /\.css$/i.test(path)).concat(mediaFiles));
 // The homepage uses the original verified emblem, resized for narrow phones.
 // Source HTML keeps canonical artwork URLs for prebuild link verification.
 function optimizeHomeHero(html,version){
@@ -150,18 +179,22 @@ function optimizeHomeHero(html,version){
 for (const file of publishedFiles.filter(path => /\.(?:html|js|mjs|css)$/.test(path))) {
   let contents = await readFile(file, "utf8");
   if (file === resolve(output,"index.html")) {
-    contents=optimizeHomeHero(contents,assetVersion);
+    contents=optimizeHomeHero(contents,heroVersion);
     // Swap only the public homepage to the slim CSS bundle; every other
     // Blipmood route retains all its original page-specific styles.
     const fullCss='href="assets/css/styles.css"';
     if(!contents.includes(fullCss))throw new Error("Homepage shared stylesheet missing");
     contents=contents.replace(fullCss,'href="assets/css/styles-home.css"');
   }
-  const versioned = contents.replace(/(["'])([^"'\s<>]+\.(?:js|mjs|css|png|svg|webp))\1/g, (match, quote, path) => {
-    if (/^(?:[a-z]+:|\/\/)/i.test(path)) return match;
-    const local = path.startsWith("/") ? resolve(output, `.${path}`) : resolve(dirname(file), path);
-    if (!existsSync(local) && !existsSync(resolve(output, path))) return match;
-    return `${quote}${path}?v=${assetVersion}${quote}`;
+  const versioned = contents.replace(/(["'])([^"'\s<>]+\.(?:js|mjs|css|png|jpe?g|webp|avif|gif|svg|ico|woff2?|ttf|otf))\1/gi, (match, quote, path) => {
+    if (/^(?:[a-z]+:|\/\/)/i.test(path) || /[?#]/.test(path) || /(?:^|\/)sw\.js$/i.test(path)) return match;
+    const local = path.startsWith("/") ? resolve(output, "." + path) : resolve(dirname(file), path);
+    const assetPath = existsSync(local) ? local : resolve(output, path);
+    if (!existsSync(assetPath)) return match;
+    const extension = path.split(".").pop().toLowerCase();
+    const version = mediaVersions.get(assetPath) || vendorVersions.get(assetPath) ||
+      (extension === "css" ? stylesheetVersion : /^(?:js|mjs)$/.test(extension) ? javascriptVersion : assetVersion);
+    return quote + path + "?v=" + version + quote;
   });
   await writeFile(file, versioned);
 }

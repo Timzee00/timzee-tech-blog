@@ -60,6 +60,7 @@ const state = {
   settings: null,
   ads: [],
   discussionTopics: [],
+  discussionTopicsLoaded: false,
   activeTags: [],
   leaderboard: [],
   suggestedPeople: [],
@@ -200,7 +201,7 @@ function renderNav(categories) {
     event.preventDefault();
     state.activeCategory = target.dataset.category || "all";
     nav.querySelectorAll("a").forEach(link => { if (link === target) link.setAttribute("aria-current", "true"); else link.removeAttribute("aria-current"); });
-    renderTrending(state.activeCategory);
+    refreshTrending(state.activeCategory);
     renderPopular();
     renderPopularTopics();
     if(state.searchTerm||state.activeTags.length)renderLists();
@@ -218,6 +219,33 @@ function hydrateCounts() {
   Object.assign(state.commentCounts, state.engagement?.commentCounts || {});
   Object.assign(state.likeCounts, state.engagement?.likeCounts || {});
   for (const id of state.engagement?.likedPostIds || []) state.userLikes.add(id);
+}
+
+function observeHomeWidget(selector, callback, rootMargin = "700px 0px") {
+  const target = document.querySelector(selector);
+  if (!target) return;
+  let started = false;
+  const run = () => {
+    if (started) return;
+    started = true;
+    try {
+      Promise.resolve(callback()).catch(error => console.warn(`Homepage widget failed (${selector}):`, error));
+    } catch (error) {
+      console.warn(`Homepage widget failed (${selector}):`, error);
+    }
+  };
+  if (typeof IntersectionObserver === "function") {
+    const observer = new IntersectionObserver(entries => {
+      if (!entries.some(entry => entry.isIntersecting)) return;
+      observer.disconnect();
+      run();
+    }, { rootMargin, threshold: 0 });
+    observer.observe(target);
+  } else if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(run, { timeout: 2500 });
+  } else {
+    window.setTimeout(run, 1200);
+  }
 }
 
 function showLoadingPlaceholders() {
@@ -319,13 +347,29 @@ function buildPostCard(post, compact = false) {
   `;
 }
 
-function renderPopular() {
-  void renderPopularRanking(state.activeCategory).then(setupPopularNav);
+const deferredRankings = { trendingVisible: false, trendingCategory: "all", popularVisible: false, popularCategory: "all" };
+function refreshTrending(categoryId = state.activeCategory) {
+  deferredRankings.trendingCategory = categoryId;
+  if (deferredRankings.trendingVisible) void renderTrending(categoryId);
+}
+function renderPopular(categoryId = state.activeCategory) {
+  deferredRankings.popularCategory = categoryId;
+  if (deferredRankings.popularVisible) void renderPopularRanking(categoryId).then(setupPopularNav);
+}
+function activateTrendingRanking() {
+  if (deferredRankings.trendingVisible) return;
+  deferredRankings.trendingVisible = true;
+  void renderTrending(deferredRankings.trendingCategory);
+}
+function activatePopularRanking() {
+  if (deferredRankings.popularVisible) return;
+  deferredRankings.popularVisible = true;
+  void renderPopularRanking(deferredRankings.popularCategory).then(setupPopularNav);
 }
 
 function renderPopularTopics() {
   const track = document.getElementById("popularTopicsTrack");
-  if (!track) return;
+  if (!track || !state.discussionTopicsLoaded) return;
   if (!state.discussionTopics.length) {
     track.innerHTML = "<div class=\"callout\">No discussions yet — start the first one.</div>";
     return;
@@ -720,7 +764,7 @@ function setupTagFilters() {
         state.searchTerm = "";
       }
       state.filteredPosts = null;
-      renderTrending(state.activeCategory);
+      refreshTrending(state.activeCategory);
       renderPopular();
       renderPopularTopics();
       if(state.feedCategory!==state.activeCategory)void loadHomeCategory(state.activeCategory);
@@ -736,9 +780,6 @@ async function performSearch() {
   const tags = [...state.activeTags];
   if (!state.searchTerm && !state.activeTags.length) {
     state.filteredPosts = null;
-    renderTrending(state.activeCategory);
-    renderPopular();
-    renderPopularTopics();
     if(state.feedCategory!==state.activeCategory)void loadHomeCategory(state.activeCategory);
     else renderLists();
     return;
@@ -762,17 +803,11 @@ async function performSearch() {
       fallback();
     }
 
-    renderTrending(state.activeCategory);
-    renderPopular();
-    renderPopularTopics();
     renderLists();
   } catch (error) {
     if (request !== searchRequest) return;
     console.error("Search error:", error);
     fallback();
-    renderTrending(state.activeCategory);
-    renderPopular();
-    renderPopularTopics();
     renderLists();
   }
 }
@@ -945,16 +980,15 @@ function renderAds(settings) {
   const filledTop = renderCustomAds(homeTop, homeTopAds, 1);
   const filledSidebar = renderCustomAds(homeSidebar, homeSidebarAds, 1);
 
-  if (!settings.adSense.enabled || !settings.adSense.publisherId) {
-    return;
-  }
+  const adSense = settings?.adSense || {};
+  if (!adSense.enabled || !adSense.publisherId) return;
 
   const buildAd = (slotId) => {
     if (!slotId) return "";
     return `
       <ins class="adsbygoogle"
         style="display:block"
-        data-ad-client="${settings.adSense.publisherId}"
+        data-ad-client="${adSense.publisherId}"
         data-ad-slot="${slotId}"
         data-ad-format="auto"
         data-full-width-responsive="true"></ins>
@@ -963,13 +997,13 @@ function renderAds(settings) {
 
   let usedAdsense = false;
   if (!filledTop) {
-    homeTop.innerHTML = buildAd(settings.adSense.slots.homeTop);
-    homeTop.hidden = !settings.adSense.slots.homeTop;
+    homeTop.innerHTML = buildAd(adSense.slots?.homeTop);
+    homeTop.hidden = !adSense.slots?.homeTop;
     usedAdsense = true;
   }
   if (!filledSidebar) {
-    homeSidebar.innerHTML = buildAd(settings.adSense.slots.homeSidebar);
-    homeSidebar.hidden = !settings.adSense.slots.homeSidebar;
+    homeSidebar.innerHTML = buildAd(adSense.slots?.homeSidebar);
+    homeSidebar.hidden = !adSense.slots?.homeSidebar;
     usedAdsense = true;
   }
 
@@ -1026,25 +1060,41 @@ async function boot() {
     { items: [], nextCursor: null, hasMore: false },
     "posts"
   );
-  const adsPromise = softTimeout(fetchAds({ status: "active", limit: 8 }), [], "ads");
-  const boardsPromise = softTimeout(
-    supabaseForEngagement.rpc("get_popular_discussion_topics",{limit_count:5})
-      .then(async ({data,error})=>{
-        if(error)throw error;
-        const ranked=(data||[]).slice(0,5);
-        if(!ranked.length)return [];
-        // The ranking RPC carries counts but not images. A single bounded
-        // public lookup preserves visual covers without fetching all topics.
-        const media=await supabaseForEngagement.from("discussion_topics")
+  // Defer secondary data until its widget approaches the viewport.
+  // Each query remains bounded; guests do not request member recommendations.
+  let adsPromise = null, boardsPromise = null, leaderboardPromise = null;
+  let suggestionsPromise = null, suggestionsForUser = null;
+  const loadAds = () => adsPromise || (adsPromise = softTimeout(
+    fetchAds({ status: "active", limit: 8,
+      columns: "id,title,body,image_url,link_url,placement,status,starts_at,ends_at" }),
+    [], "ads"
+  ));
+  const loadBoards = () => boardsPromise || (boardsPromise = softTimeout(
+    supabaseForEngagement.rpc("get_popular_discussion_topics", { limit_count: 5 })
+      .then(async ({ data, error }) => {
+        if (error) throw error;
+        const ranked = (data || []).slice(0, 5);
+        if (!ranked.length) return [];
+        const media = await supabaseForEngagement.from("discussion_topics")
           .select("id,media_url,media_type,author_id")
-          .in("id",ranked.map(topic=>topic.id)).limit(5);
-        if(media.error)return ranked;
-        const byId=new Map((media.data||[]).map(item=>[item.id,item]));
-        return ranked.map(topic=>({...topic,...(byId.get(topic.id)||{})}));
+          .in("id", ranked.map(topic => topic.id)).limit(5);
+        if (media.error) return ranked;
+        const byId = new Map((media.data || []).map(item => [item.id, item]));
+        return ranked.map(topic => ({ ...topic, ...(byId.get(topic.id) || {}) }));
       }),
     [], "popular discussions"
-  );
-  const leaderboardPromise = softTimeout(fetchAnnualLeaderboard(5), [], "annual leaderboard");
+  ));
+  const loadLeaderboard = () => leaderboardPromise || (leaderboardPromise = softTimeout(
+    fetchAnnualLeaderboard(5), [], "annual leaderboard"
+  ));
+  const loadSuggestions = userId => {
+    if (!userId) return Promise.resolve([]);
+    if (suggestionsForUser !== userId) {
+      suggestionsForUser = userId;
+      suggestionsPromise = softTimeout(fetchSuggestedPeople(userId, 8), [], "suggested people");
+    }
+    return suggestionsPromise || Promise.resolve([]);
+  };
 
   // First meaningful content does not wait for sidebar widgets, identity,
   // advertisements or custom-theme lookups.
@@ -1059,9 +1109,41 @@ async function boot() {
   renderLists();
   void hydratePublicHandles(state.posts).then(()=>renderLists())
     .catch(error=>console.warn("Post usernames unavailable",error));
-  // These rankings are independent of login and sidebar data.
-  renderTrending(state.activeCategory);
+  // Rankings, sidebar data and recommendations load only when approached.
+  refreshTrending(state.activeCategory);
   renderPopular();
+  observeHomeWidget("#trendingList", activateTrendingRanking, "500px 0px");
+  observeHomeWidget("#popularTrack", activatePopularRanking, "700px 0px");
+  observeHomeWidget("#popularTopicsTrack", async () => {
+    state.discussionTopics = await loadBoards();
+    state.discussionTopicsLoaded = true;
+    renderPopularTopics();
+    void hydratePublicHandles(state.discussionTopics).then(() => renderPopularTopics())
+      .catch(error => console.warn("Discussion usernames unavailable", error));
+  }, "850px 0px");
+  observeHomeWidget("#leaderboardList", async () => {
+    state.leaderboard = await loadLeaderboard();
+    renderLeaderboard();
+  }, "850px 0px");
+  observeHomeWidget(".side-card", async () => {
+    const [ads, settings] = await Promise.all([loadAds(), settingsPromise]);
+    state.ads = ads;
+    renderAds(settings || {});
+  }, "650px 0px");
+  observeHomeWidget("#popular", async () => {
+    const user = state.user || await identityPromise;
+    if (!user?.id) return;
+    state.user = state.user || user;
+    state.suggestedPeople = await loadSuggestions(user.id);
+    renderSuggestedPeople();
+  }, "1100px 0px");
+  let championHistoryPromise = null;
+  const championHistory = document.querySelector(".leaderboard-history");
+  championHistory?.addEventListener("toggle", () => {
+    if (!championHistory.open || championHistoryPromise) return;
+    championHistoryPromise = softTimeout(fetchAnnualChampions(9), [], "champion archive");
+    void championHistoryPromise.then(renderAnnualChampions);
+  });
   renderTagFilters();
   setupTagFilters();
   setupSearch();
@@ -1106,24 +1188,7 @@ async function boot() {
     ).catch(error=>console.warn("Reader home unavailable:",error));
   }
 
-  // Secondary widgets are deliberately separated from the article render.
-  const [ads, discussionTopics, leaderboard, suggestedPeople] = await Promise.all([
-    adsPromise,
-    boardsPromise,
-    leaderboardPromise,
-    softTimeout(fetchSuggestedPeople(state.user?.id || null, 8), [], "suggested people")
-  ]);
-  state.ads = ads;
-  state.discussionTopics = discussionTopics;
-  state.leaderboard = leaderboard;
-  state.suggestedPeople = suggestedPeople;
-  renderPopularTopics();
-  void hydratePublicHandles(state.discussionTopics).then(()=>renderPopularTopics())
-    .catch(error=>console.warn("Discussion usernames unavailable",error));
-  renderLeaderboard();
-  void softTimeout(fetchAnnualChampions(9), [], "champion archive").then(renderAnnualChampions);
-  renderSuggestedPeople();
-  renderAds(state.settings);
+  // Secondary widgets are loaded by their one-shot observers.
 }
 
 function installImmediateCommunityJoin(){

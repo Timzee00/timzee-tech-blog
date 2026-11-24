@@ -8,7 +8,8 @@ test("homepage keeps essential Blipmood design, accessibility and feed styles",(
   "variables.css","base.css","navbar.css","buttons.css","forms.css","avatars.css",
   "content-pages.css","home.css","animations.css","utilities.css","responsive.css",
   "design-system.css","mobile-acceptance-fixes.css","viewport-guard.css",
-  "verified-identity.css","reader-journey.css","feature-launches.css","blipmood-brand.css"
+  "verified-identity.css","reader-journey.css","feature-launches.css","blipmood-brand.css",
+  "blipmood-home.css","blipmood-home-refresh.css","blipmood-neon-experience.css"
  ]){
   assert.ok(home.includes(essential),essential+" must remain on homepage");
  }
@@ -39,4 +40,13 @@ test("guest homepage does not eagerly download personalized reader modules",()=>
  assert.match(app,/if\(state\.user\?\.id\)\{\s*\/\/ No reader-personalization/);
  assert.match(app,/import\("\.\/reader-home\.mjs"\)\.then\(\(\{mountReaderHome\}\)=>/);
  assert.match(app,/mountReaderHome\(state\.user,\{posts:state\.posts,categories:state\.categories\}\)/);
+});
+
+test("homepage styles are bundled and unchanged assets keep stable cache keys",()=>{
+ const build=read("scripts/build-site.mjs"),html=read("index.html"),home=imports(read("assets/css/styles-home.css"));
+ for(const name of ["blipmood-home.css","blipmood-home-refresh.css","blipmood-neon-experience.css"])
+  assert.ok(home.includes(name),name+" must be included in the homepage CSS bundle");
+ assert.doesNotMatch(html,/href="assets\/css\/blipmood-(?:home|home-refresh|neon-experience)\.css"/);
+ for(const marker of ["const javascriptVersion = await hashAssetGroup","const stylesheetVersion = await hashAssetGroup","vendorVersions.get(assetPath)","mediaVersions.get(assetPath)","optimizeHomeHero(contents,heroVersion)"])
+  assert.ok(build.includes(marker),"Missing optimization contract: "+marker);
 });
