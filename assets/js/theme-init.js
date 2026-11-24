@@ -52,7 +52,7 @@
     document.documentElement.dataset.fontScale = scale;
     document.documentElement.style.fontSize = scale + "%";
     document.documentElement.dataset.contentDensity = options?.contentDensity === "compact" ? "compact" : "comfortable";
-    if (validTheme(options?.theme)) {
+    if ((options && options.theme === "system") || validTheme(options?.theme)) {
       // A header toggle is an explicit cross-page choice. A previously saved
       // account preference may still say "system"; it must not undo that choice
       // while a page is booting or loading unrelated preferences.
