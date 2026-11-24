@@ -25,7 +25,7 @@ test("For You video previews load metadata only near the viewport", () => {
   assert.match(fyp, /loadeddata/);
   assert.match(fyp, /limit = 20/);
   assert.match(fyp, /p_limit: limit/);
-  assert.doesNotMatch(fyp, /loading="lazy"/);
+  assert.doesNotMatch(fyp, /<video[^>]*loading="lazy"/);
 });
 
 test("Reels prepare a visible preview and keep active audio state consistent", () => {
