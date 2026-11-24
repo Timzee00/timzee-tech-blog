@@ -140,7 +140,10 @@ export async function loadUserPreferences(user = null) {
   writeLocalPreferences(currentUser.id, merged); return merged;
 }
 export async function saveUserPreferences(userId, partial) {
-  if (!userId) return writeLocalPreferences("guest", partial);
+  if (!userId) {
+    const appearanceThemeExplicit = Boolean(partial?.appearance && Object.prototype.hasOwnProperty.call(partial.appearance, "theme"));
+    return writeLocalPreferences("guest", partial, { appearanceThemeExplicit });
+  }
   const existing = readLocalPreferences(userId); const merged = mergePreferences(deepMerge(existing, partial));
   const result = await supabase.from("user_settings").upsert({ user_id: userId, preferences: merged, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
   if (result.error) throw result.error;
