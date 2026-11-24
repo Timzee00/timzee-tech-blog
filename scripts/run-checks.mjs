@@ -28,6 +28,13 @@ const steps=[
     ]
   },
   {
+    "label": "Discussion ranking aggregation",
+    "args": [
+      "--test",
+      "tests/discussion-ranking-scale.test.cjs"
+    ]
+  },
+  {
     "label": "Public page-link validation",
     "args": [
       "scripts/validate-page-links.mjs"
