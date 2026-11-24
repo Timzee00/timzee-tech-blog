@@ -31,5 +31,5 @@ test("voice-note playback waveform is decoded from the actual audio and loaded l
 test("voice notes keep a normal readable width on mobile and desktop", () => {
   assert.match(chatCss, /\.chat-page \.voice-player\{box-sizing:border-box;width:100%/);
   assert.match(chatCss, /\.chat-message:has\(\.voice-player\)\{width:min\(420px,92%\)/);
-  assert.match(chatCss, /Prevent voice-note waveform and player from being squeezed/);
+  assert.match(chatCss, /\.chat-page \.chat-message \.voice-player\{width:100%!important;max-width:100%!important\}/);
 });
