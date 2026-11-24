@@ -999,6 +999,15 @@
         try { sessionStorage.setItem("timzee:reels-muted", String(state.sessionMuted)); } catch {}
         document.querySelectorAll(".reel-video").forEach(video => { video.muted = state.sessionMuted; });
         syncHeaderMute();
+        // The volume control is an explicit user gesture. Resume the active
+        // reel here so mobile browsers can grant audio playback permission.
+        if (!state.sessionMuted) {
+          const active = document.getElementById("video-" + state.activeIndex);
+          if (active) {
+            hydrateNearby(state.activeIndex, { playback: true });
+            playWithSoundFallback(active, state.activeIndex, { explicit: true });
+          }
+        }
       }
       const playerMenu = document.getElementById("reelPlayerMenu");
       const playerMenuToggle = document.getElementById("reelPlayerMenuToggle");
@@ -1446,7 +1455,7 @@
           <div class="reel-item" id="reel-${index}" data-index="${index}" data-id="${escapeHTML(video.id)}">
             <div class="reel-scrub-time" id="scrubtime-${index}">0:00</div>
             <div class="reel-buffer-spinner" id="spinner-${index}"></div>
-            <video class="reel-video" id="video-${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} playsinline ${state.autoAdvance ? "" : "loop"} preload="none" data-video-src="${escapeHTML(src)}"></video>
+            <video class="reel-video" id="video-${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} playsinline ${state.autoAdvance ? "" : "loop"} preload="none" data-video-src="${escapeHTML(src)}" data-resume-time="0"></video>
             <div class="reel-vignette"></div>
             <div class="reel-tapzone" aria-hidden="true"></div>
             <div class="reel-pause-flash" id="pauseflash-${index}">${icon("play")}</div>
@@ -1531,14 +1540,16 @@
         if (!explicit && (state.preferences.videos.autoplay === false || saveData || document.visibilityState === "hidden")) return;
         // Preserve the viewer's latest mute decision across every reel.
         if (state.commentsOpenFor || document.getElementById("reelUploadDialog")?.open) return;
+        hydrateNearby(idx, { playback: true });
         vid.muted = state.sessionMuted;
         const attempt = vid.play();
         if (attempt && typeof attempt.catch === "function") {
           attempt.catch(() => {
-            // An autoplay policy rejection applies to the whole feed.
-            // Preserve the effective sound state for every subsequent reel.
-            // Keep the current item muted only until a deliberate viewer gesture.
-            // Do not persist an autoplay-policy rejection as the viewer's mute choice.
+            // Autoplay can be rejected with sound. Switch the session's effective
+            // state to muted (without saving a user preference) so the visible
+            // control correctly offers Unmute instead of claiming audio is on.
+            if (explicit) return;
+            state.sessionMuted = true;
             vid.muted = true;
             syncHeaderMute();
             vid.play().catch(() => {});
@@ -2000,14 +2011,35 @@
         // Only load the video the viewer actually watches. Older code attached
         // both neighbours and invoked load(), producing CDN traffic while scrolling.
         // Video src is added only for the active reel or an explicit tap.
-        function hydrateNearby(index) {
+        function releaseInactiveReelSources(activeIndex) {
+          document.querySelectorAll(".reel-video").forEach(video => {
+            if (Number(video.dataset.index) === activeIndex || !video.hasAttribute("src")) return;
+            video.dataset.resumeTime = String(Number(video.currentTime) || 0);
+            video.pause();
+            video.removeAttribute("src");
+            video.load();
+          });
+        }
+        function hydrateNearby(index, { playback = false } = {}) {
           const candidate=document.getElementById(`video-${index}`);
-          if(!candidate||candidate.getAttribute("src"))return;
+          if(!candidate)return;
           const source=candidate.dataset.videoSrc;
           if(!source)return;
-          candidate.preload="none";
+          if(candidate.hasAttribute("src")) {
+            if(playback)candidate.preload="auto";
+            return;
+          }
+          const resumeTime=Number(candidate.dataset.resumeTime)||0;
+          candidate.preload=playback?"auto":"metadata";
+          if(resumeTime>0) {
+            candidate.addEventListener("loadedmetadata",()=>{
+              if(Number.isFinite(candidate.duration))
+                candidate.currentTime=Math.min(resumeTime,Math.max(0,candidate.duration-0.1));
+              candidate.dataset.resumeTime="0";
+            },{once:true});
+          }
           candidate.src=source;
-          // The play() promise below starts fetching only if playback is requested.
+          candidate.load();
         }
         // Wait until a viewer settles on the reel. A rapid swipe must not
         // download an entire video just because it crossed the screen briefly.
@@ -2020,9 +2052,13 @@
               const idx = entry.target.dataset.index;
               const vid = document.getElementById(`video-${idx}`);
               if (!vid) return;
-              if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+              if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
                 state.activeIndex = Number(idx);
-                // Background tabs and Data Saver never download autoplay candidates.
+                // Keep one active media source at a time. The visible reel gets
+                // metadata for its preview even when autoplay is disabled.
+                releaseInactiveReelSources(Number(idx));
+                hydrateNearby(Number(idx));
+                // Background tabs and Data Saver never autoplay candidates.
                 const saving=state.preferences.videos.dataSaver ||
                   state.preferences.performance?.dataSaver || navigator.connection?.saveData;
                 if(document.visibilityState!=="hidden" &&
