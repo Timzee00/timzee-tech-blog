@@ -23,6 +23,7 @@ test("For You video previews load metadata only near the viewport", () => {
   assert.match(fyp, /rootMargin:"320px 0px"/);
   assert.match(fyp, /video\.preload="metadata"/);
   assert.match(fyp, /loadeddata/);
+  assert.match(fyp, /currentTime=Math.min\(0\.08/);
   assert.match(fyp, /limit = 20/);
   assert.match(fyp, /p_limit: limit/);
   assert.doesNotMatch(fyp, /<video[^>]*loading="lazy"/);
@@ -33,7 +34,8 @@ test("Reels prepare a visible preview and keep active audio state consistent", (
   assert.match(reels, /releaseInactiveReelSources\(Number\(idx\)\)/);
   assert.match(reels, /data-index="\$\{index\}"/);
   assert.match(reels, /candidate\.preload=playback\?"auto":"metadata"/);
-  assert.match(reels, /entry\.intersectionRatio >= 0\.55/);
+  assert.match(reels, /candidate\.currentTime=Math\.min\(0\.08/);
+  assert.match(reels, /entry\.intersectionRatio >= 0\.5/);
   assert.match(reels, /if \(!state\.sessionMuted\)[\s\S]*playWithSoundFallback\(active, state\.activeIndex, \{ explicit: true \}\)/);
   assert.match(reels, /state\.sessionMuted = true;[\s\S]*vid\.muted = true;[\s\S]*syncHeaderMute\(\)/);
   assert.match(reels, /if \(explicit\) return;/);
