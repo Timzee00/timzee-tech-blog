@@ -2,7 +2,7 @@ const test=require("node:test");
 const assert=require("node:assert/strict");
 const fs=require("node:fs");
 const read=path=>fs.readFileSync(path,"utf8");
-const migration=read("supabase/migrations/20261124090000_unified_personalized_reels.sql");
+const migration=read("supabase/migrations/20261124072758_unified_personalized_reels.sql");
 const video=read("video.html");
 const discovery=read("assets/js/video-discovery.mjs");
 const menu=read("assets/js/blipmood-unified-menu.mjs");
