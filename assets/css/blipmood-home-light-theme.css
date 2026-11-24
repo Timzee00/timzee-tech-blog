@@ -1,0 +1,63 @@
+/* Explicit light palette for the neon homepage layer. This file is imported
+   after the dark art direction so user appearance settings always win. */
+:root[data-theme="light"] body.blipmood-home {
+  --bm-navy:#f5f8f8; --bm-panel:#ffffff; --bm-raise:#eaf1f0;
+  --bm-teal:#076f64; --bm-sky:#2368a2; --bm-copy:#172b32; --bm-muted:#536970;
+  --bg:#f5f8f8; --bg-deep:#eaf1f0; --ink:#172b32; --muted:#536970;
+  --card:#ffffff; --card-solid:#ffffff;
+  --color-bg:#f5f8f8; --color-surface:#ffffff; --color-surface-muted:#eaf1f0;
+  --color-text:#172b32; --color-text-muted:#536970; --color-text-subtle:#536970;
+  --color-primary:#076f64; --color-primary-hover:#05675d; --color-secondary:#2368a2;
+  --color-text-on-primary:#ffffff; --color-border:rgba(23,43,50,.12);
+  --color-border-strong:rgba(23,43,50,.22);
+  background:#f5f8f8;color:#172b32;
+  background-image:radial-gradient(ellipse 58% 16% at 77% 4%,rgba(17,126,184,.08),transparent 95%),
+    linear-gradient(180deg,#f5f8f8,#edf4f3 55%,#f5f8f8 100%);
+}
+:root[data-theme="light"] body.blipmood-home::before{background:radial-gradient(ellipse 47% 36% at 72% 32%,rgba(29,117,208,.07),transparent 80%)}
+:root[data-theme="light"] body.blipmood-home .site-header{background:rgba(255,255,255,.94);border-bottom:1px solid rgba(23,43,50,.12);box-shadow:0 8px 24px rgba(23,43,50,.06)}
+:root[data-theme="light"] .blipmood-home .site-header .nav-pill a,
+:root[data-theme="light"] .blipmood-home .site-header .nav-more-toggle,
+:root[data-theme="light"] .blipmood-home .site-header .icon-btn{color:#172b32}
+:root[data-theme="light"] .blipmood-home .site-header .nav-pill a:hover,
+:root[data-theme="light"] .blipmood-home .site-header .nav-more-toggle:hover{color:#076f64}
+:root[data-theme="light"] .blipmood-home .site-header .search-box{background:#f2f7f6;border-color:rgba(23,43,50,.16)}
+:root[data-theme="light"] .blipmood-home .site-header .search-box input{color:#172b32}
+:root[data-theme="light"] .blipmood-home .site-header .search-box input::placeholder{color:#64777c}
+:root[data-theme="light"] .blipmood-home .home-intro{background:radial-gradient(ellipse 55% 73% at 78% 42%,rgba(17,149,209,.07),transparent 78%)}
+:root[data-theme="light"] .blipmood-home .home-intro .eyebrow{background:rgba(7,111,100,.07);border-color:rgba(7,111,100,.2);color:#076f64}
+:root[data-theme="light"] .blipmood-home .home-intro h1{color:#172b32;text-shadow:none}
+:root[data-theme="light"] .blipmood-home .bm-mood-line{background:linear-gradient(110deg,#076f64 0%,#087f73 48%,#2368a2 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+:root[data-theme="light"] .blipmood-home .bm-hero-description{color:#536970}
+:root[data-theme="light"] .blipmood-home .cta .btn.ghost{background:#ffffff;border-color:rgba(23,43,50,.2);color:#172b32}
+:root[data-theme="light"] .blipmood-home .cta .btn.ghost:hover{background:#eaf1f0}
+:root[data-theme="light"] .blipmood-home .intro-note{color:#536970}
+:root[data-theme="light"] .blipmood-home .bm-orbit-words{color:#076f64;text-shadow:none}
+:root[data-theme="light"] .blipmood-home .bm-orbit-words span:nth-child(2){color:#2368a2}
+:root[data-theme="light"] .blipmood-home .explore-panel{background:linear-gradient(132deg,#ffffff,#f1f7f6);border-color:rgba(23,43,50,.13);box-shadow:0 14px 34px rgba(23,43,50,.08)}
+:root[data-theme="light"] .blipmood-home .explore-panel .eyebrow{color:#076f64}
+:root[data-theme="light"] .blipmood-home .explore-panel>a{background:linear-gradient(145deg,#ffffff,#edf5f4);border-color:rgba(23,43,50,.12)}
+:root[data-theme="light"] .blipmood-home .explore-panel>a:hover,
+:root[data-theme="light"] .blipmood-home .explore-panel>a:focus-visible{border-color:#076f64;box-shadow:0 10px 22px rgba(23,43,50,.1)}
+:root[data-theme="light"] .blipmood-home .explore-panel strong{color:#172b32}
+:root[data-theme="light"] .blipmood-home .explore-panel small{color:#536970}
+:root[data-theme="light"] .blipmood-home .bm-explore-icon{background:rgba(7,111,100,.08);border-color:rgba(7,111,100,.16);color:#076f64}
+:root[data-theme="light"] .blipmood-home .bm-explore-icon.bm-icon-blue{color:#2368a2}
+:root[data-theme="light"] .blipmood-home .explore-footer a,
+:root[data-theme="light"] .blipmood-home .bm-sidebar-cta a,
+:root[data-theme="light"] .blipmood-home .bm-feed-all,
+:root[data-theme="light"] .blipmood-home .tz-reader-interest-manage{color:#076f64}
+:root[data-theme="light"] .blipmood-home :is(#latestPosts .post-card,.people-card,.popular-card,.side-card,.tz-reader-home,#categories .board){background:#ffffff;border-color:rgba(23,43,50,.12);box-shadow:0 6px 22px rgba(23,43,50,.06)}
+:root[data-theme="light"] .blipmood-home #latestPosts .post-card:hover,
+:root[data-theme="light"] .blipmood-home .popular-card:hover{border-color:#76b9b0;box-shadow:0 12px 28px rgba(23,43,50,.1)}
+:root[data-theme="light"] .blipmood-home #categoryNav a{background:#ffffff;border-color:rgba(23,43,50,.15);color:#344c52}
+:root[data-theme="light"] .blipmood-home #categoryNav a[aria-current="true"]{background:#076f64;color:#ffffff;border-color:#076f64}
+:root[data-theme="light"] .blipmood-home .bm-feed-heading .section-title,
+:root[data-theme="light"] .blipmood-home .popular-top .section-title{color:#172b32}
+:root[data-theme="light"] .blipmood-home .bm-feed-eyebrow{color:#076f64}
+:root[data-theme="light"] .blipmood-home .post-card-excerpt,
+:root[data-theme="light"] .blipmood-home .popular-summary{color:#536970}
+:root[data-theme="light"] .blipmood-home .bm-sidebar-cta{background:linear-gradient(135deg,#e7f3f1,#ffffff);border-color:rgba(7,111,100,.18)}
+:root[data-theme="light"] .blipmood-home .bm-feed-all{background:#edf5f4;border-color:rgba(7,111,100,.18)}
+:root[data-theme="light"] .blipmood-home #trendingList .post-card{background:#ffffff}
+:root[data-theme="light"] .blipmood-home .footer{background:#eaf1f0;color:#344c52;border-top:1px solid rgba(23,43,50,.12)}
