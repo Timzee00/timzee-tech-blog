@@ -292,7 +292,8 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
-      .reel-caption-more{background:transparent;color:#e3f4f0;border:0;text-decoration:underline;font:700 12px system-ui;padding:4px 0 8px;min-height:36px;cursor:pointer}
+.reel-source-post{display:inline-flex;margin:2px 0 7px;color:#b5f4e9;font:700 12px system-ui;text-decoration:underline;text-underline-offset:2px;position:relative;z-index:1}
+            .reel-caption-more{background:transparent;color:#e3f4f0;border:0;text-decoration:underline;font:700 12px system-ui;padding:4px 0 8px;min-height:36px;cursor:pointer}
       .reel-caption.expanded {
         -webkit-line-clamp: unset;
         overflow:visible;
@@ -921,7 +922,7 @@
       } from "./assets/js/videos-marketplace.js";
       import { supabase, getCurrentUser } from "./assets/js/supabase.js";
       import { loadUserPreferences, mergePreferences } from "./assets/js/user-preferences.js";
-      import { fetchVideoDiscoveryPage } from "./assets/js/video-discovery.mjs";
+      import { fetchVideoDiscoveryPage, recordVideoWatchSignal } from "./assets/js/video-discovery.mjs";
       import { escapeHTML, isSafeUrl } from "./assets/js/utils.js";
       import { icon } from "./assets/js/icons.js";
       import {setupMentionInput} from "./assets/js/mentions.js";
@@ -1437,6 +1438,9 @@
         const poster = video.thumbnail_url && isSafeUrl(video.thumbnail_url) ? deliveryMediaUrl(video.thumbnail_url) : "";
         const src = isSafeUrl(video.video_url) ? deliveryMediaUrl(video.video_url) : "";
         const caption = video.description || "";
+        const originalPostMarkup=video.source_post_id
+          ? '<a class="reel-source-post" href="post.html?id='+encodeURIComponent(video.source_post_id)+'">View original post</a>'
+          : '';
 
         return `
           <div class="reel-item" id="reel-${index}" data-index="${index}" data-id="${escapeHTML(video.id)}">
@@ -1460,6 +1464,7 @@
                   ${followMarkup}
                 </div>
                 <p class="reel-caption" id="caption-${index}">${renderSocialText(caption)}</p>
+                ${originalPostMarkup}
                 <button type="button" class="reel-caption-more" data-action="expand-caption" data-index="${index}" aria-expanded="false" ${caption.length<120?"hidden":""}>More caption</button>
                 <div class="reel-tags">${tags}</div>
               </div>
@@ -2038,6 +2043,54 @@
           if(video && !video.dataset.playViewWired) {
             video.dataset.playViewWired="true";
             let watchTimer=null;
+            // Record actual playback progress in small batches. The database
+            // aggregates per viewer/video/day and derives topic affinity.
+            let watchedSeconds=0,lastPlaybackTime=null,watchFlushPromise=null;
+            let watchFlushRequested=false,pendingCompletion=false,watchSignalRetryAt=0;
+            const videoId=el.dataset.id;
+            const flushWatchSignal=async completed=>{
+              if(completed)pendingCompletion=true;
+              if(!state.user?.id){watchedSeconds=0;pendingCompletion=false;return;}
+              if(watchFlushPromise){watchFlushRequested=true;return;}
+              const seconds=Math.min(90,Math.floor(watchedSeconds));
+              const isCompleted=pendingCompletion;
+              if(seconds<3&&!isCompleted)return;
+              watchedSeconds=Math.max(0,watchedSeconds-seconds);
+              pendingCompletion=false;
+              watchFlushPromise=(async()=>{
+                try{
+                  await recordVideoWatchSignal(supabase,{videoId,watchSeconds:seconds,completed:isCompleted});
+                }catch(error){
+                  watchedSeconds=Math.min(90,watchedSeconds+seconds);
+                  pendingCompletion=pendingCompletion||isCompleted;
+                  watchSignalRetryAt=Date.now()+15000;
+                  console.warn("Reel watch signal unavailable; retry after cooldown",error);
+                }finally{
+                  watchFlushPromise=null;
+                  if(watchFlushRequested){
+                    watchFlushRequested=false;
+                    if(Date.now()>=watchSignalRetryAt&&(watchedSeconds>=3||pendingCompletion))
+                      void flushWatchSignal(pendingCompletion);
+                  }
+                }
+              })();
+              await watchFlushPromise;
+            };
+            video.addEventListener("playing",()=>{lastPlaybackTime=video.currentTime;});
+            video.addEventListener("timeupdate",()=>{
+              const currentTime=video.currentTime;
+              if(video.paused||document.visibilityState==="hidden"||
+                 state.activeIndex!==Number(el.dataset.index)){
+                lastPlaybackTime=currentTime;return;
+              }
+              if(lastPlaybackTime!==null){
+                const delta=currentTime-lastPlaybackTime;
+                if(delta>0&&delta<=4)watchedSeconds+=delta;
+              }
+              lastPlaybackTime=currentTime;
+              if(watchedSeconds>=10&&Date.now()>=watchSignalRetryAt)
+                void flushWatchSignal(false);
+            });
             // Count a real visible watch, not a one-frame autoplay or rapid
             // scroll. Postgres enforces one view per account/video/UTC day.
             video.addEventListener("playing",()=>{
@@ -2088,8 +2141,14 @@
                 }
               },2000);
             });
-            video.addEventListener("pause",()=>clearTimeout(watchTimer));
-            video.addEventListener("ended",()=>clearTimeout(watchTimer));
+            video.addEventListener("pause",()=>{
+              clearTimeout(watchTimer);lastPlaybackTime=null;
+              if(!video.ended)void flushWatchSignal(false);
+            });
+            video.addEventListener("ended",()=>{
+              clearTimeout(watchTimer);lastPlaybackTime=null;
+              void flushWatchSignal(true);
+            });
           }
         });
 
@@ -2568,6 +2627,5 @@
       }
       boot();
     </script>
-    <script type="module" src="assets/js/blipmood-unified-menu.mjs"></script>
   </body>
 </html>
