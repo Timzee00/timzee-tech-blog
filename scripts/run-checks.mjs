@@ -16,7 +16,8 @@ const steps=[
       "tests/chat-previews.test.cjs",
       "tests/blip-earn-phase-a.test.cjs",
       "tests/blip-earn-manual-rewards.test.cjs",
-      "tests/chat-formatters.test.cjs"
+      "tests/chat-formatters.test.cjs",
+      "tests/chat-voice-waveform-and-reel-audio.test.cjs"
     ]
   },
   {
