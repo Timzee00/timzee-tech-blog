@@ -148,6 +148,7 @@
             <tbody id="postsTable"></tbody>
           </table>
         </div>
+        <button type="button" class="btn ghost sm" id="postsLoadMoreBtn" hidden>Load more</button>
       </section>
 
       <section class="admin-card" data-panel="comments" style="display:none;">
@@ -166,6 +167,7 @@
             <tbody id="commentsTable"></tbody>
           </table>
         </div>
+        <button type="button" class="btn ghost sm" id="commentsLoadMoreBtn" hidden>Load more</button>
       </section>
 
       <section class="admin-card" data-panel="announcements" style="display:none;">
@@ -210,6 +212,7 @@
             <tbody id="announcementsTable"></tbody>
           </table>
         </div>
+        <button type="button" class="btn ghost sm" id="announcementsLoadMoreBtn" hidden>Load older</button>
       </section>
 
       <section class="admin-card" data-panel="launches" style="display:none;" aria-labelledby="featureManagerHeading">
@@ -533,6 +536,7 @@
             <tbody id="contactTable"></tbody>
           </table>
         </div>
+        <button type="button" class="btn ghost sm" id="contactRequestsLoadMore" data-request-more="contact" hidden>Load older</button>
 
         <h3 style="margin-top:20px;">Support</h3>
         <div class="table-wrap">
@@ -551,6 +555,7 @@
             <tbody id="supportTable"></tbody>
           </table>
         </div>
+        <button type="button" class="btn ghost sm" id="supportRequestsLoadMore" data-request-more="support" hidden>Load older</button>
 
         <h3 style="margin-top:20px;">Newsletter</h3>
         <div class="table-wrap">
@@ -568,6 +573,7 @@
             <tbody id="newsletterTable"></tbody>
           </table>
         </div>
+        <button type="button" class="btn ghost sm" id="newsletterLoadMore" data-request-more="newsletter" hidden>Load older</button>
 
         <h3 style="margin-top:20px;">Ad Applications</h3>
         <div class="table-wrap">
@@ -587,6 +593,7 @@
             <tbody id="adsApplicationTable"></tbody>
           </table>
         </div>
+        <button type="button" class="btn ghost sm" id="adApplicationsLoadMore" data-request-more="ads" hidden>Load older</button>
 
         <h3 style="margin-top:20px;">Admin Requests</h3><p class="hint">Approve or reject applications here; approving an application does not automatically give the applicant elevated permissions. Grant staff access separately in Users.</p>
         <div class="table-wrap">
@@ -604,6 +611,7 @@
             <tbody id="adminRequestTable"></tbody>
           </table>
         </div>
+        <button type="button" class="btn ghost sm" id="adminRequestsLoadMore" data-request-more="admin" hidden>Load older</button>
 
         <h3 style="margin-top:20px;">Content Requests</h3><p class="hint">View each reader request and mark completed after handling it.</p>
         <div class="table-wrap">
@@ -621,6 +629,7 @@
             <tbody id="contentRequestTable"></tbody>
           </table>
         </div>
+        <button type="button" class="btn ghost sm" id="contentRequestsLoadMore" data-request-more="content" hidden>Load older</button>
       </section>
 
       <section class="admin-card" data-panel="profile" style="display:none;">

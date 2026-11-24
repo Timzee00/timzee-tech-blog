@@ -6,8 +6,9 @@ import { requireRole, logout, getDisplayName, getUserRole, getSession } from "./
 import { supabase as supabaseClient } from "./supabase.js";
 import {
   fetchCategories,
-  fetchPosts,
-  fetchComments,
+  fetchAdminPostsPage,
+  fetchCommentModerationPage,
+  fetchAdminQueuePage,
   fetchThemes,
   fetchAds,
   fetchContactRequests,
@@ -74,6 +75,7 @@ let postMediaUploadedUrls = new WeakMap();
 let existingPostMedia = [];
 const customCategoryValue = "__other__";
 const emptyEditorHtml = "";
+const ADMIN_PAGE_SIZE = 40;
 
 const categoryPalette = [
   "#0f766e",
@@ -97,6 +99,12 @@ const state = {
   adApplications: [],
   adminRequests: [],
   contentRequests: [],
+  postsCursor: null, postsHasMore: false,
+  commentsCursor: null, commentsHasMore: false,
+  requestQueueCursors: {}, requestQueueHasMore: {}, requestQueueLoading: {},
+  requestsLoaded: false, requestsLoading: false,
+  announcements: [], announcementCursor: null, announcementHasMore: false,
+  announcementsLoaded: false, announcementsLoading: false,
   user: null,
   users: [],
   userSearch: "",
@@ -384,6 +392,8 @@ function setupTabs() {
       });
       if (button.dataset.tab === "curator") void ensureCuratorManager();
       if (button.dataset.tab === "launches") void ensureLaunchManager();
+      if (button.dataset.tab === "requests") void ensureRequestsLoaded();
+      if (button.dataset.tab === "announcements") void ensureAnnouncementsLoaded();
     });
   });
 }
@@ -461,60 +471,54 @@ async function setupAnnouncementForm() {
   });
 }
 
-async function renderAnnouncementsTable() {
+async function renderAnnouncementsTable({ reset = true } = {}) {
   const table = document.getElementById("announcementsTable");
-  if (!table) return;
-
+  const moreButton = document.getElementById("announcementsLoadMoreBtn");
+  if (!table || state.announcementsLoading) return;
+  state.announcementsLoading = true;
+  if (moreButton) { moreButton.disabled = true; moreButton.textContent = "Loading…"; }
+  if (reset) { state.announcements = []; state.announcementCursor = null; state.announcementHasMore = false; }
   try {
-    const result = await supabase
-      .from("announcements")
-      .select("*")
-      .order("created_at", { ascending: false });
-    
-    const announcements = result.data || [];
-    if (!announcements.length) {
-      table.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#999;'>No announcements yet</td></tr>";
-      return;
-    }
-
-    table.innerHTML = announcements
-      .map((ann) => `
-        <tr>
-          <td>${escapeHTML(ann.title)}</td>
-          <td>${ann.type}</td>
-          <td>${ann.status || "published"}</td>
-          <td>${formatDate(ann.created_at)}</td>
-          <td>
-            <div class="inline-actions">
-              <button class="muted" data-action="edit" data-id="${ann.id}">Edit</button>
-              <button class="danger" data-action="delete" data-id="${ann.id}">Delete</button>
-            </div>
-          </td>
-        </tr>
-      `)
-      .join("");
-
-    table.querySelectorAll("button").forEach((btn) => {
+    const page = await fetchAdminQueuePage("announcements", {
+      cursor: reset ? null : state.announcementCursor, limit: 30
+    });
+    state.announcements = reset ? page.items : [...state.announcements, ...page.items];
+    state.announcementCursor = page.nextCursor;
+    state.announcementHasMore = page.hasMore;
+    state.announcementsLoaded = true;
+    table.innerHTML = state.announcements.length ? state.announcements.map(ann => `
+      <tr>
+        <td>${escapeHTML(ann.title)}</td>
+        <td>${escapeHTML(ann.type || "")}</td>
+        <td>${escapeHTML(ann.status || "published")}</td>
+        <td>${formatDate(ann.created_at)}</td>
+        <td><div class="inline-actions">
+          <button class="muted" data-action="edit" data-id="${ann.id}">Edit</button>
+          <button class="danger" data-action="delete" data-id="${ann.id}">Delete</button>
+        </div></td>
+      </tr>
+    `).join("") : "<tr><td colspan='5' style='text-align:center; color:#999;'>No announcements yet</td></tr>";
+    table.querySelectorAll("button").forEach(btn => {
       btn.addEventListener("click", async () => {
-        const action = btn.dataset.action;
+        if (btn.dataset.action !== "delete") return;
         const announcementId = btn.dataset.id;
-        const announcement = announcements.find((a) => a.id === announcementId);
-        if (!announcement) return;
-
-        if (action === "delete") {
-          if (!await window.appUI.confirm("Delete this announcement?")) return;
-          const result = await supabase.from("announcements").delete().eq("id", announcementId);
-          if (result.error) {
-            window.appUI.toast("Delete failed: " + result.error.message);
-            return;
-          }
-          await renderAnnouncementsTable();
-        }
+        if (!state.announcements.some(item => item.id === announcementId)) return;
+        if (!await window.appUI.confirm("Delete this announcement?")) return;
+        const result = await supabase.from("announcements").delete().eq("id", announcementId);
+        if (result.error) { window.appUI.toast("Delete failed: " + result.error.message); return; }
+        await renderAnnouncementsTable({ reset: true });
       });
     });
+    if (moreButton) {
+      moreButton.hidden = !state.announcementHasMore;
+      moreButton.onclick = () => void renderAnnouncementsTable({ reset: false });
+    }
   } catch (error) {
     console.error("Error loading announcements:", error);
     table.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#f00;'>Error loading announcements</td></tr>";
+  } finally {
+    state.announcementsLoading = false;
+    if (moreButton) { moreButton.disabled = false; if (!moreButton.hidden) moreButton.textContent = "Load older"; }
   }
 }
 
@@ -1232,14 +1236,13 @@ async function openPostForEditing(postId) {
   if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(String(postId||""))){
     window.appUI.toast("This post edit link is invalid.",{tone:"error"});return false;
   }
-  let post=state.posts.find(item=>item.id===postId);
-  if(!post){
-    const result=await supabase.from("posts").select("*").eq("id",postId).maybeSingle();
-    if(result.error||!result.data){
-      window.appUI.toast("Unable to load that post for editing. Check staff access.",{tone:"error"});return false;
-    }
-    post=result.data;
+  // The table includes compact preview rows only. Fetch full article HTML only
+  // when staff explicitly opens one post in the editor.
+  const result=await supabase.from("posts").select("*").eq("id",postId).maybeSingle();
+  if(result.error||!result.data){
+    window.appUI.toast("Unable to load that post for editing. Check staff access.",{tone:"error"});return false;
   }
+  const post=result.data;
   editingPostId=post.id;
   const title=document.getElementById("postTitle");
   title.value=post.title||"";
@@ -1818,7 +1821,9 @@ function attachRequestHandlers(table, kind, updater) {
         window.appUI.toast(result.error.message || "Update failed.");
         return;
       }
-      await refreshData();
+      const queueConfig = REQUEST_QUEUE_CONFIG.find(item => item.queue === kind);
+      const row = queueConfig && state[queueConfig.stateKey].find(item => String(item.id) === String(id));
+      if (row) row.status = nextStatus;
       renderRequests();
     });
   });
@@ -1962,7 +1967,8 @@ function renderRequests() {
         try{
           const result=await updateAdminRequestStatus(item.id,action,state.user?.id);
           if(result.error)throw result.error;
-          await refreshData();renderRequests();
+          item.status=action;
+          renderRequests();
           window.appUI.toast(action==="approved" ? "Application approved. Grant access separately in Users." : "Request status updated.");
         }catch(error){button.disabled=false;window.appUI.toast(extractErrorMessage(error,"Could not update request."));}
       });
@@ -1993,6 +1999,7 @@ function renderRequests() {
       : "<tr><td colspan=\"6\">No content requests yet.</td></tr>";
   }
   attachRequestHandlers(contentTable, "content", updateContentRequestStatus);
+  syncRequestPageButtons();
 }
 
 function setupThemeForm() {
@@ -2109,42 +2116,138 @@ function handleLogout() {
 }
 
 async function refreshData() {
-  const [
-    categories,
-    posts,
-    comments,
-    themes,
-    ads,
-    contactRequests,
-    supportRequests,
-    newsletterSignups,
-    adApplications,
-    adminRequests,
-    contentRequests
-  ] = await Promise.all([
+  // Hidden inbox queues are loaded lazily. Posts/comments use compact cursors.
+  const [categories, postsPage, commentsPage, themes, ads] = await Promise.all([
     fetchCategories(),
-    fetchPosts(),
-    fetchComments(),
+    fetchAdminPostsPage({ limit: ADMIN_PAGE_SIZE }),
+    fetchCommentModerationPage({ limit: ADMIN_PAGE_SIZE }),
     fetchThemes(),
-    fetchAds(),
-    fetchContactRequests(),
-    fetchSupportRequests(),
-    fetchNewsletterSignups(),
-    fetchAdApplications(),
-    fetchAdminRequests(),
-    fetchContentRequests()
+    fetchAds()
   ]);
   state.categories = categories;
-  state.posts = posts;
-  state.comments = comments;
+  state.posts = postsPage.items;
+  state.postsCursor = postsPage.nextCursor;
+  state.postsHasMore = postsPage.hasMore;
+  state.comments = commentsPage.items;
+  state.commentsCursor = commentsPage.nextCursor;
+  state.commentsHasMore = commentsPage.hasMore;
   state.themes = themes;
   state.ads = ads;
-  state.contactRequests = contactRequests;
-  state.supportRequests = supportRequests;
-  state.newsletterSignups = newsletterSignups;
-  state.adApplications = adApplications;
-  state.adminRequests = adminRequests;
-  state.contentRequests = contentRequests;
+  syncAdminPageButtons();
+}
+
+function syncAdminPageButtons() {
+  const postsButton = document.getElementById("postsLoadMoreBtn");
+  if (postsButton) postsButton.hidden = !state.postsHasMore;
+  const commentsButton = document.getElementById("commentsLoadMoreBtn");
+  if (commentsButton) commentsButton.hidden = !state.commentsHasMore;
+}
+
+async function loadMoreAdminPage(kind) {
+  const isPosts = kind === "posts";
+  const button = document.getElementById(isPosts ? "postsLoadMoreBtn" : "commentsLoadMoreBtn");
+  const cursor = isPosts ? state.postsCursor : state.commentsCursor;
+  if (!(isPosts ? state.postsHasMore : state.commentsHasMore) || !cursor || button?.disabled) return;
+  if (button) { button.disabled = true; button.textContent = "Loading…"; }
+  try {
+    const page = isPosts
+      ? await fetchAdminPostsPage({ cursor, limit: ADMIN_PAGE_SIZE })
+      : await fetchCommentModerationPage({ cursor, limit: ADMIN_PAGE_SIZE });
+    if (isPosts) {
+      state.posts = [...state.posts, ...page.items];
+      state.postsCursor = page.nextCursor;
+      state.postsHasMore = page.hasMore;
+      renderPostsTable();
+    } else {
+      state.comments = [...state.comments, ...page.items];
+      state.commentsCursor = page.nextCursor;
+      state.commentsHasMore = page.hasMore;
+      renderCommentsTable();
+    }
+  } catch (error) {
+    reportAppError(error, "Could not load the next admin page");
+    window.appUI.toast(extractErrorMessage(error, "Could not load more records."));
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "Load more"; }
+    syncAdminPageButtons();
+  }
+}
+
+function setupAdminPagination() {
+  document.getElementById("postsLoadMoreBtn")?.addEventListener("click", () => void loadMoreAdminPage("posts"));
+  document.getElementById("commentsLoadMoreBtn")?.addEventListener("click", () => void loadMoreAdminPage("comments"));
+}
+
+const REQUEST_QUEUE_CONFIG = [
+  { queue: "contact", stateKey: "contactRequests", buttonId: "contactRequestsLoadMore" },
+  { queue: "support", stateKey: "supportRequests", buttonId: "supportRequestsLoadMore" },
+  { queue: "newsletter", stateKey: "newsletterSignups", buttonId: "newsletterLoadMore" },
+  { queue: "ads", stateKey: "adApplications", buttonId: "adApplicationsLoadMore" },
+  { queue: "admin", stateKey: "adminRequests", buttonId: "adminRequestsLoadMore" },
+  { queue: "content", stateKey: "contentRequests", buttonId: "contentRequestsLoadMore" }
+];
+
+async function ensureRequestsLoaded() {
+  if (state.requestsLoaded || state.requestsLoading) return;
+  state.requestsLoading = true;
+  ["contactTable", "supportTable", "newsletterTable", "adsApplicationTable", "adminRequestTable", "contentRequestTable"]
+    .forEach(id => { const table = document.getElementById(id); if (table) table.innerHTML = "<tr><td>Loading requests…</td></tr>"; });
+  try {
+    const pages = await Promise.all(REQUEST_QUEUE_CONFIG.map(item => fetchAdminQueuePage(item.queue, { limit: 30 })));
+    REQUEST_QUEUE_CONFIG.forEach((item, index) => {
+      state[item.stateKey] = pages[index].items;
+      state.requestQueueCursors[item.queue] = pages[index].nextCursor;
+      state.requestQueueHasMore[item.queue] = pages[index].hasMore;
+    });
+    state.requestsLoaded = true;
+  } catch (error) {
+    reportAppError(error, "Admin request queues failed to load");
+    window.appUI.toast(extractErrorMessage(error, "Could not load request queues."));
+  } finally {
+    state.requestsLoading = false;
+    renderRequests();
+  }
+}
+
+async function loadMoreRequestQueue(queue) {
+  const config = REQUEST_QUEUE_CONFIG.find(item => item.queue === queue);
+  if (!config || state.requestQueueLoading[queue] || !state.requestQueueHasMore[queue]) return;
+  const button = document.getElementById(config.buttonId);
+  state.requestQueueLoading[queue] = true;
+  if (button) { button.disabled = true; button.textContent = "Loading…"; }
+  try {
+    const page = await fetchAdminQueuePage(queue, { cursor: state.requestQueueCursors[queue], limit: 30 });
+    state[config.stateKey] = [...state[config.stateKey], ...page.items];
+    state.requestQueueCursors[queue] = page.nextCursor;
+    state.requestQueueHasMore[queue] = page.hasMore;
+  } catch (error) {
+    reportAppError(error, "Admin request page failed");
+    window.appUI.toast(extractErrorMessage(error, "Could not load more requests."));
+  } finally {
+    state.requestQueueLoading[queue] = false;
+    renderRequests();
+  }
+}
+
+function setupRequestPagination() {
+  REQUEST_QUEUE_CONFIG.forEach(item => {
+    document.getElementById(item.buttonId)?.addEventListener("click", () => void loadMoreRequestQueue(item.queue));
+  });
+}
+
+function syncRequestPageButtons() {
+  REQUEST_QUEUE_CONFIG.forEach(item => {
+    const button = document.getElementById(item.buttonId);
+    if (!button) return;
+    button.hidden = !state.requestQueueHasMore[item.queue];
+    button.disabled = !!state.requestQueueLoading[item.queue];
+    if (!button.disabled) button.textContent = "Load older";
+  });
+}
+
+async function ensureAnnouncementsLoaded() {
+  if (state.announcementsLoaded || state.announcementsLoading) return;
+  await renderAnnouncementsTable({ reset: true });
 }
 
 async function bootDashboard() {
@@ -2163,6 +2266,8 @@ async function bootDashboard() {
   updateAdImagePreview("");
   await loadPostMedia(null);
   await refreshData();
+  setupAdminPagination();
+  setupRequestPagination();
   populateCategories();
   const customWrap = document.getElementById("customCategoryWrap");
   if (customWrap) customWrap.classList.add("hidden");
@@ -2181,10 +2286,9 @@ async function bootDashboard() {
   renderThemes();
   setupAdForm();
   renderAdsTable();
-  renderRequests();
   renderProfile();
   setupAnnouncementForm();
-  await renderAnnouncementsTable();
+  // Requests and announcements are loaded only when their tabs are opened.
   // The modern curator editor is initialized lazily from the Curator tab.
   await setupFaq();
   handleLogout();
