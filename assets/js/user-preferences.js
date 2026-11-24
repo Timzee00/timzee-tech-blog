@@ -115,14 +115,20 @@ export function clearLocalPreferences(userId = "guest") {
     return false;
   }
 }
-export function writeLocalPreferences(userId, preferences) {
+export function writeLocalPreferences(userId, preferences, { appearanceThemeExplicit = false } = {}) {
   const merged = mergePreferences(preferences);
   try {
     localStorage.setItem(storageKey(userId || "guest"), JSON.stringify(merged));
     localStorage.setItem("timzee-ui-appearance", JSON.stringify(merged.appearance || {}));
     localStorage.setItem("blipmood:data-saver",merged.performance?.dataSaver===true?"1":"0");
   } catch (_) {}
-  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("timzee:preferences", { detail: merged }));
+  if (typeof window !== "undefined") {
+    const event = new CustomEvent("timzee:preferences", { detail: merged });
+    // A database load or unrelated preference save must not override a local
+    // theme-toggle choice. Only a deliberate appearance.theme edit is authoritative.
+    event.appearanceThemeExplicit = appearanceThemeExplicit;
+    window.dispatchEvent(event);
+  }
   return merged;
 }
 export async function loadUserPreferences(user = null) {
@@ -138,7 +144,9 @@ export async function saveUserPreferences(userId, partial) {
   const existing = readLocalPreferences(userId); const merged = mergePreferences(deepMerge(existing, partial));
   const result = await supabase.from("user_settings").upsert({ user_id: userId, preferences: merged, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
   if (result.error) throw result.error;
-  return writeLocalPreferences(userId, merged);
+  const appearanceThemeExplicit = Boolean(partial?.appearance &&
+    Object.prototype.hasOwnProperty.call(partial.appearance, "theme"));
+  return writeLocalPreferences(userId, merged, { appearanceThemeExplicit });
 }
 export function getPreference(path, fallback = undefined, userId = "guest") {
   const parts = String(path || "").split(".").filter(Boolean); let current = readLocalPreferences(userId);
