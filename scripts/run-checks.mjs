@@ -182,6 +182,7 @@ const steps=[
       "tests/video-discovery.test.cjs",
       "tests/atomic-video-view.test.cjs",
       "tests/reels-identity-views-ranking.test.cjs",
+      "tests/unified-reels-personalization.test.cjs",
       "tests/video-player-interface.test.cjs"
     ]
   },
