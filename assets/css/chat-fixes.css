@@ -288,3 +288,59 @@ html[data-chat-wallpaper="linen"] .chat-page .chat-message.received{color:#17272
 .chat-page .voice-player .voice-preview-bars i:nth-child(3n){height:var(--wave-level,35%)!important}
 .chat-page .chat-message:has(.voice-player){width:min(420px,92%)!important;max-width:92%!important}
 .chat-page .chat-message .voice-player{width:100%!important;max-width:100%!important}
+
+
+/* The waveform is the seek surface; do not show a separate straight progress rail. */
+.chat-page .voice-player .voice-preview-bars{
+  position:relative!important;
+  height:34px!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:3px!important;
+  overflow:hidden!important;
+  padding:2px 0!important;
+  isolation:isolate;
+}
+.chat-page .voice-player .voice-preview-bars>i{
+  position:relative;
+  z-index:0;
+  flex:1 1 0!important;
+  width:auto!important;
+  min-width:2px!important;
+  max-width:6px!important;
+  height:var(--wave-level,35%)!important;
+  min-height:3px!important;
+  border-radius:999px!important;
+  background:currentColor!important;
+  opacity:.34!important;
+  transition:opacity .12s ease,filter .12s ease;
+}
+.chat-page .voice-player .voice-preview-bars>i.is-played{opacity:.98!important}
+.chat-page .voice-player .voice-preview-bars>i.is-current{
+  opacity:1!important;
+  filter:drop-shadow(0 0 3px currentColor);
+}
+.chat-page .voice-player .voice-preview-bars.is-playing>i.is-current{
+  animation:voice-wave-current .7s ease-in-out infinite alternate;
+}
+.chat-page .voice-player .voice-preview-bars .voice-player-seek{
+  position:absolute!important;
+  z-index:2!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  margin:0!important;
+  opacity:0!important;
+  cursor:pointer!important;
+  accent-color:transparent!important;
+}
+.chat-page .voice-player .voice-preview-bars .voice-player-seek:focus-visible{
+  opacity:1!important;
+  outline:2px solid currentColor!important;
+  outline-offset:2px!important;
+  background:transparent!important;
+}
+@keyframes voice-wave-current{
+  from{transform:scaleY(.82)}
+  to{transform:scaleY(1.12)}
+}
