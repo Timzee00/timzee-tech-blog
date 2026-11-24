@@ -38,18 +38,37 @@ export async function loadLatestThreadPreviews(supabase, threadIds = []) {
   const unique = distinctThreadIds(threadIds);
   if (!unique.length) return new Map();
   const previews = new Map();
+  const batches = [];
   for (let start = 0; start < unique.length; start += BATCH) {
-    const batch = unique.slice(start, start + BATCH);
-    const response = await supabase.rpc("get_direct_message_previews", { p_thread_ids: batch });
+    batches.push(unique.slice(start, start + BATCH));
+  }
+
+  // Keep RPC fan-out bounded while allowing independent batches to overlap.
+  // Large contact lists no longer pay one round-trip per 64-thread batch.
+  const responses = new Array(batches.length);
+  let nextBatch = 0;
+  async function worker() {
+    while (nextBatch < batches.length) {
+      const index = nextBatch++;
+      responses[index] = await supabase.rpc("get_direct_message_previews", {
+        p_thread_ids: batches[index]
+      });
+    }
+  }
+  await Promise.all(Array.from(
+    { length: Math.min(CONCURRENCY, batches.length) },
+    () => worker()
+  ));
+
+  for (let index = 0; index < responses.length; index++) {
+    const response = responses[index];
     if (response.error) {
       if (!missingRpc(response.error)) throw response.error;
-      // An older database without the optional function still works correctly
-      // without transferring large chat histories to every browser.
-      const fallback = await fetchFallback(supabase, unique.slice(start));
-      for (const [id, value] of fallback) previews.set(id, value);
-      return previews;
+      // Older databases without the optional function still work without
+      // transferring full chat histories to every browser.
+      return fetchFallback(supabase, unique);
     }
-    const allowed = new Set(batch);
+    const allowed = new Set(batches[index]);
     for (const item of response.data || []) {
       if (allowed.has(item?.thread_id)) previews.set(item.thread_id, item);
     }

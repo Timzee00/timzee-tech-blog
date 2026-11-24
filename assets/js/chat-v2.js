@@ -188,10 +188,28 @@ async function reportActiveConversation(){
   });
   window.siteToast?.("Report submitted for moderator review.",{type:"success",title:"Report sent"});
 }
+const PROFILE_FETCH_BATCH_SIZE = 100;
+const PROFILE_FETCH_CONCURRENCY = 4;
 async function loadProfiles(ids) {
-  const unique=[...new Set(ids.filter(Boolean))]; if(!unique.length)return;
-  const result=await supabase.from("public_profiles").select("*").in("id",unique); if(result.error)throw result.error;
-  (result.data||[]).forEach((p)=>state.friendProfiles.set(p.id,p));
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return;
+  let next = 0;
+  async function worker() {
+    while (next < unique.length) {
+      const batch = unique.slice(next, next + PROFILE_FETCH_BATCH_SIZE);
+      next += PROFILE_FETCH_BATCH_SIZE;
+      const result = await supabase.from("public_profiles")
+        .select("*")
+        .in("id", batch);
+      if (result.error) throw result.error;
+      (result.data || []).forEach(profile => state.friendProfiles.set(profile.id, profile));
+    }
+  }
+  // Bound both URL size and simultaneous profile requests for large contact lists.
+  await Promise.all(Array.from(
+    { length: Math.min(PROFILE_FETCH_CONCURRENCY, Math.ceil(unique.length / PROFILE_FETCH_BATCH_SIZE)) },
+    () => worker()
+  ));
 }
 async function loadAllChatData({deferPreviews=false}={}) {
   const generation=++state.chatListGeneration;

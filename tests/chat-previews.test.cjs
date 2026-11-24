@@ -55,3 +55,35 @@ test("permission errors cannot be disguised as empty chats", async () => {
     error => error.code === "42501"
   );
 });
+
+test("large chat preview lists use bounded concurrent RPC batches", async () => {
+  const { loadLatestThreadPreviews } = await helper;
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const supabase = {
+    rpc: async (_name, args) => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise(resolve => setTimeout(resolve, 2));
+      inFlight--;
+      return {
+        data: args.p_thread_ids.map(thread_id => ({ thread_id, body: "latest" })),
+        error: null
+      };
+    }
+  };
+  const ids = Array.from({ length: 130 }, (_, n) => "large-thread-" + n);
+  const result = await loadLatestThreadPreviews(supabase, ids);
+  assert.equal(result.size, 130);
+  assert.ok(maxInFlight > 1 && maxInFlight <= 5);
+});
+
+test("chat profile IDs are fetched in bounded batches with bounded concurrency", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const source = fs.readFileSync(path.resolve(__dirname, "../assets/js/chat-v2.js"), "utf8");
+  assert.match(source, /PROFILE_FETCH_BATCH_SIZE = 100/);
+  assert.match(source, /PROFILE_FETCH_CONCURRENCY = 4/);
+  assert.match(source, /\.in\("id", batch\)/);
+  assert.match(source, /Promise\.all\(Array\.from\(/);
+});
