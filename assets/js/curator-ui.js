@@ -541,8 +541,15 @@ class CuratorManager {
 
     list.innerHTML = this.posts.map(post => {
       const reportingNote=this.reportingNotes.get(post.id)||{text:"",url:"",checked:false};
-      const candidates=[...String(post.content||"").matchAll(/data-curator-image-candidate="([^"]+)"/g)]
+      const embeddedCandidates=[...String(post.content||"").matchAll(/data-curator-image-candidate="([^"]+)"/g)]
         .map(match=>{try{return decodeURIComponent(match[1]);}catch{return "";}}).filter(Boolean);
+      // RSS/source images are only suggestions. Include the source image in
+      // the approval field so the image shown in Preview is also part of the
+      // actual publication payload after the editor verifies its reuse rights.
+      const candidates=[...new Set([
+        ...embeddedCandidates,
+        ...(post.image_url && trustedExternalUrl(post.image_url) ? [post.image_url] : [])
+      ])];
       const dateText = post.published_at ? new Date(post.published_at).toLocaleDateString() : "Unknown date";
       const wordCount = String(post.content || "").replace(/<[^>]*>/g, " ").trim().split(/\s+/).filter(Boolean).length;
       const isSourceBrief=String(post.content||"").includes("Editorial status:");
@@ -644,11 +651,12 @@ class CuratorManager {
         <strong>${escapeHTML(post.title || "Curated article")}</strong>
         <p><a href="post.html?id=${encodeURIComponent(post.post_id)}" target="_blank" rel="noopener noreferrer">View published article</a></p>
         <label>Approved image URLs (one per line, up to six)
-          <textarea class="field" rows="2" data-repair-images="${post.id}"></textarea>
+          <textarea class="field" rows="2" data-repair-images="${post.id}">${escapeHTML(post.image_url && trustedExternalUrl(post.image_url) ? post.image_url : "")}</textarea>
         </label>
         <label>Photographer, license or permission reference
           <input class="field" data-repair-credit="${post.id}" placeholder="License and image source">
         </label>
+        <p class="curator-reporting-hint">A saved source image may be prefilled above. It is not attached to the published article until you verify its reuse rights and provide attribution.</p>
         <label><input type="checkbox" data-repair-rights="${post.id}"> Rights verified for all images</label>
         <button type="button" class="btn ghost" data-repair-gallery="${post.id}">Attach missing images</button>
       </div>`).join("");
@@ -732,7 +740,10 @@ class CuratorManager {
     // This is a local visual preview; no published post is created.
     const selected=imageUrls(this.container.querySelector('[data-curator-images="'+id+'"]')?.value||"");
     const permitted=this.container.querySelector('[data-curator-image-rights="'+id+'"]')?.checked===true;
-    const media=selected.length?selected:post.image_url && trustedExternalUrl(post.image_url)?[post.image_url]:[];
+    // Preview and publication use exactly the same selected URL list.
+    // A source image is prefilled above, but remains unapproved until the
+    // rights checkbox and attribution are completed by the editor.
+    const media=selected;
     const credited=this.container.querySelector('[data-curator-image-credit="'+id+'"]')?.value.trim()||"";
     const doc=new DOMParser().parseFromString(String(post.content||""),"text/html");
     const takeawayTag=doc.querySelector("[data-timzee-takeaways]")?.getAttribute("data-timzee-takeaways");
