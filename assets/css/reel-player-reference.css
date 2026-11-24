@@ -222,15 +222,15 @@
 @media(prefers-reduced-motion:reduce){
   .reel-player-menu,.reel-menu-row{scroll-behavior:auto;transition:none!important}
 }
-/* Keep the reel title below the fixed top controls instead of crowding them. */
+/* Keep titles in the upper-middle viewing area, clear of the fixed controls. */
 .reel-title-overlay{
-  top:max(calc(env(safe-area-inset-top) + 118px), clamp(132px, 15vh, 220px));
-  max-height:min(20vh, 3.6em);
+  top:clamp(180px, 25vh, 290px);
+  max-height:min(18vh, 3.2em);
   -webkit-line-clamp:2;
 }
 @media(max-height:620px){
   .reel-title-overlay{
-    top:calc(env(safe-area-inset-top) + 92px);
+    top:clamp(132px, 22vh, 190px);
     max-height:2.8em;
   }
 }
