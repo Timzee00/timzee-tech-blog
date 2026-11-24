@@ -1,7 +1,24 @@
 /* Shared theme and feedback primitives. Loaded before feature modules. */
 (() => {
   const KEY = "timzee-theme";
+  const APPEARANCE_KEY = "timzee-ui-appearance";
   const saved = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
+  const validTheme = value => ["light", "dark", "system"].includes(value);
+  function readStoredAppearance() {
+    try {
+      const value = JSON.parse(localStorage.getItem(APPEARANCE_KEY) || "{}");
+      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    } catch { return {}; }
+  }
+  function persistThemeChoice(theme) {
+    try {
+      localStorage.setItem(KEY, theme);
+      const appearance = readStoredAppearance();
+      localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ ...appearance, theme }));
+    } catch {
+      try { localStorage.setItem(KEY, theme); } catch { /* Storage may be unavailable. */ }
+    }
+  }
   const system = window.matchMedia("(prefers-color-scheme: dark)");
   function applyTheme(mode) {
     const theme = mode === "dark" ? "dark" : "light";
@@ -15,7 +32,7 @@
   }
   function toggleTheme() {
     const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-    try { localStorage.setItem(KEY, next); } catch { /* The session still works without storage. */ }
+    persistThemeChoice(next);
     applyTheme(next);
   }
   applyTheme(saved() || (system.matches ? "dark" : "light"));
@@ -28,29 +45,43 @@
   }
   syncEarlyDataSaver();
   window.addEventListener("storage",event=>{if(event.key===dataSaverKey)syncEarlyDataSaver();});
-  const APPEARANCE_KEY = "timzee-ui-appearance";
-  function applyAppearance(options) {
+  function applyAppearance(options, { authoritativeTheme = false } = {}) {
     document.documentElement.dataset.reduceMotion = options?.reduceMotion === true ? "true" : "false";
     document.documentElement.dataset.highContrast = options?.highContrast === true ? "true" : "false";
     const scale = ["90","100","110","125"].includes(String(options?.fontScale)) ? String(options.fontScale) : "100";
     document.documentElement.dataset.fontScale = scale;
     document.documentElement.style.fontSize = scale + "%";
     document.documentElement.dataset.contentDensity = options?.contentDensity === "compact" ? "compact" : "comfortable";
-    if (["light","dark","system"].includes(options?.theme)) {
+    if (validTheme(options?.theme)) {
+      // A header toggle is an explicit cross-page choice. A previously saved
+      // account preference may still say "system"; it must not undo that choice
+      // while a page is booting or loading unrelated preferences.
+      const explicit = saved();
+      const theme = !authoritativeTheme && (explicit === "light" || explicit === "dark")
+        ? explicit
+        : options.theme;
       try {
-        if (options.theme === "system") localStorage.removeItem(KEY);
-        else localStorage.setItem(KEY, options.theme);
+        if (theme === "system") localStorage.removeItem(KEY);
+        else localStorage.setItem(KEY, theme);
       } catch { /* Browser storage is optional. */ }
-      applyTheme(options.theme === "system" ? (system.matches ? "dark" : "light") : options.theme);
+      applyTheme(theme === "system" ? (system.matches ? "dark" : "light") : theme);
     }
   }
-  try { applyAppearance(JSON.parse(localStorage.getItem(APPEARANCE_KEY) || "{}")); }
-  catch { applyAppearance({}); }
-  window.addEventListener("timzee:preferences", event => applyAppearance(event.detail?.appearance));
+  const initialAppearance = readStoredAppearance();
+  // Migrate legacy installations where the theme toggle updated timzee-theme
+  // but an older account-preference snapshot still contained "system".
+  const savedTheme = saved();
+  if (savedTheme === "light" || savedTheme === "dark") initialAppearance.theme = savedTheme;
+  applyAppearance(initialAppearance);
+  window.addEventListener("timzee:preferences", event =>
+    applyAppearance(event.detail?.appearance, { authoritativeTheme: event.appearanceThemeExplicit === true })
+  );
   window.addEventListener("storage", event => {
     if (event.key === APPEARANCE_KEY) {
-      try { applyAppearance(JSON.parse(event.newValue || "{}")); }
-      catch { applyAppearance({}); }
+      const appearance = readStoredAppearance();
+      const explicit = saved();
+      if (explicit === "light" || explicit === "dark") appearance.theme = explicit;
+      applyAppearance(appearance);
     }
   });
   system.addEventListener("change", () => { if (!saved()) applyTheme(system.matches ? "dark" : "light"); });
