@@ -70,6 +70,7 @@ let adImageFile = null;
 let adImagePreviewUrl = "";
 let postMediaFiles = [];
 let postMediaPreviewUrls = [];
+let postMediaUploadedUrls = new WeakMap();
 let existingPostMedia = [];
 const customCategoryValue = "__other__";
 const emptyEditorHtml = "";
@@ -203,6 +204,8 @@ function renderPostMediaPreview() {
     const index = Number(btn.dataset.index);
     btn.addEventListener("click", () => {
       if (!Number.isInteger(index)) return;
+      const removedFile = postMediaFiles[index];
+      if (removedFile) postMediaUploadedUrls.delete(removedFile);
       postMediaFiles.splice(index, 1);
       const url = postMediaPreviewUrls.splice(index, 1)[0];
       if (url) URL.revokeObjectURL(url);
@@ -215,6 +218,7 @@ function resetPostMediaSelections() {
   postMediaFiles = [];
   postMediaPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
   postMediaPreviewUrls = [];
+  postMediaUploadedUrls = new WeakMap();
   renderPostMediaPreview();
 }
 
@@ -303,6 +307,7 @@ function setupImageInputs() {
       postMediaFiles = Array.from(postMediaInput.files || []);
       postMediaPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
       postMediaPreviewUrls = postMediaFiles.map((file) => URL.createObjectURL(file));
+      postMediaUploadedUrls = new WeakMap();
       renderPostMediaPreview();
     });
   }
@@ -1072,8 +1077,17 @@ function handlePostForm() {
     const now = new Date().toISOString();
     let uploadedCover = "";
     const firstMediaPhoto=mediaOnly?postMediaFiles.find(file=>file.type?.startsWith("image/")):null;
-    if(coverFile)uploadedCover=await uploadMedia(coverFile,"covers");
-    else if(firstMediaPhoto&&!cover)uploadedCover=await uploadMedia(firstMediaPhoto,"covers");
+    try {
+      if(coverFile)uploadedCover=await uploadMedia(coverFile,"covers");
+      else if(firstMediaPhoto&&!cover)uploadedCover=await uploadMedia(firstMediaPhoto,"covers");
+      if((coverFile || (firstMediaPhoto&&!cover)) && !uploadedCover)
+        throw new Error("The upload returned no image URL.");
+    } catch(error) {
+      const message=error?.message||"The cover image could not be uploaded.";
+      document.getElementById("postFormHint").textContent="Cover upload failed. The post was not saved. "+message;
+      window.appUI.toast("Cover upload failed: "+message,{tone:"error"});
+      return;
+    }
     if(mediaOnly&&hasArtwork&&!uploadedCover&&!cover&&!editingPostId){
       document.getElementById("postFormHint").textContent="Graphic upload failed. Please retry; nothing was published.";
       return;
@@ -1126,21 +1140,81 @@ function handlePostForm() {
       }
     }
 
-    if (!saveError && savedPostId && postMediaFiles.length) {
+    if (saveError || !savedPostId) {
+      document.getElementById("postFormHint").textContent = "The post could not be saved. Your selected media is still in the editor. Please retry.";
+      await refreshData();
+      renderPostsTable();
+      return;
+    }
+
+    const hadNewMedia = postMediaFiles.length > 0;
+    if (hadNewMedia) {
       const orderStart = existingPostMedia.length;
+      const failedFiles = [];
+      const failedPreviews = [];
+      const failedReasons = [];
       for (let index = 0; index < postMediaFiles.length; index += 1) {
         const file = postMediaFiles[index];
-        const uploadedUrl = file===firstMediaPhoto&&!coverFile&&uploadedCover?uploadedCover:await uploadMedia(file, "post-media");
-        if (!uploadedUrl) continue;
-        const mediaType = file.type?.startsWith("video") ? "video" : "image";
-        await createPostMedia({
-          id: crypto.randomUUID(),
-          post_id: savedPostId,
-          url: uploadedUrl,
-          media_type: mediaType,
-          sort_order: orderStart + index,
-          created_at: new Date().toISOString()
-        });
+        const previewUrl = postMediaPreviewUrls[index] || "";
+        try {
+          let uploadedUrl = postMediaUploadedUrls.get(file) || "";
+          if (!uploadedUrl) {
+            uploadedUrl = file === firstMediaPhoto && !coverFile && uploadedCover
+              ? uploadedCover
+              : await uploadMedia(file, "post-media");
+            if (!uploadedUrl) throw new Error("The upload returned no public media URL.");
+            // Keep this URL if the database insert fails; retrying should only
+            // retry the insert, not upload a second copy of the same file.
+            postMediaUploadedUrls.set(file, uploadedUrl);
+          }
+          const mediaType = file.type?.startsWith("video") ? "video" : "image";
+          const inserted = await createPostMedia({
+            id: crypto.randomUUID(),
+            post_id: savedPostId,
+            url: uploadedUrl,
+            media_type: mediaType,
+            sort_order: orderStart + index,
+            created_at: new Date().toISOString()
+          });
+          if (inserted?.error) throw inserted.error;
+          postMediaUploadedUrls.delete(file);
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+        } catch (error) {
+          failedFiles.push(file);
+          failedPreviews.push(previewUrl);
+          failedReasons.push((file.name || "Selected media") + ": " + (error?.message || "Could not attach media."));
+        }
+      }
+
+      if (failedFiles.length) {
+        // The post itself is saved. Convert this form to edit mode and retain
+        // only failed attachments so retrying cannot create a duplicate post
+        // or re-upload files whose gallery rows were already inserted.
+        editingPostId = savedPostId;
+        postMediaFiles = failedFiles;
+        postMediaPreviewUrls = failedPreviews;
+        if (coverFile && uploadedCover) {
+          const coverInput = document.getElementById("postCover");
+          if (coverInput) coverInput.value = uploadedCover;
+          coverFile = null;
+          coverPreviewUrl = uploadedCover;
+          updateCoverPreview(uploadedCover);
+        } else if (firstMediaPhoto && uploadedCover && !cover) {
+          const coverInput = document.getElementById("postCover");
+          if (coverInput) coverInput.value = uploadedCover;
+          coverPreviewUrl = uploadedCover;
+          updateCoverPreview(uploadedCover);
+        }
+        await loadPostMedia(savedPostId);
+        await refreshData();
+        renderPostsTable();
+        renderPostMediaPreview();
+        document.getElementById("savePostBtn").textContent = "Retry image attachments";
+        document.getElementById("postFormHint").textContent =
+          "Post saved, but " + failedFiles.length + " media attachment(s) failed. The post was not duplicated. Retry to attach the remaining files. " +
+          failedReasons.slice(0, 2).join(" ");
+        window.appUI.toast(failedFiles.length + " media attachment(s) need a retry. The post itself is saved.", {tone:"warning"});
+        return;
       }
       resetPostMediaSelections();
       await loadPostMedia(savedPostId);
