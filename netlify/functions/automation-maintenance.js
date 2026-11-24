@@ -85,8 +85,8 @@ exports.handler = async () => {
       ok: true,
       automation: "completed",
       verification: "completed",
-      moderationExpiries: Number(expiries.data || 0),
-      digestNotifications: Number(digest.data?.notified || 0),
+      moderationExpiries: Number.isFinite(Number(expiries.data)) ? Number(expiries.data) : 0,
+      digestNotifications: Number.isFinite(Number(digest.data?.notified)) ? Number(digest.data.notified) : 0,
       feedCandidateRefresh
     })
   };
