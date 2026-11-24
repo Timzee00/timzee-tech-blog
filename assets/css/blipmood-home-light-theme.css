@@ -1,3 +1,5 @@
+:root[data-theme="light"]{color-scheme:light;}
+
 /* Explicit light palette for the neon homepage layer. This file is imported
    after the dark art direction so user appearance settings always win. */
 :root[data-theme="light"] body.blipmood-home {
