@@ -14,6 +14,7 @@ const state = { user: null, preferences: mergePreferences(), type: "all", mode: 
 const feedCache = new Map();
 const suppressedContent = new Set();
 let feedIdentityMap=new Map();
+let fypVideoObserver=null;
 const $ = (id) => document.getElementById(id);
 
 function rememberKey(userId) { return `timzee:fyp:last:${userId}`; }
@@ -48,7 +49,7 @@ function renderRow(row) {
     : '<div class="fyp-media-fallback" aria-hidden="true">'+escapeHTML(typeLabel(type).toUpperCase())+'</div>';
   const media=isVideo ?
     '<div class="fyp-video-stage" data-fyp-video-stage>'+
-      '<video class="fyp-inline-video" controls playsinline preload="none" loading="lazy"'+
+      '<video class="fyp-inline-video" controls playsinline preload="none"'+
       (row.image_url&&isSafeUrl(row.image_url)?' poster="'+escapeHTML(deliveryMediaUrl(row.image_url))+'"':"")+
       ' src="'+escapeHTML(mediaUrl)+'" aria-label="'+escapeHTML(row.title||"Community video")+'"></video>'+
       '<div class="fyp-video-gestures" data-fyp-video-gestures role="button" tabindex="0" aria-label="Tap to pause or play; double tap to like"></div>'+
@@ -255,7 +256,7 @@ async function loadFeed({ force = false } = {}) {
       if(mode==="for-you")await syncObservedRegion(supabase);
       const rpcName = mode === "following" ? "get_following_feed" : "get_personalized_feed";
       const response = await supabase.rpc(rpcName, {
-        p_limit: 40, p_content_type: type === "all" ? "all" : type
+        p_limit: 20, p_content_type: type === "all" ? "all" : type
       });
       if (version !== feedVersion) return;
       if (response.error) throw response.error;
@@ -338,6 +339,37 @@ async function markNotInterested(card) {
   }
 }
 function bindFypVideoGestures(root){
+  // Load metadata only for the visible video and the next nearby card. This
+  // produces a first-frame preview when no uploaded thumbnail exists, without
+  // asking the browser to fetch all videos in the feed.
+  fypVideoObserver?.disconnect();
+  const previewVideos=[...root.querySelectorAll(".fyp-inline-video")];
+  const preparePreview=video=>{
+    if(!video.dataset.previewEventsWired){
+      video.dataset.previewEventsWired="true";
+      video.addEventListener("loadedmetadata",()=>{
+        if(!video.hasAttribute("poster")&&Number.isFinite(video.duration)&&video.duration>0.12){
+          try{video.currentTime=Math.min(0.08,video.duration/2);}catch{}
+        }
+      },{once:true});
+      video.addEventListener("loadeddata",()=>video.classList.add("fyp-preview-ready"),{once:true});
+      video.addEventListener("play",()=>{video.preload="auto";});
+    }
+    video.preload="metadata";
+    if(video.readyState===0)video.load();
+  };
+  if("IntersectionObserver" in window){
+    fypVideoObserver=new IntersectionObserver(entries=>{
+      entries.forEach(entry=>{
+        const video=entry.target;
+        if(entry.isIntersecting)preparePreview(video);
+        else if(!video.paused)video.pause();
+      });
+    },{rootMargin:"320px 0px",threshold:0.01});
+    previewVideos.forEach(video=>fypVideoObserver.observe(video));
+  }else{
+    previewVideos.slice(0,2).forEach(preparePreview);
+  }
   root.querySelectorAll("[data-fyp-video-gestures]").forEach(zone=>{
     if(zone.dataset.wired==="true")return;
     zone.dataset.wired="true";
