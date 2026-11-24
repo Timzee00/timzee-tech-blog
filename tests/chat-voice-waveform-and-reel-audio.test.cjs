@@ -6,6 +6,7 @@ const reels = fs.readFileSync("video.html", "utf8");
 const recorder = fs.readFileSync("assets/js/chat-v2.js", "utf8");
 const voicePlayer = fs.readFileSync("assets/js/chat-voice-player.mjs", "utf8");
 const chatCss = fs.readFileSync("assets/css/chat-fixes.css", "utf8");
+const css = chatCss;
 
 test("Reels recover audio after autoplay fallback on an explicit viewer tap", () => {
   assert.match(reels, /if\(vid\.muted \|\| state\.sessionMuted\)/);
@@ -26,6 +27,11 @@ test("voice-note playback waveform is decoded from the actual audio and loaded l
   assert.match(voicePlayer, /getChannelData\(0\)/);
   assert.match(voicePlayer, /new IntersectionObserver/);
   assert.match(voicePlayer, /waveformBars=40/);
+  assert.match(voicePlayer, /bar\.classList\.toggle\('is-played'/);
+  assert.match(voicePlayer, /bar\.classList\.toggle\('is-current'/);
+  assert.match(voicePlayer, /voice-preview-bars" role="group"/);
+  assert.match(css, /The waveform is the seek surface/);
+  assert.match(css, /\.voice-preview-bars \.voice-player-seek\{[\s\S]*?opacity:0!important/);
 });
 
 test("voice notes keep a normal readable width on mobile and desktop", () => {
