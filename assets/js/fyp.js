@@ -387,12 +387,15 @@ function bindFypVideoGestures(root){
   const preparePreview=video=>{
     if(!video.dataset.previewEventsWired){
       video.dataset.previewEventsWired="true";
-      video.addEventListener("loadedmetadata",()=>{
+      const seekFirstFrame=()=>{
         if(!video.hasAttribute("poster")&&Number.isFinite(video.duration)&&video.duration>0.12){
           try{video.currentTime=Math.min(0.08,video.duration/2);}catch{}
         }
-      },{once:true});
+      };
+      video.addEventListener("loadedmetadata",seekFirstFrame,{once:true});
+      if(video.readyState>=1)seekFirstFrame();
       video.addEventListener("loadeddata",()=>video.classList.add("fyp-preview-ready"),{once:true});
+      if(video.readyState>=2)video.classList.add("fyp-preview-ready");
       video.addEventListener("play",()=>{video.preload="auto";});
     }
     video.preload="metadata";
