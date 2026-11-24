@@ -63,6 +63,18 @@ test("Reels client sends real playback signals in bounded batches",()=>{
  assert.match(video,/View original post/);
 });
 
+test("watch-signal client clamps each playback batch before calling the RPC",async()=>{
+ const {recordVideoWatchSignal}=await import("../assets/js/video-discovery.mjs");
+ const calls=[];
+ const supabase={rpc:async(name,args)=>{calls.push({name,args});return {data:true,error:null};}};
+ assert.equal(await recordVideoWatchSignal(supabase,{videoId:"video-a",watchSeconds:240,completed:true}),true);
+ assert.deepEqual(calls,[{name:"record_video_watch_signal",args:{
+  p_video_id:"video-a",p_watch_seconds:90,p_completed:true
+ }}]);
+ assert.equal(await recordVideoWatchSignal(supabase,{videoId:"video-a",watchSeconds:2}),false);
+ assert.equal(calls.length,1,"sub-threshold playback must not create a request");
+});
+
 test("Reels does not load or inject the general navigation menu",()=>{
  assert.doesNotMatch(video,/blipmood-unified-menu\.mjs/);
  assert.doesNotMatch(menu,/installReelMenu|bmReelMenuToggle|bm-reel-menu-panel/);
