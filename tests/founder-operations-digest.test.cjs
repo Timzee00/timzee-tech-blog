@@ -52,6 +52,7 @@ test("maintenance worker expires temporary suspensions before founder digest",as
  const response=await module.exports.handler();
  assert.equal(response.statusCode,200);
  assert.equal(response.headers["Cache-Control"],"no-store");
+ assert.equal(response.headers["X-Content-Type-Options"],"nosniff");
  const summary=JSON.parse(response.body);
  assert.equal(summary.ok,true);
  assert.equal(summary.automation,"completed");
