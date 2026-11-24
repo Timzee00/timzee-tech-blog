@@ -280,3 +280,11 @@ html[data-chat-wallpaper="linen"] .chat-page .chat-message.received{color:#17272
 .chat-page .chat-header-menu [data-chat-menu="clear"]{color:var(--color-text);font-weight:700}
 .chat-page .chat-list-row .chat-list-copy small{overflow-wrap:anywhere}
 @media(max-width:480px){.chat-page .chat-tabs .chat-tab{min-width:85px}}
+
+/* Final voice-note sizing: keep the waveform readable and the player uncompressed. */
+.chat-page .voice-player .voice-preview-bars{height:24px!important;max-width:none!important;justify-content:space-between!important;gap:2px!important}
+.chat-page .voice-player .voice-preview-bars i{flex:1 1 0!important;width:auto!important;max-width:5px!important;height:var(--wave-level,35%)!important;min-height:3px}
+.chat-page .voice-player .voice-preview-bars i:nth-child(2n),
+.chat-page .voice-player .voice-preview-bars i:nth-child(3n){height:var(--wave-level,35%)!important}
+.chat-page .chat-message:has(.voice-player){width:min(420px,92%)!important;max-width:92%!important}
+.chat-page .chat-message .voice-player{width:100%!important;max-width:100%!important}
