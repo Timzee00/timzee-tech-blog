@@ -571,7 +571,7 @@ class CuratorManager {
         <p class="curator-editorial-state" data-editorial-state="${post.id}" role="status">${escapeHTML(editorialStatus)}</p>
         <details class="curator-media-editor">
           <summary>Images and embeds (up to six)</summary>
-          <p>Source images are previews only. Add approved HTTPS image URLs, one per line. Publishing requires confirmed image rights.</p>
+          <p>A source image URL is prefilled when available. Preview and publication use this same list; images are only published after you verify reuse rights and provide attribution.</p>
           ${post.image_url && trustedExternalUrl(post.image_url)?'<img class="curator-image-preview" loading="lazy" referrerpolicy="no-referrer" alt="Source image preview - rights not verified" src="'+escapeHTML(post.image_url)+'" style="max-width:180px;max-height:120px;object-fit:contain;">':""}
           <label>Approved image URLs<textarea data-curator-images="${post.id}" rows="3" class="field" placeholder="https://example.com/licensed-image.jpg">${escapeHTML(candidates.join("\n"))}</textarea></label>
           <label>Image credit and permission reference<input data-curator-image-credit="${post.id}" class="field" placeholder="Photographer / license / permission link"></label>
