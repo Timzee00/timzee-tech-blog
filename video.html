@@ -1580,7 +1580,7 @@
                 document.querySelectorAll(".reel-video").forEach(video=>{video.muted=false;});
                 syncHeaderMute();
                 if(vid.paused){hydrateNearby(Number(idx));playWithSoundFallback(vid,idx,{explicit:true});}
-                flash.textContent="🔊";
+                flash.textContent="▶";
               }else if(vid.paused){hydrateNearby(Number(idx));playWithSoundFallback(vid,idx,{explicit:true});flash.textContent="▶";}
               else{vid.pause();flash.textContent="Ⅱ";}
               flash.classList.add("show");
