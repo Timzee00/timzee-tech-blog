@@ -117,3 +117,18 @@ test("comment rows use the joined post title even when its article is beyond pag
   const admin=read("assets/js/admin.js");
   assert.match(admin,/post\?\.title \|\| comment\.posts\?\.title/);
 });
+
+test("admin cursor indexes cover all-status lists and paged request inboxes",()=>{
+  const sql=read("supabase/migrations/20261125000100_admin_cursor_pagination_indexes.sql");
+  for(const index of [
+    "posts_admin_cursor_idx",
+    "comments_admin_cursor_idx",
+    "contact_requests_admin_cursor_idx",
+    "support_requests_admin_cursor_idx",
+    "newsletter_signups_admin_cursor_idx",
+    "ad_applications_admin_cursor_idx",
+    "admin_requests_admin_cursor_idx",
+    "content_requests_admin_cursor_idx",
+    "announcements_admin_cursor_idx"
+  ]) assert.match(sql,new RegExp("CREATE INDEX IF NOT EXISTS "+index));
+});
