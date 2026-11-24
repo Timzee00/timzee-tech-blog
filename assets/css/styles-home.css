@@ -29,6 +29,7 @@
 @import url("blipmood-home.css");
 @import url("blipmood-home-refresh.css");
 @import url("blipmood-neon-experience.css");
+@import url("blipmood-home-light-theme.css");
 /* Profile-specific polish must override broad responsive defaults, not the other way around. */
 /* profile.css is not used on the public homepage. */
 
