@@ -1537,10 +1537,9 @@
           attempt.catch(() => {
             // An autoplay policy rejection applies to the whole feed.
             // Preserve the effective sound state for every subsequent reel.
+            // Keep the current item muted only until a deliberate viewer gesture.
+            // Do not persist an autoplay-policy rejection as the viewer's mute choice.
             vid.muted = true;
-            state.sessionMuted = true;
-            try { sessionStorage.setItem("timzee:reels-muted","true"); } catch {}
-            document.querySelectorAll(".reel-video").forEach(item=>{item.muted=true;});
             syncHeaderMute();
             vid.play().catch(() => {});
           });
@@ -1572,7 +1571,17 @@
               const vid=document.getElementById("video-"+idx);
               const flash=document.getElementById("pauseflash-"+idx);
               if(!vid)return;
-              if(vid.paused){hydrateNearby(Number(idx));playWithSoundFallback(vid,idx,{explicit:true});flash.textContent="▶";}
+              if(vid.muted || state.sessionMuted){
+                // A deliberate tap is the browser-supported way to restore audio
+                // after autoplay was blocked. Android hardware volume keys are not
+                // exposed to web pages, so never leave the feed stuck in autoplay mute.
+                state.sessionMuted=false;
+                try{sessionStorage.setItem("timzee:reels-muted","false");}catch{}
+                document.querySelectorAll(".reel-video").forEach(video=>{video.muted=false;});
+                syncHeaderMute();
+                if(vid.paused){hydrateNearby(Number(idx));playWithSoundFallback(vid,idx,{explicit:true});}
+                flash.textContent="🔊";
+              }else if(vid.paused){hydrateNearby(Number(idx));playWithSoundFallback(vid,idx,{explicit:true});flash.textContent="▶";}
               else{vid.pause();flash.textContent="Ⅱ";}
               flash.classList.add("show");
               setTimeout(()=>flash.classList.remove("show"),450);
