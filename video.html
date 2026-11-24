@@ -1448,7 +1448,6 @@
             <div class="reel-buffer-spinner" id="spinner-${index}"></div>
             <video class="reel-video" id="video-${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} playsinline ${state.autoAdvance ? "" : "loop"} preload="none" data-video-src="${escapeHTML(src)}"></video>
             <div class="reel-vignette"></div>
-            <h2 class="reel-title-overlay" id="title-${index}">${renderSocialText(video.title || "")}</h2>
             <div class="reel-tapzone" aria-hidden="true"></div>
             <div class="reel-pause-flash" id="pauseflash-${index}">${icon("play")}</div>
 
@@ -1463,6 +1462,7 @@
                   <span class="reel-username" title="@${escapeHTML(uploaderName)}">${uploaderMarkup}</span>
                   ${followMarkup}
                 </div>
+                ${video.title ? `<h2 class="reel-title-overlay" id="title-${index}">${renderSocialText(video.title)}</h2>` : ""}
                 <p class="reel-caption" id="caption-${index}">${renderSocialText(caption)}</p>
                 ${originalPostMarkup}
                 <button type="button" class="reel-caption-more" data-action="expand-caption" data-index="${index}" aria-expanded="false" ${caption.length<120?"hidden":""}>More caption</button>
