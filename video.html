@@ -2459,6 +2459,9 @@
       // Attach seller/uploader verification + staff-pick + comment counts in a batch (avoid N+1)
       async function attachUploaderBadgesAndCounts(videos) {
         if(!videos.length)return;
+        // This helper is also exercised independently in tests and may run
+        // before viewer state is initialized. Treat that as a guest viewer.
+        const viewer=typeof state!=="undefined"?state.user:null;
         const ids=videos.map(v=>v.id).filter(Boolean).slice(0,50);
         const userIds=[...new Set(videos.map(v=>v.user_id).filter(Boolean))];
         // Public reel metadata joins to public_profiles on the server and
@@ -2471,8 +2474,8 @@
             .select("id,username,display_name,avatar_url,is_verified,verification_tier,verification_expires_at,official_badge_kind,official_badge_title,frame_style,is_staff_pick")
             .in("id",userIds):Promise.resolve({data:[],error:null}),
           supabase.rpc("video_social_counts",{p_video_ids:ids}),
-          state.user&&userIds.length?supabase.from("follows").select("target_id")
-            .eq("follower_id",state.user.id).eq("target_type","author")
+          viewer&&userIds.length?supabase.from("follows").select("target_id")
+            .eq("follower_id",viewer.id).eq("target_type","author")
             .in("target_id",userIds.map(String)):Promise.resolve({data:[],error:null})
         ]);
         const usable=result=>result.status==="fulfilled"&&!result.value?.error
@@ -2490,7 +2493,7 @@
         const profileById=new Map(profiles.map(p=>[p.id,p]));
         const countsById=new Map(usable(countsResult).map(row=>[row.video_id,row]));
         const followingIds=new Set(usable(followsResult).map(row=>String(row.target_id)));
-        const followStatusKnown=!state.user || (followsResult.status==="fulfilled"&&!followsResult.value?.error);
+        const followStatusKnown=!viewer || (followsResult.status==="fulfilled"&&!followsResult.value?.error);
         videos.forEach(v=>{
           const publicRow=publicById.get(v.id);
           const p=profileById.get(v.user_id);
