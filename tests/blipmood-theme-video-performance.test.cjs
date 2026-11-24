@@ -23,7 +23,8 @@ test("For You video previews load metadata only near the viewport", () => {
   assert.match(fyp, /rootMargin:"320px 0px"/);
   assert.match(fyp, /video\.preload="metadata"/);
   assert.match(fyp, /loadeddata/);
-  assert.match(fyp, /p_limit: 20/);
+  assert.match(fyp, /limit = 20/);
+  assert.match(fyp, /p_limit: limit/);
   assert.doesNotMatch(fyp, /loading="lazy"/);
 });
 
