@@ -1,0 +1,58 @@
+/* Full-viewport chat: the app shell owns the viewport and internal panes scroll. */
+html:has(body.chat-page.blipmood-chat-redesign),
+body.chat-page.blipmood-chat-redesign {
+  width:100%;
+  height:100%;
+  min-height:100%;
+  margin:0;
+  overflow:hidden;
+}
+body.chat-page.blipmood-chat-redesign {
+  display:flex;
+  flex-direction:column;
+  min-height:100dvh;
+  height:100dvh;
+  padding:0;
+}
+body.chat-page.blipmood-chat-redesign .chat-main {
+  flex:1 1 auto;
+  width:100%;
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+}
+body.chat-page.blipmood-chat-redesign .chat-app-shell {
+  height:100%;
+  min-height:0;
+  max-height:100%;
+  overflow:hidden;
+}
+body.chat-page.blipmood-chat-redesign .chat-pane,
+body.chat-page.blipmood-chat-redesign .chat-conversation {
+  min-height:0;
+  height:100%;
+  overflow:hidden;
+}
+body.chat-page.blipmood-chat-redesign .chat-conversation {
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+}
+body.chat-page.blipmood-chat-redesign .chat-messages {
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+body.chat-page.blipmood-chat-redesign .chat-composer {
+  position:relative;
+  flex:0 0 auto;
+  margin-top:auto;
+  padding-bottom:max(10px,env(safe-area-inset-bottom));
+}
+body.chat-page.blipmood-chat-redesign .chat-mobile-nav {
+  padding-bottom:max(3px,env(safe-area-inset-bottom));
+}
+@supports(height:100svh) {
+  body.chat-page.blipmood-chat-redesign { min-height:100svh; height:100svh; }
+}
