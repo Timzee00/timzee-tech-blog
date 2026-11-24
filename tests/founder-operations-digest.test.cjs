@@ -49,7 +49,14 @@ test("maintenance worker expires temporary suspensions before founder digest",as
  };
  vm.runInNewContext("(function(require,module,exports){"+source+"\n})",
    {process:{env},console:{log(){},error(){}}})(requireStub,module,module.exports);
- await module.exports.handler();
+ const response=await module.exports.handler();
+ assert.equal(response.statusCode,200);
+ assert.equal(response.headers["Cache-Control"],"no-store");
+ const summary=JSON.parse(response.body);
+ assert.equal(summary.ok,true);
+ assert.equal(summary.automation,"completed");
+ assert.equal(summary.verification,"completed");
+ assert.equal(summary.feedCandidateRefresh,"skipped");
  assert.deepEqual(calls,["process_automation_tick","process_verification_maintenance","expire_moderation_suspensions","process_founder_operations_digest"]);
 });
 
