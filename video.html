@@ -1455,7 +1455,7 @@
           <div class="reel-item" id="reel-${index}" data-index="${index}" data-id="${escapeHTML(video.id)}">
             <div class="reel-scrub-time" id="scrubtime-${index}">0:00</div>
             <div class="reel-buffer-spinner" id="spinner-${index}"></div>
-            <video class="reel-video" id="video-${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} playsinline ${state.autoAdvance ? "" : "loop"} preload="none" data-video-src="${escapeHTML(src)}" data-resume-time="0"></video>
+            <video class="reel-video" id="video-${index}" data-index="${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} playsinline ${state.autoAdvance ? "" : "loop"} preload="none" data-video-src="${escapeHTML(src)}" data-resume-time="0"></video>
             <div class="reel-vignette"></div>
             <div class="reel-tapzone" aria-hidden="true"></div>
             <div class="reel-pause-flash" id="pauseflash-${index}">${icon("play")}</div>
