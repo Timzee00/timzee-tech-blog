@@ -192,7 +192,8 @@ const steps=[
     "label": "Theme and video performance regressions",
     "args": [
       "--test",
-      "tests/blipmood-theme-video-performance.test.cjs"
+      "tests/blipmood-theme-video-performance.test.cjs",
+      "tests/media-egress-guardrails.test.cjs"
     ]
   },
   {
