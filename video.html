@@ -1529,6 +1529,28 @@
         syncHeaderMute();
       }
 
+      function hydrateNearby(index, { playback = false } = {}) {
+        const candidate=document.getElementById(`video-${index}`);
+        if(!candidate)return;
+        const source=candidate.dataset.videoSrc;
+        if(!source)return;
+        if(candidate.hasAttribute("src")) {
+          if(playback)candidate.preload="auto";
+          return;
+        }
+        const resumeTime=Number(candidate.dataset.resumeTime)||0;
+        candidate.preload=playback?"auto":"metadata";
+        if(resumeTime>0) {
+          candidate.addEventListener("loadedmetadata",()=>{
+            if(Number.isFinite(candidate.duration))
+              candidate.currentTime=Math.min(resumeTime,Math.max(0,candidate.duration-0.1));
+            candidate.dataset.resumeTime="0";
+          },{once:true});
+        }
+        candidate.src=source;
+        candidate.load();
+      }
+
       // Browsers block unmuted autoplay unless the user already interacted with
       // the page. We try unmuted first (since that's the better experience),
       // and only fall back to muted playback if the browser actually rejects it —
@@ -1545,9 +1567,9 @@
         const attempt = vid.play();
         if (attempt && typeof attempt.catch === "function") {
           attempt.catch(() => {
+            // Do not persist an autoplay-policy rejection as the viewer's mute choice.
             // Autoplay can be rejected with sound. Switch the session's effective
-            // state to muted (without saving a user preference) so the visible
-            // control correctly offers Unmute instead of claiming audio is on.
+            // state to muted so the visible control correctly offers Unmute.
             if (explicit) return;
             state.sessionMuted = true;
             vid.muted = true;
@@ -2019,27 +2041,6 @@
             video.removeAttribute("src");
             video.load();
           });
-        }
-        function hydrateNearby(index, { playback = false } = {}) {
-          const candidate=document.getElementById(`video-${index}`);
-          if(!candidate)return;
-          const source=candidate.dataset.videoSrc;
-          if(!source)return;
-          if(candidate.hasAttribute("src")) {
-            if(playback)candidate.preload="auto";
-            return;
-          }
-          const resumeTime=Number(candidate.dataset.resumeTime)||0;
-          candidate.preload=playback?"auto":"metadata";
-          if(resumeTime>0) {
-            candidate.addEventListener("loadedmetadata",()=>{
-              if(Number.isFinite(candidate.duration))
-                candidate.currentTime=Math.min(resumeTime,Math.max(0,candidate.duration-0.1));
-              candidate.dataset.resumeTime="0";
-            },{once:true});
-          }
-          candidate.src=source;
-          candidate.load();
         }
         // Wait until a viewer settles on the reel. A rapid swipe must not
         // download an entire video just because it crossed the screen briefly.
