@@ -74,3 +74,7 @@
 .fyp-fullscreen{position:absolute;right:12px;top:12px;z-index:4;border:1px solid #ffffff77;background:#0b151acb;color:#fff;border-radius:999px;padding:10px 14px;font:700 12px system-ui;min-height:42px;cursor:pointer}
 .fyp-comment-count{font-variant-numeric:tabular-nums}
 @media(max-width:620px){.fyp-grid{max-width:100%}.fyp-video-stage{height: min(78dvh,760px);min-height:400px;border-radius:12px 12px 0 0}.fyp-video-stage .fyp-inline-video{height:100%;aspect-ratio:auto}.fyp-social-actions .btn{flex:1 1 auto}}
+
+/* Progressive feed continuation stays inside the grid without a heavy footer. */
+.fyp-load-more-wrap{grid-column:1/-1;display:flex;justify-content:center;align-items:center;padding:14px 0}
+.fyp-load-more-wrap .btn{min-width:160px}
