@@ -1546,6 +1546,12 @@
               candidate.currentTime=Math.min(resumeTime,Math.max(0,candidate.duration-0.1));
             candidate.dataset.resumeTime="0";
           },{once:true});
+        } else if(!candidate.poster) {
+          candidate.addEventListener("loadedmetadata",()=>{
+            if(Number.isFinite(candidate.duration)&&candidate.duration>0.12) {
+              try{candidate.currentTime=Math.min(0.08,candidate.duration/2);}catch{}
+            }
+          },{once:true});
         }
         candidate.src=source;
         candidate.load();
@@ -2053,7 +2059,7 @@
               const idx = entry.target.dataset.index;
               const vid = document.getElementById(`video-${idx}`);
               if (!vid) return;
-              if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
+              if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
                 state.activeIndex = Number(idx);
                 // Keep one active media source at a time. The visible reel gets
                 // metadata for its preview even when autoplay is disabled.
@@ -2081,7 +2087,7 @@
               }
             });
           },
-          { root: scroller, threshold: [0, 0.6, 1] }
+          { root: scroller, threshold: [0, 0.5, 0.6, 1] }
         );
         scroller.querySelectorAll(".reel-item").forEach(el => {
           observer.observe(el);
