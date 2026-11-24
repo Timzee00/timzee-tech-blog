@@ -1330,7 +1330,7 @@
         const edit=event.target.closest("[data-edit-reel]");
         if(!edit)return;
         const reel=state.videos.find(row=>row.id===edit.dataset.editReel);
-        if(!reel||!state.user||reel.user_id!==state.user.id)return;
+        if(!reel||reel.source_post_id||!state.user||reel.user_id!==state.user.id)return;
         editingReelId=reel.id;
         document.getElementById("reelEditTitle").value=reel.title||"";
         document.getElementById("reelEditDescription").value=reel.description||"";
@@ -1340,7 +1340,7 @@
       reelForm.addEventListener("submit",async event=>{
         event.preventDefault();
         const reel=state.videos.find(row=>row.id===editingReelId);
-        if(!reel||!state.user||reel.user_id!==state.user.id)return;
+        if(!reel||reel.source_post_id||!state.user||reel.user_id!==state.user.id)return;
         const title=document.getElementById("reelEditTitle").value.trim(),
           description=document.getElementById("reelEditDescription").value.trim(),
           resultStatus=document.getElementById("reelEditStatus"),
@@ -1423,7 +1423,7 @@
         const staff = video.uploader_staff_pick
           ? '<span class="reel-staff">'+icon("star")+' Staff Pick</span>'
           : '';
-        const editMarkup = state.user?.id===video.user_id
+        const editMarkup = !video.source_post_id && state.user?.id===video.user_id
           ? '<button type="button" class="reel-edit-caption" data-edit-reel="'+escapeHTML(video.id)+'" aria-label="Edit my reel caption">'+icon("edit")+' Edit</button>'
           : '';
         const followMarkup = video.user_id && state.user?.id!==video.user_id &&
@@ -2198,7 +2198,7 @@
       setupMentionInput(drawerInput);
       document.getElementById('videoCreatePoll').addEventListener('click',()=>{
         const video=state.videos.find(v=>v.id===state.commentsOpenFor);
-        if(video&&state.user?.id===video.user_id)void openPollComposer('video',video.id,
+        if(video&&!video.source_post_id&&state.user?.id===video.user_id)void openPollComposer('video',video.id,
           ()=>mountPoll(document.getElementById('videoCommentPoll'),'video',video.id));
       });
       for(const [control,column] of [['videoCommentsEnabled','allow_comments'],['videoDownloadsEnabled','allow_download']]){
@@ -2373,7 +2373,7 @@
         }
         state.commentsOpenFor = videoId;
         const video=state.videos.find(v=>v.id===videoId);
-        const isOwner=Boolean(state.user&&video?.user_id===state.user.id);
+        const isOwner=Boolean(state.user&&video?.user_id===state.user.id&&!video?.source_post_id);
         const controls=document.getElementById('videoCommentCreatorControls');
         controls.hidden=!isOwner;
         document.getElementById("videoCommentsEnabled").checked=video?.allow_comments!==false;
