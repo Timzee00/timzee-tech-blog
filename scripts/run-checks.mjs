@@ -198,6 +198,14 @@ const steps=[
     ]
   },
   {
+    "label": "Curator and article media persistence",
+    "args": [
+      "--test",
+      "tests/curator-publishing-regression.test.cjs",
+      "tests/admin-post-media-upload.test.cjs"
+    ]
+  },
+  {
     "label": "Product upgrade behavior",
     "args": [
       "--test",
