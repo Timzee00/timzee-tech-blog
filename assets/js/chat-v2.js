@@ -1196,7 +1196,7 @@ async function refreshRecent(threadId) {
 async function invokeBlipForMessage(message, threadId) {
   if (!message?.id || message.is_blip || !threadId) return;
   const body=String(message.body||"");
-  if (!/@blip\\b/i.test(body) && !message.reply_to) return;
+  if (!/@blip\b/i.test(body) && !message.reply_to) return;
   try {
     const {data:{session}}=await supabase.auth.getSession();
     if(!session?.access_token)return;
