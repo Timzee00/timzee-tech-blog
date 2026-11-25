@@ -8,6 +8,18 @@ const { parseJsonObject } = require("./_lib/request.js");
 
 const MAX_CONTEXT_MESSAGES = 30;
 const MAX_CONTEXT_CHARS = 1200;
+const PROVIDER_MODELS = {
+  groq: ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b"],
+  openai: ["gpt-4o-mini", "gpt-4o"],
+  anthropic: ["claude-sonnet-5", "claude-opus-4-8", "claude-haiku-4-5-20251001"],
+  openrouter: ["openrouter/free"]
+};
+const DEFAULT_MODELS = {
+  groq: "openai/gpt-oss-120b",
+  openai: "gpt-4o-mini",
+  anthropic: "claude-sonnet-5",
+  openrouter: "openrouter/free"
+};
 
 function response(body, status = 200) {
   return {
@@ -152,6 +164,12 @@ exports.handler = async event => {
     const baseUrl = process.env.DEPLOY_PRIME_URL || process.env.URL ||
       (host ? protocol + "://" + host : "");
     if (!baseUrl) throw new Error("AI endpoint is unavailable.");
+    const requestedProvider = String(parsed.payload.provider || "groq").toLowerCase();
+    const provider = Object.hasOwn(PROVIDER_MODELS, requestedProvider) ? requestedProvider : "groq";
+    const requestedModel = String(parsed.payload.model || "");
+    const model = PROVIDER_MODELS[provider].includes(requestedModel)
+      ? requestedModel
+      : DEFAULT_MODELS[provider];
     const aiResponse = await fetch(baseUrl.replace(/\/$/, "") + "/.netlify/functions/llm-proxy", {
       method: "POST",
       headers: {
@@ -159,8 +177,8 @@ exports.handler = async event => {
         Authorization: "Bearer " + token
       },
       body: JSON.stringify({
-        provider: "groq",
-        model: "openai/gpt-oss-120b",
+        provider,
+        model,
         temperature: 0.45,
         max_tokens: 900,
         messages: [{ role: "system", content: system }, ...context]
