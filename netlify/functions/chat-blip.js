@@ -192,19 +192,17 @@ exports.handler = async event => {
       throw error;
     }
 
-    let recipientId = null;
-    if (!isGroup) {
-      recipientId = source.sender_id === session.invoked_by
-        ? source.recipient_id
-        : source.sender_id;
-      if (!recipientId) throw new Error("Could not resolve the other chat participant.");
+    if (!isGroup && !source.recipient_id) {
+      throw new Error("Could not resolve the other chat participant.");
     }
     const responseMessageId = require("crypto").randomUUID();
     const { error: insertError } = await db.from("direct_messages").insert({
       id: responseMessageId,
       thread_id: threadId,
-      sender_id: session.invoked_by,
-      recipient_id: recipientId,
+      // Use the message author as the database sender for visibility to both
+      // direct-chat participants. The is_blip flag controls the rendered identity.
+      sender_id: source.sender_id,
+      recipient_id: isGroup ? null : source.recipient_id,
       body: String(aiData.message).slice(0, 12000),
       reply_to: source.id,
       media_url: null,
