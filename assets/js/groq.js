@@ -193,7 +193,7 @@ export async function chat({
 
   let response = await callGroqAPI({
     messages,
-    systemPrompt: systemPrompt + "\\n\\nOutput budget: up to 4096 tokens per response. Prioritize a complete, useful answer within this limit. Do not stop mid-sentence or mid-list.",
+    systemPrompt: systemPrompt + "\n\nOutput budget: up to 4096 tokens per response. Prioritize a complete, useful answer within this limit. Do not stop mid-sentence or mid-list.",
     model,
     provider,
     maxTokens: 4096
@@ -211,7 +211,7 @@ export async function chat({
     ];
     const next = await callGroqAPI({
       messages: continuationMessages,
-      systemPrompt: systemPrompt + "\\n\\nContinue incomplete answers without repetition. Keep the answer accurate and finish cleanly.",
+      systemPrompt: systemPrompt + "\n\nContinue incomplete answers without repetition. Keep the answer accurate and finish cleanly.",
       model,
       provider,
       maxTokens: 4096
@@ -221,7 +221,7 @@ export async function chat({
     response = next;
   }
   if (response.finishReason === "length") {
-    responseContent += "\\n\\n[Blip reached the provider's maximum continuation limit. Ask it to continue for the remaining part.]";
+    responseContent += "\n\n[Blip reached the provider's maximum continuation limit. Ask it to continue for the remaining part.]";
   }
 
   if (conversationId && userId) {
