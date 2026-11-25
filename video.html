@@ -1629,6 +1629,7 @@
               if(heldVideo)heldVideo.playbackRate=holdOriginalRate;
               holdActivated=false;
               item.dataset.holdSpeedConsumed="true";
+              setTimeout(()=>{delete item.dataset.holdSpeedConsumed;},700);
             }
             holdPointerId=null;
             holdBadge?.classList.remove("show");
@@ -1654,7 +1655,7 @@
             },220);
           });
           const endHoldPointer=event=>{
-            if(holdPointerId!==null&&event.pointerId!==holdPointerId)return;
+            if(holdPointerId===null||event.pointerId!==holdPointerId)return;
             releaseHoldSpeed();
           };
           item.addEventListener("pointerup",endHoldPointer);
