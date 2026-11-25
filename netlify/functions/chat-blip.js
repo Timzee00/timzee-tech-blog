@@ -6,8 +6,8 @@
 const { createClient } = require("@supabase/supabase-js");
 const { parseJsonObject } = require("./_lib/request.js");
 
-const MAX_CONTEXT_MESSAGES = 40;
-const MAX_CONTEXT_CHARS = 1400;
+const MAX_CONTEXT_MESSAGES = 30;
+const MAX_CONTEXT_CHARS = 1200;
 
 function response(body, status = 200) {
   return {
