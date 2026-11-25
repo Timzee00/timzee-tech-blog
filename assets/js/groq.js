@@ -102,7 +102,7 @@ export async function callGroqAPI({
   systemPrompt = SYSTEM_PROMPTS.general,
   model = null,
   temperature = 0.7,
-  maxTokens = 1024,
+  maxTokens = 4096,
   provider = null
 } = {}) {
   const resolvedProvider = provider || getProvider();
@@ -149,6 +149,7 @@ export async function callGroqAPI({
     return {
       content: data.message || data.choices?.[0]?.message?.content || "",
       usage: data.usage,
+      finishReason: data.finish_reason || data.stop_reason || null,
       model: data.model || resolvedModel
     };
   } catch (error) {
@@ -190,15 +191,38 @@ export async function chat({
     .map(msg => ({ role: msg.role, content: msg.content }));
   messages.push({ role: "user", content: message });
 
-  const response = await callGroqAPI({
+  let response = await callGroqAPI({
     messages,
-    systemPrompt,
+    systemPrompt: systemPrompt + "\\n\\nOutput budget: up to 4096 tokens per response. Prioritize a complete, useful answer within this limit. Do not stop mid-sentence or mid-list.",
     model,
-    provider
+    provider,
+    maxTokens: 4096
   });
 
-  const responseContent = response.content || "";
-  const tokensUsed = response.usage?.total_tokens || 0;
+  let responseContent = response.content || "";
+  let tokensUsed = response.usage?.total_tokens || 0;
+  // If the provider explicitly reports a length stop, continue the same answer
+  // automatically instead of leaving a visibly cut-off response.
+  for (let continuation = 0; response.finishReason === "length" && continuation < 2; continuation += 1) {
+    const continuationMessages = [
+      ...messages,
+      { role: "assistant", content: responseContent },
+      { role: "user", content: "Continue exactly where your previous response stopped. Do not repeat earlier text. Finish the answer cleanly." }
+    ];
+    const next = await callGroqAPI({
+      messages: continuationMessages,
+      systemPrompt: systemPrompt + "\\n\\nContinue incomplete answers without repetition. Keep the answer accurate and finish cleanly.",
+      model,
+      provider,
+      maxTokens: 4096
+    });
+    responseContent += next.content || "";
+    tokensUsed += next.usage?.total_tokens || 0;
+    response = next;
+  }
+  if (response.finishReason === "length") {
+    responseContent += "\\n\\n[Blip reached the provider's maximum continuation limit. Ask it to continue for the remaining part.]";
+  }
 
   if (conversationId && userId) {
     const userSave = await saveMessage(conversationId, userId, "user", message, 0);
