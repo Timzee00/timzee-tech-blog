@@ -1636,7 +1636,7 @@
           };
           item.addEventListener("pointerdown",event=>{
             if((event.pointerType==="mouse"&&event.button!==0) ||
-               event.target.closest("button,a,.reel-progress,.reel-caption,.reel-feed-modes,.comment-drawer,.reel-player-dock"))return;
+               event.target.closest("button,a,.reel-progress,.reel-caption,.reel-feed-modes,.comment-drawer,.reel-player-dock,.reel-bottom,.reel-nav"))return;
             const rect=item.getBoundingClientRect();
             const x=event.clientX-rect.left;
             // Only the outer quarter on either side activates 2×. The centre
@@ -1644,6 +1644,7 @@
             if(x>=rect.width*.25&&x<=rect.width*.75)return;
             const idx=item.dataset.index;
             holdPointerId=event.pointerId;
+            try{item.setPointerCapture(event.pointerId);}catch(_){}
             holdTimer=setTimeout(()=>{
               const heldVideo=document.getElementById("video-"+idx);
               if(!heldVideo||!heldVideo.isConnected)return;
@@ -1661,8 +1662,6 @@
           item.addEventListener("pointerup",endHoldPointer);
           item.addEventListener("pointercancel",endHoldPointer);
           item.addEventListener("lostpointercapture",endHoldPointer);
-          window.addEventListener("pointerup",endHoldPointer);
-          window.addEventListener("pointercancel",endHoldPointer);
           item.addEventListener("contextmenu",event=>{
             if(holdActivated){event.preventDefault();releaseHoldSpeed();}
           });
