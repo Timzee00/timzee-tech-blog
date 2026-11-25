@@ -106,7 +106,7 @@ test("sitemap XML escapes untrusted content, skips duplicates and rejects invali
 
 test("indexable public pages get self-canonical links at build time without touching noindex pages",async()=>{
  const {injectSocialDefaults}=await import("../scripts/inject-social-meta.mjs");
- for(const page of ["spaces.html","videos.html","novels.html","marketplace.html","terms.html"]){
+ for(const page of ["spaces.html","videos.html","novels.html","marketplace.html","terms.html","download.html"]){
   const html=fs.readFileSync(page,"utf8");
   const built=injectSocialDefaults(html,page);
   const canonical="https://blipmood.netlify.app/"+page;

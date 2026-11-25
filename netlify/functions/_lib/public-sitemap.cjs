@@ -19,7 +19,8 @@ const STATIC_PATHS=Object.freeze([
   "/terms.html",
   "/privacy.html",
   "/cookies.html",
-  "/accessibility.html"
+  "/accessibility.html",
+  "/download.html"
 ]);
 const validId=id=>typeof id==="string"&&/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id);
 function escapeXml(value){
