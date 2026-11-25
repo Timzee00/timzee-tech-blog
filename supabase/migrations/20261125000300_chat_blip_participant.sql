@@ -38,14 +38,14 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY INVOKER
 SET search_path = ''
-AS $
+AS $guard_blip$
 BEGIN
   IF NEW.is_blip AND COALESCE(auth.jwt() ->> 'role', '') <> 'service_role' THEN
     RAISE EXCEPTION 'Only the Blip server may create or update Blip messages';
   END IF;
   RETURN NEW;
 END;
-$$;
+$guard_blip$;
 
 DROP TRIGGER IF EXISTS direct_messages_guard_blip ON public.direct_messages;
 CREATE TRIGGER direct_messages_guard_blip
