@@ -644,7 +644,7 @@ function reactionBadges(m){
       <span aria-hidden="true">${escapeHTML(r.emoji)}</span><small>${Number(r.reaction_count)||0}</small>
     </button>`).join('')}</div>`;
 }
-function renderMessages({ preserveScroll = false } = {}) { const target=$("chatMessages"); if(!target)return; const previousTop=target.scrollTop; const followBottom=!preserveScroll||target.scrollHeight-target.scrollTop-target.clientHeight<80; const q=state.messageSearchTerm.trim().toLowerCase(); const msgs=q?state.messages.filter(m=>String(m.body||'').toLowerCase().includes(q)):state.messages;const replyMap=new Map(state.messages.map(m=>[m.id,m])); if(!msgs.length){target.innerHTML=`<div class="chat-no-messages">${q?'No messages match your search.':'No messages yet. Start the conversation.'}</div>`;return;} target.innerHTML=msgs.map(m=>{const self=m.sender_id===state.user.id;const p=profileFor(m.sender_id)||{};const deleted=Boolean(m.deleted_at);
+function renderMessages({ preserveScroll = false } = {}) { const target=$("chatMessages"); if(!target)return; const previousTop=target.scrollTop; const followBottom=!preserveScroll||target.scrollHeight-target.scrollTop-target.clientHeight<80; const q=state.messageSearchTerm.trim().toLowerCase(); const msgs=q?state.messages.filter(m=>String(m.body||'').toLowerCase().includes(q)):state.messages;const replyMap=new Map(state.messages.map(m=>[m.id,m])); if(!msgs.length){target.innerHTML=`<div class="chat-no-messages">${q?'No messages match your search.':'No messages yet. Start the conversation.'}</div>`;return;} target.innerHTML=msgs.map(m=>{const isBlip=m.is_blip===true;const self=m.sender_id===state.user.id&&!isBlip;const p=isBlip?{}:(profileFor(m.sender_id)||{});const deleted=Boolean(m.deleted_at);
  const body=deleted?'This message was unsent':m.body?renderChatText(m.body,{verified:p.is_verified===true}):'';
  const canPin=!state.activeGroupId||isOwnerOfActiveGroup();
  return `<article class="chat-message ${self?'self':'received'} ${deleted?'is-unsent':''} ${m.pinned_at?'is-pinned':''}"
@@ -652,7 +652,7 @@ function renderMessages({ preserveScroll = false } = {}) { const target=$("chatM
  data-message-deleted="${deleted?'true':'false'}" data-can-pin="${canPin?'true':'false'}"
  data-message-created="${escapeHTML(asUtcTimestamp(m.created_at))}"
  data-message-pinned="${m.pinned_at?'true':'false'}" data-starred="${state.starred.has(m.id)?'true':'false'}"
- data-message-author="${escapeHTML(self?'You':chatProfileLabel(p))}">${!self&&state.activeGroupId?`<a class="chat-message-author" href="profile.html?id=${encodeURIComponent(m.sender_id)}" title="View member profile">${verifiedName(chatProfileLabel(p),p,{compact:true})}</a>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${state.starred.has(m.id)?'<span class="chat-star-indicator">★ Starred</span>':''}${m.forwarded_from?'<span class="chat-forwarded-indicator">↗ Forwarded</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}${deleted?'':reactionBadges(m)}${!deleted&&String(m.body||'').startsWith('📊 Poll:')?`<div class="chat-bubble-poll" data-chat-poll-id="${escapeHTML(m.id)}"></div>`:''}${state.translations.has(m.id+'::'+state.settings.translateLanguage)?`<div class="chat-message-translation">${escapeHTML(state.translations.get(m.id+'::'+state.settings.translateLanguage))}</div>`:''}<div class="chat-message-meta"><span>${chatTimeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop;
+ data-message-author="${escapeHTML(isBlip?'Blip':self?'You':chatProfileLabel(p))}">${isBlip?'<span class="chat-message-author chat-message-author-blip">Blip</span>':!self&&state.activeGroupId?`<a class="chat-message-author" href="profile.html?id=${encodeURIComponent(m.sender_id)}" title="View member profile">${verifiedName(chatProfileLabel(p),p,{compact:true})}</a>`:''}${m.pinned_at?'<span class="chat-pin-indicator" aria-label="Pinned message">📌 Pinned</span>':''}${state.starred.has(m.id)?'<span class="chat-star-indicator">★ Starred</span>':''}${m.forwarded_from?'<span class="chat-forwarded-indicator">↗ Forwarded</span>':''}${replyQuoteHtml(m,replyMap)}${body?`<div class="chat-message-body">${body}</div>`:''}${deleted?'':messageMediaHtml(m)}${deleted?'':reactionBadges(m)}${!deleted&&String(m.body||'').startsWith('📊 Poll:')?`<div class="chat-bubble-poll" data-chat-poll-id="${escapeHTML(m.id)}"></div>`:''}${state.translations.has(m.id+'::'+state.settings.translateLanguage)?`<div class="chat-message-translation">${escapeHTML(state.translations.get(m.id+'::'+state.settings.translateLanguage))}</div>`:''}<div class="chat-message-meta"><span>${chatTimeAgo(m.created_at)}</span>${!deleted&&m.edited_at?'<span class="chat-edited-indicator" title="Message text was edited">Edited</span>':''}<button type="button" class="chat-message-actions" aria-label="Message actions" aria-haspopup="menu" aria-expanded="false">···</button></div></article>`}).join(''); target.scrollTop=followBottom?target.scrollHeight:previousTop;
   target.querySelectorAll("[data-chat-poll-id]").forEach(host=>{
     void mountPoll(host,'chat',host.dataset.chatPollId);
   });
@@ -1058,7 +1058,7 @@ function startLinkedReply(messageId){
   if(!m||m.deleted_at){window.siteToast?.("This message can no longer be replied to.",{type:"info"});return;}
   state.replyTo={
     id:m.id,threadId:state.activeThreadId,
-    author:m.sender_id===state.user.id?"You":chatProfileLabel(profileFor(m.sender_id)),
+    author:m.is_blip?"Blip":m.sender_id===state.user.id?"You":chatProfileLabel(profileFor(m.sender_id)),
     excerpt:String(m.body||m.media_type||"Attachment").slice(0,150)
   };
   renderReplyPreview();
@@ -1067,7 +1067,7 @@ function startLinkedReply(messageId){
 function replyQuoteHtml(m,map){
   if(!m.reply_to)return "";
   const parent=map.get(m.reply_to);
-  const author=parent?(parent.sender_id===state.user.id?"You":chatProfileLabel(profileFor(parent.sender_id))):"Message";
+  const author=parent?(parent.is_blip?"Blip":parent.sender_id===state.user.id?"You":chatProfileLabel(profileFor(parent.sender_id))):"Message";
   const excerpt=parent?(parent.deleted_at?"Message unsent":String(parent.body||parent.media_type||"Attachment")):"Tap to view original message";
   return `<button type="button" class="chat-message-reply-ref" data-replied-id="${escapeHTML(m.reply_to)}" aria-label="Jump to replied message">
     <strong>${escapeHTML(author)}</strong><span>${escapeHTML(excerpt.slice(0,140))}</span></button>`;
@@ -1193,6 +1193,29 @@ async function refreshRecent(threadId) {
   void loadPinnedMessages(threadId).catch(err=>console.warn("Pinned messages unavailable",err));
   void refreshReactions(threadId).catch(err=>console.warn("Chat reactions unavailable",err));
 }
+async function invokeBlipForMessage(message, threadId) {
+  if (!message?.id || message.is_blip || !threadId) return;
+  const body=String(message.body||"");
+  if (!/@blip\\b/i.test(body) && !message.reply_to) return;
+  try {
+    const {data:{session}}=await supabase.auth.getSession();
+    if(!session?.access_token)return;
+    const result=await fetch("/.netlify/functions/chat-blip",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        Authorization:"Bearer "+session.access_token
+      },
+      body:JSON.stringify({messageId:message.id,threadId})
+    });
+    if(!result.ok){
+      const payload=await result.json().catch(()=>({}));
+      console.warn("Blip chat response unavailable:",payload.error||result.status);
+    }
+  }catch(error){
+    console.warn("Blip chat invocation failed:",error);
+  }
+}
 const realtime = createChatRealtime(supabase, {
   canConnect: () => navigator.onLine,
   onStatus: status => {
@@ -1211,18 +1234,19 @@ const realtime = createChatRealtime(supabase, {
     const selection = state.selection;
     if (threadId !== state.activeThreadId) return;
     const exists = state.messages.some(item => item.id === message.id);
+    if(event==='INSERT'&&!exists&&!message.is_blip)void invokeBlipForMessage(message,threadId);
     if (event === 'UPDATE' && !exists) { void loadPinnedMessages(threadId).catch(console.warn); return; }
     state.messageVersions.set(message.id, ++state.messageRevision);
     mergeMessage(message); renderMessages({ preserveScroll: true }); renderInfoMedia(); void renderFriends();
-    if(event!=='DELETE'&&message.sender_id!==state.user?.id&&message.body)
+    if(event!=='DELETE'&&!message.is_blip&&message.sender_id!==state.user?.id&&message.body)
       void translateChatMessage(message.id,{automatic:true});
     if(event==="UPDATE")void loadPinnedMessages(threadId).catch(console.warn);
-    if(message.sender_id!==state.user.id)void chatEnhancements.markRead(message.id);
+    if(message.is_blip||message.sender_id!==state.user.id)void chatEnhancements.markRead(message.id);
     await loadProfiles([message.sender_id]);
     if (threadId !== state.activeThreadId || selection !== state.selection) return;
     renderMessages({ preserveScroll: true });
     if (event === 'INSERT' && !exists && message.sender_id !== state.user.id && state.settings.notifications && !isCurrentChatMuted()) {
-      window.siteToast?.(`${chatProfileLabel(profileFor(message.sender_id))}: ${message.body || 'Attachment'}`, { type: 'info', title: 'New message' });
+      window.siteToast?.(`${message.is_blip?'Blip':chatProfileLabel(profileFor(message.sender_id))}: ${message.body || 'Attachment'}`, { type: 'info', title: 'New message' });
     }
   }
 });
@@ -1361,6 +1385,7 @@ async function sendMessage() {
     const result = await supabase.from('direct_messages').insert(payload).select().single();
     if (result.error) throw result.error;
     const saved = result.data || payload;
+    if(!saved.is_blip)void invokeBlipForMessage(saved,threadId);
     if (state.activeThreadId === threadId) {
       if (!state.messages.some(message => message.id === saved.id)) state.messages.push(saved);
       renderMessages();
