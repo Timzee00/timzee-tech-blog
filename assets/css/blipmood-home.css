@@ -120,6 +120,35 @@ body.blipmood-home main, body.blipmood-home footer { position: relative; z-index
 .blipmood-home .explore-heading { padding: 2px 6px 14px; display: flex; align-items: center; }
 .blipmood-home .explore-heading .eyebrow { margin: 0; letter-spacing: .14em; }
 .blipmood-home .explore-heading .bm-explore-more { color: var(--bm-sky); font-size: 12px; font-weight: 700; }
+/* Keep the Explore rows readable at narrow phone widths. */
+.blipmood-home .explore-panel > a {
+  grid-template-columns: 20px 38px minmax(0,1fr) 22px;
+  gap: clamp(6px,1.5vw,14px);
+  padding-inline: clamp(8px,2vw,13px);
+}
+.blipmood-home .explore-panel > a > span:nth-child(3) {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.blipmood-home .explore-panel strong,
+.blipmood-home .explore-panel small {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.blipmood-home .explore-panel strong { line-height: 1.35; }
+.blipmood-home .explore-panel small { line-height: 1.45; }
+@media (max-width: 380px) {
+  .blipmood-home .explore-panel > a {
+    grid-template-columns: 17px 32px minmax(0,1fr) 18px;
+    gap: 6px;
+    padding: 12px 8px;
+  }
+  .blipmood-home .explore-panel .bm-explore-icon svg { width: 26px; height: 26px; }
+  .blipmood-home .explore-panel strong { font-size: 13px; }
+  .blipmood-home .explore-panel small { font-size: 11px; }
+}
 .blipmood-home .explore-panel > a {
   display: grid; grid-template-columns: 26px 45px minmax(0,1fr) 31px;
   align-items: center; gap: clamp(9px,2vw,22px);
@@ -238,4 +267,13 @@ body.blipmood-home main, body.blipmood-home footer { position: relative; z-index
     content-visibility: auto;
     contain-intrinsic-size: auto 380px;
   }
+}
+
+/* Explicit compact-width overrides must follow the base Explore grid. */
+@media (max-width: 520px) {
+  .blipmood-home .explore-panel > a {
+    grid-template-columns: 20px 38px minmax(0,1fr) 22px;
+    gap: 7px;
+  }
+  .blipmood-home .explore-panel > a > span:nth-child(3) { min-width: 0; }
 }

@@ -1,25 +1,85 @@
-.bm-install-page{padding:clamp(34px,6vw,76px) 0 48px;min-height:62vh}
-.bm-install-heading{max-width:760px;margin:0 auto 34px;text-align:center}
-.bm-install-eyebrow{display:inline-block;margin-bottom:12px;color:var(--color-primary);font-size:.75rem;font-weight:800;letter-spacing:.14em}
-.bm-install-heading h1{margin:0 0 12px;color:var(--color-text);font:800 clamp(2.1rem,6vw,3.55rem)/1.08 var(--font-display);letter-spacing:-.045em}
+/* Blipmood install page — theme-aware deep glass treatment. */
+.bm-install-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(38px,7vw,88px) 0 56px;
+  min-height: 68vh;
+  background:
+    radial-gradient(ellipse 58% 42% at 12% 8%, color-mix(in srgb,var(--color-primary) 18%,transparent),transparent 72%),
+    radial-gradient(ellipse 48% 44% at 88% 24%, color-mix(in srgb,var(--color-secondary) 17%,transparent),transparent 74%);
+}
+.bm-install-page::before,
+.bm-install-page::after {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  width: min(48vw,520px);
+  aspect-ratio:1;
+  border-radius:50%;
+  pointer-events:none;
+  filter:blur(2px);
+}
+.bm-install-page::before {
+  top:8%;left:-20%;
+  border:1px solid color-mix(in srgb,var(--color-primary) 30%,transparent);
+  background:radial-gradient(circle at 38% 35%,color-mix(in srgb,var(--color-primary) 18%,transparent),transparent 65%);
+  animation:bm-install-float 13s ease-in-out infinite alternate;
+}
+.bm-install-page::after {
+  right:-20%;bottom:-24%;
+  border:1px solid color-mix(in srgb,var(--color-secondary) 30%,transparent);
+  background:radial-gradient(circle at 48% 45%,color-mix(in srgb,var(--color-secondary) 16%,transparent),transparent 68%);
+  animation:bm-install-float 16s ease-in-out infinite alternate-reverse;
+}
+.bm-install-heading{max-width:760px;margin:0 auto 38px;text-align:center}
+.bm-install-eyebrow{display:inline-block;margin-bottom:12px;color:var(--color-primary);font-size:.75rem;font-weight:800;letter-spacing:.16em}
+.bm-install-heading h1{margin:0 0 12px;color:var(--color-text);font:800 clamp(2.1rem,6vw,3.65rem)/1.08 var(--font-display);letter-spacing:-.045em}
 .bm-install-heading>p{max-width:58ch;margin:0 auto;color:var(--color-text-muted);font-size:1rem;line-height:1.7}
-.bm-install-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;max-width:960px;margin:0 auto}
-.bm-install-card{min-width:0;padding:clamp(20px,3vw,30px);border:1px solid var(--color-border);border-radius:20px;background:var(--color-surface);color:var(--color-text);box-shadow:var(--elevation-2)}
-.bm-install-card-icon{display:grid;place-items:center;width:54px;height:54px;margin-bottom:20px;border:1px solid color-mix(in srgb,var(--color-primary) 35%,transparent);border-radius:16px;background:color-mix(in srgb,var(--color-primary) 10%,transparent);color:var(--color-primary)}
+.bm-install-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:980px;margin:0 auto}
+.bm-install-card{
+  position:relative;isolation:isolate;min-width:0;overflow:hidden;
+  padding:clamp(22px,3.2vw,34px);
+  border:1px solid color-mix(in srgb,var(--color-border-strong,var(--color-border)) 78%,transparent);
+  border-radius:26px;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--color-surface) 70%,transparent),color-mix(in srgb,var(--color-surface) 48%,transparent));
+  color:var(--color-text);
+  box-shadow:0 24px 70px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.18);
+  -webkit-backdrop-filter:blur(26px) saturate(155%);
+  backdrop-filter:blur(26px) saturate(155%);
+  transition:transform .35s cubic-bezier(.2,.75,.25,1),border-color .35s ease,box-shadow .35s ease;
+  animation:bm-install-rise .75s cubic-bezier(.2,.75,.25,1) both;
+}
+.bm-install-card:nth-child(2){animation-delay:.12s}
+.bm-install-card::before{
+  content:"";position:absolute;z-index:-1;inset:-1px;
+  background:radial-gradient(420px circle at var(--pointer-x,50%) var(--pointer-y,0%),color-mix(in srgb,var(--color-primary) 15%,transparent),transparent 62%);
+  opacity:.8;pointer-events:none;
+}
+.bm-install-card::after{
+  content:"";position:absolute;top:-65%;left:-45%;width:42%;height:230%;
+  transform:rotate(24deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent);
+  animation:bm-install-shimmer 9s ease-in-out infinite;pointer-events:none;
+}
+.bm-install-card:hover{transform:translateY(-6px);border-color:color-mix(in srgb,var(--color-primary) 52%,var(--color-border));box-shadow:0 30px 80px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.22)}
+.bm-install-card-icon{display:grid;place-items:center;width:56px;height:56px;margin-bottom:20px;border:1px solid color-mix(in srgb,var(--color-primary) 40%,transparent);border-radius:18px;background:color-mix(in srgb,var(--color-primary) 13%,transparent);color:var(--color-primary);box-shadow:0 8px 28px color-mix(in srgb,var(--color-primary) 12%,transparent)}
 .bm-install-card-icon svg{width:30px;height:30px}
-.bm-install-card-icon-blue{color:var(--color-secondary);border-color:color-mix(in srgb,var(--color-secondary) 35%,transparent);background:color-mix(in srgb,var(--color-secondary) 10%,transparent)}
-.bm-install-platform{margin:0 0 7px;color:var(--color-text-muted);font-size:.7rem;font-weight:850;letter-spacing:.13em}
-.bm-install-card h2{margin:0 0 10px;color:var(--color-text);font:750 1.45rem/1.2 var(--font-display);letter-spacing:-.025em}
-.bm-install-description{margin:0 0 18px;color:var(--color-text-muted);font-size:.92rem;line-height:1.65}
+.bm-install-card-icon-blue{color:var(--color-secondary);border-color:color-mix(in srgb,var(--color-secondary) 40%,transparent);background:color-mix(in srgb,var(--color-secondary) 13%,transparent)}
+.bm-install-platform{margin:0 0 7px;color:var(--color-text-muted);font-size:.7rem;font-weight:850;letter-spacing:.15em}
+.bm-install-card h2{margin:0 0 10px;color:var(--color-text);font:750 1.45rem/1.25 var(--font-display);letter-spacing:-.025em}
+.bm-install-description{margin:0 0 18px;color:var(--color-text-muted);font-size:.92rem;line-height:1.7}
 .bm-install-card .btn{white-space:normal}
 .bm-install-card .btn[hidden]{display:none!important}
-.bm-install-help,.bm-install-note{margin:14px 0 0;color:var(--color-text-muted);font-size:.82rem;line-height:1.65}
-.bm-install-note{padding-top:12px;border-top:1px solid var(--color-border)}
-.bm-install-steps{display:grid;gap:12px;margin:18px 0 20px;padding-left:1.35rem;color:var(--color-text);font-size:.9rem;line-height:1.6}
+.bm-install-help,.bm-install-note{margin:14px 0 0;color:var(--color-text-muted);font-size:.82rem;line-height:1.7}
+.bm-install-note{padding-top:13px;border-top:1px solid var(--color-border)}
+.bm-install-steps{display:grid;gap:12px;margin:18px 0 20px;padding-left:1.35rem;color:var(--color-text);font-size:.9rem;line-height:1.7}
 .bm-install-steps li{padding-left:4px}
 .bm-install-status{min-height:1.5em;margin:22px auto 0;text-align:center;color:var(--color-primary);font-size:.9rem;font-weight:650}
-.bm-install-back{margin:12px 0 0;text-align:center;font-size:.9rem}
+.bm-install-back{margin:16px 0 0;text-align:center;font-size:.9rem}
 .bm-install-back a{color:var(--color-primary);font-weight:700}
 .bm-install-page :where(a,button):focus-visible{outline:3px solid var(--color-secondary);outline-offset:3px}
-@media(max-width:760px){.bm-install-page{padding-top:32px}.bm-install-grid{grid-template-columns:minmax(0,1fr);gap:14px}.bm-install-heading{margin-bottom:24px;text-align:left}.bm-install-heading>p{margin:0}.bm-install-card{padding:22px}.bm-install-card-icon{margin-bottom:16px}}
-@media(prefers-reduced-motion:reduce){.bm-install-page *{scroll-behavior:auto;transition:none!important}}
+@keyframes bm-install-float{from{transform:translate3d(0,-2%,0) scale(.94)}to{transform:translate3d(8%,7%,0) scale(1.08)}}
+@keyframes bm-install-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bm-install-shimmer{0%,35%{left:-55%;opacity:0}48%{opacity:.8}70%,100%{left:125%;opacity:0}}
+@media(max-width:760px){.bm-install-page{padding-top:34px}.bm-install-grid{grid-template-columns:minmax(0,1fr);gap:15px}.bm-install-heading{margin-bottom:26px;text-align:left}.bm-install-heading>p{margin:0}.bm-install-card{padding:23px;border-radius:22px}.bm-install-card-icon{margin-bottom:16px}}
+@media(prefers-reduced-motion:reduce){.bm-install-page *,.bm-install-page::before,.bm-install-page::after{animation:none!important;transition:none!important}.bm-install-card:hover{transform:none}}
