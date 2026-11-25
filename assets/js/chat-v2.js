@@ -1540,7 +1540,7 @@ function setupEvents(){
   setupChatEmojiMenu();
   $("peopleSearchPanel")?.addEventListener("keydown",keepPeopleSearchFocus);
   $("loadOlderMessages")?.addEventListener("click", () => loadOlderMessages().catch(error => reportAppError(error, "Unable to load older messages")));
-  setupMentionInput($("chatBody"));
+  setupMentionInput($("chatBody"), {includeBlip:true});
   setupMentionInput($("chatEditBody"));
   $("chatForwardList")?.addEventListener('click',e=>{
     const friend=e.target.closest('[data-forward-friend]')?.dataset.forwardFriend;
