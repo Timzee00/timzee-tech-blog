@@ -36,11 +36,11 @@ ALTER TABLE public.chat_ai_events ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION public.guard_blip_chat_message()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = ''
-AS $$
+AS $
 BEGIN
-  IF NEW.is_blip AND COALESCE(auth.role(), '') <> 'service_role' THEN
+  IF NEW.is_blip AND COALESCE(auth.jwt() ->> 'role', '') <> 'service_role' THEN
     RAISE EXCEPTION 'Only the Blip server may create or update Blip messages';
   END IF;
   RETURN NEW;
