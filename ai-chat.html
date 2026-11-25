@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ask the AI - Blipmood</title>
-    <meta name="description" content="Ask Blipmood AI for writing help, ideas, explanations and code.">
+    <title>Blip — Blipmood</title>
+    <meta name="description" content="Ask Blip for writing help, ideas, explanations and code.">
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="assets/css/ai-message-renderer.css">
     <link rel="stylesheet" href="assets/css/blipmood-ai-chat.css">
@@ -43,11 +43,11 @@
     </header>
 
     <main id="main-content">
-      <h1 class="visually-hidden">Blipmood AI Assistant</h1>
+      <h1 class="visually-hidden">Blip</h1>
       <div class="container chat-layout" id="aiChatLayout" data-view="list">
         <aside class="chat-sidebar" data-reveal>
           <div class="chat-sidebar-header">
-            <h2>AI Chat</h2>
+            <h2>Blip</h2>
             <button class="btn" id="newConversationBtn" type="button">New chat</button>
           </div>
           <h4>Conversations</h4>
@@ -60,22 +60,22 @@
             <div class="ai-chat-identity">
               <span class="ai-chat-mark" data-bm-icon="fyp" aria-hidden="true"></span>
               <div class="ai-chat-heading">
-                <strong id="aiChatTitle">Blipmood AI</strong>
+                <strong id="aiChatTitle">Blip</strong>
                 <div class="chat-meta" id="aiChatSubtitle">Your creative copilot</div>
               </div>
             </div>
             <button type="button" class="ai-chat-new" id="aiHeaderNewChat" aria-label="Start a new AI chat">New chat</button>
           </div>
-          <div class="chat-messages message-list" id="aiChatMessages" role="log" aria-label="AI chat messages">
-            <div class="callout">Start a new chat to ask the AI anything — tech questions, writing help, code, ideas.</div>
+          <div class="chat-messages message-list" id="aiChatMessages" role="log" aria-label="Blip chat messages">
+            <div class="callout">Start a new chat to ask Blip anything — tech questions, writing help, code, ideas.</div>
           </div>
           <div class="chat-typing" id="aiTypingIndicator" style="display:none; margin: 0 16px 8px;">
             <span></span><span></span><span></span>
           </div>
           <form novalidate id="aiChatForm" class="chat-input">
-            <label for="aiChatInput" class="visually-hidden">Message Blipmood AI</label>
+            <label for="aiChatInput" class="visually-hidden">Message Blip</label>
             <div class="chat-input-row">
-              <textarea id="aiChatInput" placeholder="Ask Blipmood AI anything…" rows="1" required class="resize-none" maxlength="6000"></textarea>
+              <textarea id="aiChatInput" placeholder="Ask Blip anything…" rows="1" required class="resize-none" maxlength="6000"></textarea>
               <button type="submit" class="chat-input-icon-btn chat-send-btn" title="Send" aria-label="Send message"><span data-bm-icon="send" aria-hidden="true"></span></button>
             </div>
           </form>
@@ -189,7 +189,7 @@
           actions.className="ai-message-actions";
           const copy=document.createElement("button");
           copy.type="button";copy.className="ai-copy-answer";copy.textContent="Copy response";
-          copy.setAttribute("aria-label","Copy assistant response");
+          copy.setAttribute("aria-label","Copy Blip response");
           copy.addEventListener("click",async()=>{
             try{await navigator.clipboard.writeText(String(content||""));copy.textContent="Copied";}
             catch{copy.textContent="Copy unavailable";}
@@ -207,7 +207,7 @@
         renderConversationList();
         const conversation = state.conversations.find((c) => c.id === id);
         titleEl.textContent = conversation?.title || "Chat";
-        subtitleEl.textContent = "Blipmood AI · Clear, formatted answers";
+        subtitleEl.textContent = "Blip · Clear, formatted answers";
         messagesEl.innerHTML = `<div class="callout">Loading...</div>`;
         const history = await getConversationHistory(id);
         if(state.activeConversationId!==id)return;
