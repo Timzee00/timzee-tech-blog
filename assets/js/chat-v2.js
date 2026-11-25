@@ -327,10 +327,10 @@ function renderUnifiedInbox(){
  const filtered=all.filter(item=>!q||
    [item.title,item.type==='group'?item.group?.description:'',item.preview?.body]
      .some(part=>String(part||'').toLowerCase().includes(q)));
- all.sort((a,b)=>Number(b.pinned)-Number(a.pinned)||
+ filtered.sort((a,b)=>Number(b.pinned)-Number(a.pinned)||
    new Date(asUtcTimestamp(b.preview?.created_at||b.group?.updated_at||b.group?.created_at)||0)-
    new Date(asUtcTimestamp(a.preview?.created_at||a.group?.updated_at||a.group?.created_at)||0));
- target.innerHTML=all.length?all.map(item=>{
+ target.innerHTML=filtered.length?filtered.map(item=>{
   const active=item.type==='group'?item.id===state.activeGroupId:item.type==='dm'&&item.id===state.activeFriendId;
   const icon=item.type==='blip'?'<span class="chat-list-avatar chat-blip-avatar" aria-hidden="true">B</span>':item.type==='group'?
    '<img class="chat-list-avatar" src="'+escapeHTML(item.group.avatar_url||DEFAULT_GROUP_AVATAR)+'" alt="">':
