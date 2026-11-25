@@ -81,7 +81,7 @@ async function showMentionDropdown(field, searchTerm, options = {}) {
   closeMentionDropdown();
   const request = ++mentionRequest;
   const suggestions = await searchUsersForMention(searchTerm);
-  const matchesBlip = options.includeBlip === true && searchTerm.length > 0 && "blip".startsWith(searchTerm.toLowerCase());
+  const matchesBlip = options.includeBlip === true && "blip".startsWith(searchTerm.toLowerCase());
   if (matchesBlip && !suggestions.some(user => String(user.username || "").toLowerCase() === "blip")) {
     suggestions.unshift({ id: "blip-ai", username: "blip", display_name: "Blip", avatar_url: null, is_blip: true });
   }
@@ -257,7 +257,7 @@ export async function handleMentionInput(event, options = {}) {
   
   // Only show dropdown if we have at least one character after @
   if (searchTerm.length === 0) {
-    await showMentionDropdown(field, "");
+    await showMentionDropdown(field, "", options);
   } else if (/^\w+$/.test(searchTerm)) {
     // Only alphanumeric characters
     currentSearchTerm = searchTerm;
