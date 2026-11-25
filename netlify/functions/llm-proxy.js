@@ -238,7 +238,8 @@ exports.handler = async (event) => {
         success: true,
         message: content || "No response from AI",
         model: data.model || model,
-        usage: data.usage
+        usage: data.usage,
+        finish_reason: data.stop_reason || null
       });
     }
 
@@ -276,7 +277,8 @@ exports.handler = async (event) => {
       success: true,
       message,
       model: data.model || model,
-      usage: data.usage
+      usage: data.usage,
+      finish_reason: data.choices?.[0]?.finish_reason || null
     });
   } catch (error) {
     if (error.name === "TimeoutError" || error.name === "AbortError") {
