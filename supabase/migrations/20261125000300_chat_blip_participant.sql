@@ -32,3 +32,22 @@ ALTER TABLE public.chat_ai_events ENABLE ROW LEVEL SECURITY;
 
 -- Deliberately no client policies: only the server's service-role function
 -- can read or mutate invocation state and idempotency claims.
+
+CREATE OR REPLACE FUNCTION public.guard_blip_chat_message()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.is_blip AND COALESCE(auth.role(), '') <> 'service_role' THEN
+    RAISE EXCEPTION 'Only the Blip server may create or update Blip messages';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS direct_messages_guard_blip ON public.direct_messages;
+CREATE TRIGGER direct_messages_guard_blip
+  BEFORE INSERT OR UPDATE OF is_blip ON public.direct_messages
+  FOR EACH ROW EXECUTE FUNCTION public.guard_blip_chat_message();
