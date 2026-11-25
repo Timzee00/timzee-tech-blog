@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101e24">
+  <meta name="description" content="Install Blipmood on Android or iPhone for a convenient app-like experience.">
+  <link rel="canonical" href="https://blipmood.netlify.app/download.html">
+  <title>Install Blipmood</title>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <link rel="stylesheet" href="/assets/css/app-download.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="site-header">
+    <div class="container wrap">
+      <a class="brand" href="/index.html" aria-label="Blipmood — Home">
+        <span class="logo">Blipmood</span>
+      </a>
+      <nav class="nav-pill" aria-label="Main navigation">
+        <a href="/index.html">Home</a>
+        <a href="/fyp.html">For You</a>
+        <a href="/discussion.html">Discussion</a>
+        <div class="nav-more">
+          <button type="button" class="nav-more-toggle" aria-haspopup="true" aria-expanded="false">More <span class="nav-more-caret" aria-hidden="true">▾</span></button>
+          <div class="nav-more-menu">
+            <a href="/videos.html">Videos</a>
+            <a href="/marketplace.html">Marketplace</a>
+            <a href="/settings.html">Settings</a>
+            <a href="/download.html" aria-current="page">Install Blipmood</a>
+          </div>
+        </div>
+      </nav>
+      <div class="header-actions">
+        <div class="auth-actions" id="authActions"></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" class="bm-install-page">
+    <div class="container">
+      <header class="bm-install-heading">
+        <span class="bm-install-eyebrow">BLIPMOOD ON YOUR DEVICE</span>
+        <h1>Take Blipmood with you.</h1>
+        <p>Install Blipmood on your home screen for a focused, app-like experience. Choose your device below.</p>
+      </header>
+
+      <div class="bm-install-grid">
+        <section class="bm-install-card" id="androidInstallPanel" aria-labelledby="androidInstallTitle">
+          <div class="bm-install-card-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="12" y="4" width="24" height="40" rx="5"></rect>
+              <path d="M20 9h8M21 38h6"></path>
+            </svg>
+          </div>
+          <p class="bm-install-platform">ANDROID</p>
+          <h2 id="androidInstallTitle">Install on Android</h2>
+          <p class="bm-install-description">Add Blipmood from a supported browser. Your account, messages and content continue to use the same secure Blipmood website.</p>
+          <button id="androidInstallButton" class="btn lg full-width" type="button" hidden>Install Blipmood</button>
+          <p id="androidInstallHelp" class="bm-install-help">Open this page in Chrome, tap the browser menu (⋮), then choose <strong>Install app</strong> or <strong>Add to Home screen</strong> when available.</p>
+          <p class="bm-install-note">This installs the web app. A separate Android APK is not published yet.</p>
+        </section>
+
+        <section class="bm-install-card" id="iphoneInstallPanel" aria-labelledby="iphoneInstallTitle">
+          <div class="bm-install-card-icon bm-install-card-icon-blue" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="12" y="4" width="24" height="40" rx="5"></rect>
+              <path d="M20 9h8M21 38h6"></path>
+              <path d="M24 18v10m-4-4 4-4 4 4"></path>
+            </svg>
+          </div>
+          <p class="bm-install-platform">IPHONE</p>
+          <h2 id="iphoneInstallTitle">Add to iPhone</h2>
+          <p class="bm-install-description">Use Safari to add Blipmood to your Home Screen. iPhone installation does not use an APK.</p>
+          <ol class="bm-install-steps">
+            <li>Open this page in <strong>Safari</strong>.</li>
+            <li>Tap the <strong>Share</strong> button.</li>
+            <li>Choose <strong>Add to Home Screen</strong>. Scroll down if needed.</li>
+            <li>When shown, enable <strong>Open as Web App</strong>, then tap <strong>Add</strong>.</li>
+          </ol>
+          <p class="bm-install-note">The Blipmood icon will appear on your Home Screen. Availability of individual options can vary by iOS version and region.</p>
+        </section>
+      </div>
+
+      <p id="installStatus" class="bm-install-status" role="status" aria-live="polite"></p>
+      <p class="bm-install-back"><a href="/index.html">Back to Blipmood</a></p>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-links">
+      <a href="/index.html">Home</a>
+      <a href="/support.html">Support</a>
+    </div>
+  </footer>
+  <script type="module" src="/assets/js/pwa-install.mjs"></script>
+</body>
+</html>

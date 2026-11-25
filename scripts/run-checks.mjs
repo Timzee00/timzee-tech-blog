@@ -241,6 +241,7 @@ const steps=[
       "tests/push-navigation-security.test.cjs",
       "tests/browser-push-flow.test.cjs",
       "tests/blipmood-pwa-offline.test.cjs",
+      "tests/blipmood-pwa-install.test.cjs",
       "tests/notification-device-alerts.test.cjs",
       "tests/web-push.test.cjs"
     ]

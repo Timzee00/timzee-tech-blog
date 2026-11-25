@@ -29,6 +29,7 @@ function ensureProductNavigation(){
   addLink("fyp.html", "For You");
   addLink("launches.html", "Coming Soon");
   addLink("settings.html", "Settings");
+  addLink("download.html", "Install Blipmood");
 }
 // Approved raster artwork: play-button 'i', expressive double-'oo', brush underline.
 // The build downloads and checksum-verifies these into first-party /assets/brand URLs.
@@ -116,7 +117,7 @@ export function ensureSiteFooter() {
     } catch { /* Ignore malformed footer links. */ }
     if (contextualLinks.length >= 8) break;
   }
-  container.innerHTML = `<div class="footer-top"><a class="footer-wordmark" href="/index.html">Blipmood</a><p>A place for curious minds. Built around community.</p></div><nav class="footer-links" aria-label="Community links"><a href="/fyp.html">For You</a><a href="/video.html">Reels</a><a href="/discussion.html">Discussion</a><a href="/marketplace.html">Marketplace</a><a href="/newsletter.html">Newsletter</a><a href="/contact.html">Contact</a><a href="/support.html">Support</a></nav>`;
+  container.innerHTML = `<div class="footer-top"><a class="footer-wordmark" href="/index.html">Blipmood</a><p>A place for curious minds. Built around community.</p></div><nav class="footer-links" aria-label="Community links"><a href="/fyp.html">For You</a><a href="/video.html">Reels</a><a href="/discussion.html">Discussion</a><a href="/marketplace.html">Marketplace</a><a href="/newsletter.html">Newsletter</a><a href="/contact.html">Contact</a><a href="/support.html">Support</a><a href="/download.html">Install app</a></nav>`;
   footer.dataset.timzeeShellReady = "true";
   updateFooterBrand(window.__timzeeSiteBrandName || document.getElementById("siteName")?.textContent || "Blipmood");
   if (contextualLinks.length) {

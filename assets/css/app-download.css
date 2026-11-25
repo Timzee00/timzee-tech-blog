@@ -1,0 +1,25 @@
+.bm-install-page{padding:clamp(34px,6vw,76px) 0 48px;min-height:62vh}
+.bm-install-heading{max-width:760px;margin:0 auto 34px;text-align:center}
+.bm-install-eyebrow{display:inline-block;margin-bottom:12px;color:var(--color-primary);font-size:.75rem;font-weight:800;letter-spacing:.14em}
+.bm-install-heading h1{margin:0 0 12px;color:var(--color-text);font:800 clamp(2.1rem,6vw,3.55rem)/1.08 var(--font-display);letter-spacing:-.045em}
+.bm-install-heading>p{max-width:58ch;margin:0 auto;color:var(--color-text-muted);font-size:1rem;line-height:1.7}
+.bm-install-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;max-width:960px;margin:0 auto}
+.bm-install-card{min-width:0;padding:clamp(20px,3vw,30px);border:1px solid var(--color-border);border-radius:20px;background:var(--color-surface);color:var(--color-text);box-shadow:var(--elevation-2)}
+.bm-install-card-icon{display:grid;place-items:center;width:54px;height:54px;margin-bottom:20px;border:1px solid color-mix(in srgb,var(--color-primary) 35%,transparent);border-radius:16px;background:color-mix(in srgb,var(--color-primary) 10%,transparent);color:var(--color-primary)}
+.bm-install-card-icon svg{width:30px;height:30px}
+.bm-install-card-icon-blue{color:var(--color-secondary);border-color:color-mix(in srgb,var(--color-secondary) 35%,transparent);background:color-mix(in srgb,var(--color-secondary) 10%,transparent)}
+.bm-install-platform{margin:0 0 7px;color:var(--color-text-muted);font-size:.7rem;font-weight:850;letter-spacing:.13em}
+.bm-install-card h2{margin:0 0 10px;color:var(--color-text);font:750 1.45rem/1.2 var(--font-display);letter-spacing:-.025em}
+.bm-install-description{margin:0 0 18px;color:var(--color-text-muted);font-size:.92rem;line-height:1.65}
+.bm-install-card .btn{white-space:normal}
+.bm-install-card .btn[hidden]{display:none!important}
+.bm-install-help,.bm-install-note{margin:14px 0 0;color:var(--color-text-muted);font-size:.82rem;line-height:1.65}
+.bm-install-note{padding-top:12px;border-top:1px solid var(--color-border)}
+.bm-install-steps{display:grid;gap:12px;margin:18px 0 20px;padding-left:1.35rem;color:var(--color-text);font-size:.9rem;line-height:1.6}
+.bm-install-steps li{padding-left:4px}
+.bm-install-status{min-height:1.5em;margin:22px auto 0;text-align:center;color:var(--color-primary);font-size:.9rem;font-weight:650}
+.bm-install-back{margin:12px 0 0;text-align:center;font-size:.9rem}
+.bm-install-back a{color:var(--color-primary);font-weight:700}
+.bm-install-page :where(a,button):focus-visible{outline:3px solid var(--color-secondary);outline-offset:3px}
+@media(max-width:760px){.bm-install-page{padding-top:32px}.bm-install-grid{grid-template-columns:minmax(0,1fr);gap:14px}.bm-install-heading{margin-bottom:24px;text-align:left}.bm-install-heading>p{margin:0}.bm-install-card{padding:22px}.bm-install-card-icon{margin-bottom:16px}}
+@media(prefers-reduced-motion:reduce){.bm-install-page *{scroll-behavior:auto;transition:none!important}}
