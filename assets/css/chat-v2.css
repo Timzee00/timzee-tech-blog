@@ -357,3 +357,13 @@ html[data-group-tags="hidden"] .member-tag-list { display: none; }
  .chat-people-search:not([hidden]){top:max(68px,env(safe-area-inset-top));max-height:calc(100dvh - 158px);padding:15px 12px}
  .chat-people-search #peopleResults{max-height:calc(100dvh - 290px)}
 }
+
+/* Persistent entry point to Blip, independent of the selected conversation. */
+.chat-blip-fab{position:fixed;right:max(22px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));z-index:85;display:flex;align-items:center;gap:9px;min-height:54px;padding:0 17px 0 12px;border:1px solid color-mix(in srgb,var(--color-primary,#0f766e) 35%,var(--color-border,#dbe3e8));border-radius:999px;background:color-mix(in srgb,var(--color-surface,#fff) 86%,transparent);color:var(--color-text,#17252c);box-shadow:0 12px 34px rgba(0,0,0,.2);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);font:750 .88rem var(--font-body);text-decoration:none;transition:transform .18s ease,box-shadow .18s ease}
+.chat-blip-fab:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(0,0,0,.24)}
+.chat-blip-fab:focus-visible{outline:3px solid var(--color-secondary,#38bdf8);outline-offset:3px}
+.chat-blip-fab svg{width:30px;height:30px;color:var(--color-primary,#0f766e)}
+.chat-blip-avatar{display:grid;place-items:center;background:linear-gradient(145deg,#0f766e,#38bdf8);color:#fff;font-weight:850;font-size:1rem;box-shadow:inset 0 0 0 1px #ffffff55}
+.chat-list-row-blip{border-color:color-mix(in srgb,var(--color-primary,#0f766e) 20%,transparent);background:color-mix(in srgb,var(--color-primary,#0f766e) 5%,transparent)}
+.chat-list-row-blip:hover{background:color-mix(in srgb,var(--color-primary,#0f766e) 10%,var(--color-surface-muted,#f3f1ec))}
+@media(max-width:760px){.chat-blip-fab{right:max(16px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));min-height:52px}}
