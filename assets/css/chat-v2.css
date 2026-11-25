@@ -367,3 +367,8 @@ html[data-group-tags="hidden"] .member-tag-list { display: none; }
 .chat-list-row-blip{border-color:color-mix(in srgb,var(--color-primary,#0f766e) 20%,transparent);background:color-mix(in srgb,var(--color-primary,#0f766e) 5%,transparent)}
 .chat-list-row-blip:hover{background:color-mix(in srgb,var(--color-primary,#0f766e) 10%,var(--color-surface-muted,#f3f1ec))}
 @media(max-width:760px){.chat-blip-fab{right:max(16px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));min-height:52px}}
+
+
+/* Keep the floating Blip shortcut clear of the bottom chat navigation and controls. */
+.chat-blip-fab{bottom:max(64px,calc(env(safe-area-inset-bottom) + 48px))}
+@media(max-width:760px){.chat-blip-fab{bottom:max(88px,calc(env(safe-area-inset-bottom) + 72px))}}
