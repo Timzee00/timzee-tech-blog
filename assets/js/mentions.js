@@ -98,7 +98,7 @@ async function showMentionDropdown(field, searchTerm, options = {}) {
   const dropdown = document.createElement("div");
   dropdown.className = "mention-dropdown";
   dropdown.setAttribute("role","listbox");
-  dropdown.setAttribute("aria-label","Mention a community member");
+  dropdown.setAttribute("aria-label",options.includeBlip?"Mention a community member or Blip":"Mention a community member");
   dropdown.style.cssText = `
     position: fixed;
     top: ${Math.min(top,viewBottom-70)}px;
