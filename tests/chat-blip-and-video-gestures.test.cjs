@@ -48,7 +48,7 @@ test("Blip response messages are marked and idempotency is enforced", () => {
   assert.match(migration, /source_message_id uuid PRIMARY KEY/);
   assert.match(migration, /ADD COLUMN IF NOT EXISTS is_blip boolean/);
   assert.match(migration, /guard_blip_chat_message/);
-  assert.match(migration, /auth\\.jwt\\(\\).*service_role/);
+  assert.match(migration, /auth\.jwt\(\).*service_role/);
 });
 
 test("Blip messages render as Blip and reply quotes identify Blip", () => {
