@@ -14,6 +14,7 @@ const steps=[
       "tests/blipmood-db-contracts.test.cjs",
       "tests/account-restrictions.test.cjs",
       "tests/chat-previews.test.cjs",
+      "tests/chat-blip-and-video-gestures.test.cjs",
       "tests/blip-earn-phase-a.test.cjs",
       "tests/blip-earn-manual-rewards.test.cjs",
       "tests/chat-formatters.test.cjs",
