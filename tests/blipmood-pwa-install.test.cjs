@@ -30,6 +30,7 @@ test("shared navigation, footer and sitemap expose the download route",()=>{
  const shell=read("assets/js/site-shell.js");
  assert.match(shell,/addLink\("download\.html", "Install Blipmood"\)/);
  assert.match(shell,/href="\/download\.html">Install app/);
+ assert.match(read("index.html"),/href="\/download\.html"/);
  assert.match(read("sitemap.xml"),/https:\/\/blipmood\.netlify\.app\/download\.html/);
 });
 
