@@ -43,7 +43,7 @@
 
     <main id="main-content" class="page-shell">
       <div class="container ai-settings">
-        <h1>AI Settings</h1>
+        <h1>Blip Settings</h1>
         <p class="tagline">Choose the AI provider and model used by the Timzee assistant.</p>
 
         <section class="setting-group" aria-labelledby="providerHeading">
@@ -240,7 +240,7 @@
         setStatus("Checking provider configuration...", null);
         try {
           const result = await generateContent({
-            prompt: "Reply with exactly: Timzee AI connection OK",
+            prompt: "Reply with exactly: Blip connection OK",
             systemPrompt: SYSTEM_PROMPTS.general,
             model: modelSelect.value,
             provider: providerSelect.value,
@@ -309,7 +309,7 @@
         localStorage.setItem("ai_model", model);
         state.provider = provider;
         state.model = model;
-        setStatus("AI settings saved for this browser. Provider credential check follows.", null);
+        setStatus("Blip settings saved for this browser. Provider credential check follows.", null);
         void inspectServerConfiguration();
       });
 
