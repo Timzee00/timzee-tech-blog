@@ -322,7 +322,9 @@ function renderUnifiedInbox(){
   id:g.id,threadId:g.id,type:'group',title:g.name||'Group',
   group:g,preview:state.previews.get(g.id)||null,pinned:g.is_pinned===true
  }));
- const all=[...dms,...groups,{id:"blip",threadId:"blip",type:"blip",title:"Blip",preview:null,pinned:true}].filter(item=>!q||
+ const all=[...dms,...groups];
+ all.push({id:"blip",threadId:"blip",type:"blip",title:"Blip",preview:null,pinned:true});
+ const filtered=all.filter(item=>!q||
    [item.title,item.type==='group'?item.group?.description:'',item.preview?.body]
      .some(part=>String(part||'').toLowerCase().includes(q)));
  all.sort((a,b)=>Number(b.pinned)-Number(a.pinned)||
