@@ -76,11 +76,15 @@ export function closeMentionDropdown() {
 /**
  * Show mention suggestions dropdown
  */
-async function showMentionDropdown(field, searchTerm) {
+async function showMentionDropdown(field, searchTerm, options = {}) {
   // Remove existing dropdown
   closeMentionDropdown();
   const request = ++mentionRequest;
   const suggestions = await searchUsersForMention(searchTerm);
+  const matchesBlip = options.includeBlip === true && "blip".startsWith(searchTerm.toLowerCase());
+  if (matchesBlip && !suggestions.some(user => String(user.username || "").toLowerCase() === "blip")) {
+    suggestions.unshift({ id: "blip-ai", username: "blip", display_name: "Blip", avatar_url: null, is_blip: true });
+  }
   if (request !== mentionRequest || !field.isConnected || document.activeElement !== field) return;
 
   const rect = field.getBoundingClientRect();
@@ -130,23 +134,31 @@ async function showMentionDropdown(field, searchTerm) {
       transition: background 0.2s;
     `;
     
-    const img = document.createElement("img");
-    const avatar = isSafeUrl(user.avatar_url) ? user.avatar_url : "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI4IiBmaWxsPSIjZTJlOGYwIi8+PC9zdmc+";
-    img.src = avatar;
-    img.alt = String(user.username || "Member");
-    img.className = "avatar avatar--xs";
-    img.style.cssText = "border-radius: 50%; object-fit: cover;";
+    const isBlip = user.is_blip === true;
+    const img = document.createElement(isBlip ? "span" : "img");
+    if (isBlip) {
+      img.textContent = "B";
+      img.setAttribute("aria-hidden", "true");
+      img.className = "avatar avatar--xs mention-blip-avatar";
+      img.style.cssText = "display:grid;place-items:center;border-radius:50%;background:var(--color-primary,#0f766e);color:#fff;font-weight:800;";
+    } else {
+      const avatar = isSafeUrl(user.avatar_url) ? user.avatar_url : "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1zbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI4IiBmaWxsPSIjZTJlOGYwIi8+PC9zdmc+";
+      img.src = avatar;
+      img.alt = String(user.username || "Member");
+      img.className = "avatar avatar--xs";
+      img.style.cssText = "border-radius: 50%; object-fit: cover;";
+    }
 
     const copy = document.createElement("div");
     copy.style.cssText = "flex: 1; min-width: 0;";
     const name = document.createElement("div");
     name.style.cssText = "font-weight: 600; font-size: 13px;";
-    name.textContent = String(user.username || "Member");
+    name.textContent = isBlip ? "Blip" : String(user.username || "Member");
     const handle = document.createElement("div");
     handle.style.cssText = "font-size: 12px; color: #999;";
-    handle.textContent = `@${user.username || ""}`;
+    handle.textContent = isBlip ? "AI participant" : `@${user.username || ""}`;
     copy.append(name, handle);
-    if(user.is_friend){
+    if(user.is_friend&&!isBlip){
       const badge=document.createElement("small");badge.textContent="Friend";
       badge.style.cssText="color:var(--color-primary,#0f766e);font-weight:700";
       copy.append(badge);
@@ -161,7 +173,7 @@ async function showMentionDropdown(field, searchTerm) {
     });
 
     item.setAttribute("role","option");
-    item.setAttribute("aria-label",`Mention @${user.username}`);
+    item.setAttribute("aria-label",isBlip?"Mention Blip":`Mention @${user.username}`);
     // Keep the textarea focused so its caret position is preserved.
     item.addEventListener("pointerdown",event=>event.preventDefault());
     item.addEventListener("click", () => {
@@ -213,7 +225,7 @@ export function insertMention(field, username, searchTerm) {
 /**
  * Handle text input for mention detection
  */
-export async function handleMentionInput(event) {
+export async function handleMentionInput(event, options = {}) {
   const field = event.target;
   const text = field.value;
   const cursorPos = field.selectionStart;
@@ -221,7 +233,7 @@ export async function handleMentionInput(event) {
   // Check if @ is at cursor
   if (cursorPos > 0 && text[cursorPos - 1] === "@") {
     currentSearchTerm = "";
-    await showMentionDropdown(field, "");
+    await showMentionDropdown(field, "", options);
     return;
   }
 
@@ -249,7 +261,7 @@ export async function handleMentionInput(event) {
   } else if (/^\w+$/.test(searchTerm)) {
     // Only alphanumeric characters
     currentSearchTerm = searchTerm;
-    await showMentionDropdown(field, searchTerm);
+    await showMentionDropdown(field, searchTerm, options);
   } else {
     closeMentionDropdown();
   }
@@ -258,16 +270,16 @@ export async function handleMentionInput(event) {
 /**
  * Setup mention system on a textarea or input
  */
-export function setupMentionInput(field) {
+export function setupMentionInput(field, options = {}) {
   if (!field) return;
 
   if (field.dataset.timzeeMentionsWired === "true") return;
   field.dataset.timzeeMentionsWired = "true";
   field.setAttribute("aria-autocomplete","list");
-  field.addEventListener("input", handleMentionInput);
+  field.addEventListener("input", event => handleMentionInput(event, options));
   field.addEventListener("click", () => {
     if (field.value.slice(0,field.selectionStart).includes("@"))
-      void handleMentionInput({target:field});
+      void handleMentionInput({target:field}, options);
   });
   field.addEventListener("keydown", (event) => {
     // Close dropdown on Escape
