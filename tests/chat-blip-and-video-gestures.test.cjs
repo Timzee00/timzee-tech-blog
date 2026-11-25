@@ -36,6 +36,8 @@ test("Blip response messages are marked and idempotency is enforced", () => {
   assert.match(endpoint, /23505/);
   assert.match(migration, /source_message_id uuid PRIMARY KEY/);
   assert.match(migration, /ADD COLUMN IF NOT EXISTS is_blip boolean/);
+  assert.match(migration, /guard_blip_chat_message/);
+  assert.match(migration, /auth\.role\(\).*service_role/);
 });
 
 test("Blip messages render as Blip and reply quotes identify Blip", () => {
@@ -54,6 +56,7 @@ test("Holding either outer side of a reel temporarily activates 2x speed", () =>
   assert.match(video, /heldVideo\.playbackRate=holdOriginalRate/);
   assert.match(video, /pointerup/);
   assert.match(video, /pointercancel/);
+  assert.match(video, /setPointerCapture/);
   assert.match(video, /reel-hold-speed/);
 });
 
