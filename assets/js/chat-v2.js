@@ -322,26 +322,26 @@ function renderUnifiedInbox(){
   id:g.id,threadId:g.id,type:'group',title:g.name||'Group',
   group:g,preview:state.previews.get(g.id)||null,pinned:g.is_pinned===true
  }));
- const all=[...dms,...groups].filter(item=>!q||
+ const all=[...dms,...groups,{id:"blip",threadId:"blip",type:"blip",title:"Blip",preview:null,pinned:true}].filter(item=>!q||
    [item.title,item.type==='group'?item.group?.description:'',item.preview?.body]
      .some(part=>String(part||'').toLowerCase().includes(q)));
  all.sort((a,b)=>Number(b.pinned)-Number(a.pinned)||
    new Date(asUtcTimestamp(b.preview?.created_at||b.group?.updated_at||b.group?.created_at)||0)-
    new Date(asUtcTimestamp(a.preview?.created_at||a.group?.updated_at||a.group?.created_at)||0));
  target.innerHTML=all.length?all.map(item=>{
-  const active=item.type==='group'?item.id===state.activeGroupId:item.id===state.activeFriendId;
-  const icon=item.type==='group'?
+  const active=item.type==='group'?item.id===state.activeGroupId:item.type==='dm'&&item.id===state.activeFriendId;
+  const icon=item.type==='blip'?'<span class="chat-list-avatar chat-blip-avatar" aria-hidden="true">B</span>':item.type==='group'?
    '<img class="chat-list-avatar" src="'+escapeHTML(item.group.avatar_url||DEFAULT_GROUP_AVATAR)+'" alt="">':
    verifiedAvatar(item.profile.avatar_url||DEFAULT_AVATAR,item.profile,{size:"md"});
-  const label=item.type==='group'?escapeHTML(item.title):
+  const label=item.type==='blip'?'Blip':item.type==='group'?escapeHTML(item.title):
    verifiedName(item.title,item.profile,{compact:true});
-  const excerpt=String(item.preview?.body||(
+  const excerpt=String(item.type==='blip'?'Your AI assistant · Open private AI chat':item.preview?.body||(
     !item.preview&&state.previewsLoading?'Loading latest message…':
     item.preview?.media_type?'Sent '+item.preview.media_type:
     item.type==='group'?item.group?.description||'Group chat':'Start a conversation')).slice(0,120);
   const when=item.preview?chatTimeAgo(item.preview.created_at):'';
-  return '<button class="chat-list-row '+(active?'active':'')+'" type="button" data-'+
-   (item.type==='group'?'group-id':'friend-id')+'="'+escapeHTML(item.id)+'">'+
+  return '<button class="chat-list-row '+(active?'active':'')+(item.type==='blip'?' chat-list-row-blip':'')+'" type="button" '+
+   (item.type==='blip'?'data-blip-chat="true"':'data-'+(item.type==='group'?'group-id':'friend-id')+'="'+escapeHTML(item.id)+'"')+'>'+
    icon+'<span class="chat-list-copy"><strong>'+label+'</strong><small>'+
    escapeHTML(excerpt)+'</small></span><span class="chat-list-time">'+escapeHTML(when)+
    (item.pinned?'<span class="chat-row-pin" title="Pinned">◆</span>':'')+
@@ -1568,6 +1568,7 @@ function setupEvents(){
   $("chatSearch")?.addEventListener('input',async e=>{state.searchTerm=e.target.value||'';await renderFriends();renderGroups();}); bindSearch($("peopleSearch"), searchPeople);
   for(const listId of ["friendList","dmsList","groupList"]){
    $(listId)?.addEventListener('click',event=>{
+    if(event.target.closest('[data-blip-chat]')){location.assign("ai-chat.html");return;}
     const friend=event.target.closest('[data-friend-id]')?.dataset.friendId;
     const group=event.target.closest('[data-group-id]')?.dataset.groupId;
     if(friend)void selectFriend(friend).catch(err=>reportAppError(err,'Chat open failed'));
