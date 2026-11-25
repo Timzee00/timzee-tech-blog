@@ -186,7 +186,8 @@ body.chat-page {
 .chat-message.received { align-self: flex-start; border-top-left-radius: 6px; }
 .chat-message.self { align-self: flex-end; color: #fff; background: var(--color-primary); border-color: transparent; border-top-right-radius: 6px; }
 .chat-message-body { overflow-wrap: anywhere; font-size: .9rem; line-height: 1.48; }
-.chat-message-author { margin-bottom: 4px; color: var(--color-primary); font-size: .72rem; font-weight: 700; }
+.chat-message-author { display:block; margin-bottom: 4px; color: var(--color-primary); font-size: .72rem; font-weight: 700; }
+.chat-message-author-blip { color: var(--color-accent, #38bdf8); letter-spacing: .02em; }
 .chat-message.self .chat-message-author { color: rgba(255,255,255,.8); }
 .chat-message-meta { display: flex; justify-content: flex-end; gap: 7px; margin-top: 5px; font-size: .63rem; align-items: center; }
 
