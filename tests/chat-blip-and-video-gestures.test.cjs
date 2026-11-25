@@ -10,6 +10,7 @@ const endpoint = read("netlify/functions/chat-blip.js");
 const migration = read("supabase/migrations/20261125000300_chat_blip_participant.sql");
 const video = read("video.html");
 const aiPage = read("ai-chat.html");
+const chatPage = read("chat.html");
 
 test("Blip is invoked from normal and group chat message events", () => {
   assert.match(chat, /invokeBlipForMessage\(message,threadId\)/);
@@ -22,6 +23,7 @@ test("The chat composer offers Blip as a mention target", () => {
   assert.match(mentions, /options\.includeBlip === true/);
   assert.match(mentions, /AI participant/);
   assert.match(mentions, /mention-blip/);
+  assert.match(chatPage, /@mention someone or @blip/);
 });
 
 test("Blip responds only to an explicit mention or a reply to a Blip message", () => {
