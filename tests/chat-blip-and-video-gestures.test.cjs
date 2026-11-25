@@ -76,3 +76,14 @@ test("The AI identity is named Blip in its dedicated chat page", () => {
   assert.match(aiPage, /Ask Blip anything/);
   assert.doesNotMatch(aiPage, /Blipmood AI|Timzee AI/);
 });
+
+test("Blip appears immediately when the user types @, including an empty search", () => {
+  assert.match(mentions, /options\.includeBlip === true && "blip"\.startsWith\(searchTerm\.toLowerCase\(\)\)/);
+  assert.match(mentions, /showMentionDropdown\(field, "", options\)/);
+});
+test("Chat inbox and floating shortcut both open the dedicated Blip chat", () => {
+  assert.match(chatPage, /class="chat-blip-fab" href="ai-chat\.html"/);
+  assert.match(chat, /type:"blip",title:"Blip"/);
+  assert.match(chat, /data-blip-chat="true"/);
+  assert.match(chat, /location\.assign\("ai-chat\.html"\)/);
+});
