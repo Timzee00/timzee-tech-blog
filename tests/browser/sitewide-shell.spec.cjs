@@ -239,7 +239,7 @@ test("Story viewer and composer manage keyboard focus and Escape", async ({ page
 test("AI assistant and immersive reels have primary headings and meaningful landmarks", async ({ page }) => {
   await mockSite(page, { role: "user" });
   await page.goto("/ai-chat.html");
-  await expect(page.getByRole("heading", { level: 1, name: "Timzee AI Assistant" })).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 1, name: "Blip" })).toHaveCount(1);
   await page.goto("/video.html");
   await expect(page.locator("main#main-content")).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 1, name: "Timzee Reels" })).toHaveCount(1);
