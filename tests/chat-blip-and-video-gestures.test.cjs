@@ -27,6 +27,7 @@ test("Blip session context starts at invocation and is bounded", () => {
   assert.match(endpoint, /created_at", session\.invoked_at/);
   assert.match(endpoint, /MAX_CONTEXT_MESSAGES = 30/);
   assert.match(endpoint, /MAX_CONTEXT_CHARS = 1200/);
+  assert.match(endpoint, /deleted_at/);
   assert.match(endpoint, /You are Blip/);
 });
 
