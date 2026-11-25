@@ -5,6 +5,7 @@ const path = require("node:path");
 
 const read = file => fs.readFileSync(path.join(__dirname, "..", file), "utf8");
 const chat = read("assets/js/chat-v2.js");
+const mentions = read("assets/js/mentions.js");
 const endpoint = read("netlify/functions/chat-blip.js");
 const migration = read("supabase/migrations/20261125000300_chat_blip_participant.sql");
 const video = read("video.html");
@@ -14,6 +15,13 @@ test("Blip is invoked from normal and group chat message events", () => {
   assert.match(chat, /invokeBlipForMessage\(message,threadId\)/);
   assert.match(chat, /invokeBlipForMessage\(saved,threadId\)/);
   assert.match(chat, /fetch\("\/.netlify\/functions\/chat-blip"/);
+});
+
+test("The chat composer offers Blip as a mention target", () => {
+  assert.match(chat, /setupMentionInput\(\$\("chatBody"\), \{includeBlip:true\}\)/);
+  assert.match(mentions, /options\.includeBlip === true/);
+  assert.match(mentions, /AI participant/);
+  assert.match(mentions, /mention-blip/);
 });
 
 test("Blip responds only to an explicit mention or a reply to a Blip message", () => {
