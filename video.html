@@ -133,6 +133,28 @@
         z-index: 3;
       }
 
+      .reel-hold-speed {
+        position: absolute;
+        z-index: 6;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(.94);
+        padding: 11px 18px;
+        border: 1px solid rgba(255,255,255,.28);
+        border-radius: 999px;
+        background: rgba(0,0,0,.72);
+        color: #fff;
+        font: 800 18px/1 system-ui,sans-serif;
+        letter-spacing: .02em;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .12s ease, transform .12s ease;
+      }
+      .reel-hold-speed.show {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
       .reel-pause-flash {
         position: absolute;
         top: 50%; left: 50%;
@@ -1458,6 +1480,7 @@
             <video class="reel-video" id="video-${index}" data-index="${index}" ${poster ? `poster="${escapeHTML(poster)}"` : ""} playsinline ${state.autoAdvance ? "" : "loop"} preload="none" data-video-src="${escapeHTML(src)}" data-resume-time="0"></video>
             <div class="reel-vignette"></div>
             <div class="reel-tapzone" aria-hidden="true"></div>
+            <div class="reel-hold-speed" aria-hidden="true">2×</div>
             <div class="reel-pause-flash" id="pauseflash-${index}">${icon("play")}</div>
 
             <div class="reel-bottom">
@@ -1597,7 +1620,57 @@
         const tapState=new Map();
         scroller.querySelectorAll(".reel-item:not([data-reel-tap-wired])").forEach(item=>{
           item.dataset.reelTapWired="true";
+          let holdTimer=null, holdOriginalRate=1, holdActivated=false, holdPointerId=null;
+          const holdBadge=item.querySelector(".reel-hold-speed");
+          const releaseHoldSpeed=()=>{
+            if(holdTimer){clearTimeout(holdTimer);holdTimer=null;}
+            if(holdActivated){
+              const heldVideo=document.getElementById("video-"+item.dataset.index);
+              if(heldVideo)heldVideo.playbackRate=holdOriginalRate;
+              holdActivated=false;
+              item.dataset.holdSpeedConsumed="true";
+            }
+            holdPointerId=null;
+            holdBadge?.classList.remove("show");
+          };
+          item.addEventListener("pointerdown",event=>{
+            if((event.pointerType==="mouse"&&event.button!==0) ||
+               event.target.closest("button,a,.reel-progress,.reel-caption,.reel-feed-modes,.comment-drawer,.reel-player-dock"))return;
+            const rect=item.getBoundingClientRect();
+            const x=event.clientX-rect.left;
+            // Only the outer quarter on either side activates 2×. The centre
+            // remains the normal tap/pause area and vertical swipes stay intact.
+            if(x>=rect.width*.25&&x<=rect.width*.75)return;
+            const idx=item.dataset.index;
+            holdPointerId=event.pointerId;
+            holdTimer=setTimeout(()=>{
+              const heldVideo=document.getElementById("video-"+idx);
+              if(!heldVideo||!heldVideo.isConnected)return;
+              holdOriginalRate=heldVideo.playbackRate||1;
+              heldVideo.playbackRate=2;
+              holdActivated=true;
+              holdTimer=null;
+              holdBadge?.classList.add("show");
+            },220);
+          });
+          const endHoldPointer=event=>{
+            if(holdPointerId!==null&&event.pointerId!==holdPointerId)return;
+            releaseHoldSpeed();
+          };
+          item.addEventListener("pointerup",endHoldPointer);
+          item.addEventListener("pointercancel",endHoldPointer);
+          item.addEventListener("lostpointercapture",endHoldPointer);
+          window.addEventListener("pointerup",endHoldPointer);
+          window.addEventListener("pointercancel",endHoldPointer);
+          item.addEventListener("contextmenu",event=>{
+            if(holdActivated){event.preventDefault();releaseHoldSpeed();}
+          });
           item.addEventListener("click",e=>{
+            if(item.dataset.holdSpeedConsumed==="true"){
+              delete item.dataset.holdSpeedConsumed;
+              e.preventDefault();
+              return;
+            }
             if(e.target.closest("button,a,.reel-progress,.reel-caption,.reel-feed-modes,.comment-drawer"))return;
             const idx=item.dataset.index,now=Date.now();
             const previous=tapState.get(idx);
