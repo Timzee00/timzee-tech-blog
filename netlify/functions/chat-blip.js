@@ -124,10 +124,11 @@ exports.handler = async event => {
 
   try {
     const { data: history, error: historyError } = await db.from("direct_messages")
-      .select("id,sender_id,body,media_type,is_blip,created_at,reply_to")
+      .select("id,sender_id,body,media_type,is_blip,created_at,reply_to,deleted_at")
       .eq("thread_id", threadId)
       .gte("created_at", session.invoked_at)
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(MAX_CONTEXT_MESSAGES);
     if (historyError) throw historyError;
 
@@ -141,6 +142,9 @@ exports.handler = async event => {
     ]));
 
     const context = (history || []).reverse().map(row => {
+      if (row.deleted_at) {
+        return { role: row.is_blip ? "assistant" : "user", content: "[message unsent]" };
+      }
       const text = String(row.body || (row.media_type ? "[" + row.media_type + " attachment]" : "[attachment]"))
         .slice(0, MAX_CONTEXT_CHARS);
       if (row.is_blip) return { role: "assistant", content: text };
