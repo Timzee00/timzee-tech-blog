@@ -1207,7 +1207,7 @@ async function invokeBlipForMessage(message, threadId) {
         Authorization:"Bearer "+session.access_token
       },
       body:JSON.stringify({
-        messageId,threadId,
+        messageId:message.id,threadId,
         provider:localStorage.getItem("ai_provider")||"groq",
         model:localStorage.getItem("ai_model")||""
       })
