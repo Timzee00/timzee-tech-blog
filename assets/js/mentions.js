@@ -81,7 +81,7 @@ async function showMentionDropdown(field, searchTerm, options = {}) {
   closeMentionDropdown();
   const request = ++mentionRequest;
   const suggestions = await searchUsersForMention(searchTerm);
-  const matchesBlip = options.includeBlip === true && "blip".startsWith(searchTerm.toLowerCase());
+  const matchesBlip = options.includeBlip === true && searchTerm.length > 0 && "blip".startsWith(searchTerm.toLowerCase());
   if (matchesBlip && !suggestions.some(user => String(user.username || "").toLowerCase() === "blip")) {
     suggestions.unshift({ id: "blip-ai", username: "blip", display_name: "Blip", avatar_url: null, is_blip: true });
   }
@@ -345,6 +345,9 @@ export function extractMentions(text) {
 export function linkifyMentions(text) {
   if (!text) return text;
   return text.replace(/@([a-zA-Z0-9_]+)/g, (match, username) => {
+    if (username.toLowerCase() === "blip") {
+      return '<span class="mention-link mention-blip" title="Blip AI participant">@Blip</span>';
+    }
     return `<a href="profile.html?username=${encodeURIComponent(username)}" class="mention-link">@${username}</a>`;
   });
 }
