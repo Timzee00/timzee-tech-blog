@@ -41,3 +41,40 @@ html[data-reduce-motion="true"] *,html[data-reduce-motion="true"] *::before,html
 html[data-high-contrast="true"]{filter:contrast(1.08);}
 html[data-high-contrast="true"] :where(button,a,input,select,textarea){border-color:var(--color-text,#16181d);}
 html[data-high-contrast="true"] :where(.card,.post-card,.popular-card,.feature-card,.side-card,.post-shell,.board,.hero-card,.stats-card,.category-card){border-color:var(--color-text,#16181d);}
+
+
+/* Homepage hero quick links: structural layout lives in the shared entry CSS
+   so it is applied on every device regardless of optional homepage bundles. */
+#bmHeroQuickLinks {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  margin: 18px 0 0;
+  position: relative;
+  clear: both;
+}
+#bmHeroQuickLinks > a.intro-note {
+  display: block !important;
+  position: static !important;
+  float: none !important;
+  inset: auto !important;
+  transform: none !important;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 2px 0;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  line-height: 1.6;
+  text-align: left;
+}
+#bmHeroQuickLinks > a.intro-note > span {
+  display: inline-block;
+  margin-left: 5px;
+}
