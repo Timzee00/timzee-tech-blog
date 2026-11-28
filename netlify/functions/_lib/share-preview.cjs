@@ -26,10 +26,10 @@ function imageMimeType(value){
  if(typeof value!=="string"||!value)return "";
  try{
   const path=new URL(value).pathname.toLowerCase();
-  if(/\\.jpe?g$/.test(path))return "image/jpeg";
-  if(/\\.png$/.test(path))return "image/png";
-  if(/\\.webp$/.test(path))return "image/webp";
-  if(/\\.avif$/.test(path))return "image/avif";
+  if(path.endsWith(".jpg")||path.endsWith(".jpeg"))return "image/jpeg";
+  if(path.endsWith(".png"))return "image/png";
+  if(path.endsWith(".webp"))return "image/webp";
+  if(path.endsWith(".avif"))return "image/avif";
  }catch{}
  return "";
 }
