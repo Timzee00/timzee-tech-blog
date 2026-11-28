@@ -13,6 +13,26 @@ function clean(value,max=230){
  return s.length>max?s.slice(0,max-1).replace(/\s+\S*$/,"")+"…":s;
 }
 function esc(x){return String(x??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+function formatPrice(value,currency){
+ if(value===null||value===undefined||value==="")return "";
+ const amount=Number(value);
+ if(!Number.isFinite(amount)||amount<0)return "";
+ const code=String(currency||"").trim().toUpperCase();
+ if(!/^[A-Z]{3}$/.test(code))return amount.toLocaleString("en-NG");
+ try{return new Intl.NumberFormat("en-NG",{style:"currency",currency:code,maximumFractionDigits:2}).format(amount);}
+ catch{return code+" "+amount.toLocaleString("en-NG");}
+}
+function imageMimeType(value){
+ if(typeof value!=="string"||!value)return "";
+ try{
+  const path=new URL(value).pathname.toLowerCase();
+  if(/\\.jpe?g$/.test(path))return "image/jpeg";
+  if(/\\.png$/.test(path))return "image/png";
+  if(/\\.webp$/.test(path))return "image/webp";
+  if(/\\.avif$/.test(path))return "image/avif";
+ }catch{}
+ return "";
+}
 function validUrl(value,origin){
  if(typeof value!=="string"||!value.trim()||value.length>2100)return "";
  try{const u=new URL(value.trim(),origin);
@@ -44,21 +64,32 @@ async function getMeta(kind,params,db,origin,path){
     image=m?.url||"";
   }
   if(!image)image=(String(row.content||"").match(/<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/i)||[])[1]||"";
-  details={title:row.title,description:row.feed_excerpt||row.content,image,type:"article",published:row.created_at,author:row.author_name};
+  details={title:row.title,description:[row.feed_excerpt||row.content,row.author_name?"By "+row.author_name:""].filter(Boolean).join(" · "),image,imageAlt:row.title+" on Blipmood",type:"article",published:row.created_at,author:row.author_name};
   canonicalKey=id?"id":"slug";canonicalVal=id||slug;
  }else if(kind==="video"){
   if(!id)return standard;
   row=one(await db.from("videos").select("id,title,description,author_name,thumbnail_url,video_url,created_at,is_public").eq("id",id).eq("is_public",true).maybeSingle());
   if(!row)return standard;
-  details={title:row.title||"Watch this video",description:row.description||"Watch a video on Blipmood",image:row.thumbnail_url,video:row.video_url,type:"video.other",published:row.created_at};
+  details={title:row.title||"Watch this video",description:[row.description||"Watch a video on Blipmood",row.author_name?"By "+row.author_name:""].filter(Boolean).join(" · "),image:row.thumbnail_url,imageAlt:(row.title||"Video")+" on Blipmood",video:row.video_url,type:"video.other",published:row.created_at,author:row.author_name};
   canonicalVal=id;
  }else if(kind==="listing"){
   if(!id)return standard;
-  row=one(await db.from("marketplace_items").select("id,title,description,images,is_available,expires_at").eq("id",id).maybeSingle());
+  row=one(await db.from("marketplace_items").select("id,title,description,seller_name,category,subcategory,price,currency,condition,location,images,is_available,expires_at").eq("id",id).maybeSingle());
   if(!row||(row.expires_at&&new Date(row.expires_at)<new Date()))return standard;
   const images=Array.isArray(row.images)?row.images:[];
   const image=images.map(v=>typeof v==="string"?v:(v?.url||v?.image_url||"")).find(v=>validUrl(v,origin))||"";
-  details={title:row.title,description:(row.description||"View this listing")+" · "+(row.is_available?"Available":"Currently unavailable"),image,type:"product"};
+  const price=formatPrice(row.price,row.currency);
+  const category=[row.category,row.subcategory].filter(Boolean).join(" · ");
+  const description=[
+   row.description||"View this marketplace listing",
+   price?"Price: "+price:"",
+   category,
+   row.condition?"Condition: "+row.condition:"",
+   row.location?"Location: "+row.location:"",
+   row.is_available===false?"Currently unavailable":"Available now",
+   row.seller_name?"Seller: "+row.seller_name:""
+  ].filter(Boolean).join(" · ");
+  details={title:row.title,description,image,imageAlt:(row.title||"Marketplace listing")+" on Blipmood",type:"product"};
   canonicalVal=id;
  }else if(kind==="novel"){
   if(!id)return standard;
@@ -99,27 +130,30 @@ async function getMeta(kind,params,db,origin,path){
   canonicalKey=story?"story":"user";canonicalVal=story||user;
  }else return standard;
  const qp=new URLSearchParams([[canonicalKey,canonicalVal]]);
- return {title:clean(details.title,130)||standard.title,description:clean(details.description)||standard.description,
- image:validUrl(details.image,origin)||standard.image,video:validUrl(details.video,origin),type:details.type||"website",
+ const image=validUrl(details.image,origin)||standard.image;
+ return {title:clean(details.title,110)||standard.title,description:clean(details.description,180)||standard.description,
+ image,imageAlt:clean(details.imageAlt||details.title||standard.title,150),imageType:imageMimeType(image),
+ video:validUrl(details.video,origin),type:details.type||"website",
  published:details.published||"",author:clean(details.author||"",80),canonical:origin+path+"?"+qp.toString(),found:true};
 }
 function renderHTML(meta,options={}){
  const tag=(name,value,attr="property")=>value?'<meta '+attr+'="'+esc(name)+'" content="'+esc(value)+'">':"";
- const parts=['<!doctype html><html lang="en"><head><meta charset="utf-8">',
+ const parts=['<!doctype html><html lang="en-NG"><head><meta charset="utf-8">',
  '<meta name="viewport" content="width=device-width,initial-scale=1">',
  '<title>'+esc(meta.title+" | Blipmood")+'</title>',tag("description",meta.description,"name"),
  '<link rel="canonical" href="'+esc(meta.canonical)+'">',
  tag("robots",options.noindex?"noindex, nofollow":"index, follow","name"),
- tag("og:site_name","Blipmood"),tag("og:type",meta.type),tag("og:title",meta.title),
+ tag("og:site_name","Blipmood"),tag("og:locale","en_NG"),tag("og:type",meta.type),tag("og:title",meta.title),
  tag("og:description",meta.description),tag("og:url",meta.canonical),
- tag("og:image",meta.image),tag("og:image:secure_url",meta.image),
- tag("og:image:alt",meta.title),tag("og:video",meta.video),tag("og:video:secure_url",meta.video),
- meta.video&&/\.mp4(?:$|\?)/i.test(meta.video)?tag("og:video:type","video/mp4"):"",
+ tag("og:image",meta.image),tag("og:image:secure_url",meta.image),tag("og:image:type",meta.imageType),
+ tag("og:image:alt",meta.imageAlt||meta.title),tag("og:video",meta.video),tag("og:video:secure_url",meta.video),
+ meta.video&&/\\.mp4(?:$|\\?)/i.test(meta.video)?tag("og:video:type","video/mp4"):"",
  tag("article:published_time",meta.published),tag("article:author",meta.author),
  tag("twitter:card","summary_large_image","name"),tag("twitter:title",meta.title,"name"),
  tag("twitter:description",meta.description,"name"),tag("twitter:image",meta.image,"name"),
+ tag("twitter:image:alt",meta.imageAlt||meta.title,"name"),
  '</head><body><main><h1>'+esc(meta.title)+'</h1><p>'+esc(meta.description)+'</p>',
  '<a href="'+esc(meta.canonical)+'">View on Blipmood</a></main></body></html>'];
- return parts.filter(Boolean).join("\n");
+ return parts.filter(Boolean).join("\\n");
 }
 module.exports={UUID,ROUTES,getMeta,renderHTML,safeOrigin,validUrl,clean,esc,fallback};
