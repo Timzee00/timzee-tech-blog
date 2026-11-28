@@ -74,7 +74,7 @@ async function getMeta(kind,params,db,origin,path){
   canonicalVal=id;
  }else if(kind==="listing"){
   if(!id)return standard;
-  row=one(await db.from("marketplace_items").select("id,title,description,seller_name,category,subcategory,price,currency,condition,location,images,is_available,expires_at").eq("id",id).maybeSingle());
+  row=one(await db.from("marketplace_items").select("id,title,description,seller_name,category,subcategory,price,currency,condition,location,images,is_available,expires_at").eq("id",id).eq("is_available",true).maybeSingle());
   if(!row||(row.expires_at&&new Date(row.expires_at)<new Date()))return standard;
   const images=Array.isArray(row.images)?row.images:[];
   const image=images.map(v=>typeof v==="string"?v:(v?.url||v?.image_url||"")).find(v=>validUrl(v,origin))||"";
