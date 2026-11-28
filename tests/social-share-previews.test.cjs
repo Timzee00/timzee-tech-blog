@@ -58,6 +58,12 @@ test("marketplace previews advertise the actual listing details and verified ima
  assert.match(html,/og:image:type/);
  assert.match(html,/twitter:image:alt/);
 });
+test("unavailable marketplace listings do not leak through service-role previews",async()=>{
+ const listing={id:A,title:"Private sold item",description:"This should not be public",is_available:false,expires_at:null};
+ const meta=await getMeta("listing",query("id="+A),mockDB({marketplace_items:[listing]}),BASE,"/listing.html");
+ assert.equal(meta.found,false);
+ assert.doesNotMatch(JSON.stringify(meta),/Private sold item|This should not be public/);
+});
 test("private reels, communities and stories cannot leak public previews",async()=>{
  const video=await getMeta("video",query("id="+A),mockDB({videos:[{id:A,is_public:false,title:"Private reel"}]}),BASE,"/video.html");
  assert.equal(video.found,false);
