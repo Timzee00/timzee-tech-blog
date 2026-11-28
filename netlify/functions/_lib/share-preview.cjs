@@ -46,7 +46,7 @@ function safeOrigin(input,production="https://blipmood.netlify.app"){
  return known;}catch{return production;}
 }
 function getId(params,key){const id=params.get(key)||"";return UUID.test(id)?id:null;}
-function fallback(kind,origin,path){return {title:(LABEL[kind]||"Discover")+" on Blipmood",description:"Discover videos, stories and conversations from the Blipmood community.",image:origin+FALLBACK,type:"website",canonical:origin+path,found:false};}
+function fallback(kind,origin,path){const title=(LABEL[kind]||"Discover")+" on Blipmood";return {title,description:"Discover videos, stories and conversations from the Blipmood community.",image:origin+FALLBACK,imageAlt:title+" social preview",imageType:"image/png",type:"website",canonical:origin+path,found:false};}
 function one(result){if(result?.error)throw Error("Public preview query failed: "+(result.error.code||"unknown"));return result?.data||null;}
 async function getMeta(kind,params,db,origin,path){
  const standard=fallback(kind,origin,path),id=getId(params,"id"),now=new Date().toISOString();
