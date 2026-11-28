@@ -38,6 +38,26 @@ test("drafts and scheduled posts produce only generic previews",async()=>{
   assert.doesNotMatch(JSON.stringify(meta),/Secret draft|Future post/);
  }
 });
+test("marketplace previews advertise the actual listing details and verified image",async()=>{
+ const listing={id:A,title:"Handmade leather tote",description:"Locally crafted everyday bag",seller_name:"Ada Crafts",
+  category:"Fashion",subcategory:"Bags",price:45000,currency:"NGN",condition:"New",location:"Ikeja, Lagos",
+  images:["https://images.example.com/tote.jpg"],is_available:true};
+ const meta=await getMeta("listing",query("id="+A),mockDB({marketplace_items:[listing]}),BASE,"/listing.html");
+ assert.equal(meta.found,true);
+ assert.equal(meta.title,"Handmade leather tote");
+ assert.equal(meta.image,"https://images.example.com/tote.jpg");
+ assert.equal(meta.imageType,"image/jpeg");
+ assert.match(meta.description,/Locally crafted everyday bag/);
+ assert.match(meta.description,/45,000/);
+ assert.match(meta.description,/Fashion · Bags/);
+ assert.match(meta.description,/Condition: New/);
+ assert.match(meta.description,/Location: Ikeja, Lagos/);
+ assert.match(meta.description,/Available now/);
+ assert.match(meta.description,/Seller: Ada Crafts/);
+ const html=renderHTML(meta);
+ assert.match(html,/og:image:type/);
+ assert.match(html,/twitter:image:alt/);
+});
 test("private reels, communities and stories cannot leak public previews",async()=>{
  const video=await getMeta("video",query("id="+A),mockDB({videos:[{id:A,is_public:false,title:"Private reel"}]}),BASE,"/video.html");
  assert.equal(video.found,false);
