@@ -147,13 +147,13 @@ function renderHTML(meta,options={}){
  tag("og:description",meta.description),tag("og:url",meta.canonical),
  tag("og:image",meta.image),tag("og:image:secure_url",meta.image),tag("og:image:type",meta.imageType),
  tag("og:image:alt",meta.imageAlt||meta.title),tag("og:video",meta.video),tag("og:video:secure_url",meta.video),
- meta.video&&/\\.mp4(?:$|\\?)/i.test(meta.video)?tag("og:video:type","video/mp4"):"",
+ meta.video&&new URL(meta.video).pathname.toLowerCase().endsWith(".mp4")?tag("og:video:type","video/mp4"):"",
  tag("article:published_time",meta.published),tag("article:author",meta.author),
  tag("twitter:card","summary_large_image","name"),tag("twitter:title",meta.title,"name"),
  tag("twitter:description",meta.description,"name"),tag("twitter:image",meta.image,"name"),
  tag("twitter:image:alt",meta.imageAlt||meta.title,"name"),
  '</head><body><main><h1>'+esc(meta.title)+'</h1><p>'+esc(meta.description)+'</p>',
  '<a href="'+esc(meta.canonical)+'">View on Blipmood</a></main></body></html>'];
- return parts.filter(Boolean).join("\\n");
+ return parts.filter(Boolean).join(" ");
 }
 module.exports={UUID,ROUTES,getMeta,renderHTML,safeOrigin,validUrl,clean,esc,fallback};
